@@ -21,7 +21,7 @@ import a_r8 as R8
 import a_r9 as R9
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
-READY = False
+READY = True
 FPS = 30
 W, H, BAR = 1920, 1080, 120
 F0, F1 = 0, 1321
