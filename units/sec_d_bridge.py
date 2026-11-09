@@ -258,8 +258,8 @@ class S04_Snow(Shot):
             th = V(on)
             if t < th - 0.35: continue
             q = (t - (th - 0.35)) / 0.35
-            y = lerp(-100, 560, ei(min(q, 1), 1.6)) + max(0, t - th) * 260
-            L = D.text_layer([(ch, x, y, 300, 1.0, 1.0, -10 + 25 * q, CINNABAR)], fname='serif_black')
+            y = lerp(330, 560, ei(min(q, 1), 1.6)) + max(0, t - th) * 260     # [r8] P2-5：从画框内落下（旧起点 -100 → 上沿被裁）
+            L = D.text_layer([(ch, x, y, 300, min(1.0, 0.15 + q * 2.2), 1.0 + 0.22 * (1 - min(q, 1)), -10 + 25 * q, CINNABAR)], fname='serif_black')
             L.A = cv2.GaussianBlur(L.A, (0, 0), 0.5 + 2.0 * max(0, 1 - q))
             fr = D.ink_text(fr, L, bleed=0.2, sig=8)
         fr = vcol(fr, '什么叫', 1745, 300, 108, O[40][5:8], t, (0.42, 0.40, 0.38), fname='serif_black', adv=1.15)   # [r5] 质问递进 1/3：淡墨、中号、右   # [r4] 停用角落小竖排：只留「什么叫」中号，牺牲由巨字承担
@@ -768,8 +768,12 @@ class S12_Pierce(Shot):
             fr = D.ink_text(fr, L, bleed=0.3, sig=8)
         else:
             q = cl((t - tc) / 0.45)
+            f0 = fr
             fr = T.slash_cut(fr, '罪状', 0.02 + 0.98 * q, places=self.P, fname='xing', color=tuple(CINNABAR), angle=-87, cut_at=0.02,
                              offset=-10, slide=0.35, appear=0.0, style_kw=dict(shadow=0.0, outline=0, glow=0.35, glow_color=(0.85, 0.12, 0.05)))
+            # [r8] P2-6：斩线末端的红热火星落在刀身中段，读成一块不明金色碎片 → 刀身（膨胀 30px）下半段不吃 slash_cut 的增量
+            blade = cv2.GaussianBlur(cv2.dilate(Aw, np.ones((61, 61), np.uint8)), (0, 0), 8) * np.clip((y_ - 590) / 40, 0, 1)
+            fr = fr + (f0 - fr) * blade[..., None]
             fr = D.ink_spray(fr, t, tc, (975, 400), n=60, seed=121, power=800, col=CINNABAR)
         return shake_cam(fr, t, [tc], 12, z=1.0 + 0.04 * u), 0.8
 
