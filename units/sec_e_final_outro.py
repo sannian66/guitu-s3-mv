@@ -61,45 +61,127 @@ def bloom(fr, thr=0.8, amt=0.5, sig=30): return K.bloom(fr, thr, amt, sig)
 
 
 # =========================================================================================== 副歌终「定」
-class E01(Shot):   # S111 ECU（第六棒重做，去和副歌一 S028「横刀 + 刀上方巨字」撞构图）：竖刀刀尖朝天、纵贯画面偏右，
-    #  逆光晨日在左下画外；一道日光沿刃口自下而上扫到刀尖；「血」以碑拓材质拓在刃面上 —— 刃面里的倒影（随刃面高光一起闪）；
-    #  副句「未冷」移到右上（刀的另一侧、远离左下）
+class E01(Shot):   # S111 ECU（第七棒重做刀身）竖刀刀尖朝天、纵贯画面偏右，逆光晨日在左下画外。
+    #  刀身按截面着色：镐筋把刀身分成两面 —— 刃面（朝左下日）暖亮、平地（朝右上天）冷暗；刃口一条细亮线、刃文白雾；
+    #  冷暖环境反射（刃面映地平线暖晕、平地映天空冷云条纹）；锋利斜尖（刃线直线斜收到背线尖点 + 横手线）；
+    #  底部刀镡 + 缠柄入画（离镜最近，浅景深虚化）；碑拓「血」占刃宽 80%，日光自下而上扫过时字面反光；副句「未冷」右上
+    V0, V1 = 905, 150            # 刀镡处 / 刀尖 的屏幕 y
+    HW = 118                     # 刃宽一半（px）
+
     def __init__(self):
         self.sky = E.dawn_sky(111, horizon=0.86, sun=(260, 900), mid=(0.40, 0.27, 0.15), cloud=0.55)
         self.l2 = Sub('未冷', cts(48, [1, 2]), 1560, CT(48, 2) + 0.15, seed=2, y=330)
+        from PIL import Image as _I
+        tip = np.asarray(_I.open(ROOT + '/assets/gen/E_r6/blade_tip_cut.png').convert('RGB')).astype(np.float32) / 255
+        tx = tip[250:1190, 286:368].mean(-1)
+        tx = cv2.resize(tx, (300, 1100), interpolation=cv2.INTER_CUBIC)
+        tx = cv2.GaussianBlur(tx, (0, 0), 2.0)
+        self.tex = (tx / tx.mean()).astype(np.float32)                      # 原图金属锻纹（只取明暗细节，弱化，防止读成木纹）
+        self.brush = (np.random.default_rng(5).random(300).astype(np.float32) - 0.5)
+        self.brush = np.convolve(self.brush, np.ones(3) / 3, 'same').astype(np.float32)
+        sw = np.asarray(_I.open(ROOT + '/assets/gen/E_r6/blade_vert_cut.png')).astype(np.float32) / 255
+        g = sw[985:1270, 1222:1338]                                           # 刀镡 + 缠柄
+        sc = 2 * self.HW * 1.0 / 57.0
+        self.hilt = cv2.resize(g, (int(g.shape[1] * sc), int(g.shape[0] * sc)), interpolation=cv2.INTER_CUBIC)
+        self.cool_sky = cv2.GaussianBlur(self.sky, (0, 0), 25)
+
+    def geom(self, t):
+        u = self.u(t)
+        yy, xx = E.grid()
+        v = np.clip((self.V0 - yy) / (self.V0 - self.V1), -0.4, 1.2)       # 0 = 刀镡，1 = 刀尖
+        cx = 1150 + 22 * u - 60 * v + 26 * v * v                           # 刀身微弯、轻微左倾；推镜时缓慢右移
+        hw = self.HW * (1 - 0.14 * np.clip(v, 0, 1))
+        xe, xsp = cx - hw, cx + hw                                          # 左 = 刃口（朝日），右 = 刀背
+        vt = 0.74                                                           # 横手线：此上刃线直线斜收到刀背顶点
+        k = np.clip((v - vt) / (1 - vt), 0, 1)
+        xe = xe + (xsp - xe) * (1 - (1 - k) ** 1.35)                       # 刃线微凸地斜收到刀背尖点
+        s = (xx - xe) / np.maximum(xsp - xe, 1)                             # 0 = 刃口，1 = 刀背
+        inside = (s > 0) & (s < 1) & (v > -0.4) & (v <= 1.0)
+        A = inside.astype(np.float32)
+        A = cv2.GaussianBlur(A, (0, 0), 0.8)
+        return u, v, s, A, k
 
     def render(self, t):
-        u = self.u(t)
+        u, v, s, A, k = self.geom(t)
         fr = self.sky.copy()
         fr = fx2.god_rays(fr, (260, 900), strength=0.55, length=0.9, t=t, src_r=160)
-        z, info = put(np.zeros((H, W, 3), np.float32), t, 'E_r6/blade_tip', (1130 + 25 * u, 150 - 30 * u), h=2500, anc=(0.5, 0.0),
-                      rot=-6, rim=GOLDW, rim_amt=2.6, rim_dir=(-0.7, 0.7), grade=G_HOT, wind=0)
-        A = info['A']
-        self.blade = (info['to_scr'], A)
         yy, xx = E.grid()
-        sy = 1000 - 1050 * eio(c01(u * 1.15))                              # 日光沿刃口自下而上扫
-        sheen = np.exp(-((yy - sy) / 70) ** 2)[..., None] * np.array([1.0, 0.85, 0.6], np.float32) * 1.4
-        z = z + sheen * A[..., None]
-        fr = fr * (1 - A[..., None]) + z
-        tip = info['to_scr']((0.5, 0.04))
-        ex = info['to_scr']((0.42, (sy - 150) / 2500 * 1.0 + 0.04))
-        fr = E.flare_streak(fr, (ex[0], sy), amt=1.0, angle=0)
-        if u > 0.75: fr = E.flare_streak(fr, tip, amt=1.6 * c01((u - 0.75) / 0.1) * (1 - c01((u - 0.9) / 0.1)), angle=0)
+        sr = 0.36 + 0.25 * k                                                # 镐筋位置（尖部随横手线收向背）
+        bev = np.clip((sr - s) / 0.012 + 0.5, 0, 1)                         # 1 = 刃面（镐筋以下）
+        # 环境反射：刃面映左下地平线暖光（随 v 上去渐暗）；平地映天空冷云（取天空模糊镜像、纵向拉伸）
+        sv = np.clip(v, 0, 1)
+        # 刃面（朝左下日）：镜面映出地平线暖光 —— 下段炽亮、往上迅速转暗，带拉丝竖纹
+        mw = self.sky[np.clip((620 + 300 * sv + 40 * (s - sr)).astype(np.int32), 0, H - 1), np.clip((xx * 0.35 + 80).astype(np.int32), 0, W - 1)]
+        warm = mw * (1.55 - 1.15 * sv)[..., None] * np.array([1.05, 0.92, 0.80], np.float32)
+        warm = warm * (0.65 + 0.7 * ((sr - s) / np.maximum(sr, 1e-3)))[..., None]       # 刃口侧更亮（截面弧度）
+        # 平地（朝右上天）：镜面映天空冷云，高反差
+        mir = self.cool_sky[np.clip((140 + 520 * (1 - sv)).astype(np.int32), 0, H - 1), np.clip((1900 - xx * 0.8).astype(np.int32), 0, W - 1)].mean(-1)
+        mir = np.clip(0.10 + (mir - 0.18) * 1.6, 0.015, 1)
+        cool = mir[..., None] * np.array([0.62, 0.74, 1.0], np.float32) + np.array([0.012, 0.016, 0.028], np.float32)
+        across = (s - sr) / (1 - sr)
+        cool = cool * (0.55 + 0.9 * np.exp(-((across - 0.78) / 0.18) ** 2) * 0.6 + 0.25 * across)[..., None]
+        cool = cool + (np.exp(-((across - 0.06) / 0.05) ** 2) * 0.06)[..., None] * np.array([1.0, 0.8, 0.6], np.float32)   # 镐筋下沿接暖
+        col = warm * bev[..., None] + cool * (1 - bev[..., None])
+        brush = self.brush[np.clip(s * 299, 0, 299).astype(np.int32)]                    # 研磨拉丝（沿刃长方向）
+        ti = np.clip((1 - sv) * 1099, 0, 1099).astype(np.int32); si = np.clip(s * 299, 0, 299).astype(np.int32)
+        col = col * (0.88 + 0.12 * self.tex[ti, si] + 0.10 * brush)[..., None]
+        # 刃文：刃口内侧一道白雾波纹
+        ham = 0.10 + 0.025 * np.sin(yy / 23.0) + 0.012 * np.sin(yy / 7.0)
+        col = col + (np.exp(-((s - ham) / 0.05) ** 2) * 0.10 * (1 - k))[..., None] * np.array([1.0, 0.95, 0.88], np.float32)
+        # 刃口细亮线 + 镐筋棱线（亮）+ 刀背暗棱
+        edge = np.exp(-(s / 0.010) ** 2)
+        ridge = np.exp(-((s - sr) / 0.006) ** 2)
+        spine = np.exp(-((1 - s) / 0.012) ** 2)
+        col = col + edge[..., None] * np.array([1.0, 0.92, 0.78], np.float32) * 1.4 + ridge[..., None] * np.array([1.0, 0.85, 0.65], np.float32) * 0.5
+        col = col * (1 - 0.6 * spine[..., None])
+        # 横手线
+        col = col + (np.exp(-((v - 0.74) / 0.0025) ** 2) * (s > 0) * 0.35)[..., None] * np.array([1.0, 0.85, 0.6], np.float32)
+        # 日光沿刃自下而上扫（刃面最强）
+        sy = 1000 - 1050 * eio(c01(u * 1.15))
+        sheen = np.exp(-((yy - sy) / 60) ** 2)
+        col = col + (sheen * (0.35 + 0.9 * bev) + sheen * edge * 1.5)[..., None] * np.array([1.0, 0.86, 0.62], np.float32)
+        self.sheen_y = sy
+        fr = fr * (1 - A[..., None]) + col * A[..., None]
+        # 刀镡 + 缠柄：离镜最近 → 虚化，接刃根
+        h, w = self.hilt.shape[:2]
+        cx0 = 1150 + 22 * u + 4
+        x0, y0 = int(cx0 - w / 2), int(self.V0 - 8 * (2 * self.HW / 57.0))
+        hl = np.zeros((H, W, 4), np.float32)
+        xs, ys = max(0, x0), max(0, y0); xe_, ye_ = min(W, x0 + w), min(H, y0 + h)
+        if xe_ > xs and ye_ > ys: hl[ys:ye_, xs:xe_] = self.hilt[ys - y0:ye_ - y0, xs - x0:xe_ - x0]
+        hl[..., :3] *= hl[..., 3:4]
+        hl = cv2.GaussianBlur(hl, (0, 0), 2.2)
+        ha = np.clip(hl[..., 3:4], 0, 1); hc = hl[..., :3] / np.maximum(ha, 1e-3)
+        hc = hc * 0.5
+        a0 = ha[..., 0]
+        rim = np.clip(a0 - cv2.GaussianBlur(a0, (0, 0), 7), 0, 1) * a0 * np.clip((cx0 - xx) / 260 + 0.5, 0, 1) * (yy < y0 + 150)
+        hc = hc + (rim * 2.0)[..., None] * np.array([1.0, 0.72, 0.4], np.float32)
+        fr = fr * (1 - ha) + hc * ha
+        self.blade = (v, s, A)
+        tip = (float(1150 + 22 * u - 60 + 26 + self.HW * 0.86), float(self.V1) + 2)
+        self.tip = tip
+        if u > 0.75: fr = E.flare_streak(fr, tip, amt=1.4 * c01((u - 0.75) / 0.1) * (1 - c01((u - 0.9) / 0.1)), angle=0)
         fr = E.dust_motes(fr, t, 111, n=70, amt=0.5, drift=(60, -20), depth=True)
-        return bloom(fr, 0.75, 0.6)
+        return bloom(fr, 0.85, 0.5)
 
     def text(self, fr, t):
         if hasattr(self, 'blade'):
-            to_scr, A = self.blade
-            c = to_scr((0.51, 0.20))
+            v, s, A = self.blade
             p = c01((t - (CT(48, 0) - 0.1)) / 0.22)
             if p > 0:
-                rub = R3.blood_rub(fr.copy(), '血', c[0], c[1], 185, p, seed=11)            # 碑拓「血」拓在刃面上
-                Ab = cv2.GaussianBlur(cv2.erode(A, np.ones((7, 7), np.uint8)), (0, 0), 1.5)[..., None]
-                fr = fr * (1 - Ab) + rub * Ab
-                ghost = R3.blood_rub(np.zeros_like(fr), '血', c[0] - 40, c[1] + 300, 260, p, seed=12)   # 刃面倒影：下方一枚拉长、虚化的反影
-                ghost = cv2.GaussianBlur(cv2.resize(ghost, (W, int(H * 1.0))), (0, 0), 4)
-                fr = fr + ghost * Ab * 0.35
+                cy = 560
+                vv = (self.V0 - cy) / (self.V0 - self.V1)
+                cx = 1150 + 22 * self.u(t) - 60 * vv + 26 * vv * vv
+                base = fr.copy()
+                rub = R3.blood_rub(fr.copy(), '血', cx, cy, 200, p, seed=11)          # 碑拓「血」：字宽 ≈ 刃宽 80%
+                m = np.clip(np.abs(rub - base).sum(-1) * 3, 0, 1)
+                Ab = cv2.erode(A, np.ones((5, 5), np.uint8))
+                dark = cv2.GaussianBlur(m, (0, 0), 3) - m                           # 暗边
+                out = rub * (1 - np.clip(dark * 1.2, 0, 0.6))[..., None]
+                yy = np.arange(H, dtype=np.float32)[:, None]
+                sh = np.exp(-((yy - self.sheen_y) / 55) ** 2)                       # 日光扫过 → 字面反光
+                out = out + (m * sh * 0.9)[..., None] * np.array([1.0, 0.55, 0.35], np.float32)
+                fr = fr * (1 - Ab[..., None]) + out * Ab[..., None]
         return self.l2.draw(fr, t)
 
 

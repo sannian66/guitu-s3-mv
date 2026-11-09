@@ -16,6 +16,7 @@ import props as PR
 import vcam3 as V3
 import vcam as VC
 import a_kit as A
+import a_r7 as R7
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
 READY = False
@@ -1626,8 +1627,8 @@ CUTS = {
     'V09': ('a_brush', 0.14, 0.20, dict(seed=9)),                                    # 第五棒：飞白大笔横扫（水墨），替换蓝色闪电圈
     'V10': ('hard', 0, 0, {}),
     'V11': ('flash_red', 0.03, 0.10, {}),
-    'V12': ('slash_wipe', 0.0, 0.14, dict(angle=58)),
-    'V13': ('a_split', 0.10, 0.16, dict(angle=32)),                                   # 第六棒：沿 V12 斩线一刀两分（两块）滑开露出 V13（原三块错位读成渲染错误）
+    'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
+    'V13': ('a_cleave', 0.08, 0.16, dict(angle=32, center=(960, 600), mode='shear', col=(0.55, 0.7, 1.0))),   # 第七棒：沿 V12 斩线两块反向错滑出画（两块，冷光；原三条带、人物无头）                                   # 第六棒：沿 V12 斩线一刀两分（两块）滑开露出 V13（原三块错位读成渲染错误）
     'V14': ('hard', 0, 0, {}),
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
     'V16': ('a_glyph', 0.08, 0.24, dict(ch='主', center=(750, 650), size=230)),          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
@@ -1635,7 +1636,7 @@ CUTS = {
     'V18': ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）
     'V19': ('hard', 0, 0, {}),
     'V20': ('hard', 0, 0, {}),
-    'V21': ('slash_wipe', 0.0, 0.14, dict(angle=-62)),
+    'V21': ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(960, 540), mode='open', col=(1.0, 0.85, 0.6))),   # 第七棒：V20 撩刀弧光一线斩开画面，露出「锋」（原灰平板 + 半截「锋」重复）
 }
 
 M3 = V3.Move3
@@ -1942,6 +1943,7 @@ class Section:
             if name == 'a_seam': return a_seam(Af, B, p), max(ca1, ca2)
             if name == 'a_split': return a_split(Af, B, p, **kw), max(ca1, ca2)
             if name == 'a_glyph': return a_glyph(Af, B, p, **kw), max(ca1, ca2)
+            if name == 'a_cleave': return R7.a_cleave(Af, B, p, **kw), 0
             return TR.transition(name, Af, B, p, **kw), max(ca1, ca2)
         fr, ca = s.render(t)
         name = CUTS.get(self.ids[i], ('hard',))[0]

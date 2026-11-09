@@ -411,56 +411,64 @@ class V03(Shot):
 
 
 # =====================================================================================
-# V04 90.77–91.67 仰 CU：鞠躬的纸人头顶剪影压在画面下沿；「大局」金色宋体巨字悬在雨里、雨打在字上溅开；「退让」小字逐字压低
+# V04 90.77–91.67 CU 低机位：第七棒——「大局」不再是悬空金字。四个纸扎百官垂首捧笏（生图 hu_hands），
+#   「大」「局」被一记一记阴刻进前两块笏板（刻刀火星 + 嵌金），「退」「让」随后刻在笏板下半（墨色阴刻，字小）——
+#   顾全大局 = 写在臣子手里的板子上；每刻一字，捧笏的人再低一分头。前＝雨丝，中＝笏板与手，后＝暗殿里一线金光。
+import b_carve as BV
+
+
 class V04(Shot):
-    T_DA = 90.62
+    HU = [((0.315, 0.40), (0.284, 0.64), -10.0), ((0.567, 0.44), (0.545, 0.64), -9.0)]   # 两块笏板：上字 / 下字的精灵内归一化中心、倾角
+    SRC, DST, WPX = (0.42, 0.50), (900, 600), 3000
     def __init__(self):
-        sk = night_sky(4911, top=(0.02, 0.022, 0.03), bot=(0.09, 0.085, 0.08), horizon=0.9)
-        self.bg = sk
-        self.back = BC.figs('crowd_back')[0]    # 第五棒：金边黑团块 → 生图纸扎人群背影（逆光、保留纸纹）
-        self.rain = fx2.RainSheet(4913, density=1.0)
-        T.warm('大局', 'serif_black', 300); T.warm('退让', 'serif_sb', 90)
+        self.sp = spr('B_r4/hu_hands')
+        x, y = K.grid()
+        bg = BK.dark_bg(4911, 0.008, 0.03, tint=(1.15, 1.0, 0.86))
+        bg += np.exp(-(((x - 1500) / 520) ** 2 + ((y - 220) / 240) ** 2))[..., None] * GOLD * 0.16          # 殿门缝的金光
+        bg += np.exp(-((x - 1500) / 60) ** 2)[..., None] * np.exp(-((y - 300) / 400) ** 2)[..., None] * GOLD * 0.10
+        self.bg = bg
+        self.rain = fx2.RainSheet(4913, density=0.8)
+        self.sh = self.sp.h / self.sp.w
+
+    def to_scr(self, n, bow):
+        return (self.DST[0] + (n[0] - self.SRC[0]) * self.WPX, self.DST[1] + bow + (n[1] - self.SRC[1]) * self.WPX * self.sh)
 
     def render(self, t):
         u = self.u(t)
         fr = self.bg.copy()
+        tks = [V(CT(20, k)) for k in (6, 7, 8, 9)]
+        tks[0] = max(tks[0], self.t0 + 0.02)
+        nb = sum(eout(clamp01((t - tk) / 0.25), 3) for tk in tks)               # 每刻一字低一分头
+        bow = 14 * nb + 20 * eio(u)
+        fr, Aw = put_at(fr, self.sp, t, self.SRC, (self.DST[0], self.DST[1] + bow), self.WPX,
+                        grade=dict(expo=0.62, sat=0.45, tint=(1.04, 0.97, 0.90), lift=0.0, gamma=1.15),
+                        rim=dict(col=GOLD * 1.0, amt=1.6, dir=(0.6, -0.8)), wind_amp=0, breathe=0.002,
+                        shade=(300, 1900, -0.25, 500, 0.45), wrap=0.25)
         x, y = K.grid()
-        fr += np.exp(-(((x - 960) / 700) ** 2 + ((y - 380) / 300) ** 2))[..., None] * GOLD * 0.12
-        # 「大局」金字（已在上一镜字头出现 → 这里落定 + 被雨打）
-        L = T.Layer()
-        k1 = clamp01((t - self.t0) / 0.18)
-        for ch, xx in (('大', 760), ('局', 1160)):
-            T.place(L, ch, xx, 400 - 30 * eio(u), 330, color='gold', fname='serif_black', alpha=1.0, scale=1.12 - 0.12 * eout(k1))
-        fr = T.compose(fr, L, shadow=0.6, glow=0.55, glow_color=(1.0, 0.55, 0.2))
-        # 雨打字面：字的上缘溅起细小水花
-        edge = np.clip(L.A - np.roll(L.A, 6, 0), 0, 1)
-        ys, xs = np.nonzero(edge[::8, ::8] > 0.5)
-        r = np.random.default_rng(int(t * 30))
-        if len(xs):
-            idx = r.choice(len(xs), min(26, len(xs)), replace=False)
-            for i in idx:
-                px, py = xs[i] * 8, ys[i] * 8
-                for _ in range(3):
-                    a = r.uniform(-2.6, -0.5); d = r.uniform(6, 22)
-                    cv2.line(fr, (px, py), (int(px + math.cos(a) * d), int(py + math.sin(a) * d)), (0.75, 0.78, 0.85), 1, cv2.LINE_AA)
-        # 「退让」：逐字从上压低（宋体小字，像被按下去的头）
-        pr = prs(20, [8, 9], t)
-        fr = self.rain.draw(fr, t, intensity=1.2, angle=4, light=(960, 380), light_r=700)
-        # 纸人头顶剪影（下沿，前景，逆光金边，随鞠躬下压）
-        bowk = eio(clamp01((t - V(CT(20, 8)) + 0.2) / 0.8))
-        # 第五棒 9/n：不再压成黑团+硬金边——中景人群背影露头肩（纸纹/湿袍可见），顶光暖、两侧冷边，后排略虚
-        fr, _ = BC.draw(fr, self.back, (980, 1830 + 60 * bowk), 1250 * (1 - 0.02 * bowk), tilt=0, expo=0.46, tint=(1.0, 0.93, 0.84), sat=0.55,
-                        rim_col=GOLD * 1.0, rim_amt=1.1, rim_dir=(0.0, -1.0), sil=0.18, wet=0.35, blur=0.6)
-        x2, y2 = K.grid()
-        fr *= (1 - 0.35 * np.clip((y2 - 700) / 260, 0, 1))[..., None]   # 下沿压暗收边（脚下暗场，视线回到「大局」）
-        # 「退让」在人群头顶之上、「局」右下，逐字被按低（像被按下去的头），画在人群之后不被遮
-        L2 = T.Layer()
-        for i, (ch, pc) in enumerate(zip('退让', pr)):
-            if pc <= 0: continue
-            T.place(L2, ch, 1470 + i * 120, 470 + 70 * eout(pc, 3) + i * 40, 96, color='white', fname='serif_sb', alpha=min(1, pc * 2))
-        fr = T.compose(fr, L2, shadow=0.8)
-        k = hitp(t, 91.314, 0.12)
-        fr = cam(fr, 1.04 + 0.04 * eio(u) + 0.03 * k, 0, -20 * eio(u))
+        fr = fr * (0.75 + 0.45 * np.exp(-(((x - 900) / 800) ** 2 + ((y - 380) / 380) ** 2)))[..., None]   # 顶光落在笏板上半
+        spark = []
+        chars = [('大', 0, 0, 175, True), ('局', 1, 0, 160, True), ('退', 0, 1, 118, False), ('让', 1, 1, 110, False)]
+        for k, (ch, hu, row, sz, gold) in enumerate(chars):
+            tk = tks[k]
+            p = clamp01((t - (tk - 0.03)) / 0.14)
+            if p <= 0: continue
+            c = self.to_scr(self.HU[hu][row], bow)
+            A = BV.mask([(ch, c[0], c[1], sz, self.HU[hu][2])], fname='serif_black')
+            A, front = BV.reveal(A, p)
+            hot = pulse(t, tk + 0.1, 0.3) * (t >= tk)
+            if gold:
+                fr = BV.engrave(fr, A, light=(-0.6, -0.8), depth=4, groove=0.5, fill=(0.95, 0.70, 0.30), fill_k=0.85,
+                                hl=0.45, surface=Aw, glow=0.25 + 0.6 * hot, glow_col=(1.0, 0.62, 0.25))
+            else:
+                fr = BV.engrave(fr, A, light=(-0.6, -0.8), depth=3, groove=0.75, fill=(0.05, 0.03, 0.03), fill_k=0.8, hl=0.3, surface=Aw)
+            if front is not None and p < 1: spark.append((front, tk))
+        for (fx_, fy_), tk in spark:
+            fr = K.sparks(fr, t, 4915 + int(fx_), (fx_, fy_), n=60, life=0.35, speed=(200, 700), dirc=(0.3, -1), spread=1.4, grav=1500,
+                          size=1.3, area=(30, 10), color=(1.0, 0.75, 0.4), amt=1.2, t0=tk - 0.03, burst=True)
+        fr = self.rain.draw(fr, t, intensity=0.9, angle=6, light=(1500, 260), light_r=700)
+        k = max(hitp(t, tks[1], 0.1), hitp(t, tks[2], 0.1))
+        dx, dy, dr = shake(t, 3 + 9 * k, 11, 404)
+        fr = cam(fr, 1.0 + 0.05 * eio(u) + 0.02 * k, dx, dy, dr)
         return fr, (2 if k > 0.5 else 0)
 
 
