@@ -441,3 +441,22 @@
 - `blood`（#4 血手印按状纸）task `6acd55b2-a6cb-4320-885a-0015cc55033d`：completed。3840×2160 → `blood_raw.png` → `blood_cut.png`（alpha_mean=0.647）。
 - 背景按要求用纯绿幕 #00FF00（本片新规矩，灰板发丝抠不干净）；印面篆书已要求正字非镜像。
 - 无失败/重抽，本次消耗 6 points。
+
+## 2026-11-09 19:28 · 批量生图（hero_matrix.json，16 张 / 48 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `hero_side_l` 3 点（task 0a8244cc）→ `assets/gen/char/hero_side_l_raw.png` + `_cut.png`
+- ✔ `hero_tq_bl` 3 点（task 0250c022）→ `assets/gen/char/hero_tq_bl_raw.png` + `_cut.png`
+- ✔ `hero_tq_br` 3 点（task cf918ef9）→ `assets/gen/char/hero_tq_br_raw.png` + `_cut.png`
+- ✔ `hero_pose_thrust` 3 点（task 044567b6）→ `assets/gen/char/hero_pose_thrust_raw.png` + `_cut.png`
+- ✔ `hero_pose_crouch` 3 点（task a1bf48db）→ `assets/gen/char/hero_pose_crouch_raw.png` + `_cut.png`
+- ✔ `hero_pose_walk` 3 点（task 812fb5fb）→ `assets/gen/char/hero_pose_walk_raw.png` + `_cut.png`
+- ✔ `hero_pose_run` 3 点（task ea6f3d54）→ `assets/gen/char/hero_pose_run_raw.png` + `_cut.png`
+- ✔ `hero_pose_sheathe` 3 点（task 5eeb37d5）→ `assets/gen/char/hero_pose_sheathe_raw.png` + `_cut.png`
+- ✔ `hero_pose_point` 3 点（task 8d728794）→ `assets/gen/char/hero_pose_point_raw.png` + `_cut.png`
+- ✔ `hero_pose_spin` 3 点（task add584e2）→ `assets/gen/char/hero_pose_spin_raw.png` + `_cut.png`
+- ✔ `hero_pose_kneel` 3 点（task 757bcce6）→ `assets/gen/char/hero_pose_kneel_raw.png` + `_cut.png`
+- ✔ `hero_expr_shout` 3 点（task 43dc2d26）→ `assets/gen/char/hero_expr_shout_raw.png` + `_cut.png`
+- ✔ `hero_expr_pain` 3 点（task 940affaa）→ `assets/gen/char/hero_expr_pain_raw.png` + `_cut.png`
+- ✔ `hero_expr_closed` 3 点（task 88e6b88f）→ `assets/gen/char/hero_expr_closed_raw.png` + `_cut.png`
+- ✔ `emperor_full_front` 3 点（task 368cc040）→ `assets/gen/char/emperor_full_front_raw.png` + `_cut.png`
+- ✔ `emperor_tq` 3 点（task d44f7855）→ `assets/gen/char/emperor_tq_raw.png` + `_cut.png`
