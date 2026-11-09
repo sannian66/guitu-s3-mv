@@ -116,7 +116,9 @@ def _build(path, work_w=2048):
 
 
 class SpriteLayer:
-    def __init__(self, path, work_w=2048):
+    def __init__(self, path, work_w=None):
+        if work_w is None:
+            work_w = int(os.environ.get('SPRITE_WORK_W', 2048))
         key = (os.path.abspath(str(path)), int(work_w))
         st = _RAW.get(key)
         if st is None:

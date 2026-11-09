@@ -1,3 +1,4 @@
+import os
 """units/a_kit.py — A 组（前奏 + 主歌一）工具：差值抠像、精灵摆放、背景元件、歌词版式（马善政楷逐笔竖排）。
 只被 units/sec_a_intro_verse1.py 使用。"""
 import math, os, hashlib, json
@@ -73,6 +74,8 @@ def diff_matte(key, lo=0.035, hi=0.13, work=2560, keep_cut=True, crop=None):
 
 _LRU = {}
 def sprite(path, work_w=1600):
+    # 2026-11-09 23:4x 机器内存吃紧（16G、swap 近满）→ 允许用环境变量降精灵工作分辨率提速
+    work_w = int(os.environ.get('SPRITE_WORK_W', work_w))
     k = (path, work_w)
     if k in _LRU:
         v = _LRU.pop(k); _LRU[k] = v; return v
