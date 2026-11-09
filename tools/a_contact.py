@@ -29,6 +29,25 @@ def sheet(items, out, cols=4, tw=480, th=270):
 def items_for(cmd):
     if cmd == 'contact':
         return [(S.__name__, S.t0 + 0.55 * (S.t1 - S.t0)) for S in M.SHOTS]
+    if cmd == 'triple':                                   # 第七棒：每镜起/中/止三帧（节奏素材）
+        out = []
+        for S in M.SHOTS:
+            d = S.t1 - S.t0
+            out += [(S.__name__ + ' 起', S.t0 + min(0.2, d * 0.15)), (S.__name__ + ' 中', S.t0 + d * 0.5), (S.__name__ + ' 止', S.t1 - min(0.12, d * 0.1))]
+        return out
+    if cmd == 'keys':                                     # 第七棒 keys v6：转场中点 + 评审点名的关键帧
+        items = []
+        for S in M.SHOTS[1:]:
+            c = M.CUTS.get(S.__name__)
+            if c and c[0] != 'hard':
+                items.append((S.__name__ + ' ' + c[0][:10] + ' 中点', S.t0 + (c[2] - c[1]) / 2))
+        items += [('V12入 前', 29.80), ('V12入 后', 29.93), ('V21入 前', 42.60), ('V21入 后', 42.76),
+                  ('署名', 1.6), ('署名2', 4.9), ('片名', 8.6), ('片名化灰', 13.5), ('长夜', 16.4), ('五百', 19.1), ('拦不住', 20.9),
+                  ('寒光', 21.6), ('谁在高处', 23.3), ('V08', 23.80), ('V08 落印', 24.44), ('V08 俯拍印痕', 24.62), ('罪状', 24.95),
+                  ('沿梁', 26.95), ('V10 铜盘', 27.9), ('称量', 28.7), ('杀', 30.3), ('放', 32.2), ('火星成字', 34.25), ('主张', 36.0),
+                  ('若正义', 37.9), ('V17 落前', 38.63), ('V17 落地', 38.72), ('V17 凹坑', 38.85), ('V17 凹坑', 39.20),
+                  ('那我 V18', 40.18), ('宁愿', 41.5), ('锋', 43.55), ('出口', 44.0)]
+        return items
     items = []
     for S in M.SHOTS[1:]:
         c = M.CUTS.get(S.__name__)
@@ -47,6 +66,7 @@ if __name__ == '__main__' and sys.argv[1] in ('part', 'assemble'):
         os.makedirs('/tmp/acon', exist_ok=True); cache = {}
         for i in range(int(sys.argv[3]), min(len(its), int(sys.argv[4]))):
             lab, t = its[i]
+            if os.path.exists('/tmp/acon/%s_%03d.jpg' % (kind, i)): continue
             Image.fromarray(M.frame(int(round(t * FPS)), cache)).resize((480, 270), Image.LANCZOS).save('/tmp/acon/%s_%03d.jpg' % (kind, i), quality=90)
             print(i, lab, flush=True)
     else:

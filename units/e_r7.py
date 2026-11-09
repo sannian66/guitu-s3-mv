@@ -173,3 +173,54 @@ def self_burn_glyph(fr, A, t, t0, seed=0, ink=(0.42, 0.035, 0.02)):
             y = y0 + ey[k] - (60 + 120 * rr.random()) * age
             cv2.circle(P, (int(x), int(y)), 1 + int(rr.random() * 1.6), float(1 - age / 0.7), -1, cv2.LINE_AA)
     return fr + cv2.GaussianBlur(P, (0, 0), 0.7)[..., None] * np.array([1.4, 0.65, 0.2], np.float32)
+
+
+def _mb(m, k, horiz=True):
+    if k < 2: return m
+    ker = np.ones((1, k), np.float32) / k if horiz else np.ones((k, 1), np.float32) / k
+    return cv2.filter2D(m, -1, ker)
+
+
+def warm_veil(A, B, p, axis='x', direction=-1, seed=7301, cap=0.68, warm=(1.0, 0.78, 0.48), dark=(0.10, 0.075, 0.06), shafts=True):
+    """第七棒：有层次的暖色雾/烟幕转场（替代满屏平灰的 fog_wall / smoke_through 中间帧）。
+    雾墙扫过（axis='x' 横扫 / 'y' 自下而上翻涌），浓度封顶 cap → 前后两镜的剪影在雾里始终透出；
+    雾色 = 暗部暖褐 → 受光处淡金，叠斜入光束（明暗条纹）与翻卷的亮边。返回帧。"""
+    h2, w2 = H // 2, W // 2
+    yy, xx = np.mgrid[0:h2, 0:w2].astype(np.float32)
+    e = c01(p); e = e * e * (3 - 2 * e)
+    key = ('veil', seed)
+    if key not in _C:
+        n1 = K.fbm(h2, w2 * 2, seed, base=4, octaves=4).astype(np.float32)
+        n2 = K.fbm(h2, w2 * 2, seed + 1, base=16, octaves=3).astype(np.float32)
+        _C[key] = (n1, n2)
+    n1, n2 = _C[key]
+    off = int((e * 300) % w2)
+    N = 0.6 * n1[:, off:off + w2] + 0.4 * n2[:, off:off + w2]
+    if axis == 'x':
+        span = w2 * 2.6; c = (w2 * 1.8 - span * e) if direction < 0 else (-w2 * 0.8 + span * e)
+        d = (xx - c) * (-direction)
+    else:
+        span = h2 * 2.8; c = h2 * 1.9 - span * e
+        d = -(yy - c)
+    core = (w2 if axis == 'x' else h2) * 0.40
+    dd = d + (N - 0.5) * 260
+    dens = sstep_(-core - 120, -core + 60, dd) * sstep_(core + 120, core - 60, dd)
+    dens = np.clip(dens * (0.55 + 0.7 * N), 0, 1) * cap
+    lightv = np.clip(1.1 - yy / h2 * 0.8, 0, 1)
+    if shafts:                                                     # 斜入光束：明暗条纹（左上 → 右下）
+        sh = 0.5 + 0.5 * np.sin((xx * 0.9 + yy * 0.45) / 38.0 + 1.7) * np.sin((xx * 0.9 + yy * 0.45) / 91.0)
+        lightv = lightv * (0.55 + 0.75 * sh)
+    rim = np.clip(N - cv2.GaussianBlur(N, (0, 0), 6), 0, 1) * 5        # 翻卷亮边
+    L = np.clip(lightv * (0.5 + 0.8 * N) + rim * 0.4, 0, 1.4)
+    fogc = np.asarray(dark, np.float32) + (np.asarray(warm, np.float32) - np.asarray(dark, np.float32)) * L[..., None]
+    up = lambda m: cv2.resize(m, (W, H), interpolation=cv2.INTER_LINEAR)
+    D = _mb(up(dens), 40, axis == 'x'); F = _mb(up(fogc), 40, axis == 'x')
+    sw = up(d)
+    base = np.where((sw > 0)[..., None], B, A)
+    out = base * (1 - D[..., None]) + F * D[..., None]
+    return out
+
+
+def sstep_(a, b, x):
+    t = np.clip((x - a) / (b - a), 0, 1)
+    return t * t * (3 - 2 * t)

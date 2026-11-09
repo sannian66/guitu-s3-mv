@@ -660,7 +660,7 @@ class E10(Shot):   # S119（第三棒重做）碎纸扑面：被斩碎的律令�
 
 class E11(Shot):   # S120a 低机位 MS：刀插大地，尘环冲击；巨字「定」
     def __init__(self):
-        self.sky = E.dawn_sky(1200, horizon=0.80, sun=(1500, 700), mid=(0.40, 0.28, 0.15), cloud=0.6)
+        self.sky = E.dawn_sky(1200, horizon=0.80, sun=None, mid=(0.36, 0.25, 0.14), hor=(0.85, 0.58, 0.32), cloud=0.6)   # 第七棒：去身后日轮，光源在画外右
         n = K.fbm(H // 2, W // 2, 1201, base=8, octaves=6)
         yy = np.linspace(0, 1, H // 2, dtype=np.float32)[:, None]
         g = (0.04 + 0.10 * n) * (0.6 + 0.8 * yy)
@@ -674,7 +674,9 @@ class E11(Shot):   # S120a 低机位 MS：刀插大地，尘环冲击；巨字�
         hy = 820
         m = sstep(hy - 4, hy + 4, np.arange(H, dtype=np.float32))[:, None, None]
         fr = fr * (1 - m) + self.ground * m
-        fr = E.sun_disc(fr, (1500, hy - 20), 90, amt=1.0)
+        yy0, xx0 = E.grid()
+        fr = fr + (np.exp(-(((xx0 - 2150) / 700) ** 2 + ((yy0 - 640) / 380) ** 2)) * 0.6)[..., None] * np.array([1.0, 0.66, 0.34], np.float32)   # 画外右侧低位晨光晕
+        fr = fx2.god_rays(fr, (2150, 600), strength=0.5, length=1.0, t=t, src_r=200)
         z, info = put(np.zeros((H, W, 3), np.float32), t, 'S120/plant', (1180, 1010), h=860, rim=GOLDW, rim_amt=2.6, rim_dir=(0.8, -0.3), wind=8)
         C, A = sprite_clean(z, info['A'], erode=2, rim_col=(1.0, 0.66, 0.32), rim_amt=2.6, rim_dir=(0.95, -0.2), cool_amt=0.15)
         C = C * 0.68                                                      # 第六棒：正面压暗（背后低位日光逆光），右侧暖轮廓光与日同向
@@ -723,12 +725,30 @@ class E12(Shot):   # S120b ELS 正俯拍（第三棒返工）：大地即印面�
         cv2.line(bs, c, (int(c[0] - 34 * 13), int(c[1] + 26 * 13)), 1.0, 14, cv2.LINE_AA)
         fr = fr * (1 - 0.55 * cv2.GaussianBlur(bs, (0, 0), 4)[..., None])
         fr = np.ascontiguousarray(fr, np.float32)
-        cv2.circle(fr, c, 40, (0.05, 0.045, 0.04), -1, cv2.LINE_AA)                     # 镡
-        cv2.circle(fr, c, 40, (0.85, 0.62, 0.35), 2, cv2.LINE_AA)
-        cv2.ellipse(fr, (c[0] + 4, c[1] - 3), (40, 40), 0, 200, 340, (1.0, 0.82, 0.5), 3, cv2.LINE_AA)     # 右上受光
-        for k in range(5): cv2.circle(fr, c, 18 - 3 * k, (0.08 + 0.05 * (k % 2), 0.06, 0.05), 2, cv2.LINE_AA)   # 缠绳柄头
-        sw = 6 * math.sin(t * 3.1)
-        cv2.ellipse(fr, (int(c[0] + 34 + sw), int(c[1] + 22)), (26, 11), 30, 0, 360, (0.62, 0.06, 0.04), -1, cv2.LINE_AA)   # 红穗
+        # 第七棒：俯角 75°——刀柄朝镜头斜伸出（缠绳菱纹 + 柄头），镡椭圆加一圈金色受光边，红穗绳甩出印外
+        hx, hy = c[0] + 46, c[1] + 168                                                   # 柄头
+        cv2.line(fr, (c[0] + 3, c[1] + 6), (hx + 3, hy + 6), (0.01, 0.01, 0.01), 40, cv2.LINE_AA)   # 柄影
+        cv2.ellipse(fr, c, (54, 40), -4, 0, 360, (0.035, 0.03, 0.028), -1, cv2.LINE_AA)            # 镡
+        cv2.ellipse(fr, c, (54, 40), -4, 0, 360, (0.95, 0.70, 0.36), 4, cv2.LINE_AA)
+        cv2.ellipse(fr, c, (54, 40), -4, 190, 350, (1.0, 0.88, 0.55), 6, cv2.LINE_AA)
+        cv2.line(fr, c, (hx, hy), (0.045, 0.035, 0.03), 34, cv2.LINE_AA)                     # 柄
+        for k in range(1, 9):                                                            # 缠绳菱纹
+            q = k / 9; px, py = c[0] + (hx - c[0]) * q, c[1] + (hy - c[1]) * q
+            cv2.line(fr, (int(px - 15), int(py - 6)), (int(px + 15), int(py + 10)), (0.30, 0.06, 0.04), 4, cv2.LINE_AA)
+            cv2.line(fr, (int(px - 15), int(py + 10)), (int(px + 15), int(py - 6)), (0.22, 0.05, 0.03), 4, cv2.LINE_AA)
+        cv2.line(fr, (c[0] + 16, c[1] + 4), (hx + 16, hy + 4), (0.85, 0.62, 0.35), 2, cv2.LINE_AA)   # 柄右侧受光
+        cv2.ellipse(fr, (hx, hy), (20, 14), 15, 0, 360, (0.55, 0.40, 0.20), -1, cv2.LINE_AA)        # 柄头（铜）
+        cv2.ellipse(fr, (hx, hy), (20, 14), 15, 200, 340, (1.0, 0.85, 0.5), 3, cv2.LINE_AA)
+        sw = 14 * math.sin(t * 3.1)
+        pts = [(hx + 10, hy + 6)]
+        for k in range(1, 9):                                                            # 红穗绳：甩出印外（右下），随风摆
+            q = k / 8; pts.append((hx + 10 + 340 * q, hy + 6 + 120 * q + sw * q * q + 18 * math.sin(q * 5 + t * 4)))
+        cv2.polylines(fr, [np.array(pts, np.int32)], False, (0.62, 0.07, 0.04), 5, cv2.LINE_AA)
+        ex, ey = pts[-1]
+        for k in range(9):                                                               # 穗头散开
+            ang = 0.35 + 0.08 * (k - 4) + 0.05 * math.sin(t * 5 + k)
+            cv2.line(fr, (int(ex), int(ey)), (int(ex + 70 * math.cos(ang)), int(ey + 70 * math.sin(ang))), (0.70 - 0.03 * k, 0.08, 0.05), 4, cv2.LINE_AA)
+        cv2.circle(fr, (int(ex), int(ey)), 9, (0.85, 0.62, 0.30), -1, cv2.LINE_AA)
         at = (1470, 600)
         z, info = put(np.zeros((H, W, 3), np.float32), t, self.KEY, at, h=495, anc=(0.5, 0.5), rim=GOLDW, rim_amt=3.2, rim_dir=(0.7, -0.7),
                       grade=dict(expo=0.95, sat=0.6, tint=(1.1, 0.98, 0.84), lift=0.0, gamma=1.05), wind=4)
@@ -756,8 +776,9 @@ class E12(Shot):   # S120b ELS 正俯拍（第三棒返工）：大地即印面�
 
 class E13(Shot):   # S121 MCU 晨风中马尾与暗红腰带甩动，背景日光虚焦；巨字「血」
     def __init__(self):
-        sky = E.dawn_sky(1210, horizon=0.75, sun=(1500, 380), mid=(0.45, 0.32, 0.18), cloud=0.7)
-        sky = E.sun_disc(sky, (1500, 380), 120, amt=1.0)
+        sky = E.dawn_sky(1210, horizon=0.75, sun=None, mid=(0.36, 0.25, 0.14), cloud=0.7)        # 第七棒：去身后日轮，只留画外右上光 + 光斑虚焦
+        yy, xx = E.grid()
+        sky = sky + (np.exp(-(((xx - 2100) / 900) ** 2 + ((yy + 80) / 600) ** 2)) * 0.7)[..., None] * np.array([1.0, 0.72, 0.4], np.float32)
         self.bg = cv2.GaussianBlur(sky, (0, 0), 18)
         r = np.random.default_rng(121)
         self.bok = [(r.uniform(900, 1900), r.uniform(150, 900), r.uniform(25, 70), r.uniform(0.2, 0.6)) for _ in range(18)]
@@ -815,7 +836,10 @@ def lyr_gu():
 
 
 class E14T(E14):
-    def text(self, fr, t): return lyr_gu().draw(fr, t)
+    def text(self, fr, t):                                               # 第七棒：「骨未凉」在 E15 入点前 3 帧内淡出，不挂到斩轴爆点上
+        out = lyr_gu().draw(fr, t)
+        a = c01((6295 / 30 - 1 / 60 - t) / 0.1)
+        return fr + (out - fr) * a
 
 
 class E15(Shot):   # S122b ECU 刀尖拖过焦土，划出一道朱金火线（他自己画的线）；刀尖由精灵 alpha 标定，火线头 = 刀尖
@@ -878,7 +902,7 @@ class E15(Shot):   # S122b ECU 刀尖拖过焦土，划出一道朱金火线（�
         fr = E.dust_motes(fr, t, 1233, n=50, amt=0.5, drift=(-30, -60), col=(1.0, 0.55, 0.25), size=(1, 3))
         return bloom(fr, 0.75, 0.5)
 
-    def text(self, fr, t): return lyr_gu().draw(fr, t)
+    def text(self, fr, t): return fr                                   # 第七棒：爆点上不挂「骨未凉」
 
 
 # ---- 对 / 错：竖分屏镜像（左金右墨 → 左墨右朱）
@@ -1046,14 +1070,15 @@ class E21(Shot):   # S127 CU（第三棒重做）逆光侧脸：低调光，脸�
     GR = dict(expo=0.72, sat=0.55, tint=(1.06, 0.97, 0.88), lift=0.0, gamma=1.15)   # 第四棒：新精灵与 E16 同脸，不再藏五官
 
     def __init__(self):
-        sky = E.dawn_sky(1270, horizon=0.7, sun=(1600, 300), mid=(0.42, 0.30, 0.17), cloud=0.6)
-        sky = E.sun_disc(sky, (1600, 300), 90, amt=1.0)
+        sky = E.dawn_sky(1270, horizon=0.7, sun=None, mid=(0.38, 0.27, 0.15), cloud=0.6)          # 第七棒：去身后日轮 → 画外右上光源，只留斜入体积光
+        yy, xx = E.grid()
+        sky = sky + (np.exp(-(((xx - 2150) / 800) ** 2 + ((yy + 120) / 560) ** 2)) * 0.75)[..., None] * np.array([1.0, 0.74, 0.42], np.float32)
         self.bg = cv2.GaussianBlur(sky, (0, 0), 14)
 
     def render(self, t):
         u = self.u(t)
         fr = self.bg.copy()
-        fr = fx2.god_rays(fr, (1600, 300), strength=0.7, length=1.0, t=t)
+        fr = fx2.god_rays(fr, (2150, -100), strength=0.7, length=1.0, t=t, src_r=240)
         fr, info = put(fr, t, 'E_r4/profile_up', (560 + 40 * u, 1170), h=1080, rim=(1.0, 0.86, 0.6), rim_amt=4.0, rim_dir=(1.0, -0.35),
                        grade=self.GR, wind=12)
         fr = E.dust_motes(fr, t, 1271, n=80, amt=0.5, drift=(-20, -30), depth=True)
@@ -1189,8 +1214,8 @@ class E25(Shot):   # S130（第三棒重做）低机位终极横斩：墨黑红�
         self.sky = E.dawn_sky(1300, horizon=0.92, top=(0.02, 0.012, 0.012), mid=(0.17, 0.05, 0.03), hor=(0.62, 0.20, 0.08), cloud=0.9, sun=None)
         n = K.fbm(H // 2, W // 2, 1302, base=10, octaves=5)
         self.ground = cv2.resize(((0.02 + 0.05 * n)[..., None] * np.array([1.0, 0.7, 0.6], np.float32)).astype(np.float32), (W, H))
-        self.s1 = Sub('的', [CT(55, 6)], 450, CT(55, 8) - 0.12, seed=200)
-        self.l = LyrO([('正', 450, 470, 330, 'serif_black', GOLD_T, CT(55, 7))], CT(55, 8) - 0.12, seed=201, glow=0.6, outline=4)
+        self.s1 = Sub('的', [CT(55, 6)], 190, CT(55, 8) - 0.12, seed=200, y=700)
+        self.l = LyrO([('正', 450, 690, 300, 'serif_black', GOLD_T, CT(55, 7))], CT(55, 8) - 0.12, seed=201, glow=0.35, outline=6, plate_amt=0.55)   # 第七棒：下移出横斩光带 + 暗衬
 
     def render(self, t):
         u = self.u(t)
@@ -1242,7 +1267,7 @@ class E26(Shot):   # S131（第三棒重做）一点透视：他划下的那道�
         fr = RS.fx_embers(fr, t, 1312, amt=0.6, n=40)
         return bloom(fr, 0.85, 0.5)
 
-    def text(self, fr, t): return self.l.draw(fr, t)
+    def text(self, fr, t): return self.l.draw(fr, t, alpha=c01((t - (self.t0 + 0.20)) / 0.12))   # 第七棒：线形揭开完成后再淡入，不被揭开边/黑边切字
 
 
 # ---- 高潮碎切（221.27–223.10，按鼓点 221.28 / 221.97 / 222.65 切）：眼 → 斩 → 匾碎，每镜 0.5–0.67s，取代原 1.83s 慢走
@@ -1333,8 +1358,10 @@ class E27c(Shot):   # 匾碎（第五棒重做，去和 E04 正面平拍撞构�
 
 class E28(Shot):   # S132b ECU 暗红腰带与马尾在逆光里翻飞（红绳母题收束）
     def __init__(self):
-        sky = E.dawn_sky(1330, horizon=0.6, sun=(700, 480), mid=(0.5, 0.36, 0.2), cloud=0.6)
-        self.bg = cv2.GaussianBlur(E.sun_disc(sky, (700, 480), 140, amt=1.0), (0, 0), 22)
+        sky = E.dawn_sky(1330, horizon=0.6, sun=None, mid=(0.42, 0.30, 0.17), cloud=0.9)           # 第七棒：去日轮 → 逆光云隙（左上画外光从云缝漏下）
+        yy, xx = E.grid()
+        sky = sky + (np.exp(-(((xx + 200) / 900) ** 2 + ((yy - 200) / 420) ** 2)) * 0.55)[..., None] * np.array([1.0, 0.74, 0.42], np.float32)
+        self.bg = cv2.GaussianBlur(fx2.god_rays(sky, (-200, 150), strength=0.8, length=1.0, t=0.0, src_r=200), (0, 0), 10)
 
     def render(self, t):
         u = self.u(t)
@@ -1675,7 +1702,7 @@ CUTS = {   # 第三棒：亮底上不再用白色系转场（flash_white 0 处�
     'E02': ('hard', 0, 0, {}),
     'E03': ('ink_swallow', 0.10, 0.22, dict(center=(1150, 360), seed=3)),
     'E04': ('hard', 0, 0, {}),
-    'E05': ('whip_pan_blur', 0.05, 0.10, dict(direction='right', strength=0.45)),   # 第六棒：减弱，模糊帧里留住匾纹残影
+    'E05': ('impact', 0, 0, dict(col=(1.0, 0.82, 0.45), amp=10)),   # 第七棒：whip 中间帧纯黄横糊 → 金闪冲击硬切（昭彰开裂的冲击）
     'E06': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=-1, color=(0.03, 0.02, 0.015))),
     'E07': ('hard', 0, 0, {}),
     'E08': ('hard', 0, 0, {}),
@@ -1705,12 +1732,12 @@ CUTS = {   # 第三棒：亮底上不再用白色系转场（flash_white 0 处�
     'E30': ('hard', 0, 0, {}),
     'E31': ('ink_bleed', 0.0, 0.40, dict(center=(960, 540), white=False, seed=9)),
     'E32': ('blade_sweep', 0.12, 0.16, dict(direction=1)),      # 第五棒：平灰板 → 近景刀身掠镜（钢纹/脊线/刃口暖光/运动模糊）
-    'E33': ('fog_wall', 0.14, 0.20, dict(direction=-1)),        # 第五棒：平灰板 → 晨雾墙横扫（体积明暗/顶部暖光/运动模糊）
-    'E34': ('smoke_through', 0.20, 0.30, dict(seed=34, direction=1, color=(0.36, 0.30, 0.25))),   # 第六棒：E33 落灰 → 灰烟穿过 → 日出全景
+    'E33': ('warm_veil', 0.14, 0.20, dict(axis='x', direction=-1, seed=7301, cap=0.66)),   # 第七棒：fog_wall 中间帧满屏平灰 → 暖雾封顶 66%（刀柄/刀穗剪影始终透出）+ 斜入光束 + 翻卷亮边
+    'E34': ('warm_veil', 0.20, 0.30, dict(axis='y', seed=7341, cap=0.62, warm=(1.0, 0.82, 0.52), dark=(0.13, 0.09, 0.06))),   # 第七棒：灰烟平涂 → 自下翻涌的暖金烟（封顶 62%，烟里带光束与亮边）
     'E35': ('hard', 0, 0, {}),
     'E36': ('cut', 0, 0, {}),
 }
-CUSTOM = {'light_sweep': R6.light_sweep, 'gold_leaf': R6.gold_leaf, 'blade_sweep': R5.blade_sweep, 'fog_wall': R5.fog_wall, 'blade_black': R3.blade_black, 'seal_cover': R3.seal_cover, 'ink_swallow': R3.ink_swallow, 'push_h': R3.push_h, 'door_open': R3.door_open}
+CUSTOM = {'warm_veil': R7.warm_veil, 'light_sweep': R6.light_sweep, 'gold_leaf': R6.gold_leaf, 'blade_sweep': R5.blade_sweep, 'fog_wall': R5.fog_wall, 'blade_black': R3.blade_black, 'seal_cover': R3.seal_cover, 'ink_swallow': R3.ink_swallow, 'push_h': R3.push_h, 'door_open': R3.door_open}
 
 # 运镜：(缓动, z0, z1, x0, x1, y0, y1, rot0, rot1)
 MOVE = {

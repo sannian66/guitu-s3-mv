@@ -820,37 +820,85 @@ class V10(Shot):
 
 
 # =====================================================================================
-# V11 98.48–99.47 CU 俯：算盘边的账簿（同 P01 生死簿的竖格人名），99.0 金印「量」重重盖在一列人名上、雨水溅开；「分」宋体
+# V11 98.48–99.47 ECU 平视微距：第七棒——不再盖「量」方印（撞副歌一 S043）、也不再用账簿纸面（生死簿第 3 次）。
+#   雨夜里一杆乌木杆秤（生图 steelyard）横贯画面、浅景深；「分」「量」由秤杆上的铜秤星一颗颗点亮拼成（字 = 秤星），
+#   99.0「量」落定时秤砣一沉、秤杆猛地向下一磕，杆上积的雨珠被震飞。前＝虚焦雨珠，中＝秤杆，后＝暗处宫灯散景。
+def star_glyph(A, step=9, r=3.2, p=1.0, seed=0, order_y=False):
+    """把字形遮罩换成秤星点阵：步长 step 的网格点落在字内 → 圆点；p 控制点亮比例（随机顺序逐颗亮）"""
+    ys, xs = np.mgrid[0:H:step, 0:W:step]
+    inside = A[ys, xs] > 0.45
+    pts = np.stack([xs[inside], ys[inside]], -1)
+    if len(pts) == 0: return np.zeros((H, W), np.float32)
+    rr = np.random.default_rng(seed).random(len(pts))
+    m = np.zeros((H // 1, W // 1), np.float32)
+    for (px, py), q in zip(pts, rr):
+        if q < p: cv2.circle(m, (int(px), int(py)), int(round(r)), 1.0, -1, cv2.LINE_AA)
+    return m
+
+
 class V11(Shot):
     T_LIANG = 99.0
+    SRC, DST, WPX = (0.66, 0.29), (980, 560), 6000
+    CH = [('分', 0.575), ('量', 0.655)]
     def __init__(self):
-        import sec_b_pre1 as P1
-        pg = P1.ledger(5602, cols=11, size=52, x0=120, x1=1800, y0=140, y1=940, chars='壹贰叁肆伍陆柒捌玖拾佰仟万两石斗升银钱')   # 第五棒：人名→账目大写数字（名单母题 ≤2）
+        self.sp = spr('B_r4/steelyard')
         x, y = K.grid()
-        self.page = pg * (0.35 + 0.55 * np.exp(-(((x - 960) / 900) ** 2 + ((y - 560) / 520) ** 2)))[..., None] * np.array([0.9, 0.92, 1.0], np.float32)
-        wet = np.clip((cv2.resize(K.fbm(H // 6, W // 6, 5605, 6, 4), (W, H)) - 0.55) * 3, 0, 1)
-        self.page = self.page * (1 - 0.35 * wet[..., None])
+        bg = BK.dark_bg(5601, 0.008, 0.025, tint=(1.0, 1.0, 1.08))
+        r = np.random.default_rng(5602)
+        bok = np.zeros((H, W), np.float32)
+        for _ in range(16):
+            cv2.circle(bok, (int(r.uniform(0, W)), int(r.uniform(150, 900))), int(r.uniform(30, 80)), float(r.uniform(0.3, 1.0)), -1, cv2.LINE_AA)
+        bok = cv2.GaussianBlur(bok, (0, 0), 10)
+        self.bg = bg + bok[..., None] * np.array([0.30, 0.13, 0.05], np.float32) * 0.5
         self.rain = fx2.RainSheet(5603, density=0.7)
-        self.spl = fx2.Splashes(5604)
-        T.warm('分', 'serif_black', 140)
+        self.drops = r.uniform(0, 1, (40, 3))
+
+    def ang(self, t):
+        th = V(self.T_LIANG)
+        if t < th: return -1.5 + 0.6 * math.sin(t * 3.0)
+        q = t - th
+        return -1.5 + 6.5 * (1 - math.exp(-q / 0.06)) + 2.0 * math.exp(-q / 0.25) * math.sin(q * 30)
 
     def render(self, t):
         u = self.u(t)
-        fr = self.page.copy()
-        ps = clamp01((t - (V(self.T_LIANG) - 0.3 * 0.9)) / 0.9)
-        if ps > 0:
-            fr = T.stamp_seal(fr, '量', 1000, 560, 400, ps, style='yang', rot=-3, seed=56, color='gold')
+        x, y = K.grid()
+        fr = self.bg.copy()
+        rot = self.ang(t)
+        pivot = sp_pt(self.sp, self.SRC, self.DST, self.WPX, 0, (0.80, 0.29))      # 提绳处（秤纽）为支点
+        # 绕支点旋转：先算出支点不动的 dst
+        src_px = (self.SRC[0], self.SRC[1])
+        fr, Aw = put_at(fr, self.sp, t, (0.80, 0.29), pivot, self.WPX, rot=rot,
+                        grade=dict(expo=0.95, sat=0.75, tint=(1.04, 0.97, 0.90), lift=0.0, gamma=1.05),
+                        rim=dict(col=(0.85, 0.9, 1.0), amt=1.8, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=None, wrap=0.25)
+        # 浅景深：焦平面在两字之间
+        cxs = [sp_pt(self.sp, (0.80, 0.29), pivot, self.WPX, rot, (cx, 0.29)) for _, cx in self.CH]
+        fx_ = 0.5 * (cxs[0][0] + cxs[1][0])
+        foc = np.exp(-((x - fx_) / 760) ** 2)[..., None]
+        fr = fr * foc + K.blur_ds(fr, 9) * (1 - foc)
+        fr = fr + np.exp(-((y - (cxs[0][1] - 50)) / 40) ** 2)[..., None] * np.array([0.05, 0.055, 0.065], np.float32) * Aw[..., None]   # 杆面顶光
+        th = V(self.T_LIANG)
+        for i, (ch, cx) in enumerate(self.CH):
+            tk = V(CT(22, 7 + i))
+            p = clamp01((t - (tk - 0.12)) / 0.2)
+            if p <= 0: continue
+            c = cxs[i]
+            A = BV.mask([(ch, c[0], c[1], 150, -rot)], fname='serif_black')
+            st = star_glyph(A, step=9, r=3.3, p=p, seed=5610 + i) * Aw
+            hot = pulse(t, tk, 0.3) * (t >= tk)
+            fr = fr * (1 - st[..., None] * 0.8) + st[..., None] * np.array([1.0, 0.80, 0.45], np.float32) * (0.9 + 0.8 * hot)
+            fr = fr + K.blur_ds(st, 10)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * (0.35 + 0.9 * hot)
+        # 秤杆上的雨珠：落定前沿杆滚动，99.0 一磕全部震飞
         hk = hitp(t, self.T_LIANG, 0.14)
-        if t >= V(self.T_LIANG):
-            fr = K.sparks(fr, t, 5606, (1000, 700), n=120, life=0.55, speed=(300, 1100), dirc=(0, -1), spread=1.6, grav=1400, size=1.4,
-                          area=(420, 20), color=(0.75, 0.8, 0.9), amt=1.0, t0=V(self.T_LIANG), burst=True)
-        pr = prs(22, [7], t)[0]
-        if pr > 0:
-            L = T.Layer(); T.place(L, '分', 420, 420, 190, color='white', fname='serif_black', alpha=min(1, pr * 2), scale=1.3 - 0.3 * eout(pr))
-            fr = T.compose(fr, L, shadow=0.95, outline=3)
+        if t >= th:
+            fr = K.sparks(fr, t, 5606, (fx_, cxs[0][1] - 40), n=140, life=0.6, speed=(250, 900), dirc=(0, -1), spread=1.7, grav=1500, size=1.6,
+                          area=(900, 10), color=(0.78, 0.84, 0.95), amt=1.0, t0=th, burst=True)
+        else:
+            for (a_, b_, c_) in self.drops:
+                px = int(a_ * W + 40 * math.sin(t * 2 + c_ * 9)); py = int(cxs[0][1] - 62 + (px - fx_) * math.tan(math.radians(-rot)))
+                cv2.circle(fr, (px, py), 3 + int(3 * b_), (0.55, 0.60, 0.70), -1, cv2.LINE_AA)
         fr = self.rain.draw(fr, t, intensity=0.8, angle=6)
-        dx, dy, dr = shake(t, 22 * hk, 13, 56)
-        fr = cam(fr, 1.08 + 0.05 * eio(u) + 0.04 * hk, dx, dy - 20 * eio(u), dr - 2 + 1.5 * u)
+        dx, dy, dr = shake(t, 20 * hk, 13, 56)
+        fr = cam(fr, 1.02 + 0.04 * eio(u) + 0.03 * hk, dx - 30 * eio(u), dy, dr)
         return fr, (4 if hk > 0.5 else 0)
 
 
