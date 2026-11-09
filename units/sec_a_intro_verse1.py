@@ -1896,6 +1896,12 @@ def a_brush(A_, B_, p, seed=0):
     ink = body * band * dry
     rev = np.clip((head - 650 - x + (nz - 0.5) * 300) / 80, 0, 1)
     m = cv2.resize(rev, (W, H))[..., None]; k = cv2.resize(ink, (W, H))[..., None]
+    # 第八棒（P2-8）：笔扫过的 A 被墨刷碎 —— 横向拖拽 + 褪色压暗（「罪状」红块不再整块留在笔后）
+    psd = cv2.resize(np.clip((head - x) / 140, 0, 1), (W, H))[..., None]
+    if psd.max() > 0:
+        Asm = cv2.blur(A_, (91, 3)); g_ = Asm.mean(-1, keepdims=True)
+        Asm = (Asm * 0.3 + g_ * 0.7) * 0.35
+        A_ = A_ * (1 - psd) + Asm * psd
     out = A_ * (1 - m) + B_ * m
     return out * (1 - 0.95 * k) + k * np.array([0.012, 0.012, 0.016], np.float32)
 
@@ -1923,9 +1929,15 @@ def a_glyph(A_, B_, p, ch='主', center=(960, 540), size=230):
     L = T.Layer(); T.place(L, ch, center[0], center[1], size, 'white', 'kai', scale=sc, texture=False)
     m = L.A
     nz = cv2.resize(A.ink_noise(77, 256), (W, H))
-    m = np.clip((cv2.GaussianBlur(m, (0, 0), 2 + 4 * p) - 0.5 + (nz - 0.5) * 0.25) * 8 + 0.5, 0, 1)
+    # 第八棒（P2-9）：墨边加飞白丝 + 外缘晕染，让遮罩读得出是「主」字的笔画而不是几块黑块
+    hair = cv2.resize(A.tex(79, 256, 40, 3)[:, :5], (W, H), interpolation=cv2.INTER_LINEAR)
+    hair = cv2.warpAffine(hair, cv2.getRotationMatrix2D((960, 540), -35, 1.3), (W, H), borderMode=cv2.BORDER_REFLECT)
+    mb = cv2.GaussianBlur(m, (0, 0), 2 + 4 * p)
+    m = np.clip((mb - 0.5 + (nz - 0.5) * 0.25 + (hair - 0.5) * 0.45 * np.clip(1 - np.abs(mb - 0.5) * 2.2, 0, 1)) * 8 + 0.5, 0, 1)
     if p > 0.75: m = np.maximum(m, (p - 0.75) / 0.25)
     edge = np.clip(m * (1 - m) * 4, 0, 1)
+    halo = np.clip(cv2.GaussianBlur(m, (0, 0), 14) - m, 0, 1) * (1 - p)
+    A_ = A_ * (1 - 0.75 * halo[..., None])
     out = A_ * (1 - m[..., None]) + B_ * m[..., None]
     return out * (1 - 0.8 * edge[..., None]) + edge[..., None] * np.array([1.0, 0.75, 0.4], np.float32) * 0.6
 
