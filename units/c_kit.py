@@ -352,13 +352,17 @@ def draw_sent(fr, s, t, cam=(0.0, 0.0, 1.0)):
             k = t - ti
             jit = (np.random.default_rng(int(ti * 100) + i).normal(0, 1.2, 2) if k < 0.07 else (0, 0))
             sc = 1.0 + 0.10 * pulse(t, ti, 0.05)
-            T.place(L, c, px + jit[0], py + jit[1], sz * z, colr, s.font, scale=sc, texture=False)
-            # 第十棒（critic_C_r5 P1①）：RGB 错位不再整镜挂着 → 只在落字那一拍闪 2 帧（k < 0.067s）就回正
-            if c in s.glitch and k < 0.067:
-                Lr = Lr or T.Layer()
-                off = 9 * (1 - k / 0.067) + 3
-                T.place(Lr, c, px - off, py, sz * z, (1.0, 0.1, 0.1), s.font, alpha=0.55, texture=False)
-                T.place(Lr, c, px + off, py + 1, sz * z, (0.1, 0.6, 1.0), s.font, alpha=0.45, texture=False)
+            # 第十一棒（critic_C_r5「红青错位像渲染事故」）：关键字落字不再做 RGB 错位，改「冲压」——
+            # 字从 1.32× 砸下、3 帧回到 1.0 并下沉 6px，整句随之一震（铸字落模），没有任何色差
+            slam = 0.0
+            for j, cj in enumerate(s.text):
+                if cj in s.glitch:
+                    kj = t - s.tin[j]
+                    if 0 <= kj < 0.10: slam = max(slam, (1 - kj / 0.10) ** 2)
+            if c in s.glitch and 0 <= k < 0.10:
+                sc = 1.0 + 0.32 * (1 - k / 0.10) ** 2
+            jy = 6 * slam
+            T.place(L, c, px + jit[0], py + jit[1] + jy, sz * z, colr, s.font, scale=sc, texture=False)
         else:
             ee = eout(e, 3)
             sc = lerp(2.4, 1.0, ee)
