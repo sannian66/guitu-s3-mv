@@ -38,8 +38,8 @@ def flagstones(seed=7, n=60, base=(0.075, 0.072, 0.07)):
     r = np.random.default_rng(seed)
     tone = r.uniform(0.75, 1.15, int(cid.max()) + 2)[cid.astype(int)]
     grain = 0.78 + 0.45 * cv2.resize(A.tex(seed + 11, 512, 10, 5), (W, H)) + 0.25 * (cv2.resize(A.tex(seed + 12, 512, 60, 3), (W, H)) - 0.5)
-    seam = np.clip(1 - edge / 7, 0, 1)                                       # 石缝（宽 ~7px，暗）
-    bevel = np.clip(1 - np.abs(edge - 10) / 4, 0, 1) * 0.12                 # 缝边微倒角亮
+    seam = np.clip(1 - edge / 9, 0, 1)                                       # 石缝（宽 ~7px，暗）
+    bevel = np.clip(1 - np.abs(edge - 12) / 4, 0, 1) * 0.22                 # 缝边微倒角亮
     v = tone * grain * (1 - 0.85 * seam) + bevel
     wet = np.clip((cv2.resize(A.tex(seed + 21, 256, 3, 4), (W, H)) - 0.55) * 6, 0, 1)
     wet = np.maximum(wet, seam * 0.9)                                        # 缝里积水
@@ -105,7 +105,7 @@ class Crater:
             for j in range(2):
                 dd = d + r.normal(0, 0.35, 2); dd /= np.linalg.norm(dd)
                 L = r.uniform(380, 900)
-                self.cracks.append(K.crack_path(tuple(p), tuple(p + dd * L), seed + 40 + i * 3 + j, jag=0.05))
+                self.cracks.append(K.crack_path(tuple(p), tuple(p + dd * L), seed + 40 + i * 3 + j, jag=0.025))
         self.zm = None
         if zheng:
             Lz = T.Layer(); T.place(Lz, '正', c[0], c[1] + 10, zsize, 'white', 'kai', texture=False)
@@ -117,18 +117,18 @@ class Crater:
         m = self.mask
         # 坑外投影（光从左上 → 坑沿右下外侧无投影；坑内左上内壁背光 → 投影落在坑底左上）
         inside = m[..., None]
-        depth_dark = 0.45 + 0.35 * self.wall[..., None]
+        depth_dark = 0.22 + 0.30 * self.wall[..., None]
         fr = fr * (1 - inside * depth_dark)
         # 内壁：迎光的一侧（右下内壁朝向左上光源）亮；背光侧（左上内壁）在坑底投下宽阴影
         sh_off = cv2.warpAffine(m, np.float32([[1, 0, -lx * 46], [0, 1, -ly * 46]]), (W, H))
         shadow = np.clip(m - sh_off, 0, 1)                                    # 坑底被左上坑沿遮住的部分
         shadow = cv2.GaussianBlur(shadow, (0, 0), 5)
-        fr = fr * (1 - 0.65 * shadow[..., None])
+        fr = fr * (1 - 0.70 * shadow[..., None])
         lit_off = cv2.warpAffine(m, np.float32([[1, 0, lx * 30], [0, 1, ly * 30]]), (W, H))
         lit = np.clip(m - lit_off, 0, 1) * (1 - self.floor)                   # 右下内壁斜面
         lit = cv2.GaussianBlur(lit, (0, 0), 3)
         stone = 0.8 + 0.4 * cv2.resize(A.tex(91, 256, 40, 3), (W, H))
-        fr = fr + (lit * stone)[..., None] * np.array([0.20, 0.20, 0.22], np.float32)
+        fr = fr + (lit * stone ** 2 * 0.8)[..., None] * np.array([0.26, 0.25, 0.25], np.float32) + (lit * self.wall)[..., None] * np.array([0.10, 0.05, 0.02], np.float32) * heat
         # 坑沿：迎光唇口一线冷高光（雨水湿边），背光唇口暗
         rim = np.clip(cv2.dilate(m, np.ones((5, 5), np.uint8)) - m, 0, 1)
         lip_l = np.clip(rim * (cv2.warpAffine(m, np.float32([[1, 0, -lx * 6], [0, 1, -ly * 6]]), (W, H)) > 0.5), 0, 1)
@@ -141,12 +141,11 @@ class Crater:
         # 裂缝：暗缝 + 缝底一线暖光（余热），只在缝内，不外溢成闪电
         prog = min(1.0, 0.35 + a / 0.35)
         for cp in self.cracks:
-            cm = K.draw_crack((H, W), cp, 2.2, branches=1, seed=5, prog=prog)
-            core = cv2.erode((cm > 0.6).astype(np.uint8), np.ones((2, 2), np.uint8)).astype(np.float32)
-            core = cv2.GaussianBlur(core, (0, 0), 0.8)
+            cm = K.draw_crack((H, W), cp, 2.4, branches=1, seed=5, prog=prog)
+            core = cv2.GaussianBlur(cm, (0, 0), 0.7) * 0.8
             fr = fr * (1 - 0.9 * cm[..., None])
-            warm = heat * (0.22 + 0.55 * math.exp(-a / 0.6)) * (0.9 + 0.1 * math.sin(t * 9))
-            fr = fr + (core * 0.9 + cv2.GaussianBlur(core, (0, 0), 3) * 0.35)[..., None] * np.array([1.0, 0.52, 0.20], np.float32) * warm
+            warm = heat * (0.30 + 0.55 * math.exp(-a / 0.6)) * (0.9 + 0.1 * math.sin(t * 9))
+            fr = fr + (core * 0.9 + cv2.GaussianBlur(core, (0, 0), 3) * 0.35)[..., None] * np.array([0.95, 0.42, 0.16], np.float32) * warm
         # 坑底沿缝透出的暖光（四角最深处一点）
         heatmap = cv2.GaussianBlur(self.floor * (1 - cv2.GaussianBlur(self.floor, (0, 0), 30)), (0, 0), 8)
         fr = fr + heatmap[..., None] * np.array([1.0, 0.5, 0.18], np.float32) * heat * 0.10 * (0.5 + math.exp(-a / 0.8))
@@ -166,8 +165,8 @@ class Crater:
             hi = np.clip(sub - np.roll(np.roll(sub, 2, 0), 2, 1), 0, 1)
             reg = fr[y0:y1, x0:x1]
             reg = reg * (1 - 0.6 * shd[..., None])
-            reg = reg * (1 - sub[..., None]) + sub[..., None] * np.array([0.06, 0.058, 0.056], np.float32) * sc
-            reg = reg + hi[..., None] * np.array([0.22, 0.22, 0.24], np.float32) * sc
+            reg = reg * (1 - sub[..., None]) + sub[..., None] * np.array([0.13, 0.125, 0.12], np.float32) * sc
+            reg = reg + hi[..., None] * np.array([0.30, 0.30, 0.32], np.float32) * sc
             fr[y0:y1, x0:x1] = reg
         return fr
 

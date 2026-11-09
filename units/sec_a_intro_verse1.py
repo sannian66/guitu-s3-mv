@@ -1429,39 +1429,37 @@ class V17(Shot):
         fr = RAIN.draw(fr, t, 0.6, angle=6, layers=(2,))
         return fr
     def top(self, t, a):
-        fr = A.vgrad((0.11, 0.09, 0.075), (0.05, 0.04, 0.034)) * self.ground
-        fr = fr * (1 - 0.25 * cv2.GaussianBlur(self.sq, (0, 0), 60)[..., None])
-        for c in self.cracks:                                                                # 裂缝：暖金余热（不着朱红）
-            m = K.draw_crack((H, W), c, 4, branches=4, seed=3, prog=clamp01(a / 0.45))
-            mg = cv2.GaussianBlur(m, (0, 0), 7)
-            fr = fr * (1 - m[..., None] * 0.9) + (m[..., None] * 0.7 + mg[..., None] * 1.0) * np.array([1.0, 0.55, 0.18], np.float32) * (0.18 + 0.5 * math.exp(-a / 0.7))
-        # 印坑：坑底压暗，左上光 → 上/左内壁亮、下/右内壁投影
-        fr = self.R.engraved(fr, self.sq, light=(-1, -1), depth=26, dark=0.30, hl=(0.85, 0.66, 0.45), hl_amt=0.55)
-        # 坑底凹进去的「正」：再深一层（暗槽 + 槽壁高光），槽底一线暖光渗出
-        fr = self.R.engraved(fr, self.zm, light=(-1, -1), depth=10, dark=0.85, hl=(0.95, 0.75, 0.5), hl_amt=0.9)
-        zg = cv2.GaussianBlur(self.zm, (0, 0), 2.5)[..., None]
-        fr = fr + zg * np.array([1.0, 0.55, 0.2], np.float32) * (0.05 + 0.12 * math.exp(-a / 0.9))      # 槽底余热（暖金，不着红）
+        # 第七棒（critic_A_r4 P0-1）：俯拍雨夜不规则石板地 + 真凹坑（崩口坑沿、内壁厚度、碎石、裂缝透暖光）；
+        # 「正」只在坑底凹刻、靠左上侧光的阴影读出（不着金红、无框）；去砖墙、去橙色闪电、去白色碎屑
+        import a_r7
+        if not hasattr(self, 'cr'):
+            self.cr = a_r7.Crater(c=(960, 585), size=(560, 470), rot=-4.0, seed=17, zheng=True, zsize=300)
+            self.fs, self.wet = a_r7.flagstones(7, n=55)
+            yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+            self.lit = (0.55 + 0.75 * np.exp(-(((xx - 520) / 1300) ** 2 + ((yy + 100) / 900) ** 2)))[..., None]
+        fr = self.fs * self.lit * 2.0
+        fr = a_r7.wet_sheen(fr, self.wet, light=(500, -250), amt=0.30, t=t)
+        fr = self.cr.draw(fr, a, light=(-0.75, -0.65), heat=1.0, t=t)
+        # 尘浪：贴地低矮暖褐，向外推开后散（不是白圈）
         yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32)
-        d = np.hypot(xx * 2 - 960, (yy * 2 - 540) * 1.5)
-        R = 420 + 1300 * eout(a / 0.9)
-        ring = np.exp(-((d - R) / (90 + 260 * a)) ** 2) * math.exp(-a / 0.8)
-        rg = cv2.resize(ring, (W, H))[..., None] * (0.6 + 0.4 * cv2.resize(A.tex(9, 256, 6, 4), (W, H))[..., None])
-        rg = rg * np.clip(cv2.resize(A.ink_noise(19, 256), (W, H))[..., None] * 1.6 - 0.3, 0, 1)
-        fr = fr * (1 - rg * 0.35) + rg * np.array([0.20, 0.16, 0.12], np.float32)
-        fr = K.sparks(fr, t, 71, (960, 540), n=70, life=0.9, speed=(300, 1200), dirc=(0, -1), spread=3.0, grav=0, area=(300, 280), amt=0.45,
-                      t0=V(38.72), burst=True, color=(0.8, 0.7, 0.55))
+        d = np.hypot(xx * 2 - 960, (yy * 2 - 585) * 1.15)
+        R = 430 + 1100 * eout(min(1, a / 1.0))
+        ring = np.exp(-((d - R) / (70 + 220 * a)) ** 2) * math.exp(-a / 0.7) + np.clip((R - d) / R, 0, 1) * 0.25 * math.exp(-a / 0.5)
+        rg = cv2.resize(ring, (W, H)) * np.clip(cv2.resize(A.ink_noise(19, 256), (W, H)) * 1.6 - 0.3, 0, 1)
+        fr = fr * (1 - 0.3 * rg[..., None]) + rg[..., None] * np.array([0.10, 0.085, 0.07], np.float32)
+        fr = fx2.ripples(fr, t, [(420, 820), (1500, 260), (1380, 880), (300, 300), (1650, 640)],
+                         [self.t0 + 0.75, self.t0 + 0.9, self.t0 + 1.05, self.t0 + 1.15, self.t0 + 0.8], speed=120, amt=0.35, life=0.8)
+        fr = RAIN.draw(fr, t, 0.45, angle=6, light=(500, -250), layers=(1, 2))
         return fr
     def render(self, t):
         th = V(38.72); a = t - th
         if a < 0: return self.side(t, th), 0
-        if a < 0.12:                                                                           # 落地：侧面画面压黑一拍 + 两侧尘浪
+        if a < 0.12:                                                                           # 落地：侧面画面压黑一拍（第七棒：去白色碎屑、去色散撕裂）
             fr = self.side(t, th) * (0.30 + 2.5 * max(0, a - 0.05))
-            fr = K.sparks(fr, t, 72, (960, 880), n=120, life=0.5, speed=(500, 1600), dirc=(0, -0.2), spread=3.0, grav=200, area=(560, 10),
-                          amt=0.7, t0=th, burst=True, color=(0.75, 0.6, 0.45))
-            return fr, 6
+            return fr, 0
         fr = self.top(t, a)
-        if a < 0.2: fr = fr * 1.35 + 0.06 * GOLDV
-        return fr, (3 if a < 0.25 else 0)
+        if a < 0.15: fr = fr * (1 + 0.5 * (1 - a / 0.15))
+        return fr, 0
 
 
 # V18 39.47–40.84 HA 高机位大远景（第四棒：原 MCU 回头 → 俯拍）：印坑边缘的石板地上鬼屠一人极小、长影拖向画外，尘浪掠过，
