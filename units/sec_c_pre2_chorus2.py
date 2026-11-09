@@ -515,8 +515,13 @@ def fill_people(n, seed, h, scatter=0.0, t=0.0):
             ox = r.uniform(-0.75, 0.75) * rx; oy = r.uniform(-0.5, 0.3) * ry
             hh = int(h * r.uniform(0.8, 1.15))
             k = scatter * r.uniform(0.6, 1.3)
-            x = c[0] + ox + r.uniform(-1, 1) * 260 * k; y = c[1] + oy - hh * 0.95 - (900 * k - 1100 * k * k * 0.6)
-            ang = r.uniform(-12, 12) + r.uniform(-200, 200) * k
+            # 第十二棒（critic_C_r6 P2⑤）：不再抛成左上一团来源不明的彩色碎纸人 —— 秤盘被翘起时人偶只颠起一下、
+            # 在盘里东倒西歪，站在盘沿外侧的几个从盘边滑落、掉出画框下方（来源一眼可见：就是这只盘）
+            rest = c[1] + oy - hh * 0.95
+            x = c[0] + ox + (ox / max(1.0, rx)) * 140 * k
+            y = rest - (170 * k - 420 * k * k)
+            if abs(x - c[0]) < rx * 0.82: y = min(y, rest)            # 还在盘里：落回盘面
+            ang = r.uniform(-12, 12) + r.uniform(-45, 45) * min(k, 0.6) + (ox / max(1.0, rx)) * 160 * max(0.0, k - 0.3)
             # 第八棒：秤盘里的人也换成 C03 同款皮影（暗房里无幕光透射 → 用暖光衬底提亮）
             fr = PY.draw_piying(fr, PY.piying_sprite(60 + i % 8, hh), x, y, ang, light=1.0, flip=bool(i % 2), base=(0.95, 0.72, 0.45))[0]
         return fr
@@ -545,7 +550,7 @@ class C04(Shot):
         sc = clamp(k / 0.9)
         fl = pulse(t, td, 0.12)
         fr, info = self.B.draw(fr, t, 960, 250, 1360, tilt=tilt, rim=(1.0, 0.72, 0.42), rim_amt=0.9, light=(0.6, -0.8),
-                               fill_l=fill_people(18, 41, 74, scatter=sc * 0.9, t=t),
+                               fill_l=fill_people(12, 41, 92, scatter=sc * 0.9, t=t),
                                fill_r=fill_seal(150, 1.0, fl) if t >= td else None)
         if t < td:   # 坠落中的金印（拖影）
             pr = info['pan_r']

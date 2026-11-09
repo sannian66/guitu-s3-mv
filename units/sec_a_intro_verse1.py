@@ -720,22 +720,25 @@ class V04(Shot):
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         gm = np.clip((yy - 600) / 4, 0, 1)[..., None]
         z = 1.0 / np.maximum(yy - 590, 1)
-        tile = 1 - 0.35 * ((np.mod((xx - 960) * z * 40, 1.0) < 0.06) | (np.mod(60 * np.log(np.maximum(yy - 590, 1)), 5) < 0.35))
+        # 第十一棒（critic_A_r7 P0-2「V04 加真正运镜」）：低机位侧移 truck + 前推 dolly 写进场景层 —— 地砖按深度视差（近处横移最快）、
+        #   砖缝向镜头涌来（前推），远处火把只微移，人物中景居中被跟，前景枪杆最快 → 四层视差速度不同 = 真机位移动，不是人在动
+        e_ = eio(u); camx = 1.8 * e_; push = 9.0 * e_
+        tile = 1 - 0.35 * ((np.mod((xx - 960) * z * 40 - camx, 1.0) < 0.06) | (np.mod(60 * np.log(np.maximum(yy - 590, 1)) - push, 5) < 0.35))
         fr = fr * (1 - gm) + gm * ((0.7 + 0.5 * self.tex) * tile)[..., None] * np.array([0.03, 0.03, 0.036], np.float32)
         for (x, y, ph, row) in self.torch:                                                 # 远处军阵火把（焦外光斑）+ 地面倒影竖条
-            x2 = x - 40 * u * (1 + row); fl = 0.8 + 0.2 * math.sin(t * 11 + ph)
+            x2 = x - 40 * u * (1 + row) - 90 * e_ * (1 + 0.4 * row); fl = 0.8 + 0.2 * math.sin(t * 11 + ph)
             fr = A.glow(fr, (x2, y), 7 + 3 * row, 0.9 * fl, (1.0, 0.55, 0.22), aspect=1.3)
             fr = A.glow(fr, (x2, y), 60, 0.06 * fl, (1.0, 0.45, 0.18))
             fr = fr + (np.exp(-((xx - x2) / 5) ** 2) * np.exp(-np.clip(yy - 600, 0, None) / 160) * (yy > 600))[..., None] * np.array([0.5, 0.25, 0.1], np.float32) * 0.10 * fl
-        fr = fog(fr, t, 2, 450, 700, 0.55, (0.20, 0.20, 0.24), speed=(-50, 0))
-        fr = A.glow(fr, (700, 420), 360, 0.15, (0.55, 0.62, 0.8))
+        fr = fog(fr, t, 2, 450, 700, 0.55, (0.20, 0.20, 0.24), speed=(-50, 0), cam=(-160 * e_, 0))
+        fr = A.glow(fr, (700 - 60 * e_, 420), 360, 0.15, (0.55, 0.62, 0.8))
         # 第九棒（critic_A_r6 P0-1「人物要动」）：鬼屠迎着镜头走近 —— 由右后方斜走到画面中偏右，身形 640→830px，带步伐起伏与左右摆
         e = eio(u); stp = abs(math.sin(math.pi * (t - self.t0) / 0.31))
         fr, info = A.place(fr, t, S('S010/walk'), (1330 - 200 * e + 6 * math.sin(math.pi * (t - self.t0) / 0.31), 1000 + 190 * e - 14 * stp), h=640 + 170 * e,
                            rim=(1.0, 0.6, 0.3), rim_amt=2.4, rim_dir=(0, -1), wind=8, grade=dict(expo=0.85, sat=0.55), rot=1.2 * math.sin(math.pi * (t - self.t0) / 0.31))
         fr = RAIN.draw(fr, t, 0.7, angle=10, light=(960, 520), layers=(1, 2))
         Lp = np.zeros((H // 2, W // 2), np.float32)                                         # 前景虚焦枪杆 ×2
-        for k, (x0, sl) in enumerate(((180 + 900 * u, 0.25), (1700 - 1200 * u, -0.18))):
+        for k, (x0, sl) in enumerate(((420 - 1500 * u, 0.25), (1900 - 1700 * u, -0.18))):           # 第十一棒：两支枪杆同向（与机位反向）高速掠过
             cv2.line(Lp, (int(x0 / 2), 0), (int((x0 + sl * H) / 2), H // 2), 1.0, 14 + 6 * k, cv2.LINE_AA)
             cv2.fillConvexPoly(Lp, np.array([(int(x0 / 2) - 16, 0), (int(x0 / 2) + 16, 0), (int(x0 / 2), 70)], np.int32), 1.0)
         Lp = cv2.resize(cv2.GaussianBlur(Lp, (0, 0), 9), (W, H))[..., None]
@@ -772,8 +775,13 @@ class V06(Shot):
     def render(self, t):
         u = self.u(t); ts = CT(1, 10); ts2 = V(21.86)                     # 第四棒：二次刀光斩字（寒光先完整可读 ≥0.55s）
         fr = night((0.015, 0.017, 0.025), (0.06, 0.065, 0.08), y1=900)
-        fr, _ = self.army.draw(fr, t, cam=dict(x=-1.0 - 3.0 * eio(u), y=1.8, z=-2.5, pitch=1, f=1500), march=0.0, rim_color=COLDV, dof=1.4, fog_dist=50,
-                               level=1.0)                                             # 第九棒：军阵与人物反向视差（配合 MOVES3 环绕）
+        # 第十一棒（critic_A_r7 P0-2）：真环绕 orbit —— 机位绕人物（距 8m）转 -11°→+11°（共 22°）：机位沿圆弧平移并转向始终对准人物，
+        #   军阵（人后 7–30m）随机位同向滑、越远越多；前景枪林（人前）反向急掠；人物本身随视角做透视压缩 + 轮廓光方向转。
+        th = math.radians(-11 + 22 * eio(u)); Zp = 8.0
+        cxw = -2.5 + Zp * math.sin(th); czw = -2.5 - Zp * (1 - math.cos(th))
+        self._th = th
+        fr, _ = self.army.draw(fr, t, cam=dict(x=cxw, y=1.8, z=czw, pitch=1, f=1500, cx=W / 2 + 1500 * math.tan(th)),
+                               march=0.0, rim_color=COLDV, dof=1.4, fog_dist=50, level=1.0)
         fr = cv2.GaussianBlur(fr, (0, 0), 2.0)
         a = t - ts
         if a >= 0:                                                                     # 前排被斩：一道红热裂线
@@ -783,7 +791,15 @@ class V06(Shot):
         fr = fog(fr, t, 0, 640, 960, 0.5, (0.28, 0.3, 0.36), speed=(80, 0))
         ax = 900 + 60 * eout(u)                                                       # 第九棒：收势跟进（人随刀前送 60px、身体由 -2.5° 回正）
         fr, info = A.place(fr, t, S('S010/slash_h'), (ax, 1000), h=720, rim=COLD, rim_amt=3.0, wind=10, grade=dict(expo=0.9, sat=0.55),
-                           mblur=(30 * math.exp(-max(0, a) / 0.08), 0) if a >= 0 else (0, 0), rot=-2.5 * (1 - eout(u)))
+                           mblur=(30 * math.exp(-max(0, a) / 0.08), 0) if a >= 0 else (0, 0), rot=-2.5 * (1 - eout(u)),
+                           rim_dir=(-2.2 * math.sin(th), -1.0))                       # 第十一棒：环绕中轮廓光随视角从人物右侧转到左侧
+        # 第十一棒：人前 3–4m 的前景枪林（虚焦暗剪影），环绕中与军阵反向急掠（视差 ≈ −f·tanθ·(Zp/Z−1)）
+        Lf = np.zeros((H // 4, W // 4), np.float32)
+        for (x0, zf, sl, wd) in ((300, 3.0, 0.10, 9), (1500, 3.6, -0.06, 7), (2500, 3.2, 0.08, 8), (-700, 3.4, -0.05, 8)):
+            xs = x0 - 1500 * math.tan(th) * (Zp / zf - 1) * 0.55
+            cv2.line(Lf, (int(xs / 4), -5), (int((xs + sl * H) / 4), H // 4 + 5), 1.0, wd, cv2.LINE_AA)
+        Lf = cv2.resize(cv2.GaussianBlur(Lf, (0, 0), 3.0), (W, H))[..., None]
+        fr = fr * (1 - 0.9 * Lf) + Lf * 0.012
         if a >= 0:
             fr = streak(fr, 600, -100, 2100, a / 0.08, w=5, amt=1.6, ang=-0.6)
         # 第九棒（critic_A_r6 P0-1）：寒光沿刀身两次扫过（护手 → 刀尖），每次扫到刀尖，「寒光」被点亮一次
@@ -802,10 +818,19 @@ class V06(Shot):
             L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
             L.paste(BG('光', 'kai', 230, cprog(1, [10], t, 0.12)[0], seed=2), 1080, 760, (0.86, 0.12, 0.08))
             a2 = t - ts2
+            # 第十一棒（P0-2「寒光随刀光扫过点亮」）：每次刀身扫光走到刀尖后，一道冷光沿字行由左向右掠过 —— 扫到哪个字哪个字亮（逐字点亮，不是整体闪）
+            for sa, sd in ((V(21.24), 0.30), (ts2 - 0.26, 0.24)):
+                q2 = (t - sa - sd * 0.5) / 0.30
+                if -0.2 <= q2 <= 1.3:
+                    sx = 640 + 620 * q2
+                    for (gx, gy) in ((800, 760), (1080, 760)):
+                        k_ = math.exp(-((gx - sx) / 110.0) ** 2) * (0.25 if (gx == 1080 and cprog(1, [10], t, 0.12)[0] <= 0) else 1.0)
+                        if k_ > 0.02: fr = A.glow(fr, (gx, gy), 200, 0.55 * k_, (0.70, 0.85, 1.0), aspect=0.9)
+                    fr = streak(fr, 760, sx - 160, sx + 160, 1.0, w=3, amt=0.9 * math.sin(math.pi * clamp01(q2)), ang=-1)
             if a2 < 0:
                 fr = T.compose(fr, L, shadow=0.7, glow=0.2 + 0.9 * lit, glow_color=(0.7, 0.85, 1.0))
             else:
-                fr = T.slash_layer(fr, L, clamp01(a2 / 0.66), (940, 760), -4, slide=0.25, sz=230, length=900, sparks=50,
+                fr = T.slash_layer(fr, L, clamp01(a2 / 0.66), (940, 760), -4, slide=0.06, sz=230, length=900, sparks=50,   # 第十一棒：0.25→0.06，斩开错位不超过笔画宽，「寒光」两半不再读成「宙冬/业儿」
                                    style_kw=dict(shadow=0.7, glow=0.3))
                 fr = streak(fr, 760, 300, 1700, a2 / 0.08, w=4, amt=1.2, ang=-4)
         return fr, (5 if 0 <= a < 0.1 else 0)
@@ -1796,7 +1821,7 @@ MOVES3 = {
     'V03': M3('sine_io', 'beat', x=(-60, 60), pitch=(6, 0), note='高机位横移 + 俯仰'),
     'V04': M3('sine_io', 'beat', x=(-90, 70), yaw=(7, -6), z=(1.0, 1.07), note='第九棒：侧移环绕 + 推（人迎镜走近，前景枪林反向扫过）'),
     'V05': M3('expo_in', None, z=(1.0, 1.12), note='急推'),
-    'V06': M3('expo_out', None, z=(1.12, 1.03), yaw=(-9, 8), x=(70, -50), note='第九棒：冲击后环绕 orbit（沿刀身方向绕过人物，军阵反向视差）'),
+    'V06': M3('expo_out', None, z=(1.12, 1.03), yaw=(-6, 6), note='第十一棒：环绕 orbit 主体写进场景层（22°：军阵同向、前景枪林反向视差）；这里只留透视余量 + 推'),
     'V07': M3('sine_io', 'beat', y=(60, -40), pitch=(-6, 0), note='摇臂升 crane up'),
     'V08': M3('sine_io', 'beat', z=(1.0, 1.08), pitch=(-4, 3), yaw=(6, -4), note='第九棒：随玺下压的俯仰 tilt + 小环绕（落印时机位压下）'),
     'V09': M3('sine_io', 'beat', yaw=(-12, 8), z=(1.0, 1.06), note='环绕 orbit'),
