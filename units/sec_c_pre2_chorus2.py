@@ -1540,11 +1540,14 @@ class C26(Shot):
             q[:, 0] = np.clip(q[:, 0], 0, w - 1); q[:, 1] = np.clip(q[:, 1], 0, h - 1)
             if cv2.contourArea(q) < 30: continue
             c = q.mean(0); d = math.hypot(c[0] - w / 2, (c[1] - h / 2 - 20) / 0.75)
-            tris.append((q, c, d, r.uniform(-1, 1), r.uniform(0.6, 1.3)))
+            tris.append((q, c, d, r.uniform(-1, 1), r.uniform(0.6, 1.3), r.uniform(0.72, 1.12), int(r.integers(0, h)), int(r.integers(0, w)),
+                         (r.uniform(0.94, 1.06), 1.0, r.uniform(0.92, 1.05))))   # 第十二棒：每块自己的明暗 / 纹理偏移 / 微色偏
         self.tris = tris; self.S = S
         self.wall = cv2.resize(plate_view('C5/c22_wall', 0.5, 0.62, 2.0), (w, h))
         self.nz = cv2.GaussianBlur(r.random((h, w)).astype(np.float32), (0, 0), 2.5)
         self.nz = (self.nz - self.nz.mean()) / (self.nz.std() + 1e-6)          # 石片断口：噪声扰动边缘，不是干净三角
+        n2 = K.tex('c26s', seed=262, base=24, octaves=4)
+        self.nz2 = np.tile(cv2.resize(n2, (w // 2, w // 2)), (3, 3))                # 石面颗粒（按块错位采样，不是同一张平铺）
     def render(self, t):
         u = self.u(t)
         k = (t - self.t0) * 0.55 + 0.04                         # 慢放
@@ -1553,7 +1556,7 @@ class C26(Shot):
         sky = storm(t, 26, horizon=1100, flash=0.9 + fl, fc=(960, 520), ground=False)
         sky = cv2.resize(sky, (w, h)) + 0.15
         out = sky.copy()
-        for q, c, d, sp, sz in sorted(self.tris, key=lambda z: -z[2]):          # 先远（外圈，动得少）后近（中心，飞得最快）
+        for q, c, d, sp, sz, gn, oy_, ox_, tint in sorted(self.tris, key=lambda z: -z[2]):          # 先远（外圈，动得少）后近（中心，飞得最快）
             delay = d / 900.0 * 0.25
             e = max(0.0, k - delay)
             fly = e * max(0.0, 1.7 - d / 520.0) * sz
@@ -1572,13 +1575,26 @@ class C26(Shot):
                 sub = (slice(max(0, y0), min(h, y1)), slice(max(0, x0), min(w, x1)))
                 mm = m[sub][..., None]; out[sub] = out[sub] * (1 - mm) + self.wall[sub] * mm
                 continue
-            Am = cv2.warpAffine(m, M, (w, h)); Pm = cv2.warpAffine(self.wall * m[..., None], M, (w, h))
-            edge = np.clip(Am - cv2.erode(Am, np.ones((3, 3), np.uint8)), 0, 1)[..., None]
+            sl2 = (slice(max(0, y0 - 4), min(h, y1 + 4)), slice(max(0, x0 - 4), min(w, x1 + 4)))
+            src = np.zeros_like(self.wall)
+            hy_, hx_ = sl2[0].stop - sl2[0].start, sl2[1].stop - sl2[1].start
+            gr = self.nz2[oy_ % 400:oy_ % 400 + hy_, ox_ % 400:ox_ % 400 + hx_]
+            if gr.shape != (hy_, hx_): gr = cv2.resize(gr, (hx_, hy_))
+            src[sl2] = self.wall[sl2] * m[sl2][..., None] * (gn * (0.82 + 0.36 * gr))[..., None] * np.array(tint, np.float32)
+            Am = cv2.warpAffine(m, M, (w, h)); Pm = cv2.warpAffine(src, M, (w, h))
+            # 第十二棒（critic_C_r6 P2④）：均匀亮描边 → 只在朝缺口电光（画面中心）那一侧的断口有细高光，背光侧压暗
+            Ab = cv2.GaussianBlur(Am, (0, 0), 1.2); gy_, gx_ = np.gradient(Ab)
+            cxp, cyp = M[0, 0] * c[0] + M[0, 1] * c[1] + M[0, 2], M[1, 0] * c[0] + M[1, 1] * c[1] + M[1, 2]
+            lx, ly = w / 2 - cxp, h / 2 + 20 - cyp; ln = math.hypot(lx, ly) + 1e-3; lx, ly = lx / ln, ly / ln
+            facing = np.clip(-(gx_ * lx + gy_ * ly) * 2.5, 0, 1)
+            back = np.clip((gx_ * lx + gy_ * ly) * 2.5, 0, 1)
+            edge = (facing * (Am > 0.3))[..., None]
+            Pm = Pm * (1 - 0.6 * back[..., None])
             shade = 1.0 - 0.35 * min(1.0, fly)
             th = np.float32([[1, 0, -dirv[0] * 5 * min(1, fly * 3)], [0, 1, 6 * min(1, fly * 3)]])      # 厚度：暗侧面
             As = cv2.warpAffine(Am, th, (w, h))
             out = out * (1 - As[..., None] * 0.9) + As[..., None] * 0.03
-            out = out * (1 - Am[..., None]) + Pm * shade + edge * np.array([0.8, 0.85, 1.0], np.float32) * 0.38 * fl   # 第十一棒：勾边 0.6→0.38（去贴纸描边感）
+            out = out * (1 - Am[..., None]) + Pm * shade + edge * np.array([0.8, 0.85, 1.0], np.float32) * 0.55 * fl   # 第十二棒：单侧断口高光
         fr = cv2.resize(out, (W, H))
         fr = dust(fr, t, 261, n=200, amt=0.6, drift=(0, 160), region=(0, BAR, W, H - BAR))
         fr = rain(fr, self.t0 + (t - self.t0) * 0.4, 260, inten=0.8, angle=6)
