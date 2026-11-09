@@ -917,7 +917,7 @@ class C16(Shot):
         g = T.glyph('血', 'serif_black', 600, False).astype(np.float32)
         g = cv2.resize(g, (g.shape[1], int(g.shape[0] * 0.56)), interpolation=cv2.INTER_AREA)
         self.g = np.zeros((H, W), np.float32)
-        gh, gw = g.shape; y0, x0 = 770 - gh // 2, 960 - gw // 2
+        gh, gw = g.shape; y0, x0 = 735 - gh // 2, 960 - gw // 2   # 第九棒 P2⑨：上移 35px，下沿离开遮幅
         self.g[y0:y0 + gh, x0:x0 + gw] = g
         r = np.random.default_rng(16)
         self.nz = cv2.resize(cv2.GaussianBlur(r.random((H // 8, W // 8)).astype(np.float32), (0, 0), 2), (W, H))
@@ -1994,7 +1994,7 @@ class C41(Shot):
             G = np.zeros((H // 2, W // 2), np.float32)
             x1 = int(lerp(0, W, eout(clamp(k / 0.12))) / 2)
             cv2.line(G, (0, int(self.ty[0, 0] / 2)), (x1, int((470 + 0.03 * (x1 * 2 - 960)) / 2)), 1.0, 2, cv2.LINE_AA)
-            G = cv2.resize(G, (W, H)); G = G * np.clip((self.nf - 0.2) * 2, 0, 1)
+            G = cv2.resize(G, (W, H)); G = G * self.var   # 第九棒：原来用细噪声门限 → 断成虚线（蚂蚁线）；改连续带、只做低频明暗起伏
             fr = fr + (G + cv2.GaussianBlur(G, (0, 0), 8) * 1.5)[..., None] * np.array([1.0, 0.35, 0.08], np.float32) * (0.5 + 0.7 * math.exp(-k / 0.3))
         # 人：从横斩里旋进收势（前 0.15s 旋转拖影），之后呼吸、风；身后的「答」光勾亮发梢和刀脊
         kin = clamp((t - self.t0) / 0.16)
@@ -2114,8 +2114,8 @@ for _t, _n, _k in ((131.42, 1, 'white'), (131.96, 1, 'neg'), (132.07, 1, 'white'
 S = Sent
 SENTS = [
     # 预副歌二：铅字打字机（权力的话）
-    S(29, [0, 1, 2, 3], 600, 860, size=86, mode='type', glitch='正义', exit='glitch', out=V(122.79)),                 # 谁的正义（C04）
-    S(29, [4, 5, 6, 7, 8], 1580, 290, size=80, mode='type', glitch='交易', gold='交易', exit='glitch', out=V(123.90)),   # 第五棒：延续进 C06 前 6 帧，「的」不断档  # 成了交易的（C05）
+    S(29, [0, 1, 2, 3], 1240, 560, size=86, mode='type', glitch='正义', gold='正义', exit='glitch', out=V(122.79), back=0.45),   # 第九棒 P1④：左下角 → 画面中心（秤杆下、立柱与右盘吊绳之间），「正义」金                 # 谁的正义（C04）
+    S(29, [4, 5, 6, 7, 8], 960, 255, size=84, back=0.5, mode='type', glitch='交易', gold='交易', exit='glitch', out=V(123.90)),   # 第五棒：延续进 C06 前 6 帧，「的」不断档；第九棒 P1④：右上角 → 箱口正上方视线中心  # 成了交易的（C05）
     # 「我不低头」起：他自己的重字（Black，朱红「不」逐拍落下）
     S(30, [0, 1, 2, 3], 420, 330, size=96, mode='fly', layout='v', red='不', exit='shatter', out=V(125.62), track=0.12),
     S(30, [4, 5, 6], 1640, 540, size=120, mode='fly', layout='v', red='不命', exit='cut', out=V(126.22), track=0.12, back=0.7, sizes=[110, 110, 150]),   # 第五棒：脸偏左、字竖排右侧鬓发暗区（不压脸），切点前才收
@@ -2126,7 +2126,7 @@ SENTS = [
     S(32, [1, 2], 1500, 860, size=70, mode='fly', exit='shatter', out=V(135.55)),                                    # 未冷（C16）
     S(32, [3, 4, 5], 960, 260, size=120, mode='fly', red='刀', exit='shatter', out=V(137.40), track=0.25),           # 刀不放
     S(33, [0, 1, 2], 560, 300, size=100, mode='fly', exit='shatter', out=V(138.33), offs=[(0, 0), (40, 60), (80, 120)]),   # 谁人来（斜）
-    S(33, [6, 7], 960, 880, size=76, mode='fly', exit='shatter', out=V(140.62), track=0.4),                        # 一方
+    S(33, [6, 7], 960, 850, size=112, mode='fly', exit='shatter', out=V(140.62), track=0.4, back=0.6),   # 第九棒 P2⑧：76→112px + 暗衬                        # 一方
     S(34, [6, 7], 1560, 470, size=260, mode='fly', exit='shatter', out=V(144.70), sizes=[170, 260], back=0.4),   # 第五棒：补「铜」（143.48 落在 C24 开头，原来丢字）                                      # 墙（C24 低频震）
     S(35, [0, 1], 460, 300, size=84, mode='fly', exit='shatter', out=V(145.60), layout='v'),                        # 那就（C25）
     S(35, [3, 4], 1480, 830, size=84, mode='fly', exit='shatter', out=V(146.40)),                                    # 开它
