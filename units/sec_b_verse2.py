@@ -227,6 +227,14 @@ class V01(Shot):
         S = 1.14
         poly = np.int32([[-40, 395], [975, 588], [975, 718], [-40, 560]]) * S
         m = np.zeros((h, w), np.uint8); cv2.fillConvexPoly(m, poly.astype(np.int32), 255)
+        lum0 = cv2.GaussianBlur(self.P.mean(-1), (0, 0), 1.5)
+        dark = (lum0 < 0.085).astype(np.uint8)                       # 只取圆木本体（暗），窗外亮天不随之移动 → 不出方块
+        dark = cv2.morphologyEx(dark, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+        m = (m // 255) * dark
+        nlab, lab, st, _ = cv2.connectedComponentsWithStats(m)
+        if nlab > 1:
+            big = 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA])); m = (lab == big).astype(np.uint8)
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8)) * 255
         small = cv2.resize(self.P, (w // 2, h // 2)); ms = cv2.resize(cv2.dilate(m, np.ones((15, 15), np.uint8)), (w // 2, h // 2))
         bgi = cv2.inpaint((np.clip(small, 0, 1) * 255).astype(np.uint8), ms, 9, cv2.INPAINT_TELEA).astype(np.float32) / 255
         self.Pbg = cv2.resize(bgi, (w, h))
@@ -238,7 +246,7 @@ class V01(Shot):
         th = V(self.T_HIT)
         if t < th:
             q = clamp01((t - self.t0) / (th - self.t0))
-            return -170 * (1 - q ** 2.2)                     # 拉后 → 加速撞上
+            return -110 * (1 - q ** 2.2)                     # 拉后 → 加速撞上
         q = t - th
         return -55 * math.sin(min(q / 0.32, 1.0) * math.pi * 0.5) * math.exp(-max(0, q - 0.32) / 0.6)   # 回弹
 
@@ -1542,7 +1550,7 @@ def section():
 
 
 _C1 = [None]
-SEAM_N = 3                                    # 2586–2595：副歌一 S047 原帧 →（雨幕溶解）→ V01；墨退遮罩两边同一个
+SEAM_N = 1                                    # 2586–2595：副歌一 S047 原帧 →（雨幕溶解）→ V01；墨退遮罩两边同一个
 
 
 def frame(f, cache=None):
