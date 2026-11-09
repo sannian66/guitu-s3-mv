@@ -17,6 +17,7 @@ import vcam3 as V3
 import vcam as VC
 import a_kit as A
 import a_r7 as R7
+import a_r8 as R8
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
 READY = False
@@ -934,10 +935,13 @@ class V09(Shot):
             fr = fr + fl_m * np.exp(-((xx - bx + 60 * u) / 40) ** 2) * np.exp(-(yy - 880) / 60) * np.array([0.5, 0.3, 0.12], np.float32) * 0.6
         # 天平：先在黑底合成拿到预乘色，再做倒影
         z = np.zeros((H, W, 3), np.float32)
-        rot = 0.5 * math.sin(t * 1.3)
+        rot = 0.0
         P, info = A.place(z, t, self.spr, (960, 880), h=740, anc=(0.5, 1.0), rim=COLD, rim_amt=1.4, rim_dir=(-0.8, -0.5),
                           grade=dict(expo=1.05, sat=0.85, tint=(1.04, 1.0, 0.92), gamma=1.0), wind=0, breathe=0.0, rot=rot)
         Al = info['A'][..., None]
+        # 第八棒（critic_A_r5 P0-1）：横梁按支点慢摆 —— 装进「人命」后纸人盘被金玺压得往上翘（右盘下沉），带一点阻尼余摆
+        sl = 0.075 * eio(u) - 0.020 + 0.012 * math.sin(t * 4.2) * (1 - 0.6 * u)
+        P, Al = R8.shear_beam(P, Al, (946, 170), sl, 330, sl * 440, col_half=70, fade=150)
         Rf = cv2.flip(P[880 - 120:880], 0); Ra = cv2.flip(Al[880 - 120:880, :, 0], 0)[..., None]
         g = np.linspace(0.35, 0.0, 80, dtype=np.float32)[:, None, None]
         fr[880:960] = fr[880:960] * (1 - Ra[:80] * g) + cv2.GaussianBlur(Rf[:80], (0, 0), 3) * g
@@ -945,7 +949,7 @@ class V09(Shot):
         fr = A.glow(fr, info['to_scr']((0.78, 0.63)), 90, 0.25 + 0.1 * math.sin(t * 5), (1.0, 0.8, 0.4))   # 金玺反光
         fr = fog(fr, t, 1, 700, 900, 0.16, (0.20, 0.15, 0.11), speed=(-30, 0), light=(1180, 40))
         # 前景：焦外暗柱边横移 + 焦外烛焰
-        fx_ = 1980 - 520 * u
+        fx_ = 2000 - 360 * u
         m = np.clip((xx - fx_) / 40, 0, 1)
         fr = fr * (1 - 0.94 * m) + np.exp(-((xx - fx_ - 30) / 14) ** 2) * np.array([0.35, 0.18, 0.08], np.float32) * 0.4
         fr = A.glow(fr, (140 + 80 * u, 900), 70, 0.5, (1.0, 0.55, 0.25), aspect=1.3)
@@ -987,7 +991,8 @@ class V10(Shot):
         return inner, wall, rimB, rimF
     def render(self, t):
         u = self.u(t); tl = CT(3, 8); td = V(28.10)
-        sway = 18 * math.sin(t * 2.1)
+        sway = -34 + 68 * eio(u) + 10 * math.sin(t * 3.4)                              # 第八棒：盘在链上从左摆到右（起止差 ~70px）
+        bob = 14 * math.sin(t * 3.4 + 0.9)                                             # 人随盘起伏
         fr = night((0.035, 0.026, 0.016), (0.012, 0.012, 0.016))
         fr = A.glow(fr, (960, -60), 760, 0.55, (1.0, 0.74, 0.40))                      # 顶上天平金光（主光）
         fr = fx2.god_rays(fr, (960, -40), strength=0.45, length=1.0, color=(1.0, 0.78, 0.45), t=t, src_r=200)
@@ -1021,8 +1026,26 @@ class V10(Shot):
         inn = inn * (1 - 0.6 * lipsh[..., None])
         fr = fr * (1 - inner[..., None]) + inn * inner[..., None]
         fr = fr + (rimB * 0.7 + cv2.GaussianBlur(rimB, (0, 0), 4) * 0.25)[..., None] * np.array([0.85, 0.60, 0.30], np.float32) * 0.8
-        # 人：单膝跪在盘中，盘沿以下被盘壁挡住
-        fr, info = A.place(fr, t, self.R6.hair_clean('A/kneel_pan'), (930 + sway, 1030 + 6 * math.sin(t * 2.1 + 0.6)), h=820 * (1 + 0.02 * u), rim=COLD,
+        # 第八棒（critic_A_r5 P0-3）：人与盘面的接触 —— 顶光正下方的软接触阴影 + 膝/靴下的暗核；盘面上一抹人影倒影（金面镜反）
+        cs = np.zeros((H // 2, W // 2), np.float32)
+        cv2.ellipse(cs, (int((930 + sway) / 2), int((self.CY + 70 + bob) / 2)), (150, 26), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+        cs2 = np.zeros_like(cs)
+        cv2.ellipse(cs2, (int((900 + sway) / 2), int((self.CY + 78 + bob) / 2)), (80, 10), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+        cs = cv2.resize(cv2.GaussianBlur(cs, (0, 0), 14) * 0.75 + cv2.GaussianBlur(cs2, (0, 0), 4) * 0.6, (W, H)) * inner
+        fr = fr * (1 - np.clip(cs, 0, 0.92)[..., None])
+        # 人：单膝跪在盘中，盘沿以下被盘壁挡住（kneel_pan_fix：臂/刀/腿间封闭灰底洞清掉）
+        z0 = np.zeros_like(fr)
+        Pk, ik = A.place(z0, t, R8.kneel_pan_fix(), (930 + sway, 1030 + bob), h=820 * (1 + 0.02 * u), rim=COLD,
+                         rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
+        Ak = ik['A']
+        y_c = int(self.CY + 60 + bob)
+        hgt = 150
+        if y_c - hgt > 0:
+            refl = cv2.flip(Pk[y_c - hgt:y_c], 0); ra = cv2.flip(Ak[y_c - hgt:y_c], 0)[..., None]
+            yend = min(H, y_c + hgt)
+            g_ = np.linspace(0.30, 0.0, yend - y_c, dtype=np.float32)[:, None, None] * inner[y_c:yend, :, None]
+            fr[y_c:yend] = fr[y_c:yend] * (1 - ra[:yend - y_c] * g_ * 0.8) + cv2.GaussianBlur(refl[:yend - y_c], (0, 0), 4) * g_ * np.array([1.0, 0.85, 0.6], np.float32)
+        fr, info = A.place(fr, t, R8.kneel_pan_fix(), (930 + sway, 1030 + bob), h=820 * (1 + 0.02 * u), rim=COLD,
                            rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
         fr = A.glow(fr, (930 + sway, 300), 260, 0.10, (1.0, 0.72, 0.4))
         # 盘壁：青铜（铸纹环带 + 铜锈 + 随摆动滑过的镜面高光）
@@ -1908,11 +1931,27 @@ def a_zoom(A_, B_, p, center=(960, 540)):
     return np.maximum(A2 * (1 - m), B2 * m) * 0.6 + (A2 * (1 - m) + B2 * m) * 0.4
 
 
+# 第八棒（critic_A_r5 P0-1）：镜头层镜内运动（在转场与歌词之前），保证起/止两帧机位可见不同
+INNER = {
+    'A03': dict(z=(1.0, 1.06), c=(900, 520), d=(-40, 0)),
+    'A04': dict(z=(1.0, 1.07), c=(1250, 420), d=(-30, 10)),
+    'A07a': dict(z=(1.0, 1.12), c=(960, 760), d=(0, 70), ease='lin'),                 # 升镜：城楼在画里下沉 + 推
+    'V09': dict(z=(1.0, 1.09), c=(960, 400), d=(0, 10)),
+    'V10': dict(z=(1.0, 1.12), c=(930, 470), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
+    'V13': dict(z=(1.0, 1.07), c=(1250, 560), d=(-50, 0)),
+    'V19': dict(z=(1.0, 1.07), c=(1420, 380), d=(0, 25)),
+    'V20': dict(z=(1.10, 1.0), c=(900, 600), ease='out'),
+}
+
+
 class _Lazy:
     def __init__(self, cls): self.cls = cls; self.t0 = cls.t0; self.t1 = cls.t1; self.obj = None; self.id = cls.__name__
     def render(self, t):
         if self.obj is None: self.obj = self.cls()
-        return self.obj.render(t)
+        fr, ca = self.obj.render(t)
+        sp = INNER.get(self.id)
+        if sp: fr = R8.inner_push(fr, (t - self.t0) / max(1e-6, self.t1 - self.t0), t, sp)
+        return fr, ca
 
 
 def build_cam():

@@ -1607,7 +1607,8 @@ class V24(Shot):
         fy = HOR + FF * CH / 12.0
         # 第七棒：人物放大到画面 ~1/2 高、不再纯黑平贴——冷月轮廓光（上）+ 刀痕红光从脚下反打（下），边缘被雨溅打
         fx0 = 960 + FF * (X0 + AX * 12 - 0.9) / 12.0
-        fr, Am = put(fr, self.sp, t, 500, (fx0 - 300, fy + 40),   # 人在刀痕左侧，字在右侧不压人 rim=dict(col=(0.78, 0.86, 1.0), amt=3.4, dir=(0.4, -1.0)),
+        # 人在刀痕左侧，字在右侧不压人；第八棒：原 rim 参数误被写进注释（轮廓光从未生效）→ 恢复
+        fr, Am = put(fr, self.sp, t, 500, (fx0 - 300, fy + 40), rim=dict(col=(0.78, 0.86, 1.0), amt=3.4, dir=(0.4, -1.0)),
                      grade=dict(expo=0.42, sat=0.5, tint=(1.05, 0.92, 0.88), lift=0.0, gamma=1.15), wind_amp=8, shade=None, wrap=0.35)
         x_, y_ = K.grid()
         fr = fr + (Am * np.clip((y_ - (fy - 300)) / 340, 0, 1))[..., None] * RED * 0.22
@@ -1632,8 +1633,22 @@ class V25(Shot):
     def __init__(self):
         self.sp = spr('back_stand')
         sk = night_sky(6901, top=(0.02, 0.022, 0.03), bot=(0.16, 0.15, 0.15), horizon=0.62)
-        wl, wm = city_wall_far(6902, 480, 600, tone=0.05)
         x, y = K.grid()
+        # 第八棒（P1-8：V20/V24/V25 三镜同为城墙地平线）：V25 去城墙 → 雨雾中的远山脊线（两层，远淡近深），刀痕直指山口
+        xs = np.arange(W, dtype=np.float32)
+        def ridge(seed, base, amp, oct_):
+            r = np.zeros(W, np.float32); rng = np.random.default_rng(seed)
+            for k in range(oct_):
+                fq = 2 ** k / 900.0; ph = rng.uniform(0, 6.28)
+                r += (amp / 2 ** k) * np.abs(np.sin(xs * fq * 3.1 + ph))
+            r += 60 * np.exp(-((xs - 960) / 260) ** 2)          # 山口：中间低（刀痕指向）
+            return base - r + r.mean()
+        wm = np.zeros((H, W), np.float32); wl = np.zeros((H, W, 3), np.float32)
+        for seed, base, amp, tone in ((6902, 520, 70, 0.10), (6909, 575, 45, 0.05)):
+            rr = ridge(seed, base, amp, 5)
+            m = (y > rr[None, :]).astype(np.float32)
+            wl = wl * (1 - m[..., None]) + tone * np.ones(3, np.float32) * m[..., None]
+            wm = np.maximum(wm, m)
         self.gm = sstep(590, 620, y)
         mud = (0.015 + 0.03 * cv2.resize(K.fbm(H // 2, W // 2, 6903, 12, 6), (W, H)))[..., None] * np.ones(3, np.float32)
         # 第五棒 9/n：城楼平涂块（程序味）→ 远景大气透视：墙体/城楼重虚化 + 檐口上方雾幕吞掉硬边 + 刀痕红光反打墙根

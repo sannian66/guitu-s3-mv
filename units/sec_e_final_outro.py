@@ -904,6 +904,7 @@ class E15(Shot):   # S122b ECU 刀尖拖过焦土，划出一道朱金火线（�
         # 爆点：刀尖拖过时斩断一幅「天理」律令轴（第三棒新增：砍中东西）
         self.scr = R3.Scrolls(150, 1, (1180, 1180), 100, (760, 760), (250, 250), big=['天理'], tone=(0.92, 0.86, 0.72))
         self.scr.items[0]['amp'] = 0.3
+        it = self.scr.items[0]; it['img'], it['a'] = R8.wood_tablet(it['a'].shape)   # 第八棒：挂轴（第三幅）→ 竖挂木律令牌「天理」阴刻填金（去重：挂轴只剩 E06/E09）
         us = np.linspace(0, 1, 400); xs_ = -100 + 1900 * np.array([eio(0.3 + v * 0.7) for v in us])
         self.tcut = 209.83 + float(us[np.argmax(xs_ >= 1180)]) * (210.33 - 209.83)
 

@@ -140,3 +140,54 @@ class BladeECU:
         Cw = cv2.warpAffine(col, Mx, (W, H), flags=cv2.INTER_LINEAR, borderValue=0)
         Aw = cv2.warpAffine(self.A, Mx, (W, H), flags=cv2.INTER_LINEAR, borderValue=0)
         return fr * (1 - Aw[..., None]) + Cw * Aw[..., None], Aw, Mx
+
+
+def wood_tablet(shape, chars=('天', '理'), seed=150):
+    """E15 第八棒：把「天理」挂轴换成竖挂木律令牌（同尺寸，替换 R3.Scrolls 条目的 img/a）。
+    木纹（沿长向、噪声扭曲年轮）+ 倒角四边 + 顶部铁环挂绳；「天理」阴刻填金（槽壁暗、槽底旧金、受光边）。返回 (img, a)。"""
+    import c1kit as K
+    LL, WW = shape
+    r = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:LL, 0:WW].astype(np.float32)
+    n = cv2.resize(K.fbm(max(8, LL // 6), max(8, WW // 6), seed, base=5, octaves=4), (WW, LL))
+    warp = xx + 18 * (n - 0.5) + 6 * np.sin(yy / 140.0)
+    grain = 0.5 + 0.5 * np.sin(warp / 3.2 + 2.0 * np.sin(warp / 23.0))
+    fine = cv2.resize(r.random((LL // 2, max(2, WW // 8))).astype(np.float32), (WW, LL), interpolation=cv2.INTER_CUBIC)
+    base = np.array([0.30, 0.17, 0.085], np.float32)
+    img = base[None, None] * (0.70 + 0.30 * grain + 0.18 * (n - 0.5) + 0.08 * (fine - 0.5))[..., None]
+    # 板身：上端留挂环位置，四边倒角（左上受光、右下背光）
+    top = 26
+    m = 10.0
+    dl, dr = xx, WW - 1 - xx
+    dt, db = yy - top, LL - 1 - yy
+    A = np.clip(np.minimum(np.minimum(dl, dr), np.minimum(dt, db)) + 0.5, 0, 1).astype(np.float32)
+    bev_l = np.clip(1 - dl / m, 0, 1); bev_t = np.clip(1 - dt / m, 0, 1) * (dt >= 0)
+    bev_r = np.clip(1 - dr / m, 0, 1); bev_b = np.clip(1 - db / m, 0, 1)
+    img = img * (1 + 0.55 * np.maximum(bev_l, bev_t))[..., None] * (1 - 0.6 * np.maximum(bev_r, bev_b))[..., None]
+    # 阴刻填金
+    s = int(WW * 0.62); y = top + 40 + s * 0.55
+    M = np.zeros((LL, WW), np.float32)
+    for ch in chars:
+        gl = T.glyph(ch, 'serif_black', s, False); g = gl.shape[0]
+        x0, y0 = int(WW / 2 - g / 2), int(y - g / 2)
+        xs, ys = max(0, x0), max(0, y0); xe, ye = min(WW, x0 + g), min(LL, y0 + g)
+        if xe > xs and ye > ys: M[ys:ye, xs:xe] = np.maximum(M[ys:ye, xs:xe], gl[ys - y0:ye - y0, xs - x0:xe - x0])
+        y += s * 1.08
+    Mb = cv2.GaussianBlur(M, (0, 0), 1.6)
+    gy, gx = np.gradient(Mb)
+    lit = np.clip((gx * 0.7 + gy * 0.7) * 8, -1, 1)
+    wall = np.clip(Mb * (1 - Mb) * 4, 0, 1)
+    gold = np.array([0.72, 0.52, 0.22], np.float32) * (0.75 + 0.5 * n[..., None])
+    worn = np.clip((cv2.resize(r.random((LL // 6, WW // 6)).astype(np.float32), (WW, LL)) - 0.25) * 3, 0, 1)   # 金漆斑驳
+    fill = M * (0.55 + 0.45 * worn)
+    img = img * (1 - 0.75 * Mb[..., None]) + fill[..., None] * gold
+    img = img + (np.clip(lit, 0, 1) * wall)[..., None] * np.array([0.9, 0.7, 0.4], np.float32) * 0.6
+    img = img * (1 - 0.7 * np.clip(-lit, 0, 1) * wall)[..., None]
+    # 挂环 + 绳
+    cx = WW / 2
+    ring = np.exp(-((np.hypot(xx - cx, yy - (top - 2)) - 11) / 2.2) ** 2) * (yy < top + 6)
+    rope = np.exp(-((xx - cx) / 2.0) ** 2) * (yy < top - 12)
+    img = img * (1 - ring[..., None]) + ring[..., None] * np.array([0.22, 0.20, 0.19], np.float32) * (1 + 0.8 * (yy < top - 6))[..., None]
+    img = img * (1 - rope[..., None]) + rope[..., None] * np.array([0.35, 0.06, 0.04], np.float32)
+    A = np.maximum(A, np.clip(ring * 1.4, 0, 1)); A = np.maximum(A, np.clip(rope * 1.4, 0, 1))
+    return np.clip(img, 0, 2).astype(np.float32), cv2.GaussianBlur(A, (0, 0), 0.7)

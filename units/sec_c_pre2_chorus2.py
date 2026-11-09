@@ -1800,6 +1800,10 @@ class C37(Shot):
         # 匾（独立层：先在黑底上合成，再按裂缝分两半）
         P, A = put(self.Z.copy(), t, 'C5/c37_plaque', 960, 560, 560, anchor='src', src=(0.5, 0.5), rot=sw, rim=COLD, rim_amt=1.4,
                    rim_dir=(-0.5, -0.9), flash=0.5 * fl, expo=0.95 + 0.4 * fl, sat=0.85, tint=(1.0, 0.98, 0.94), wind=0, breathe=0.0)
+        # 第九棒 P2⑩：匾心先有暗刻的「判」（阴刻、暗铜色），不再是半拍空匾；电光再把它逐笔描成泥金
+        Ld = T.Layer(); T.place(Ld, '判', 960, 560, 300, (0.30, 0.21, 0.10), 'serif_black', rot=sw, texture=False)
+        Ld.A *= 0.85 * sm(self.t0, self.t0 + 0.12, t)
+        P = T.compose(P, Ld, shadow=0.7, shadow_sigma=3)
         if t >= tp - 0.30:                      # 泥金「判」：电光逐笔描亮（自上而下）
             prog = sm(tp - 0.30, tp + 0.04, t)
             L = T.Layer(); T.place(L, '判', 960, 560, 300, (1.0, 0.78, 0.36), 'serif_black', rot=sw, texture=False)
@@ -2055,8 +2059,8 @@ CUTS = {
     'C24': ('occlusion', 0.10, 0.10, dict(kind='pillar', direction=1)),  # 横移：墙柱掠过前景
     'C25': ('hard', 0, 0, {}),
     'C26': ('shatter', 0.0, 0.22, dict(center=(960, 540))),        # 第六棒：从 C25 中轴劈缝炸开
-    'C27': ('luma', 0.08, 0.14, {}),                                     # 崩墙后的亮天 → 缺口亮天（亮处匹配）
-    'C28': ('push', 0.06, 0.10, dict(center=(960, 480), z=0.5)),         # 推进缺口里的光
+    'C27': ('smoke_through', 0.08, 0.14, dict(direction=1, density=1.0, color=(0.62, 0.64, 0.68))),   # 第九棒 P2⑪：luma 中间帧碎片+天光糊团、露出 C27 方边 → 崩墙石尘冲过镜头
+    'C28': ('flash_white', 0.0, 0.10, dict(peak=0.40, width=0.5, color=(0.92, 0.95, 1.0))),   # 第九棒 P2⑪：push 中间帧「亮」与人脸叠鬼影 → 伪天亮那道电光过曝切入
     'C29': ('hard', 0, 0, {}),                                           # 第四棒：luma 会在 C28 亮眼处开洞（像面具）→ 落拍硬切冲击
     'C30': ('flash_red', 0.0, 0.14, {}),
     'C31': ('hard', 0, 0, {}),

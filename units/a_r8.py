@@ -160,3 +160,25 @@ def shear_beam(P, Al, pivot, slope, beam_y1, pan_dy, col_half=70, fade=60):
     P2 = cv2.remap(P, xx, my, cv2.INTER_LINEAR, borderValue=0)
     A2 = cv2.remap(Al[..., 0], xx, my, cv2.INTER_LINEAR, borderValue=0)[..., None]
     return P2, A2
+
+
+# ---------------------------------------------------------------------------------------------
+# 镜内机位运动（critic_A_r5 P0-1）：在镜头层（转场前、歌词前）做缓推 / 平移 / 摆动，起止两帧必有可见差异。
+# spec = dict(z=(z0,z1), c=(cx,cy), d=(dx,dy) 终点平移px, rot=(r0,r1) 度, ease='io'|'out'|'lin', wob=(amp_deg, hz))
+def inner_push(fr, u, t, spec):
+    e = {'io': lambda x: x * x * (3 - 2 * x), 'out': lambda x: 1 - (1 - x) ** 3, 'lin': lambda x: x}[spec.get('ease', 'io')](min(1.0, max(0.0, u)))
+    z0, z1 = spec.get('z', (1.0, 1.0)); z = z0 + (z1 - z0) * e
+    cx, cy = spec.get('c', (960, 540)); dx, dy = spec.get('d', (0, 0))
+    r0, r1 = spec.get('rot', (0.0, 0.0)); rot = r0 + (r1 - r0) * e
+    wa, wh = spec.get('wob', (0.0, 0.0)); rot += wa * math.sin(2 * math.pi * wh * t)
+    if abs(z - 1) < 1e-4 and abs(rot) < 1e-4 and dx == 0 and dy == 0: return fr
+    M = cv2.getRotationMatrix2D((float(cx), float(cy)), float(rot), float(z))
+    M[0, 2] += dx * e; M[1, 2] += dy * e
+    return cv2.warpAffine(np.ascontiguousarray(fr, np.float32), M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+
+def shake(t, t0, amp=14.0, tau=0.12, seed=0):
+    a = t - t0
+    if a < 0: return 0.0, 0.0
+    k = amp * math.exp(-a / tau)
+    return k * math.sin(a * 71 + seed), k * math.cos(a * 57 + 2 * seed)
