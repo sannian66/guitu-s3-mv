@@ -376,7 +376,7 @@ class P06(Shot):
         M = cv2.getPerspectiveTransform(np.float32([[0, 0], [2300, 0], [2300, 1400], [0, 1400]]), q)
         c = cv2.perspectiveTransform(np.float32(cen)[None], M)[0]
         self.cen = [(float(a), float(b)) for a, b in c if -50 < a < W + 50 and -50 < b < H + 50]
-        T.warm('血', 'kai', 520); T.warm('用来装潢', 'serif_sb', 72)
+        T.warm('用来装潢', 'serif_sb', 100)
         self.flow_n = cv2.resize(K.fbm(H // 8, W // 8, 906, base=4, octaves=4), (W, H))
         r = np.random.default_rng(907)
         st = cv2.resize(r.random((8, W // 14)).astype(np.float32), (W, H), interpolation=cv2.INTER_CUBIC)
@@ -409,23 +409,23 @@ class P06(Shot):
         bb = cv2.GaussianBlur(blood, (0, 0), 2.5)
         spec = np.clip(-cv2.Sobel(bb, cv2.CV_32F, 1, 0, ksize=3) * 1.5, 0, 1) + np.clip(-cv2.Sobel(bb, cv2.CV_32F, 0, 1, ksize=3), 0, 1) * 0.5
         fr = fr + spec[..., None] * np.array([1.0, 0.62, 0.52], np.float32) * 0.8
-        # 「血」巨字：49.62 字头墨洇显出，之后下流
-        pb = clamp01((t - (self.T_XUE - 0.12)) / 0.3)
-        if pb > 0:
-            a = T.ink_bleed_glyph('血', 'kai', 520, max(0.02, pb), seed=6, bleed=1.0)
-            L = T.Layer(); L.paste(a, 760, 500, (1.0, 0.16, 0.08))
-            L = T.drip_layer(L, clamp01((t - self.T_XUE) / 0.8), n=7, seed=6, length=0.5)
-            fr = fr * (1 - 0.8 * K.blur_ds(L.A, 30)[..., None])
-            fr = T.compose(fr, L, shadow=0.8, glow=0.3, glow_color=(0.6, 0.05, 0.03))
-        # 用 血 来 装 潢（宋体竖排，暗衬）
+        # 第七棒：去掉朱红「血」巨字（留给副歌一 S028）。「用血来装潢」竖排刻在血幕右侧门板上；「血」一字由门缝流下的血水写成（墨洇 + 下淌），
+        #   与其余宋体同一列、同一字号，只是它是湿的、红的、还在往下流
         pr = tp(9, [4, 5, 6, 7, 8], t, 0.18)
-        L = T.Layer()
+        L = T.Layer(); LB = T.Layer()
         for i, (ch, pc) in enumerate(zip('用血来装潢', pr)):
             if pc <= 0: continue
-            col = (0.95, 0.20, 0.12) if ch == '血' else (0.96, 0.94, 0.88)
-            T.place(L, ch, 1600, 290 + i * 108, 80, color=col, fname='serif_sb', alpha=min(1, pc * 2), scale=1 + 0.4 * (1 - eout(pc)))
-        fr = fr * (1 - 0.45 * K.blur_ds((np.abs(x - 1600) < 70) * (y > 220) * (y < 840) * 1.0, 30)[..., None])
-        fr = T.compose(fr, L, shadow=0.85, glow=0.12)
+            if ch == '血':
+                a = T.ink_bleed_glyph('血', 'kai', 150, max(0.02, pc), seed=6, bleed=1.2)
+                LB.paste(a, 1600, 290 + i * 118 + 6, (0.80, 0.07, 0.04))
+            else:
+                T.place(L, ch, 1600, 290 + i * 118, 100, color=(0.96, 0.94, 0.88), fname='serif_sb', alpha=min(1, pc * 2), scale=1 + 0.4 * (1 - eout(pc)))
+        LB = T.drip_layer(LB, clamp01((t - self.T_XUE) / 0.9), n=6, seed=6, length=0.9)
+        fr = fr * (1 - 0.5 * K.blur_ds((np.abs(x - 1600) < 80) * (y > 220) * (y < 900) * 1.0, 30)[..., None])
+        fr = T.compose(fr, L, shadow=0.85, glow=0.10)
+        fr = T.compose(fr, LB, shadow=0.6, glow=0.35, glow_color=(0.7, 0.05, 0.03))
+        hb = cv2.GaussianBlur(LB.A, (0, 0), 2)
+        fr = fr + np.clip(-cv2.Sobel(hb, cv2.CV_32F, 1, 1, ksize=3), 0, 1)[..., None] * np.array([1.0, 0.6, 0.5], np.float32) * 0.6   # 湿血高光
         k = pulse(t, self.T_XUE, 0.12) * (t >= self.T_XUE)
         fr = cam(fr, 1.0 + 0.04 * eio(u) + 0.06 * k, 0, 40 - 80 * eio(u))
         return fr, (3 if k > 0.5 else 0)
@@ -767,7 +767,7 @@ class P11(Shot):
 # P12 MCU：鬼屠竖刀当面，刀身一分为二的脸（blade_face）；「只信这柄」马善政竖排，逐字光洇
 class P12(Shot):
     def __init__(self):
-        self.sp = spr('blade_face')
+        self.sp = spr('B_r4/blade_face2')                       # 第七棒：束发版（全片造型统一）
         self.bg = BK.dark_bg(912, 0.015, 0.05)
         T.warm('只信这柄', 'kai', 96)
 
@@ -940,12 +940,13 @@ class P14(Shot):
 
 
 class P15(Shot):
-    """第五棒新增（58.26 拍点切）：LS 极低机位——鬼屠举刀向天（生图 raise_blade），通红的刀身直刺雷云，
-    火星顺刀身往上飞、云底被刀光染红；59.13 鼓停定格压暗憋住 → 副歌一 S028（横刀 CU + 血字）——接缝换景别：LS → CU。"""
+    """第七棒重做（评审 P0：LS 举刀向天 ≈ 副歌一 S030 月下举刀）：MS 侧面横刀蓄势（生图 guard_h，束发）——
+    他侧身平端长刀于眼前，刀身仍带 P14 的余烬红，刀尖指向画左；缓推 + 火星沿刃口剥落；59.13 鼓停：刀身一线寒光由刀镡扫向刀尖，
+    画面压暗憋住 → 副歌一 S028（横刀 CU + 血字）——横刀线同向接，景别 MS → CU。"""
     T_HOLD = V(59.13)
-    SRC, DST, WPX = (0.47, 0.985), (960, 1010), 1600
+    SRC, DST, WPX = (0.45, 0.17), (1010, 455), 2200
     def __init__(self):
-        self.sp = spr('raise_blade')
+        self.sp = spr('B_r4/guard_h')
         self.p7 = P07()
         self.tex = K.tile(512, 915, 6, 4)
 
@@ -954,22 +955,26 @@ class P15(Shot):
         if t > self.T_HOLD: t = self.T_HOLD + (t - self.T_HOLD) * 0.05
         u = clamp01((t - self.t0) / (self.T_HOLD - self.t0))
         x, y = K.grid()
-        fr = self.p7.sky(t * 1.4, rot=0.6)
-        dst = (self.DST[0], self.DST[1] + 40 * (1 - eio(u)))
-        wpx = self.WPX * (1.0 + 0.06 * eio(u))
-        g = spt(self.sp, self.SRC, dst, wpx, (0.466, 0.225)); tip = spt(self.sp, self.SRC, dst, wpx, (0.476, 0.02))
-        fr += np.exp(-(((x - tip[0]) / 800) ** 2 + ((y - tip[1]) / 380) ** 2))[..., None] * (RED * 0.55 + 0.04)          # 云底被刀光染红
-        fr += sstep(820, 1000, y)[..., None] * np.array([0.10, 0.03, 0.025], np.float32) * (1 + 0.3 * math.sin(t * 9))  # 湿地反红
-        fr = K.fog(fr, t, 1501, amt=0.25, y0=0.75, y1=1.0)
-        fr, Aw = put_at(fr, self.sp, t, self.SRC, dst, wpx, grade=GR_COLD, rim=dict(col=(1.0, 0.45, 0.32), amt=2.6, dir=(0.0, -1.0)),
-                        wind_amp=7, shade=(500, 1500, 0.1, 500, 0.35))
-        fr, band = blade_heat(fr, Aw, g, tip, 0.012 * wpx + 6, 1.0, 1.0, t, seed=15)
-        fr += cv2.GaussianBlur(band.astype(np.float32), (0, 0), 6)[..., None] * (RED * 0.8 + GOLD * 0.4)
-        fr = K.sparks(fr, t, 1515, tuple(((g + tip) / 2).astype(int)), n=120, life=1.1, speed=(150, 520), dirc=(0.05, -1), spread=0.5, grav=-120,
-                      area=(30, int(abs(g[1] - tip[1]) / 2)), amt=1.0)
-        fr = BK.rain(fr, t, 1502, amt=0.3, n=450, angle=-4)
-        fr = heat_haze(fr, t, self.tex, 5)
-        fr = cam(fr, 1.0 + 0.05 * eio(u), 0, 0, 1.5 * (1 - eio(u)))
+        fr = self.p7.sky(t * 1.2, rot=0.4) * 0.8
+        fr += np.exp(-(((x - 600) / 700) ** 2 + ((y - 450) / 300) ** 2))[..., None] * RED * 0.18
+        dst = (self.DST[0] + 30 * (1 - eio(u)), self.DST[1])
+        wpx = self.WPX * (1.0 + 0.07 * eio(u))
+        fr = K.fog(fr, t, 1501, amt=0.22, y0=0.6, y1=1.0)
+        fr, Aw = put_at(fr, self.sp, t, self.SRC, dst, wpx, grade=dict(expo=0.82, sat=0.6, tint=(0.95, 0.96, 1.03), lift=0.0, gamma=1.1),
+                        rim=dict(col=(1.0, 0.45, 0.32), amt=2.4, dir=(-0.9, -0.3)), wind_amp=6, shade=(1100, 1900, 0.3, 600, 0.4))
+        g = spt(self.sp, self.SRC, dst, wpx, (0.345, 0.170)); tip = spt(self.sp, self.SRC, dst, wpx, (0.006, 0.165))
+        fr, band = blade_heat(fr, Aw, g, tip, 0.009 * wpx + 6, 0.75, 1.0, t, seed=15)
+        # 59.13 一线寒光沿刃扫过（蓄势）
+        q = clamp01((t - (self.T_HOLD - 0.20)) / 0.22)
+        if q > 0:
+            px = g[0] + (tip[0] - g[0]) * eio(q); py = g[1] + (tip[1] - g[1]) * eio(q)
+            sh = np.exp(-(((x - px) / 70) ** 2 + ((y - py) / 10) ** 2)) * band
+            fr = fr + sh[..., None] * np.array([1.0, 0.97, 0.92], np.float32) * 1.4 + K.blur_ds(sh, 14)[..., None] * 0.5
+        fr = K.sparks(fr, t, 1515, tuple(((g + tip) / 2).astype(int)), n=90, life=1.0, speed=(80, 300), dirc=(0.0, -1), spread=0.9, grav=-100,
+                      area=(int(abs(g[0] - tip[0]) / 2), 12), amt=0.8)
+        fr = BK.rain(fr, t, 1502, amt=0.28, n=420, angle=-6)
+        fr = heat_haze(fr, t, self.tex, 3)
+        fr = cam(fr, 1.0 + 0.06 * eio(u), 0, 0, 0)
         if tr > self.T_HOLD:
             fr = fr * (1 - 0.6 * clamp01((tr - self.T_HOLD) / 0.1))
         return fr, 0

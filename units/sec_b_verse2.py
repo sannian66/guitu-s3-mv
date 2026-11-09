@@ -1220,7 +1220,7 @@ class V16(Shot):
 class V17(Shot):
     PALM = (620, 760)
     def __init__(self):
-        self.sp = spr('S056/palm_open')
+        self.sp = spr('B_r4/palm_open2')          # 第七棒：束发版（造型统一）
         self.bg = BK.dark_bg(6201, 0.01, 0.035)
         self.rain = fx2.RainSheet(6202, density=0.9)
         T.warm('谁的', 'kai', 120); T.warm('命', 'serif_black', 150); T.warm('都', 'kai', 90)
@@ -1295,7 +1295,7 @@ class V18(Shot):
 # V19 108.34–109.55 MCU：握拳顺势握住刀柄、转身，马尾甩出雨珠（grab_turn）。匹配：拳 → 刀柄上的拳；「手掌」志莽行书右下
 class V19(Shot):
     def __init__(self):
-        self.sp = spr('S057/grab_turn')
+        self.sp = spr('B_r4/grab_turn2')          # 第七棒：束发、背后 3/4 侧（与 V17 正面拆开）
         sk = night_sky(6401, top=(0.02, 0.022, 0.03), bot=(0.09, 0.095, 0.11), horizon=0.85)
         self.bg = sk
         self.rain = fx2.RainSheet(6402, density=1.0)
