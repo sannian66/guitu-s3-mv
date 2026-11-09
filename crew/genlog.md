@@ -428,3 +428,9 @@
 - 4 张 1536×2048：正面 / 右 3-4 侧 / 正右侧 / 背面，A-pose，纯绿幕 #00FF00（用户 18:0x 指示改绿幕，灰板发丝抠不干净）。共 **12 积分**，全部 try1 采用。
 - 文件：`assets/gen/char/hero_{front,tq_r,side_r,back}_{raw,cut}.png`（cut = `tools/cutout_green.py` 纯色键，1.1s/张）。
 - task id：front 2af05541 / tq_r a14b38c6 / side_r 93a9ded3 / back 19cc229c。
+
+## 2026-11-09 18:20–18:45 · 分层立绘素材第二批（表情 + 关键姿势）
+- 渠道 `RH_image2` 4K，3 积分/张。8 个设计：4 表情（calm/angry/smirk/look）+ 3 姿势（raise/slash/draw）+ 左 3/4 全身。
+- **计费说明（诚实记）**：第一批提交时我的 id 解析 bug（响应 id 在顶层，不在 task 里）导致 8 个任务拿不到 id、结果取不回，白花 **24 点**；重提 8 张成功，**24 点**。本批合计 **48 点**。已修脚本（稳取顶层 id）。
+- 资产：`assets/gen/char/hero_{expr_*,pose_*,view_tq_l}_{raw,cut}.png`；`hero_back_cut.png` 已从「正+背」双人同框中裁出背面（816×2051 原生）。
+- 汇总对比图：`out/char_sheet.jpg`。
