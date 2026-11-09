@@ -197,10 +197,19 @@ def shake(t, t0, amp=14.0, tau=0.12, seed=0):
 
 
 _FEATH = None
+_F2 = []
+def _FEATH2():
+    if not _F2:
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        d = np.minimum.reduce([xx, W - 1 - xx, yy, H - 1 - yy])
+        _F2.append(np.clip(d / 160.0, 0, 1) ** 1.5)
+    return _F2[0]
+
+
 def a_cleave8(A_, B_, p, angle=32.0, center=(960, 540), mode='open', col=(1.0, 0.35, 0.15)):
     """a_r7.a_cleave 的修正版（critic_A_r5 P1-6/7）：原版两块用「有效画面（黑边内）」作遮罩平移，
     一块往上走时它的下沿取自黑边外 → 遮罩为 0 → 漏出 B 的碎片（V12 入右半脸上的恶徒衣角）。
-    这里改用整帧（镜头本来就渲染满 1080）+ 画框四周 80px 羽化，碎片不再出现。"""
+    这里遮罩按半平面无限延伸（REPLICATE），块移出画框的部分补黑（与黑边同色），碎片不再出现。"""
     global _FEATH
     import a_r7
     if p < 0.3: return a_r7.a_cleave(A_, B_, p, angle, center, mode, col)
@@ -216,8 +225,8 @@ def a_cleave8(A_, B_, p, angle=32.0, center=(960, 540), mode='open', col=(1.0, 0
     for sgn in (1, -1):
         tx = sgn * (nv[0] * sep + dv[0] * sl); ty = sgn * (nv[1] * sep + dv[1] * sl)
         M = np.float32([[1, 0, tx], [0, 1, ty]])
-        half = cv2.warpAffine(A_, M, (W, H), borderMode=cv2.BORDER_REPLICATE)
-        mk = cv2.warpAffine(((sd > 0) if sgn > 0 else (sd <= 0)).astype(np.float32) * _FEATH, M, (W, H))
+        half = cv2.warpAffine(A_ * _FEATH2()[..., None], M, (W, H), borderMode=cv2.BORDER_CONSTANT)   # 块的画框边柔和压黑（不硬切矩形），不漏 B
+        mk = cv2.warpAffine(((sd > 0) if sgn > 0 else (sd <= 0)).astype(np.float32), M, (W, H), borderMode=cv2.BORDER_REPLICATE)
         mk = mk * (1 - max(0.0, (q - 0.65) / 0.35))
         edge = np.exp(-((sd - sgn * sep) / 3.0) ** 2) * mk
         out = out * (1 - mk[..., None]) + half * mk[..., None]

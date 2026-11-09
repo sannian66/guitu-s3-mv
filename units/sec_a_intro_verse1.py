@@ -1632,9 +1632,11 @@ class V21(Shot):
         p = cprog(7, [8], t, 0.12)[0]
         tf = CT(7, 8)
         if t < tf:                                                                      # 第八棒（P1-6）：转场斩缝里就露出「锋」——随刀势自右滑入，42.80 落定
-            s_ = clamp01((t - (self.t0 - 0.12)) / (tf - (self.t0 - 0.12)))
-            T.place(L, '锋', 690 + 760 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=0.9)
-        elif p > 0: T.place(L, '锋', 690, 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=max(0.9, eout(p)), scale=1 + 0.08 * (1 - eout(p)))
+            s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
+            T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=0.9, blur=10 * math.sin(math.pi * s_))
+        elif p > 0:
+            s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
+            T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=max(0.9, eout(p)), scale=1 + 0.08 * (1 - eout(p)))
         p2 = cprog(7, [9], t, 0.12)[0]
         if p2 > 0: T.place(L, '芒', 1240, 530, 500, (0.86, 0.12, 0.08), 'xing', alpha=eout(p2), scale=1 + 0.3 * (1 - eout(p2)))
         if a < 0:
