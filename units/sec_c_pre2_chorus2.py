@@ -2098,7 +2098,7 @@ class C41(Shot):
             return (q - q.mean()) / (q.std() + 1e-6)
         b = (g0 > 0.5).astype(np.uint8)
         sd = cv2.distanceTransform(b, cv2.DIST_L2, 5) - cv2.distanceTransform(1 - b, cv2.DIST_L2, 5)   # 字内为正
-        sd = sd + 3.2 * lf(9, 411) + 1.2 * lf(3, 412)            # 不规则：大起伏 + 小锯齿
+        sd = sd + 1.3 * lf(9, 411) + 0.5 * lf(3, 412)            # 不规则：大起伏 + 小锯齿（第十二棒：3.2/1.2 → 1.3/0.5，竹字头细笔不再被吃断）
         self.sd = sd.astype(np.float32)
         self.g = np.clip(sd / 1.5 + 0.5, 0, 1).astype(np.float32)          # 烧穿的洞（边缘已不规则）
         self.var = np.clip(0.75 + 0.25 * lf(6, 413), 0.45, 1.0).astype(np.float32)   # 烧边亮度起伏（不归零 → 不断开）
@@ -2125,17 +2125,17 @@ class C41(Shot):
             fr = fr * (1 - 0.88 * np.maximum(body * (1 - thru), ring)[..., None])
             fr = fr * (1 - 0.25 * ash[..., None]) + ash[..., None] * np.array([0.10, 0.095, 0.09], np.float32)
             fr = fr + fire[..., None] * np.array([1.0, 0.45, 0.12], np.float32) * 2.0 * (1 - 0.85 * thru)   # 第十棒：烧穿后火线退到边缘
-            fr = fr + ember[..., None] * np.array([1.0, 0.32, 0.07], np.float32) * (1.1 + 0.4 * thru)
+            fr = fr + ember[..., None] * np.array([1.0, 0.30, 0.06], np.float32) * (1.1 - 0.35 * thru)   # 第十二棒：烧穿后炭红边收窄，外圈焦黑环露出来
             fr = fr + cv2.GaussianBlur(ember, (0, 0), 6)[..., None] * np.array([1.0, 0.35, 0.08], np.float32) * 0.6 * (1 - 0.7 * thru)
             if thru > 0:
                 core = np.clip((sd - 4.0) / 3.0, 0, 1) * lit
                 # 第十棒（critic_C_r5 P2④）：字芯不再过曝白黄 → 压回暖红熔芯（越往笔画中心越偏橙），笔画轮廓靠焦黑环读出
                 dep = np.clip((sd - 4.0) / 14.0, 0, 1)[..., None]
-                hot = (np.array([0.80, 0.16, 0.05], np.float32) * (1 - dep) + np.array([1.0, 0.42, 0.14], np.float32) * dep) \
-                    * (0.62 + 0.25 * pulse(t, ta, 0.12)) * (0.85 + 0.3 * self.var[..., None])
+                hot = (np.array([0.50, 0.07, 0.025], np.float32) * (1 - dep) + np.array([0.80, 0.22, 0.06], np.float32) * dep) \
+                    * (0.50 + 0.20 * pulse(t, ta, 0.12))   # 第十二棒（critic_C_r6 P1③）：字芯再压暗一档 → 暖红熔芯，不再一团橙黄 * (0.85 + 0.3 * self.var[..., None])
                 fr = fr * (1 - core[..., None] * thru) + core[..., None] * hot * thru
-                fr = fr + cv2.GaussianBlur(core, (0, 0), 40)[..., None] * np.array([1.0, 0.35, 0.12], np.float32) * 0.32 * thru
-                fr = K.vol_light(fr, (1330, 545), 700, (1.0, 0.5, 0.25), 0.20 * thru)
+                fr = fr + cv2.GaussianBlur(core, (0, 0), 40)[..., None] * np.array([1.0, 0.30, 0.10], np.float32) * 0.14 * thru
+                fr = K.vol_light(fr, (1330, 545), 700, (1.0, 0.45, 0.22), 0.10 * thru)
             # 向上飘的少量火星（从烧边升起，循环发射）
             fr = sparks(fr, t, 415, (1330, 600), n=36, life=1.1, speed=(40, 140), dirc=(0, -1), spread=0.5, grav=-60,
                         area=(240, 220), color=(1.0, 0.55, 0.2), amt=0.7 * float(lit.max()))
@@ -2158,7 +2158,7 @@ class C41(Shot):
         fr = sparks(fr, t, 412, (1790, 470), n=120, life=0.6, speed=(200, 900), dirc=(1, -0.2), spread=1.0, grav=900, t0=ts, burst=True,
                     color=(1.0, 0.6, 0.25), amt=1.1)
         fr = sparks(fr, t, 413, (1330, 545), n=200, life=0.9, speed=(100, 600), dirc=(0, -1), spread=1.6, grav=-80, t0=ta, burst=True,
-                    area=(260, 260), color=(1.0, 0.7, 0.35), amt=1.0)
+                    area=(260, 260), color=(1.0, 0.45, 0.18), amt=0.55)
         fr = rain(fr, t, 410, inten=0.8, angle=10, layers=(1, 2, 3), freeze=0.35 if t > ta else None)
         return fr
 
