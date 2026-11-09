@@ -259,3 +259,11 @@ def ink_bg(t, seed=21):
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     fr = fr + (np.exp(-(((xx - 960) / 700) ** 2 + ((yy - 540) / 400) ** 2)) * 0.05)[..., None] * np.array([0.9, 0.35, 0.25], np.float32)
     return fr
+
+
+def face_shade(info, c, r=260):
+    """V19：以脸中心（精灵归一化坐标 c）为界，右半侧柔阴影遮罩（侧光塑形，让脸不扁平柔白）。"""
+    x, y = info['to_scr'](c)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    m = np.clip((xx - x + 20) / 140, 0, 1) * np.exp(-(((xx - x) / (r * 1.6)) ** 2 + ((yy - y) / (r * 1.4)) ** 2))
+    return m[..., None]

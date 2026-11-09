@@ -125,8 +125,8 @@ class A02(Shot):
     def render(self, t):
         u = self.u(t)
         fr = self.bg.copy()
-        fr = A.moon(fr, 1830, 400, 360, 0.95, halo=0.7)
-        fr = A.clouds(fr, t, 7, speed=(-60, 0), y0=300, y1=760, amt=0.65, col=(0.22, 0.24, 0.30), light=(1830, 400), light_r=420, thr=0.47)
+        fr = A.moon(fr, 2080, 300, 400, 0.80, halo=0.9)                      # 第七棒：月心出框，只剩云后一弧月晕（拉开与副歌一满月剪影的距离）
+        fr = A.clouds(fr, t, 7, speed=(-60, 0), y0=300, y1=760, amt=0.85, col=(0.22, 0.24, 0.30), light=(1880, 330), light_r=520, thr=0.42)
         fr, _ = A.ridge(fr, 940, 260, 52, tone=(0.035, 0.04, 0.055), rim=(0.6, 0.68, 0.85), rim_amt=0.25, dx=-u * 60)
         fr, rl = A.ridge(fr, 1010, 150, 57, tone=(0.006, 0.007, 0.01), rim=(0.75, 0.82, 1.0), rim_amt=0.5, peaks=2, dx=u * 70)
         fy = float(rl[640]) + 6
@@ -1496,19 +1496,16 @@ class V18(Shot):
         self.cr = [K.crack_path(a_, b_, 180 + i) for i, (a_, b_) in enumerate((((700, 330), (1160, 880)), ((560, 380), (1000, 960)),
                                                                                 ((780, 200), (1400, 760))))] if hasattr(K, 'crack_path') else []
     def render(self, t):
+        # 第七棒（critic_A_r4 P1-6）：地面 = V17 同一套雨夜不规则石板，左上是同一个印坑的一角（崩口坑沿 + 内壁 + 碎石 + 裂缝透暖光），
+        # 裂缝作引导线指向人物；去掉棕色折线与砖格
+        import a_r7
         u = self.u(t)
-        fr = A.vgrad((0.085, 0.078, 0.07), (0.05, 0.05, 0.055)) * self.ground
-        fr = fr * (1 - 0.92 * self.pit[..., None])
-        if not hasattr(self, 'zg'):                                                              # 坑底露出的「正」字一角（凹槽）
-            Lg = T.Layer(); T.place(Lg, '正', 250, 40, 900, 'white', 'kai', texture=False); self.zg = Lg.A * self.pit
-        fr = fr + cv2.GaussianBlur(self.zg, (0, 0), 2)[..., None] * np.array([1.0, 0.55, 0.2], np.float32) * 0.10
-        e = np.clip(self.pit - cv2.warpAffine(self.pit, np.float32([[1, 0, -9], [0, 1, -9]]), (W, H)), 0, 1)
-        fr = fr + e[..., None] * np.array([0.95, 0.62, 0.32], np.float32) * 0.65                  # 坑沿迎光斜面（暖金）
-        e2 = np.clip(self.pit - cv2.warpAffine(self.pit, np.float32([[1, 0, 10], [0, 1, 10]]), (W, H)), 0, 1)
-        fr = fr * (1 - 0.6 * e2[..., None])
-        for c in self.cr:
-            m = K.draw_crack((H, W), c, 3, branches=3, seed=7, prog=1.0)
-            fr = fr * (1 - 0.85 * m[..., None]) + (m[..., None] * 0.8 + cv2.GaussianBlur(m, (0, 0), 6)[..., None] * 1.3) * np.array([1.0, 0.55, 0.2], np.float32) * (0.6 + 0.12 * math.sin(t * 7))
+        if not hasattr(self, 'cr7'):
+            self.cr7 = a_r7.Crater(c=(150, 60), size=(1250, 1000), rot=-8.0, seed=18, zheng=False)
+            self.fs7, self.wet7 = a_r7.flagstones(9, n=40)
+        fr = self.fs7 * 1.6
+        fr = a_r7.wet_sheen(fr, self.wet7, light=(1500, 100), amt=0.35, t=t)
+        fr = self.cr7.draw(fr, 0.8 + (t - self.t0), light=(0.6, -0.8), heat=0.9, t=t)
         fr = A.glow(fr, (1500, 200), 600, 0.25, (0.9, 0.7, 0.5))
         at = (1180 + 40 * u, 880)
         sh = np.zeros((H // 2, W // 2), np.float32)                                              # 长影
@@ -1532,6 +1529,7 @@ class V18(Shot):
 # V19 40.84–41.77 MCU 仰望巨印（第五棒：换 look_up_mcu 统一主角脸 + defringe 去发丝灰边，人物右移让出左上歌词）
 class V19(Shot):
     def __init__(self):
+        import a_r7; self.R7 = a_r7
         self.spr = S('A/look_up_mcu2')                                     # 自抠：色距 + 连通背景，发丝间灰底清掉
     def render(self, t):
         u = self.u(t)
@@ -1540,12 +1538,13 @@ class V19(Shot):
         fr = RAIN.draw(fr, t, 0.6, angle=4, light=(960, 100), layers=(0, 1))
         hh = 1010 * (1 + 0.05 * eio(u))                                      # 第五棒：换 look_up_mcu（参考脸统一），顶边出画在黑边之上
         fr, info = A.place(fr, t, self.spr, (1420, 1125 + 20 * u), h=hh, anc=(0.5, 1.0), rim=COLD, rim_amt=3.0,
-                           rim_dir=(0.0, -1.0), wind=10, grade=dict(expo=0.82, sat=0.38, tint=(0.97, 0.99, 1.03)),
+                           rim_dir=(0.3, -1.0), wind=10, grade=dict(expo=0.66, sat=0.30, gamma=1.18, tint=(0.94, 0.98, 1.06)),   # 第七棒：压亮部、冷调，与 A04/V14 同一张脸的硬朗
                            mblur=(0, 10 * eio(u)))
         g = math.exp(-max(0, t - V(41.40)) / 0.12) * (t >= V(41.40))
         for p in ((0.486, 0.26), (0.559, 0.26)):
             fr = pupil_glint(fr, info['to_scr'](p), 0.6 * g, 1.0)
-        fr = RAIN.draw(fr, t, 0.6, angle=4, layers=(2,))
+        fr = fr * (1 - 0.35 * self.R7.face_shade(info, (0.52, 0.30)))            # 第七棒：脸右半侧阴影（光从左上），去柔白
+        fr = RAIN.draw(fr, t, 0.9, angle=4, layers=(1, 2))
         return fr, (3 if g > 0.5 else 0)
 
 
@@ -1704,8 +1703,8 @@ CREDITS = [  # (显出起点, 退场起点, 职务, 人名, x, y_top, seal)
     (0.45, 1.95, '出品人', '西几王传媒', 560, 250, '西几王'),
     (0.60, 1.95, '后期总监', '沉溺', 360, 250, None),               # HANDOFF §1：0.45 出品人 + 0.60 后期总监
     (2.21, 3.85, '编剧 / 导演', '苏打', 420, 300, '苏打'),
-    (4.06, 5.80, '美术设计', 'Cait', 1640, 250, None),
-    (4.21, 5.80, '音乐', '西几王', 1440, 250, '西几王'),
+    (4.06, 5.40, '美术设计', 'Cait', 1640, 250, None),           # 第七棒：5.40 起退场，A04 ink_bleed（5.84）前退净，不叠脸
+    (4.21, 5.40, '音乐', '西几王', 1440, 250, '西几王'),
     (5.97, 7.30, 'AI画师', '沉溺　雪晴　索恩', 640, 250, None),
 ]
 
@@ -1741,14 +1740,14 @@ _Wt, _R, _G = (0.95, 0.93, 0.88), (0.86, 0.12, 0.08), (1.0, 0.78, 0.40)
 LY2 = [
     (0, [(0, 230, _Wt), (1, 230, _Wt)], 560, 470, 17.00, False),                                   # 「长夜」压在乌云下
     (0, [(k, 84, _R if k == 5 else _Wt) for k in range(2, 9)], 1300, 330, 17.92, False),             # 压在我刀锋之上
-    (1, [(4, 190, _Wt), (5, 190, _Wt), (6, 190, _R), (7, 90, _Wt), (8, 90, _Wt)], 600, 330, 20.78, False),   # 拦不住·一道（第五棒：移到上方天幕，21.13 前退净，给 20.82「寒」让下方）
+    (1, [(4, 190, _Wt), (5, 190, _Wt), (6, 190, _R), (7, 90, _Wt), (8, 90, _Wt)], 1380, 330, 20.78, False),   # 第七棒：移到右上袍面暗区，不压拳头 # 拦不住·一道（第五棒：移到上方天幕，21.13 前退净，给 20.82「寒」让下方）
     (2, [(0, 190, _Wt), (1, 190, _Wt), (2, 190, _G), (3, 190, _G)], 960, 900, 23.44, False),        # 谁在高处（自殿檐压下）
     (2, [(4, 96, _Wt), (5, 96, _Wt), (6, 96, _Wt)], 1580, 820, 24.40, False),                       # 定对错（第七棒：后景脸已去，落在右下屏风暗部，不压人）
     (4, [(k, 80, _R if k == 1 else _Wt) for k in range(0, 5)], 420, 905, 30.74, False),             # 我杀过恶徒（第六棒：挪到左下暗区鬼屠刀下，不贴恶徒腿）
     (4, [(k, 80, _Wt) for k in range(5, 10)], 640, 880, 32.55, False),                              # 也放过混账
     (6, [(0, 120, _Wt), (1, 220, _R), (2, 220, _R)], 600, 905, 38.08, False),   # 第六棒：挨着金光里的巨印剪影                       # 若「正义」
     (6, [(3, 80, _Wt), (4, 140, _G), (5, 140, _G), (6, 80, _Wt), (7, 80, _Wt)], 960, 925, 39.85, False),  # 由「权势」执掌（第六棒：离开印面，放到下三分之一）
-    (7, [(0, 130, _Wt), (1, 130, _Wt), (2, 180, _G), (3, 180, _G), (4, 96, _Wt), (5, 180, _R), (6, 180, _R), (7, 96, _Wt)],
+    (7, [(0, 160, _Wt), (1, 160, _Wt), (2, 180, _G), (3, 180, _G), (4, 96, _Wt), (5, 180, _R), (6, 180, _R), (7, 96, _Wt)],
      640, 300, 42.40, True),                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
 ]
 
@@ -1764,7 +1763,9 @@ def lyrics(fr, t):
         x = cx - sum(adv) / 2
         L = T.Layer(); pmax = 0.0; big = max(s for (_, s, _) in chars)
         for (k, s, c), a in zip(chars, adv):
-            p = clamp01((t - max(CT(li, k) - 0.16, t_on)) / 0.26); pmax = max(pmax, p)
+            p = clamp01((t - max(CT(li, k) - 0.16, t_on)) / 0.26)
+            if li == 7 and s >= 150: p = clamp01((t - max(CT(li, k) - 0.10, t_on)) / 0.15)   # 第七棒：「乱世」等大字快写，残笔不超过 4 帧（41.31 红色半字）
+            pmax = max(pmax, p)
             if p > 0:
                 cxx = x + a / 2; cyy = by - s / 2
                 if s >= 150:
