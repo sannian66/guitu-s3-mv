@@ -14,11 +14,11 @@ jobs={
    "Recreate image 1 as an EMPTY background plate with NO person in it: the same Tang Chang'an city wall and multi-eaved gate tower at night in heavy rain, "
    "red sky wash, wet stone-paved square mirroring red. Lanterns: only about 10 lanterns spaced sparsely along the wall foot, not a dense row. "
    "Leave the right-center foreground clear (a walking figure will be composited there). Slightly wider framing than image 1. 16:9. "+STY),
- 'walk': (['assets/gen/S010/walk_raw.png','out/style_test/nb_20.0_0.jpg'],
+ 'walk': (['assets/gen/S010/walk_raw.png'],
    "Redraw the person from image 1 with the same walking pose, same angle and same costume (young swordsman, high ponytail, long dark robe, long sheathed dao held low), "
-   "full body from head to feet, nothing cropped, in the rendering style of image 2 (ink lines, ink wash, black and white with a red inner collar), wet from rain. "
+   "full body from head to feet, nothing cropped, redrawn as a refined Chinese guofeng ink illustration: elegant thin black brush ink lines, soft grey ink-wash shading, black-and-white robe with a cinnabar-red inner collar, wet from rain. Exactly ONE person. Do not draw any city wall, lanterns, rain, sky or scenery. "
    "Place him alone on a perfectly flat, uniform pure green chroma-key background (#00FF00), no shadow, no ground, no rain on the background, no other objects. 16:9. "
-   "Same art style as image 2: refined Chinese guofeng ink illustration, elegant thin brush ink lines. No text, no watermark."),
+   "No text, no watermark."),
 }
 def run(k):
     refs,prompt=jobs[k]; urls=[up(p) for p in refs]
