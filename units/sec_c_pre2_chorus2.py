@@ -2179,8 +2179,8 @@ CUTS = {
 }
 # 第七棒（critic_C_r3 转场：硬切只靠同一种推近提亮，花样单一）：硬切冲击分 4 种，按镜头内容选——
 # flash 电白闪（雷/光）、slam 下砸（重物落下：竖向震 + 赤热色偏）、zoom 冲推（径向模糊）、ink 墨眨（落拍那帧压黑再弹亮）
-HARD_FX = {'C06': 'slam', 'C10': 'flash', 'C15': 'flash', 'C17': 'slam', 'C19': 'zoom', 'C22': 'ink', 'C25': 'zoom',
-           'C29': 'ink', 'C31': 'slam', 'C35b': 'slam', 'C39': 'ink'}
+HARD_FX = {'C06': 'slam', 'C10': 'flash', 'C15': 'flash', 'C17': 'slam', 'C19': 'zoom', 'C22': 'strike', 'C25': 'zoom',
+           'C29': 'strike', 'C31': 'slam', 'C35b': 'slam', 'C39': 'strike'}   # 第十棒 P2⑧：三处 ink（全黑暗角压场）→ strike
 BREATH = {'C16': 3, 'C07': 2}      # 进副歌 / 进「我不低头」前压暗吸气（帧）
 
 # 每镜运镜（叠加在镜头内运动上）：z 推拉、x/y 平移、rot 滚转、hh 手持幅度、ease
@@ -2242,7 +2242,7 @@ SENTS = [
     S(37, [4, 5, 6, 7], 1500, 800, size=100, mode='fly', red='扛', exit='shatter', out=V(155.25), sizes=[96, 96, 96, 190], back=0.6),   # 我自己扛（C35 → C35b）
     S(38, [0, 1], 960, 262, size=130, mode='fly', exit='shatter', out=V(156.38), track=0.3, back=1.0),             # 天不（暗衬，压在闪电天上可读）
     S(39, [0, 1], 1560, 720, size=100, mode='fly', exit='shatter', out=V(159.64), back=0.5),   # 第七棒 P2⑯：移出 C40 人物衣摆                         # 这一
-    S(39, [2, 3, 4, 5], 1400, 290, size=110, mode='fly', red='刀', exit='shatter', out=V(160.30), track=0.2),        # 刀就是我
+    S(39, [2, 3, 4, 5], 1400, 290, size=110, mode='fly', red='刀', exit='shatter', out=V(160.30), track=0.2, lead=0.06),   # 第十棒 P2⑩：lead 0.20→0.06，「就」不再在「这一」未收时半透明提前出现        # 刀就是我
     S(39, [6, 7], 1330, 196, size=92, mode='fly', exit='glitch', out=V(161.20), track=0.2, back=0.5),   # 第八棒 P1①：横排压在「答」正上方，自上而下读「的回→答」   # 第六棒：的回（「答」由 C41 刀痕引燃、烧穿画面，画内字）
 ]
 
@@ -2338,6 +2338,13 @@ class Sec:
                     fr = camxf(fr, 1 + 0.045 * a, r_[0] * 0.4, dy) * (1 + 0.35 * a) + 0.09 * a * np.array([1.0, 0.38, 0.18], np.float32)
                 elif st == 'zoom':
                     fr = TR._radial_blur(camxf(fr, 1 + 0.07 * a, 0, 0), (W / 2, H / 2), 0.05 * a) * (1 + 0.3 * a)
+                elif st == 'strike':     # 第十棒（critic_C_r5 P2⑧）：白闪 1 帧（保留画面结构）→ 朱红偏 + 横抖 → 回正
+                    if k == 0:
+                        fr = camxf(fr, 1.05, r_[0] * 1.4, r_[1] * 0.6) * 1.75 + 0.06 * np.array([0.92, 0.96, 1.0], np.float32)
+                    else:
+                        sx_ = (14, -5)[k - 1]
+                        fr = camxf(fr, 1 + 0.025 * a, sx_, r_[1] * 0.5) * (1 + 0.25 * a)
+                        fr = fr * np.array([1 + 0.30 * a, 1 - 0.12 * a, 1 - 0.18 * a], np.float32) + 0.05 * a * np.array([0.9, 0.12, 0.06], np.float32)
                 elif st == 'ink':
                     fr = ink_vignette(fr, 0.85) * 0.75 if k == 0 else camxf(fr, 1 + 0.03 * a, r_[0], r_[1]) * (1 + 0.6 * a)
                 else:
