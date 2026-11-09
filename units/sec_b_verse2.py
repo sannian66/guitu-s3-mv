@@ -523,7 +523,7 @@ class V03(Shot):
         pr = prs(20, [0, 1, 2, 3, 4, 5], t)
         items = [dict(text='世人', x=-520, y=-170, z=1700, size=150, color='white', font='serif_sb', style='h', prog=pr[0:2]),
                  dict(text='教我', x=80, y=-60, z=1250, size=150, color='white', font='serif_sb', style='h', prog=pr[2:4]),
-                 dict(text='顾全', x=420, y=110, z=850, size=160, color='gold', font='serif_black', style='h', prog=pr[4:6])]
+                 dict(text='顾全', x=420, y=110, z=850, size=160, color='white', font='serif_sb', style='h', prog=pr[4:6])]
         fr = T.kinetic_track(fr, items, cam=(-pan * 1.4, 0, 0), focal=1000, focus_z=1250, dof=0.004)
         fr = self.rain.draw(fr, t, intensity=1.1, angle=12, light=(1450, 560), light_r=600, cam=(pan, 0))
         fr = cam(fr, 1.02 + 0.02 * e, 0, 0, 0.6 * e)
@@ -704,7 +704,9 @@ class V07(Shot):
         fl = 0.85 + 0.15 * math.sin(t * 23) * math.sin(t * 7.1)
         L = T.Layer(); T.place(L, '权', 1180, 540, 600, color='white', fname='serif_black', alpha=1.0, rot=8, sx=1.2, sy=1.0, texture=False)
         lat = ((np.abs(((x + 0.25 * y) % 330) - 165) < 7) | (np.abs((y % 300) - 150) < 6)).astype(np.float32)
-        Lm = np.clip(L.A, 0, 1) * (1 - lat)
+        # 第十棒：字不再是发光金字——窗洞的光斑投在墙与手上，「权」是窗上镂刻的木花投下的**影**（光里一个黑字）
+        win = np.clip(1 - np.maximum(np.abs((x - 1180 - 0.14 * (y - 540)) / 430), np.abs((y - 540) / 400)) ** 8, 0, 1)
+        Lm = np.clip(win * (1 - lat) * (1 - 0.92 * np.clip(L.A, 0, 1)), 0, 1)
         Lm = cv2.GaussianBlur(Lm, (0, 0), 5)
         light = Lm * pq * fl * (1 + 0.8 * pulse(t, V(self.T_QUAN), 0.15))
         amb = 0.55 + 0.45 * (1 - pq)
@@ -746,17 +748,17 @@ class V08(Shot):
         T1, T2 = V(self.T1), V(self.T2)
         if t < T1:                                                    # 自上方加速杵下
             q = clamp01((t - self.t0) / (T1 - self.t0))
-            return (self.F1[0], self.F1[1] - 330 * (1 - q ** 2.4)), 10.0, (330 * 2.4 * q ** 1.4) / max(T1 - self.t0, 0.1) / 30
+            return (self.F1[0], self.F1[1] - 330 * (1 - q ** 2.4)), 24.0, (330 * 2.4 * q ** 1.4) / max(T1 - self.t0, 0.1) / 30
         if t < T2 - 0.24:
-            return self.F1, 10.0, 0.0
+            return self.F1, 24.0, 0.0
         if t < T2:                                                    # 抬杖 → 横移 → 再杵
             q = clamp01((t - (T2 - 0.24)) / 0.24)
             x = self.F1[0] + (self.F2[0] - self.F1[0]) * eio(q)
             yb = self.F1[1] + (self.F2[1] - self.F1[1]) * q
             lift = 240 * math.sin(math.pi * q ** 0.8)
-            return (x, yb - lift), 10.0 - 4.0 * q, 12.0 * (1 - abs(2 * q - 1))
+            return (x, yb - lift), 24.0 - 8.0 * q, 12.0 * (1 - abs(2 * q - 1))
         q = t - T2
-        return self.F2, 6.0 + 1.2 * math.sin(q * 30) * math.exp(-q / 0.15), 0.0
+        return self.F2, 16.0 + 1.2 * math.sin(q * 30) * math.exp(-q / 0.15), 0.0
 
     def render(self, t):
         u = self.u(t)
@@ -768,7 +770,7 @@ class V08(Shot):
             if t < tk: continue
             p = eout(clamp01((t - tk) / 0.16), 2)
             g, lines = BSF.crack_mask(G, (fpt[0], fpt[1]), p, seed=5410 + i)
-            fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.85, 0.55, 0.24), fill_k=0.42 * p,
+            fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.42, 0.48, 0.58), fill_k=0.75 * p,
                             hl_col=(0.70, 0.78, 0.92), hl=0.45, glow=0.0)
             fr = fr * (1 - lines[..., None] * 0.7) + np.roll(lines, -2, 0)[..., None] * COLDC * 0.12
             fr = fx2.ripples(fr, t, [fpt, (fpt[0] + 40, fpt[1] + 8)], [tk, tk + 0.06], amt=0.9, flat=0.3, speed=420, life=0.9)
@@ -798,8 +800,8 @@ class V08(Shot):
                 pl.append((ch, ft[0] + up[0] * dd, ft[1] + up[1] * dd, 92, -ang))
             if pl:
                 Am = BV.mask(pl, fname='serif_black') * min(1.0, max(pr) * 2)
-                fr = BV.engrave(fr, Am, light=(-0.9, -0.3), depth=3, groove=0.6, fill=(0.85, 0.62, 0.30), fill_k=0.85,
-                                hl=0.4, surface=np.clip(Aw * 1.3, 0, 1), glow=0.0)
+                fr = BV.engrave(fr, Am, light=(-0.9, -0.3), depth=3, groove=0.6, fill=(0.03, 0.03, 0.035), fill_k=0.85,
+                                hl=0.5, surface=np.clip(Aw * 1.3, 0, 1), glow=0.0)
         # 杵地：水冠 + 石屑 + 声浪
         for i, tk in enumerate((T1, T2)):
             if t < tk: continue
@@ -1056,9 +1058,9 @@ class V11(Shot):
             Ap, _ = BV.reveal(A, p, axis='x', soft=30)                                    # 秤星一路亮过去
             st = star_glyph(A, step=7, r=2.6, p=p, seed=5610 + i) * Aw
             hot = pulse(t, tk, 0.3) * (t >= tk)
-            fr = BV.engrave(fr, Ap, light=(0.0, -1.0), depth=3, groove=0.5, fill=(0.90, 0.68, 0.36), fill_k=0.7, hl=0.4, surface=Aw)
-            fr = fr + st[..., None] * Ap[..., None] * np.array([1.0, 0.85, 0.55], np.float32) * (0.5 + 0.8 * hot)
-            fr = fr + K.blur_ds(Ap * Aw, 10)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * (0.25 + 0.9 * hot)
+            fr = BV.engrave(fr, Ap, light=(0.0, -1.0), depth=3, groove=0.5, fill=(0.70, 0.72, 0.76), fill_k=0.7, hl=0.4, surface=Aw)          # 第十棒：铜金 → 银白秤星（去金字同质）
+            fr = fr + st[..., None] * Ap[..., None] * np.array([0.92, 0.95, 1.0], np.float32) * (0.5 + 0.8 * hot)
+            fr = fr + K.blur_ds(Ap * Aw, 10)[..., None] * np.array([0.55, 0.60, 0.70], np.float32) * (0.15 + 0.5 * hot)
         # 秤杆上的雨珠：落定前沿杆滚动，99.0 一磕全部震飞
         hk = hitp(t, self.T_LIANG, 0.14)
         if t >= th:
@@ -1302,10 +1304,10 @@ class V15(Shot):
         fr = self.rain.draw(fr, t, intensity=1.2, angle=14, light=(1500, 150) if env > 0.1 else None, light_r=900, cam=(80 * e, 0))
         pr = prs(24, [0, 1, 2, 3], t)
         P = [dict(ch='不', x=520, y=300, size=120, rot=0, font='kai', idx=0, emph=False), dict(ch='听', x=520, y=430, size=120, rot=0, font='kai', idx=1, emph=False),
-             dict(ch='天', x=380, y=380, size=150, rot=0, font='serif_black', idx=2, emph=False), dict(ch='命', x=380, y=540, size=150, rot=0, font='serif_black', idx=3, emph=False)]
+             dict(ch='天', x=380, y=300, size=120, rot=0, font='kai', idx=2, emph=False), dict(ch='命', x=380, y=430, size=120, rot=0, font='kai', idx=3, emph=False)]   # 第十棒：同句统一楷、白
         L = T.Layer()
         for pp, pc in zip(P, pr):
-            if pc > 0: T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='gold' if pp['font'] == 'serif_black' else 'white',
+            if pc > 0: T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='white',
                                fname=pp['font'], alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
         fr = T.compose(fr, L, shadow=0.85, glow=0.15)
         ps = clamp01((t - (V(CT(24, 3)) + 0.12)) / 0.16)
@@ -1364,8 +1366,8 @@ class V16(Shot):
             A = BV.mask([(ch, c[0], c[1], sz, 0)], fname='serif_black')
             A, front = BV.reveal(A, p)
             hot = pulse(t, tk, 0.35) * (t >= tk)
-            Fz = BV.engrave(Fz, A, light=(0.0, -1.0), depth=6, groove=0.7, fill=(0.92, 0.70, 0.34), fill_k=0.75, hl=0.35,
-                            surface=Aw, glow=0.2 + 0.8 * hot, glow_col=(1.0, 0.62, 0.25))
+            Fz = BV.engrave(Fz, A, light=(0.0, -1.0), depth=6, groove=0.7, fill=(0.62, 0.48, 0.26), fill_k=0.6, hl=0.45,
+                            surface=Aw, glow=0.05 + 0.45 * hot, glow_col=(1.0, 0.62, 0.25))     # 第十棒：嵌金压成旧铜金（石里的金，不自发光；只雷凿瞬间热一下）
             if front is not None and p < 1: chips.append((front, tk))
         ts = V(self.T_SLASH)
         p0, p1 = (600, 300), (1560, 412)                                        # 刀线：斜穿碑首下、「上」字下沿之上，「苍」不被切
@@ -1392,7 +1394,7 @@ class V16(Shot):
         fr = self.rain.draw(fr, t, intensity=1.0, angle=8, light=(1080, 120), light_r=700)
         pb = prs(24, [4, 5], t)
         fr = T.scatter_stack(fr, '不问', pb, places=[dict(ch='不', x=360, y=360, size=180, rot=-6, font='xing', idx=0, emph=False),
-                                                       dict(ch='问', x=440, y=600, size=210, rot=5, font='xing', idx=1, emph=True)],
+                                                       dict(ch='问', x=440, y=560, size=180, rot=5, font='xing', idx=1, emph=False)],
                              color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85))
         hk = hitp(t, self.T_SLASH, 0.14)
         dx, dy, dr = shake(t, 3 + 22 * hk, 12, 616)
