@@ -255,10 +255,11 @@
    "tries": [
     {
      "tid": "a627b366-29e6-4c16-83dc-f50a8448fbac",
-     "pts": 3
+     "pts": 3,
+     "file": "/workspace/work/b_cands/fist3_try1_0.png"
     }
    ],
-   "state": "running"
+   "state": "done"
   }
  }
 }

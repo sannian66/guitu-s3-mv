@@ -606,50 +606,100 @@ class V07(Shot):
 
 
 # =====================================================================================
-# V08 94.48–96.10 ECU 下摇：沿权杖杖身由杖首向下摇（grip_scepter 局部，与 V07 景别/方向不同：V07 手+光，V08 杖身微距）。
-#   第七棒：去掉 RGB 故障字——「嚣」「张」是嵌在乌木杖身里的金字，镜头摇过时随字头一记记「炸金」：金箔崩起、裂纹沿木纹爬开；「柄在」白宋小字在左
+# V08 94.48–96.10 低机位贴地（第九棒重做，critic_B_r3 不可交付 → 不再出手）：雨夜宫阶石板地，太上皇的乌木权杖
+#   从画面上方「杵」下来——94.76 第一杵，石板以杖镦为心炸裂出「嚣」；抬杖横移，95.32 第二杵裂出「张」。
+#   字 = 杖杵出来的裂痕，槽里积水映着远处宫灯（暖）而不是自发光金字；「柄在」宋体阴刻在杖身上（同一字体 = 权力之字）。
+#   与 V07（手 + 竖杖 + 窗棂光，CU 平视）拆开：本镜贴地低机位、无手、横向两杵、雨夜外景。
+import b_staff as BSF
+
+
 class V08(Shot):
-    SRC, ROT, WPX = None, -12, 3800   # 第八棒：5200 → 3800，「嚣」「张」同框可读（原下摇时「嚣」在「张」落字前已出顶边）
-    QI = [(0.200, 0.095), (0.208, 0.195)]
+    T1, T2 = 94.76, 95.32
+    F1, F2 = (680, 715), (1220, 740)
+    SC = 0.78
     def __init__(self):
-        self.sp = spr('S051/grip_scepter')
-        self.bg = BK.dark_bg(5301, 0.01, 0.03, tint=(1.1, 1.0, 0.9))
-        T.warm('柄在', 'serif_sb', 100)
+        self.F, self.A = BSF.staff_tex()
+        self.bg, self.fl, _ = BSF.floor_plate(5401, hor=380)
+        self.rain = fx2.RainSheet(5402, density=0.9)
+        self.spl = fx2.Splashes(5403)
+        self.G = []
+        for ch, (fx, fy), r in (('嚣', self.F1, -4), ('张', self.F2, 3)):
+            A = BV.mask([(ch, fx, fy + 75, 380, r)], fname='serif_black')
+            M = np.float32([[1.0, 0.0, 0.0], [0.0, 0.55, (fy + 75) * 0.45]])        # 透视压扁贴到地面（字心在杖镦前方，杖不挡字）
+            self.G.append(cv2.warpAffine(A, M, (W, H)))
+        T.warm('柄在', 'serif_black', 110)
+
+    def foot(self, t):
+        T1, T2 = V(self.T1), V(self.T2)
+        if t < T1:                                                    # 自上方加速杵下
+            q = clamp01((t - self.t0) / (T1 - self.t0))
+            return (self.F1[0], self.F1[1] - 330 * (1 - q ** 2.4)), 10.0, (330 * 2.4 * q ** 1.4) / max(T1 - self.t0, 0.1) / 30
+        if t < T2 - 0.24:
+            return self.F1, 10.0, 0.0
+        if t < T2:                                                    # 抬杖 → 横移 → 再杵
+            q = clamp01((t - (T2 - 0.24)) / 0.24)
+            x = self.F1[0] + (self.F2[0] - self.F1[0]) * eio(q)
+            yb = self.F1[1] + (self.F2[1] - self.F1[1]) * q
+            lift = 240 * math.sin(math.pi * q ** 0.8)
+            return (x, yb - lift), 10.0 - 4.0 * q, 12.0 * (1 - abs(2 * q - 1))
+        q = t - T2
+        return self.F2, 6.0 + 1.2 * math.sin(q * 30) * math.exp(-q / 0.15), 0.0
 
     def render(self, t):
         u = self.u(t)
-        e = eio(u)
+        T1, T2 = V(self.T1), V(self.T2)
         fr = self.bg.copy()
-        sy = 0.115 + 0.10 * e                                       # 杖首画布上沿始终在黑边外（第八棒按新比例重算）
-        src, dst = (0.20, sy), (1060, 540)
-        fr, Aw = put_at(fr, self.sp, t, src, dst, self.WPX, rot=self.ROT,
-                        grade=dict(expo=0.74, sat=0.42, tint=(0.95, 0.97, 1.04), lift=0.0, gamma=1.12),   # 第八棒 P1-6：手压成殿内冷灰，只留烛光暖轮廓
-                        rim=dict(col=(1.0, 0.62, 0.30), amt=2.8, dir=(-0.9, -0.2)), wind_amp=0, breathe=0.0, shade=None, wrap=0.2,
-                        mblur=(0, 14 * math.sin(math.pi * u)))
+        fr = self.spl.draw(fr, t, y_far=390, y_near=960, rate=110, size=1.0, amt=0.6)
+        # 裂字（嚣 / 张）：自杖镦径向裂开，槽内积水映宫灯暖光（不自发光）
+        for i, (tk, G, fpt) in enumerate(((T1, self.G[0], self.F1), (T2, self.G[1], self.F2))):
+            if t < tk: continue
+            p = eout(clamp01((t - tk) / 0.16), 2)
+            g, lines = BSF.crack_mask(G, (fpt[0], fpt[1]), p, seed=5410 + i)
+            fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.85, 0.55, 0.24), fill_k=0.55 * p,
+                            hl_col=(0.70, 0.78, 0.92), hl=0.45, glow=0.0)
+            fr = fr * (1 - lines[..., None] * 0.7) + np.roll(lines, -2, 0)[..., None] * COLDC * 0.12
+            fr = fx2.ripples(fr, t, [fpt, (fpt[0] + 40, fpt[1] + 8)], [tk, tk + 0.06], amt=0.9, flat=0.3, speed=420, life=0.9)
+        # 权杖 + 积水倒影
+        ft, ang, mb = self.foot(t)
+        refl, Ar = BSF.draw_staff(np.zeros_like(fr), self.F, self.A, ft, ang, self.SC, mblur=mb)
+        Rf = cv2.flip(refl, 0); Ra = cv2.flip(Ar, 0)
+        sh = int(2 * ft[1] - H)
+        Rf = np.roll(Rf, sh, 0); Ra = np.roll(Ra, sh, 0)
         x, y = K.grid()
-        fr += np.exp(-((x - 1060) / 220) ** 2)[..., None] * np.array([0.10, 0.06, 0.025], np.float32) * (0.6 + 0.4 * math.sin(t * 9))
-        a0 = sp_pt(self.sp, src, dst, self.WPX, self.ROT, (0.190, 0.0)); a1 = sp_pt(self.sp, src, dst, self.WPX, self.ROT, (0.208, 0.2))
-        ang = -math.degrees(math.atan2(a1[0] - a0[0], a1[1] - a0[1]))       # 杖身倾角 → 字同角
-        for i, (ch, li) in enumerate((('嚣', 11), ('张', 12))):
-            tk = V(CT(21, li))
-            p = clamp01((t - (tk - 0.18)) / 0.18)
-            if p <= 0: continue
-            c = sp_pt(self.sp, src, dst, self.WPX, self.ROT, self.QI[i])
-            hot = pulse(t, tk, 0.35) * (t >= tk)
-            A = BV.mask([(ch, c[0], c[1], 200 * (1 + 0.06 * hot), ang)], fname='serif_black')
-            fr = BV.engrave(fr, A * min(1, p * 1.5), light=(-0.9, -0.2), depth=5, groove=0.6, fill=(0.95, 0.70, 0.30), fill_k=0.9,
-                            hl=0.5, surface=np.clip(Aw * 1.2, 0, 1), glow=0.25 + 1.1 * hot, glow_col=(1.0, 0.6, 0.2))
-            if t >= tk:                                              # 炸金：金箔屑崩起
-                fr = K.sparks(fr, t, 5310 + i, c, n=90, life=0.6, speed=(150, 650), dirc=(0.4, -1), spread=2.4, grav=700,
-                              size=1.6, area=(120, 120), color=(1.0, 0.78, 0.40), amt=1.1, t0=tk, burst=True)
+        wob = (np.sin(y * 0.09 + t * 11) * 4).astype(np.float32)
+        Ra = cv2.remap(Ra, x + wob, y, cv2.INTER_LINEAR) * (y > ft[1]) * 0.35 * np.clip(1 - (y - ft[1]) / 260, 0, 1)
+        Rf = cv2.remap(Rf, x + wob, y, cv2.INTER_LINEAR)
+        fr = fr * (1 - Ra[..., None]) + Rf * Ra[..., None] / np.maximum(Ar.max(), 1e-3) * 0.6
+        fr, Aw = BSF.draw_staff(fr, self.F, self.A, ft, ang, self.SC, mblur=mb)
+        # 烛光/宫灯暖轮廓（杖右缘）+ 冷顶光
+        rim = np.clip(Aw - np.roll(Aw, 6, 1), 0, 1)
+        fr = fr + rim[..., None] * np.array([0.9, 0.55, 0.25], np.float32) * 0.5
+        # 「柄在」阴刻在杖身（随杖走）
         pr = prs(21, [9, 10], t)
-        L = T.Layer()
-        for i, ch in enumerate('柄在'):
-            if pr[i] > 0: T.place(L, ch, 470, 360 + i * 125, 104, color='white', fname='serif_sb', alpha=min(1, pr[i] * 2))
-        fr = T.compose(fr, L, shadow=0.85)
-        gk = max(hitp(t, CT(21, 11), 0.15), hitp(t, CT(21, 12), 0.2))
-        dx, dy, dr = shake(t, 10 * gk, 12, 53)
-        fr = cam(fr, 1.04 + 0.03 * gk, dx, dy, dr)
+        if max(pr) > 0:
+            a = math.radians(ang); up = (math.sin(a), -math.cos(a))
+            pl = []
+            for k, ch in enumerate('柄在'):
+                if pr[k] <= 0: continue
+                dd = 520 - k * 125
+                pl.append((ch, ft[0] + up[0] * dd, ft[1] + up[1] * dd, 92, -ang))
+            if pl:
+                Am = BV.mask(pl, fname='serif_black') * min(1.0, max(pr) * 2)
+                fr = BV.engrave(fr, Am, light=(-0.9, -0.3), depth=3, groove=0.6, fill=(0.85, 0.62, 0.30), fill_k=0.85,
+                                hl=0.4, surface=np.clip(Aw * 1.3, 0, 1), glow=0.0)
+        # 杵地：水冠 + 石屑 + 声浪
+        for i, tk in enumerate((T1, T2)):
+            if t < tk: continue
+            fpt = self.F1 if i == 0 else self.F2
+            fr = K.sparks(fr, t, 5420 + i, (fpt[0], fpt[1] - 6), n=140, life=0.55, speed=(250, 900), dirc=(0, -1), spread=1.6, grav=1600,
+                          size=1.4, area=(60, 10), color=(0.75, 0.80, 0.90), amt=1.0, t0=tk, burst=True)
+            fr = K.sparks(fr, t, 5430 + i, (fpt[0], fpt[1]), n=40, life=0.45, speed=(150, 500), dirc=(0, -1), spread=2.6, grav=1800,
+                          size=2.2, area=(40, 8), color=(0.35, 0.34, 0.33), amt=1.0, t0=tk, burst=True)
+        fr = self.rain.draw(fr, t, intensity=0.75, angle=9)
+        gk = max(hitp(t, self.T1, 0.12), hitp(t, self.T2, 0.14))
+        dx, dy, dr = shake(t, 14 * gk, 12, 53)
+        e = eio(u)
+        fr = cam(fr, 1.02 + 0.06 * e + 0.03 * gk, -40 + 90 * e + dx, dy, dr)
         return fr, (3 if gk > 0.6 else 0)
 
 
@@ -1730,7 +1780,7 @@ CUTS = {
     'V05': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=1, seed=5)),
     'V06': ('match_cut', 0.0, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # 第五棒：去金圈（≈副歌一 S045 光圈）
     'V07': ('punch', 0, 0, {}),                                     # 第七棒：金闪 → 推近色散（窗棂光一跳）
-    'V08': ('split_slide', 0.05, 0.12, dict(angle=90.0)),
+    'V08': ('rain_curtain', 0.06, 0.14, dict(seed=8)),            # 第九棒：split_slide 中间帧全黑 → 雨帘落幕（由暗殿进雨夜外景）
     'V09': ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160)),
     'V10': ('punch', 0, 0, {}),                                     # 第七棒：hard → 推近色散冲击
     'V11': ('slash_wipe', 0.05, 0.12, dict(angle=-70)),
@@ -1749,7 +1799,7 @@ CUTS = {
     'V24': ('zoom_dark', 0.08, 0.14, dict(center=(960, 640))),     # 第四棒：去中点白场
     'V25': ('zoom_dark', 0.06, 0.12, dict(center=(960, 620))),     # 第七棒：hard → 沿刀痕推进穿越
 }
-FG = {'V03': ('rain', 0.3), 'V07': ('ember', 0.3), 'V08': ('ember', 0.25), 'V09': ('rain', 0.3), 'V13': ('rain', 0.35),
+FG = {'V03': ('rain', 0.3), 'V07': ('ember', 0.3), 'V08': ('rain', 0.3), 'V09': ('rain', 0.3), 'V13': ('rain', 0.35),
       'V14': ('ember', 0.5), 'V15': ('rain', 0.45)}
 EXPO = {}
 
