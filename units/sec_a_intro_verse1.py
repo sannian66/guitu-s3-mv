@@ -1610,6 +1610,9 @@ class V19(Shot):
 
 # V20 41.77–42.68 LS 极低机位：鬼屠自下而上斜撩一刀，刀光弧线劈向天上的巨印
 class V20(Shot):
+    def __init__(self):
+        import a_r6
+        self.coil = a_r6.clean('A/slash_coil', lo=0.3, erode=4)                     # 第九棒：抠图灰边收 4px
     def render(self, t):
         u = self.u(t)
         fr = night((0.04, 0.035, 0.03), (0.12, 0.10, 0.09), y1=800)
@@ -1626,9 +1629,13 @@ class V20(Shot):
         rot_ = -13 + 15 * k - 2 * clamp01((a - 0.12) / 0.3) if a >= 0 else -13 - 2 * eio(pre)
         sx_, sy_ = R8.shake(t, V(42.0), amp=16, tau=0.10, seed=3)
         expo_ = 0.82 if a >= 0 else 0.55
-        fr, info = A.place(fr, t, S('A/slash_up', 'dm'), (900 + 30 * (1 - k) + sx_, y_ + sy_), h=820 * (0.9 + 0.1 * k), rot=rot_, rim=COLD,
-                           rim_amt=3.2 if a >= 0 else 5.0, rim_dir=(0.6, -0.8), wind=12,
-                           grade=dict(expo=expo_, sat=0.38), mblur=(0, 30 * k * (1 - clamp01(a / 0.2))))
+        if a < 0:                                                                      # 第九棒：蓄势换真低位蓄力精灵 slash_coil（压低、刀低垂右后、仰视），缓缓再压低一点
+            fr, info = A.place(fr, t, self.coil, (930 - 20 * eio(pre) + sx_, 1080 + 18 * eio(pre)), h=700, rim=COLD, rim_amt=1.5,
+                               rim_dir=(0.6, -0.8), wind=12, grade=dict(expo=0.58, sat=0.38), rot=-1.5 * eio(pre), wrap=0.15)
+        else:
+            fr, info = A.place(fr, t, S('A/slash_up', 'dm'), (900 + 30 * (1 - k) + sx_, y_ + sy_), h=820 * (0.9 + 0.1 * k), rot=rot_, rim=COLD,
+                               rim_amt=3.2, rim_dir=(0.6, -0.8), wind=12,
+                               grade=dict(expo=expo_, sat=0.38), mblur=(0, 30 * k * (1 - clamp01(a / 0.2))))
         if a >= 0:
             fr = K.sparks(fr, t, 81, (1300, 330), n=70, life=0.6, speed=(200, 900), dirc=(0, 1), spread=1.3, grav=900, area=(300, 10), amt=0.8, t0=V(42.0), burst=True)
             L = np.zeros((H // 2, W // 2), np.float32)
