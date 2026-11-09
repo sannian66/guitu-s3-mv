@@ -18,6 +18,7 @@ import e_kit as E
 import e_r3 as R3
 import e_r5 as R5
 import e_r6 as R6
+import e_r7 as R7
 from e_r3 import LyrO
 Sub = R5.SubD          # 第五棒：副句随画面漂移、去句首朱印、暗衬变淡（去卡拉 OK 条模板感）
 from e_kit import (W, H, BAR, GOLD, GOLDW, RED, REDT, WHITE_T, GOLD_T, INK, put, Lyr, row, sstep, c01, eio, eout, ein,
@@ -376,104 +377,89 @@ def sprite_clean(z, A, erode=2, rim_col=(1.0, 0.62, 0.30), rim_amt=0.9, rim_dir=
     return C, Ae
 
 
-class E08(Shot):   # S117 CU（第五棒重做）纸糊巨脸（暖橙主光右上 + 左冷边，无竹骨网格）；「伪装」竖排在脸左侧空背景，
-    #  字一落，火从「伪装」笔画边缘沿纸面向外蔓延（暗红焦痕 → 亮橙火线 → 飞灰，连续焦边），一路吃穿纸脸，洞后是暗处他的双眼
+class E08(Shot):   # S117 CU（第七棒重做烧洞）纸糊太上皇巨脸：宣纸叠皱 + 两条斜向糊纸接缝；火从眉心烧出一个横向不规则的洞
+    #  （外圈暗褐焦痕 + 纸纤维毛边 / 中间断续橙红火线 / 内圈卷起碳化黑边），洞内近黑，只露被下方火光照亮的鬼屠双眼；
+    #  「伪装」无外框，笔画边缘自燃（碳化 + 火星），位置在脸左侧
     TX, TY, TS = 300, (410, 650), 210
-    CX, CY = 975, 430
+    CX, CY = 1015, 430                    # 老者两眼中点（f6064 实测 900/1130, 415）
+    RX, RY = 345, 200                     # 洞终值半轴
 
     def __init__(self):
-        r = np.random.default_rng(117)
-        lo = cv2.resize(r.random((6, 10)).astype(np.float32), (W, H), interpolation=cv2.INTER_CUBIC)
-        mid = cv2.resize(r.random((27, 48)).astype(np.float32), (W, H), interpolation=cv2.INTER_CUBIC)
-        n = K.fbm(H // 2, W // 2, 1171, base=4, octaves=5)
-        self.void = cv2.resize(((0.015 + 0.035 * n)[..., None] * np.array([1.0, 0.8, 0.62], np.float32)).astype(np.float32), (W, H))
         yy, xx = E.grid()
-        # 纸墙底：暗暖宣纸（右上灯笼光），整幅都是纸 → 火可以从字边一路烧过去
+        n = K.fbm(H // 2, W // 2, 1171, base=4, octaves=5)
+        self.void = cv2.resize(((0.006 + 0.012 * n)[..., None] * np.array([1.0, 0.75, 0.55], np.float32)).astype(np.float32), (W, H))
         cr = cv2.resize(K.fbm(H // 2, W // 2, 1172, base=30, octaves=5), (W, H))
         fib = cv2.resize(K.fbm(H // 2, W // 2, 1173, base=200, octaves=2), (W, H))
         key = np.exp(-(((xx - 1500) / 900) ** 2 + ((yy - 200) / 700) ** 2))
         self.bg = ((0.05 + 0.20 * key)[..., None] * np.array([1.0, 0.62, 0.32], np.float32) * (0.85 + 0.25 * cr + 0.08 * (fib - 0.5))[..., None]).astype(np.float32)
-        self.tex = (0.9 + 0.18 * cr + 0.06 * (fib - 0.5)).astype(np.float32)
-        L = T.Layer()
-        for k, ch in enumerate('伪装'): L.paste(T.glyph(ch, 'serif_black', self.TS, False), self.TX, self.TY[k], (1, 1, 1))
-        self.tm = [None, None]
+        self.crease = R7.paper_creases(717)
+        self.smul, self.sadd = R7.paper_seams((((540, 120), (1390, 960)), ((1240, 120), (1760, 760))), 718)
+        lo, mid, hi, hair, brk = R7.hole_noise(719)
+        self.D = (np.hypot(xx - self.CX, (yy - self.CY) * self.RX / self.RY) + lo * 150 + mid * 46 + hi * 6).astype(np.float32)
+        self.tm = []
         for k, ch in enumerate('伪装'):
-            L1 = T.Layer(); L1.paste(T.glyph(ch, 'serif_black', self.TS, False), self.TX, self.TY[k], (1, 1, 1)); self.tm[k] = L1.A
-        # 第六棒：火从画面中心（老者眉心）烧出一个洞（第一字落点火），第二字「装」笔画边缘再点一处
-        yy0, xx0 = E.grid()
-        self.D = [np.hypot(xx0 - self.CX, yy0 - self.CY).astype(np.float32) * 1.15,
-                  cv2.distanceTransform((self.tm[1] < 0.5).astype(np.uint8), cv2.DIST_L2, 5).astype(np.float32)]
-        self.pmul, self.padd = R6.paper_skin(617)
-        self.noise = (lo - 0.5) * 160 + (mid - 0.5) * 45
-        self.l = LyrO([('伪', self.TX, self.TY[0], self.TS, 'serif_black', REDT, CT(50, 6)), ('装', self.TX, self.TY[1], self.TS, 'serif_black', REDT, CT(50, 7))],
-                      CT(51, 0) - 0.12, seed=50, outline=5, plate_amt=0.0, glow=0.35)
+            L1 = T.Layer(); L1.paste(T.glyph(ch, 'serif_black', self.TS, False), self.TX, self.TY[k], (1, 1, 1)); self.tm.append(L1.A.copy())
+        self.t_in = [CT(50, 6), CT(50, 7)]
         self.grade = dict(expo=0.92, sat=0.42, tint=(1.06, 0.99, 0.90), lift=0.0, gamma=1.06)
+        em = np.zeros((H, W), np.float32)                                  # 洞内鬼屠双眼的受光蒙版（两只眼各一椭圆）
+        for ex in (self.CX - 126, self.CX + 126):
+            em = np.maximum(em, np.exp(-(((xx - ex) / 105) ** 2 + ((yy - (self.CY + 2)) / 46) ** 2) ** 1.4))
+        self.eyem = em
 
-    def front(self, t):
-        """各字点火后的蔓延半径（px），先慢后快。"""
-        out = []
-        for k in range(2):
-            q = t - (CT(50, 6 + k) + 0.06)
-            out.append(-1.0 if q < 0 else (20 + 760 * (q / 1.1) ** 1.25 if k == 0 else 30 + 700 * (q / 1.1) ** 1.4))
-        return out
-
-    def field(self, t):
-        R = self.front(t)
-        F = np.full((H, W), 1e4, np.float32)
-        for k in range(2):
-            if R[k] >= 0: F = np.minimum(F, self.D[k] + self.noise * min(1.0, R[k] / (90 if k == 0 else 300)) - R[k])
-        return F                                                            # <0 已烧穿；0 = 火线
+    def radius(self, t):
+        q = t - (self.t_in[0] + 0.03)
+        if q < 0: return -1.0
+        return self.RX * (1 - math.exp(-q / 0.30)) ** 0.9 * (0.12 + 0.88 * c01(q / 0.08))
 
     def render(self, t):
         u = self.u(t)
-        z, info = put(np.zeros((H, W, 3), np.float32), t, 'E_r6/emperor_cu', (1000, 1260), h=1420 * (1 + 0.06 * u), rim=(1.0, 0.6, 0.3), rim_amt=1.2,
+        z, info = put(np.zeros((H, W, 3), np.float32), t, 'E_r6/emperor_cu', (1000, 1260), h=1420 * (1 + 0.04 * u), rim=(1.0, 0.6, 0.3), rim_amt=1.2,
                       rim_dir=(0.8, -0.6), wind=1, grade=self.grade)
         C, A = sprite_clean(z, info['A'], erode=2, rim_col=(1.0, 0.58, 0.26), rim_amt=1.4, rim_dir=(0.8, -0.6))
         yy, xx = E.grid()
-        key = np.clip(0.55 + 0.6 * ((xx - 1010) / 600 - (yy - 500) / 900), 0.35, 1.0)        # 右上暖主光 → 左下落入阴影，阴影带橙环境反射（第六棒：封顶，白发不被染金）
-        C = C * key[..., None] * np.array([1.03, 0.98, 0.93], np.float32) + (1 - np.clip(key, 0, 1))[..., None] * np.array([0.075, 0.03, 0.006], np.float32)
-        C = C * self.tex[..., None]
-        lum = C.mean(-1, keepdims=True); sd = np.clip((lum - 0.30) / 0.30, 0, 1) * 0.75         # 第六棒：亮部（白发）去暖，不读成金发
+        key = np.clip(0.55 + 0.6 * ((xx - 1010) / 600 - (yy - 500) / 900), 0.35, 1.0)
+        C = C * key[..., None] * np.array([1.03, 0.98, 0.93], np.float32) + (1 - key)[..., None] * np.array([0.075, 0.03, 0.006], np.float32)
+        lum = C.mean(-1, keepdims=True); sd = np.clip((lum - 0.30) / 0.30, 0, 1) * 0.75
         C = C * (1 - sd) + lum * np.array([1.0, 0.97, 0.94], np.float32) * sd
-        pm = 1 + (self.pmul - 1) * 0.62                                     # 第六棒：宣纸叠皱 + 糊纸接缝压在脸上（约 35%）
-        C = C * pm[..., None] * np.array([1.03, 1.0, 0.94], np.float32) + self.padd * 1.2
         fr = self.bg * (1 - A[..., None]) + C * A[..., None]
-        if t >= CT(50, 6):
-            F = self.field(t)
-            v = self.void.copy()                                             # 洞后：暗处他的双眼，火光从下照亮
-            v, bi = put(v, t, 'S123/front|crop=0.36,0.25,0.64,0.45', (980, 350 - 20 * u), w=2100, anc=(0.5, 0.5),
-                        rim=(1.0, 0.6, 0.3), rim_amt=2.0, rim_dir=(0.0, 1.0), grade=dict(expo=0.95, sat=0.6, tint=(1.1, 0.96, 0.84), lift=0.0, gamma=1.08), wind=3)
-            glow = np.exp(-(((xx - 980) / 760) ** 2 + ((yy - 420) / 380) ** 2))
-            v = v * (0.25 + 0.85 * glow)[..., None] + (np.exp(-((yy - 900) / 260) ** 2) * 0.12)[..., None] * np.array([1.0, 0.4, 0.1], np.float32)
-            hole = np.clip(-F / 2.5, 0, 1)[..., None]
-            scorch = np.exp(-np.clip(F, 0, None) / 38.0) * (F > 0)                       # 层 1：暗红焦痕（火线外侧一圈纸被烤焦）
-            fr = fr * (1 - 0.82 * scorch[..., None]) + scorch[..., None] * np.array([0.10, 0.018, 0.005], np.float32) * 0.8
-            line = np.exp(-(F / 4.5) ** 2)                                                # 层 2：亮橙火线（连续轮廓）
-            fr = fr * (1 - hole) + v * hole
-            lg = cv2.GaussianBlur(line, (0, 0), 9)
-            fr = fr + (line * 2.6)[..., None] * np.array([1.0, 0.72, 0.30], np.float32) + (lg * 1.8)[..., None] * np.array([1.0, 0.38, 0.08], np.float32)
-            fr = self.ash(fr, t)                                                          # 层 3：飞灰（沿火线放出、上飘、由亮转灰）
-        return bloom(fr, 0.85, 0.45)
+        # 宣纸：整幅都是糊纸（脸和底一样），叠皱 40% + 接缝
+        pm = 1 + (self.crease - 1) * 0.40 * 2.2
+        fr = fr * pm[..., None] * self.smul[..., None] + self.sadd * np.clip(fr.mean(-1, keepdims=True) * 4, 0.25, 1)
+        fr = fr * np.array([1.03, 1.0, 0.94], np.float32)
+        R = self.radius(t)
+        if R >= 0:
+            F = self.D - R
+            v = self.void.copy()
+            v, bi = put(v, t, 'S123/front|crop=0.36,0.25,0.64,0.45', (self.CX, 380 - 6 * u), w=880, anc=(0.5, 0.5),
+                        rim=(1.0, 0.6, 0.3), rim_amt=1.0, rim_dir=(0.0, 1.0), grade=dict(expo=1.0, sat=0.65, tint=(1.12, 0.95, 0.80), lift=0.0, gamma=1.0), wind=0)
+            under = np.clip((yy - (self.CY - 50)) / 90, 0.3, 1.0)         # 火光从下往上照
+            keep = self.eyem * np.clip((-F - 40) / 22, 0, 1) * under
+            v = self.void + (v * np.array([1.25, 0.95, 0.72], np.float32) - self.void) * keep[..., None] * 1.9
+            v = np.minimum(v, np.where(keep[..., None] > 0.05, 1.0, 0.13))
+            fr = R7.burn_hole(fr, v, F, t, 719)
+            fr = self.ash(fr, t, F)
+        return bloom(fr, 0.9, 0.35)
 
-    def ash(self, fr, t):
+    def ash(self, fr, t, F):
+        """飞灰：沿火线放出、上飘，由亮转灰。"""
+        q = t - self.t_in[0]
+        ys, xs = np.nonzero(np.abs(F[::4, ::4]) < 2.5)
+        if len(xs) == 0: return fr
         P = np.zeros((H, W), np.float32); G = np.zeros((H, W), np.float32)
-        for k in range(8):
-            age = k * 0.07
-            if t - age < CT(50, 6): break
-            Fk = self.field(t - age)
-            ys, xs = np.nonzero(np.abs(Fk[::4, ::4]) < 2.0)
-            if len(xs) == 0: continue
-            r = np.random.default_rng(int((t - age) * 30) * 7 + 3)
-            idx = r.choice(len(xs), min(70, len(xs)), replace=False)
-            for j in idx:
-                x = xs[j] * 4 + r.uniform(-3, 3) + 30 * age + 12 * math.sin(j + t * 3); y = ys[j] * 4 - (90 + 140 * r.random()) * age
-                life = 1 - age / 0.56
-                tgt = P if age < 0.2 else G
-                cv2.circle(tgt, (int(x), int(y)), int(1 + 2 * r.random() * (0.5 + age)), float(life), -1, cv2.LINE_AA)
-        P = cv2.GaussianBlur(P, (0, 0), 0.8); G = cv2.GaussianBlur(G, (0, 0), 1.2)
-        return fr + P[..., None] * np.array([1.4, 0.75, 0.3], np.float32) + G[..., None] * np.array([0.22, 0.2, 0.19], np.float32)
+        r = np.random.default_rng(int(t * 30) * 7 + 3)
+        for j in r.choice(len(xs), min(110, len(xs)), replace=False):
+            age = r.uniform(0, 0.5)
+            x = xs[j] * 4 + 30 * age + 10 * math.sin(j + t * 3); y = ys[j] * 4 - (80 + 160 * r.random()) * age
+            tgt = P if age < 0.2 else G
+            cv2.circle(tgt, (int(x), int(y)), int(1 + 1.6 * r.random() * (0.5 + age)), float(1 - age / 0.5), -1, cv2.LINE_AA)
+        return fr + cv2.GaussianBlur(P, (0, 0), 0.8)[..., None] * np.array([1.4, 0.7, 0.25], np.float32) + cv2.GaussianBlur(G, (0, 0), 1.2)[..., None] * np.array([0.2, 0.18, 0.17], np.float32)
 
-    def text(self, fr, t): return self.l.draw(fr, t)
+    def text(self, fr, t):
+        for k in range(2):
+            p = c01((t - (self.t_in[k] - 0.07)) / 0.12)
+            if p <= 0: continue
+            fr = R7.self_burn_glyph(fr, self.tm[k] * p, t, self.t_in[k] - 0.07, seed=50 + k)
+        return fr
 
 
 class E09(Shot):   # S118 MS 交叉斩：一刀斜劈，纸帘沿刀线断开；「那就撕碎」沿刀线排、被一分为二
