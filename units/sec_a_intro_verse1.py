@@ -1573,7 +1573,7 @@ class V17(Shot):
         fr = fr * (1 - gm) + gcol * gm
         fr = fr + gm * (np.exp(-((xx - 960) / 500) ** 2) * np.exp(-np.clip(yy - 720, 0, None) / 80))[..., None] * np.array([0.30, 0.20, 0.10], np.float32) * 0.5   # 远处天光在湿地面上的反光
         fr = fog(fr, t, 1, 640, 780, 0.5, (0.22, 0.17, 0.12), speed=(30, 0))
-        by = 140 + 740 * ein(q, 1.8)                                                       # 印底 y（落地 = 880）
+        by = 360 + 520 * ein(q, 1.8)                                                       # 印底 y（落地 = 880）；第十一棒（P1-7）：起帧 140→360，开镜就露出大半个印身
         sh = np.zeros((H // 2, W // 2), np.float32)
         cv2.ellipse(sh, (480, 440), (int(330 + 140 * (1 - q)), int(26 + 10 * (1 - q))), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
         sh = cv2.resize(cv2.GaussianBlur(sh, (0, 0), 4 + 22 * (1 - q)), (W, H))[..., None] * gm
@@ -1583,6 +1583,15 @@ class V17(Shot):
                            grade=dict(expo=0.82, sat=0.55, tint=(1.04, 1.0, 0.95), gamma=1.05), wind=0, breathe=0.0,
                            mblur=(0, 4 + 22 * q * q))
         fr = fx2.god_rays(fr, (960, 130), strength=0.15, length=1.0, color=(1.0, 0.78, 0.45), t=t, src_r=200)
+        # 第十一棒（P1-7）：下落速度线 —— 印身两侧被压开的气流/雨线，竖向拉长、随下落加速
+        Lv = np.zeros((H // 2, W // 2), np.float32); rr_ = np.random.default_rng(171)
+        for k_ in range(26):
+            x_ = rr_.uniform(330, 1590); 
+            if 560 < x_ < 1360 and rr_.random() < 0.7: x_ = x_ + (-420 if x_ < 960 else 420)
+            y0_ = (rr_.uniform(0, 1.0) + (t - self.t0) * (2.0 + 3 * q)) % 1.3 * 900 - 100
+            cv2.line(Lv, (int(x_ / 2), int(y0_ / 2)), (int(x_ / 2), int((y0_ + 140 + 160 * q) / 2)), rr_.uniform(0.4, 1.0), 1, cv2.LINE_AA)
+        Lv = cv2.resize(cv2.GaussianBlur(Lv, (0, 0), 0.8), (W, H))[..., None] * (1 - gm)
+        fr = fr + Lv * np.array([1.0, 0.85, 0.6], np.float32) * (0.25 + 0.35 * q)
         fr = RAIN.draw(fr, t, 0.6, angle=6, layers=(2,))
         return fr
     def top(self, t, a):
