@@ -507,7 +507,7 @@ def gold_seal():
     return _GSEAL['g']
 
 
-def fill_people(n, seed, h, scatter=0.0, t=0.0):
+def fill_people(n, seed, h, scatter=0.0, t=0.0, spill=False):
     """秤盘回调：盘里一堆纸人（scatter>0 时被抛起）"""
     def f(fr, c, rx, ry):
         r = np.random.default_rng(seed)
@@ -517,6 +517,11 @@ def fill_people(n, seed, h, scatter=0.0, t=0.0):
             k = scatter * r.uniform(0.6, 1.3)
             # 第十二棒（critic_C_r6 P2⑤）：不再抛成左上一团来源不明的彩色碎纸人 —— 秤盘被翘起时人偶只颠起一下、
             # 在盘里东倒西歪，站在盘沿外侧的几个从盘边滑落、掉出画框下方（来源一眼可见：就是这只盘）
+            if not spill:   # C40：秤断，人偶被抛飞（原行为）
+                x = c[0] + ox + r.uniform(-1, 1) * 260 * k; y = c[1] + oy - hh * 0.95 - (900 * k - 1100 * k * k * 0.6)
+                ang = r.uniform(-12, 12) + r.uniform(-200, 200) * k
+                fr = PY.draw_piying(fr, PY.piying_sprite(60 + i % 8, hh), x, y, ang, light=1.0, flip=bool(i % 2), base=(0.95, 0.72, 0.45))[0]
+                continue
             rest = c[1] + oy - hh * 0.95
             x = c[0] + ox + (ox / max(1.0, rx)) * 140 * k
             y = rest - (170 * k - 420 * k * k)
@@ -550,7 +555,7 @@ class C04(Shot):
         sc = clamp(k / 0.9)
         fl = pulse(t, td, 0.12)
         fr, info = self.B.draw(fr, t, 960, 250, 1360, tilt=tilt, rim=(1.0, 0.72, 0.42), rim_amt=0.9, light=(0.6, -0.8),
-                               fill_l=fill_people(12, 41, 92, scatter=sc * 0.9, t=t),
+                               fill_l=fill_people(12, 41, 92, scatter=sc * 0.9, t=t, spill=True),
                                fill_r=fill_seal(150, 1.0, fl) if t >= td else None)
         if t < td:   # 坠落中的金印（拖影）
             pr = info['pan_r']
