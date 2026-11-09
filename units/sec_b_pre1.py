@@ -420,7 +420,7 @@ class P06(Shot):
                 LB.paste(a, 1600, 290 + i * 118 + 6, (0.80, 0.07, 0.04))
             else:
                 T.place(L, ch, 1600, 290 + i * 118, 100, color=(0.96, 0.94, 0.88), fname='serif_sb', alpha=min(1, pc * 2), scale=1 + 0.4 * (1 - eout(pc)))
-        LB = T.drip_layer(LB, clamp01((t - self.T_XUE) / 0.9), n=6, seed=6, length=0.9)
+        LB = T.drip_layer(LB, clamp01((t - self.T_XUE) / 0.9), n=5, seed=6, length=0.45)
         fr = fr * (1 - 0.5 * K.blur_ds((np.abs(x - 1600) < 80) * (y > 220) * (y < 900) * 1.0, 30)[..., None])
         fr = T.compose(fr, L, shadow=0.85, glow=0.10)
         fr = T.compose(fr, LB, shadow=0.6, glow=0.35, glow_color=(0.7, 0.05, 0.03))
@@ -944,7 +944,7 @@ class P15(Shot):
     他侧身平端长刀于眼前，刀身仍带 P14 的余烬红，刀尖指向画左；缓推 + 火星沿刃口剥落；59.13 鼓停：刀身一线寒光由刀镡扫向刀尖，
     画面压暗憋住 → 副歌一 S028（横刀 CU + 血字）——横刀线同向接，景别 MS → CU。"""
     T_HOLD = V(59.13)
-    SRC, DST, WPX = (0.45, 0.17), (1010, 455), 2200
+    SRC, DST, WPX = (0.55, 0.35), (1000, 540), 2000
     def __init__(self):
         self.sp = spr('B_r4/guard_h')
         self.p7 = P07()
@@ -962,8 +962,8 @@ class P15(Shot):
         fr = K.fog(fr, t, 1501, amt=0.22, y0=0.6, y1=1.0)
         fr, Aw = put_at(fr, self.sp, t, self.SRC, dst, wpx, grade=dict(expo=0.82, sat=0.6, tint=(0.95, 0.96, 1.03), lift=0.0, gamma=1.1),
                         rim=dict(col=(1.0, 0.45, 0.32), amt=2.4, dir=(-0.9, -0.3)), wind_amp=6, shade=(1100, 1900, 0.3, 600, 0.4))
-        g = spt(self.sp, self.SRC, dst, wpx, (0.345, 0.170)); tip = spt(self.sp, self.SRC, dst, wpx, (0.006, 0.165))
-        fr, band = blade_heat(fr, Aw, g, tip, 0.009 * wpx + 6, 0.75, 1.0, t, seed=15)
+        g = spt(self.sp, self.SRC, dst, wpx, (0.690, 0.350)); tip = spt(self.sp, self.SRC, dst, wpx, (0.010, 0.345))
+        fr, band = blade_heat(fr, Aw, g, tip, 0.006 * wpx + 4, 0.38, 1.0, t, seed=15)   # 余烬：刃口暗红，不成光剑
         # 59.13 一线寒光沿刃扫过（蓄势）
         q = clamp01((t - (self.T_HOLD - 0.20)) / 0.22)
         if q > 0:

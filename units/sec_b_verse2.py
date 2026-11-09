@@ -1229,7 +1229,7 @@ class V17(Shot):
         u = self.u(t)
         x, y = K.grid()
         fr = self.bg + np.exp(-(((x - 1000) / 700) ** 2 + ((y - 300) / 500) ** 2))[..., None] * COLDC * 0.08
-        fr, _ = put_at(fr, self.sp, t, (0.30, 0.76), self.PALM, 1750, rim=dict(col=(0.72, 0.80, 1.0), amt=2.2, dir=(-0.6, -0.8)),
+        fr, _ = put_at(fr, self.sp, t, (0.19, 0.835), self.PALM, 1750, rim=dict(col=(0.72, 0.80, 1.0), amt=2.2, dir=(-0.6, -0.8)),
                        wind_amp=4, shade=(900, 1900, 0.3, 700, 0.2))
         # 掌心积水 + 倒影「命」（随涟漪抖动），107.08 字头亮起
         cx, cy = self.PALM[0] + 10, self.PALM[1] - 20
