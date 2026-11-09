@@ -1913,7 +1913,7 @@ def trench(fr, t, hor, camH, z0, z1, width=0.8, f=1000.0, cx=960.0, seed=0, heat
 
 class V23(Shot):
     def __init__(self):
-        self.sp = spr('drag_blade')
+        self.sp = spr('B_r4/drag_blade_pt')
         x, y = K.grid()
         mud = (0.015 + 0.035 * cv2.resize(K.fbm(H // 2, W // 2, 6701, 12, 6), (W, H)))[..., None] * np.array([1.0, 0.97, 0.95], np.float32)
         self.bg = mud
@@ -1955,7 +1955,7 @@ class V23(Shot):
 # V24 115.03–116.42 ELS 高：摇臂升高，一道发光朱红刀痕从他脚下延伸向远方雨雾中的城墙；drag_blade 远景逆光剪影（第 2 次）；「出方」沿刀痕透视铺设
 class V24(Shot):
     def __init__(self):
-        self.sp = spr('drag_blade')
+        self.sp = spr('B_r4/drag_blade_pt')
         sk = night_sky(6801, top=(0.03, 0.032, 0.04), bot=(0.20, 0.19, 0.20), horizon=0.6)
         wl, wm = city_wall_far(6802, 300, 420, tone=0.09)
         wl = K.blur_ds(wl, 3); wm = K.blur_ds(wm, 3) * 0.0             # 第七棒：去城墙（城墙背景 5→4 次），地平线只留雨雾
@@ -2011,7 +2011,7 @@ class V24(Shot):
 class V25(Shot):
     T_XIANG = 116.46
     def __init__(self):
-        self.sp = spr('back_stand')
+        self.sp = spr('B_r4/back_stand_pt')
         sk = night_sky(6901, top=(0.02, 0.022, 0.03), bot=(0.16, 0.15, 0.15), horizon=0.62)
         x, y = K.grid()
         # 第八棒（P1-8：V20/V24/V25 三镜同为城墙地平线）：V25 去城墙 → 雨雾中的远山脊线（两层，远淡近深），刀痕直指山口

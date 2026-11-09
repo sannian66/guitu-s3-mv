@@ -436,7 +436,7 @@ class P06(Shot):
 # P07 MS 低机位仰拍：鬼屠仰头，雷云旋转、云缝预亮；「我」「不信」毛草错落
 class P07(Shot):
     def __init__(self):
-        self.sp = spr('S023/look_up_low')
+        self.sp = spr('B_r4/look_up_low_pt')
         self.tex = K.tile(1024, 907, 4, 6)
         T.warm('我不信', 'cao', 200); T.warm('不', 'xing', 150)
         import fx2; self.fx2 = fx2
