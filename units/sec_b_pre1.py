@@ -540,11 +540,12 @@ class P09(Shot):
         fr += np.exp(-(((x - 700) / 700) ** 2 + ((y - 450) / 420) ** 2))[..., None] * RED * 0.22
         # 人物（右）
         if t < self.T_HIT:
-            fr, _ = put_at(fr, self.a, t, (0.5, 0.42), (1320, 540), 2000, grade=GR_COLD, rim=dict(col=(1.0, 0.45, 0.35), amt=1.8, dir=(-1.0, -0.4)),
+            fr, _ = put_at(fr, self.a, t, (0.5, 0.42), (1320, 696), 1800,   # 第八棒：束发结入画
+                            grade=GR_COLD, rim=dict(col=(1.0, 0.45, 0.35), amt=1.8, dir=(-1.0, -0.4)),
                            wind_amp=4, shade=(700, 1800, 0.25, 700, 0.35))
         else:
             k = clamp01((t - self.T_HIT) / 0.08)
-            fr, _ = put_at(fr, self.b, t, (0.5, 0.45), (1340, 570), 2100 * (1.05 - 0.05 * k), grade=GR_COLD,
+            fr, _ = put_at(fr, self.b, t, (0.5, 0.45), (1340, 752), 1850 * (1.05 - 0.05 * k), grade=GR_COLD,
                            rim=dict(col=(1.0, 0.45, 0.35), amt=2.0, dir=(-1.0, -0.4)), wind_amp=6, mblur=(-50 * (1 - k), 0), shade=(700, 1800, 0.2, 700, 0.3))
         # 「命」印：字头砸入（2.2→1.0 缩放 + 落地抖）→ 撞碎
         if t < self.T_HIT:
@@ -777,7 +778,8 @@ class P12(Shot):
         fr = self.bg.copy()
         x, y = K.grid()
         fr += np.exp(-(((x - 960) / 500) ** 2 + ((y - 380) / 300) ** 2))[..., None] * np.array([0.10, 0.11, 0.14], np.float32)
-        fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 470), 2350, grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
+        fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 614), 1900,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
+                       grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
                        rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4))
         # 刀刃上一线寒光自上而下
         q = clamp01((t - self.t0 - 0.1) / 0.6)
