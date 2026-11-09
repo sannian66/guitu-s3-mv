@@ -974,7 +974,7 @@ class V09(Shot):
 #     链上一滴朱墨落到盘沿 28.10 溅开 →「称」「量」朱墨在盘壁上晕开。盘体随链轻摆。
 class V10(Shot):
     def __init__(self):
-        T.warm('里', 'kai', 240); T.warm('称量', 'kai', 180)
+        T.warm('里', 'kai', 165); T.warm('称量', 'kai', 160)
         import a_r6; self.R6 = a_r6
         self.tex = cv2.resize(A.tex(101, 512, 5, 6), (W, H)); self.tex2 = cv2.resize(A.tex(103, 512, 40, 3), (W, H))
         self.CX, self.CY, self.AX, self.AY, self.DEP = 960, 600, 1060, 96, 560
@@ -1062,8 +1062,8 @@ class V10(Shot):
         G = T.Layer()
         gp = clamp01((t - (tl - 0.12)) / 0.3)
         if gp > 0:
-            g = T.glyph('里', 'kai', 240)
-            gx, gy = 640 + sway, 742
+            g = T.glyph('里', 'kai', 165)
+            gx, gy = 640 + sway, 795                                                    # 第八棒：整字落在盘壁上（原 742 顶部被前唇口盖住读成「王」）
             h_, w_ = g.shape
             fill = np.clip((np.arange(h_)[:, None] - h_ * (1 - eout(clamp01(a_l / 0.35)))) / 6, 0, 1) if a_l > 0 else np.zeros((h_, 1))
             groove = g * gp
@@ -1110,7 +1110,7 @@ class V10(Shot):
         L = T.Layer()
         for i, (ch, k) in enumerate((('称', 9), ('量', 10))):
             p = clamp01((t - (CT(3, k) - 0.12)) / 0.4)
-            if p > 0: L.paste(T.ink_bleed_glyph(ch, 'kai', 180, p, seed=9 + i, bleed=1.0), 1240 + 250 * i + sway, 746, (0.82, 0.08, 0.06))
+            if p > 0: L.paste(T.ink_bleed_glyph(ch, 'kai', 160, p, seed=9 + i, bleed=1.0), 1250 + 220 * i + sway, 795, (0.82, 0.08, 0.06))
         fr = T.compose(fr, L, shadow=0.5, glow=0.35, glow_color=(0.9, 0.12, 0.06))
         fr = RAIN.draw(fr, t, 0.7, angle=6, layers=(2,))
         return fr, (3 if 0 <= a_l < 0.08 else 0)
@@ -1985,7 +1985,7 @@ INNER = {
     'A04': dict(z=(1.0, 1.07), c=(1250, 420), d=(-30, 10)),
     'A07a': dict(z=(1.0, 1.12), c=(960, 760), d=(0, 70), ease='lin'),                 # 升镜：城楼在画里下沉 + 推
     'V09': dict(z=(1.0, 1.09), c=(960, 400), d=(0, 10)),
-    'V10': dict(z=(1.0, 1.12), c=(930, 620), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
+    'V10': dict(z=(1.0, 1.12), c=(930, 880), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
     'V13': dict(z=(1.0, 1.07), c=(1250, 560), d=(-50, 0)),
     'V19': dict(z=(1.0, 1.07), c=(1420, 380), d=(0, 25)),
     'V20': dict(z=(1.10, 1.0), c=(900, 600), ease='out'),
