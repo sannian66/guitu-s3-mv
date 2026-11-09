@@ -1809,6 +1809,10 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 
 # (名称, pre, post, kw)；'hard' = 硬切 + 切后 2 帧冲击；第四棒：whip 0、occlusion 3→2、slash_wipe 3→2、match_cut 3→2，
 # 新增 a_cloud / a_zoom2 / a_seam（中间帧都带前后镜元素）
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
+#   P0 转场去重 4 处：V02 hard→zoom_through、V06 hard→ink_bleed、V14 hard→a_zoom2、V17 hard→paper_tear
+#   P1 过渡长度 3 处：A08 post 0.40→0.20、V16 post 0.34→0.20、V18 post 0.30→0.20
+#   P0 二期 1 处：V04 occlusion→luma（原与 A07a 隔 5 刀重名）
 CUTS = {
     'A02': ('a_cloud', 0.20, 0.24, dict(seed=2)),                                     # 云墙横扫：A01 云海 → A02 山脊
     'A03': ('a_glint', 0.14, 0.18, dict(angle=-12, center=(960, 560))),             # 第五棒：冷光掠刃（山脊线 → 刀身线），替换蓝色闪电圈
@@ -1817,13 +1821,13 @@ CUTS = {
     'A06': ('hard', 0, 0, {}),                                                        # 片名刀光在镜内（A05 末帧预光条）
     'A07a': ('occlusion', 0.14, 0.16, dict(kind='pillar', direction=-1, seed=6)),     # 前景旗杆擦过（片名屏幕层不动）
     'A07b': ('zoom_through', 0.16, 0.20, dict(center=(960, 620), variant='raindrop')),  # 穿过一滴雨：滴内倒映城墙
-    'A08': ('smoke_through', 0.06, 0.40, dict(seed=8, direction=1, density=0.65)),    # 片名化灰成烟，烟后露出城门
+    'A08': ('smoke_through', 0.06, 0.20, dict(seed=8, direction=1, density=0.65)),    # [r4-P1] post 0.40→0.20，烟不再压 A08 首帧字（原注释：片名化灰成烟，烟后露出城门）
     'V01': ('a_seam', 0.10, 0.20, {}),                                               # 城门合缝，门缝里开出雨刃
-    'V02': ('hard', 0, 0, {}),
+    'V02': ('zoom_through', 0.08, 0.14, dict(center=(960, 540))),   # [r4-P0] 原 hard（轻闪白）→ 穿镜
     'V03': ('shatter', 0.04, 0.20, dict(seed=3, center=(1060, 880), n=60)),
-    'V04': ('occlusion', 0.14, 0.14, dict(kind='spear', direction=-1, seed=4)),
+    'V04': ('luma', 0.06, 0.14, dict()),   # [r4-P0b] 原 occlusion(kind=spear)：与 A07a 隔 5 刀重名 → 火把亮处起笔的亮度擦除
     'V05': ('hard', 0, 0, {}),
-    'V06': ('hard', 0, 0, {}),
+    'V06': ('ink_bleed', 0.12, 0.08, dict(seed=206, center=(1250, 420))),   # [r4-P0] 原 hard（轻闪白）→ 墨洇，断开 V05-V06 硬切连用
     'V07': ('match_cut', 0.08, 0.10, dict(shape='line', center=(960, 600), angle=0, mode='cut')),   # 寒光横线 ↔ 丹陛顶边
     'V08': ('paper_tear', 0.10, 0.20, dict(seed=8, angle=6)),
     'V09': ('a_brush', 0.14, 0.20, dict(seed=9)),                                    # 第五棒：飞白大笔横扫（水墨），替换蓝色闪电圈
@@ -1831,11 +1835,11 @@ CUTS = {
     'V11': ('flash_red', 0.03, 0.10, {}),
     'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
     'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
-    'V14': ('hard', 0, 0, {}),
+    'V14': ('a_zoom2', 0.10, 0.16, dict(center=(960, 520), seed=14)),   # [r4-P0] 原 hard（轻闪白）→ 墨边圆窗推镜（不用 a_cleave：V12 刚用过，2 刀内重名）
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
-    'V16': ('a_glyph', 0.08, 0.34, dict(ch='主', center=(750, 650), size=230)),   # 第九棒：post 0.24→0.34          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
-    'V17': ('hard', 0, 0, {}),
-    'V18': ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）
+    'V16': ('a_glyph', 0.08, 0.20, dict(ch='主', center=(750, 650), size=230)),   # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）｜[r4-P1] post 0.34→0.20
+    'V17': ('paper_tear', 0.08, 0.16, dict(seed=217, angle=6)),   # [r4-P0] 原 hard（轻闪白）→ 撕纸
+    'V18': ('smoke_through', 0.06, 0.20, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）｜[r4-P1] post 0.30→0.20
     'V19': ('hard', 0, 0, {}),
     'V20': ('hard', 0, 0, {}),
     'V21': ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(1420, 540), mode='open', col=(1.0, 0.85, 0.6))),   # 第七棒：V20 撩刀弧光一线斩开画面，露出「锋」（原灰平板 + 半截「锋」重复）

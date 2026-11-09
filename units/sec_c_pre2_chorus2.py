@@ -2220,13 +2220,17 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 
 # 入切转场：(名称, pre 秒, post 秒, kw)。'hard' = 切后 2 帧冲击（推近 + 提亮）；c_trans 自写的 push/luma/seam/over/whip 中间帧都带两镜内容；
 # 其余走 lib/trans.py。第三棒：flash_white 0 处、whip 1 处（C03）、白插帧改电光过曝。
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
+#   P0 转场去重 4 处：C17 hard→ink_crack、C22 hard→luma、C30 flash_red→bolt_split、C36 flash_red(one_frame)→match_line
+#   P1 过渡长度 2 处：C02 match_line pre 0→0.08、C07 seam pre 0→0.08
+#   P0 二期 1 处：C30 bolt_split→freeze_glitch（原与 C37 隔 8 刀重名）
 CUTS = {
-    'C02': ('match_line', 0.0, 0.12, {}),                                # 朱笔竖笔 ↔ 红丝线（图形匹配）
+    'C02': ('match_line', 0.08, 0.12, {}),                                # [r4-P1] pre 0→0.08（原注释：朱笔竖笔 ↔ 红丝线（图形匹配））
     'C03': ('whip', 0.10, 0.12, dict(direction=1)),                      # 全段唯一甩镜：沿丝线甩到皮影幕
     'C04': ('paper_tear', 0.06, 0.10, dict(angle=-10, seed=4)),         # 第十二棒（critic_C_r6 P2⑦）：glitch_cut 数码扫描线 → 皮影幕纸被撕开（古装质感）
     'C05': ('push', 0.10, 0.12, dict(center=(1620, 640))),               # 秤盘 → 箱口（推进穿越）
     'C06': ('hard', 0, 0, {}),
-    'C07': ('seam', 0.0, 0.20, dict(y=880)),                             # 箱盖金缝张开 → 闪电照亮的脸
+    'C07': ('seam', 0.08, 0.20, dict(y=880)),                             # [r4-P1] pre 0→0.08（原注释：箱盖金缝张开 → 闪电照亮的脸）
     'C08': ('push', 0.06, 0.08, dict(center=(1050, 400), z=0.5)),        # 同轴跳进眼睛
     'C09': ('slash_wipe', 0.05, 0.12, dict(angle=-55)),
     'C10': ('hard', 0, 0, {}),
@@ -2236,12 +2240,12 @@ CUTS = {
     'C14': ('push', 0.08, 0.12, dict(center=(960, 260), z=-0.25)),       # 风眼拉出 → 他头顶的同一个风眼
     'C15': ('hard', 0, 0, {}),
     'C16': ('over', 0.0, 0.17, dict(center=(960, 420))),                 # 副歌入口：吸气 3 帧 → 电光过曝炸开（非白帧）
-    'C17': ('hard', 0, 0, {}),
+    'C17': ('ink_crack', 0.08, 0.08, dict(center=(960, 540), seed=217)),   # [r4-P0] 原 hard（强闪白+抖）→ 墨裂
     'C18': ('occlusion', 0.12, 0.12, dict(kind='spear', direction=1)),  # 枪林掠过遮挡
     'C19': ('hard', 0, 0, {}),
     'C20': ('ink_bleed', 0.06, 0.14, {}),                                # 斩落的枪缨墨溅 → 太上皇
     'C21': ('slash_wipe', 0.05, 0.14, dict(angle=-62)),                  # 对角刀线 = 分屏线
-    'C22': ('hard', 0, 0, {}),
+    'C22': ('luma', 0.06, 0.16, {}),   # [r4-P0] 原 hard（强闪白）→ 亮度擦除
     'C23': ('push', 0.08, 0.12, dict(center=(960, 400))),                # 墙远景 → 墙面（同墙推进）
     'C24': ('occlusion', 0.10, 0.10, dict(kind='pillar', direction=1)),  # 横移：墙柱掠过前景
     'C25': ('hard', 0, 0, {}),
@@ -2249,14 +2253,14 @@ CUTS = {
     'C27': ('smoke_through', 0.08, 0.14, dict(direction=1, density=1.0, color=(0.62, 0.64, 0.68))),   # 第九棒 P2⑪：luma 中间帧碎片+天光糊团、露出 C27 方边 → 崩墙石尘冲过镜头
     'C28': ('ink_crack', 0.05, 0.12, dict(center=(960, 470), seed=28)),   # 第十二棒（critic_C_r6 P2⑦ 白闪同质化）：电光过曝 → 墨裂：崩墙的墨皮裂开、缝里透出伪天亮   # 第九棒 P2⑪：push 中间帧「亮」与人脸叠鬼影 → 伪天亮那道电光过曝切入
     'C29': ('hard', 0, 0, {}),                                           # 第四棒：luma 会在 C28 亮眼处开洞（像面具）→ 落拍硬切冲击
-    'C30': ('flash_red', 0.0, 0.14, {}),
+    'C30': ('freeze_glitch', 0.06, 0.14, dict(seed=330)),   # [r4-P0] 原 flash_red → 定格故障（P0 二期：bolt_split 与 C37 隔 8 刀重名，改此招）
     'C31': ('hard', 0, 0, {}),
     'C32': ('split_slide', 0.06, 0.12, dict(angle=90.0)),                # 掌风压下：画面上下错开
     'C33': ('whip_pan_blur', 0.04, 0.08, dict(direction='left')),       # 第七棒：十字斩的余势甩进刀身横扫（甩镜方向 = 挥刀方向）
     'C34': ('match_cut', 0.04, 0.10, dict(shape='line', center=(800, 570), angle=-31, feather=40, glow=(0.85, 0.92, 1.0))),   # 第七棒：刀线 → 刀线（C34 斜劈沿这条线裂开长出）
     'C35': ('smoke_through', 0.06, 0.12, dict(direction=-1, density=1.1, color=(0.40, 0.38, 0.36))),   # 第七棒：巨印压下扬起泥尘冲过镜头
     'C35b': ('hard', 0, 0, {}),                                          # 同轴跳切：全身硬扛 → 中近景咬牙（「扛」）
-    'C36': ('flash_red', 0.0, 0.12, dict(one_frame=True)),               # 扛印 → 1 帧朱闪 → 全景
+    'C36': ('match_line', 0.0, 0.14, {}),               # [r4-P0] 原 flash_red(one_frame) → 光缝匹配，去闪（原注释：扛印 → 1 帧朱闪 → 全景）
     'C37': ('bolt_split', 0.04, 0.12, dict(x0=1000, seed=37)),          # 第十二棒（白闪同质化）：整幅过曝 → 「天」那道雷竖着劈开画面，御匾从雷缝里展开   # 第七棒：「天」那道闪电过曝 → 雷光照出御匾
     'C38': ('ink_bleed', 0.05, 0.12, {}),                                # 第五棒：斩开的匾缝墨渗 → 握刀手（去掉擦除边缘亮线）
     'C39': ('hard', 0, 0, {}),
