@@ -18,7 +18,7 @@ import d_r5 as R5
 import d_r7 as R7
 from d_kit import V, cp, seal_p, INK, CINNABAR, GOLD, RED, W, H, BAR
 
-READY = False
+READY = True
 F0, F1 = 4839, 5797
 T0, T1 = F0 / 30, F1 / 30
 O = {i: D.onsets(i) for i in range(40, 48)}
