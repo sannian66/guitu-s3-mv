@@ -259,3 +259,20 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - 交付：`out/round4/D_contact_v10.jpg`（+`_p0/_p1`）、`out/round4/D_keys_v6.jpg`（+`_p0/_p1/_p2`）；细节见 `crew/round4/D_storyboard.md` §8。
 - 积分：本棒 1 张（D_r7/scale 3 点），D 组累计 48/80。
 - 遗留：P2（S04「牲」被裁、S01 开头偏暗、S27 停顿、S30→E 接帧）；S07 字堆缩略图像墨团；未出 mp4 动态验证。下一步：派第五轮评审。
+
+## C 组第七棒（2026-11-09 13:30–14:00 CST）· c_pre2_chorus2 帧 3534–4839 · 43 镜 · 平均 1.01s
+- 起点：critic_C_r3 76.5，C06 和 C41 不可交付，精致度 10/15。第六棒已改完 P0 四条，本棒先复渲单帧 124.40 / 145.45 / 161.10 核对，四条都到位。
+- P1 已改：
+  - C35b 换定妆脸：用已入库的 C6/c35b_bear，新工具 `tools/c_solidify.py` 修补手和刀面的半透明，输出 `assets/gen/C6/c35b_bear2_cut.png`。切点改到「扛」154.70。
+  - C33「对」「错」改成刀面镂空字（新函数 `etched_glyph`：暗槽、亮边、暗衬）。
+  - C30 上沿裁到颈下。
+  - 连续硬切里 7 个改成有设计的转场：whip_pan_blur ×2、match_cut、smoke_through、flash_white、slash_wipe，以及新增的 `units/c_trans.tip`（穿过刀尖光点，不出白卡）。
+  - 其余硬切按 `HARD_FX` 分 flash / slam / zoom / ink 四式冲击。
+  - C04、C05 字号提到 ≥80px；「这一」移出衣摆。
+- 产出：`out/round4/C_contact_v8.jpg`（_p0–_p3）、`out/round4/C_keys_v5.jpg`（_p0–_p5）。逐条记录见 `crew/round4/C_storyboard.md`「第七棒返工」。
+- 积分：本棒 0 点，累计 78/80。
+- 仍弱：
+  - C09 和 C32 同构，C32 换精灵需要生图。
+  - C34 的「是」「对」靠左缘。
+  - C15 人物小，C19 枪头没有透视。
+  - 联系表环境：缓存设 `C_CACHE=/workspace/work/c7tmp/cache`。整表一次渲会被 OOM 杀掉，要按 ≤10 张分批跑。
