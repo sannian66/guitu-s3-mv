@@ -372,8 +372,14 @@ class V03(Shot):
         self.rows = []                          # (x, foot_y, h, blur, fog, idx, delay)
         for row, (n, fy, hh, bl, fg) in enumerate(((9, 655, 190, 2.5, 0.55), (7, 770, 300, 1.2, 0.3), (5, 975, 480, 0.0, 0.0))):
             for i in range(n):
-                x_ = -120 + (2200 / n) * (i + 0.5) + r.uniform(-30, 30) + (row % 2) * 60
-                self.rows.append((x_, fy + r.uniform(-8, 8), hh * r.uniform(0.95, 1.05), bl, fg, int(r.integers(6)), (x_ + 200) / 2400 * 0.55 + row * 0.05))
+                # 第八棒（P2-12 人偶阵列感）：间距/身高/站位前后/鞠躬早晚/朝向/景深全部打乱，个别人掉队、两两挨近
+                if r.uniform() < 0.12: continue
+                x_ = -120 + (2200 / n) * (i + 0.5) + r.uniform(-0.38, 0.38) * (2200 / n) + (row % 2) * 60
+                dfy = r.uniform(-22, 22) * (1 + row)
+                sc = r.uniform(0.86, 1.12)
+                self.rows.append((x_, fy + dfy, hh * sc * (1 + dfy / 900), bl + r.uniform(0, 1.2) * (row < 2), fg, int(r.integers(6)),
+                                  (x_ + 200) / 2400 * 0.55 + row * 0.05 + r.uniform(-0.12, 0.18), bool(r.uniform() < 0.8), r.uniform(-7, 7)))
+            self.rows.sort(key=lambda q: q[1])
         sk = night_sky(4901, top=(0.03, 0.03, 0.04), bot=(0.13, 0.12, 0.11), horizon=0.75)
         x, y = K.grid()
         sk += np.exp(-(((x - 1450) / 520) ** 2 + ((y - 560) / 260) ** 2))[..., None] * GOLD * 0.22
@@ -392,13 +398,14 @@ class V03(Shot):
                            light_r=600, light_color=GOLD * 0.8, cam=(pan * 0.3, 0))
         bow = clamp01((t - (V(CT(20, 4)) - 0.4)) / 1.0)
         par = (0.35, 0.6, 1.0)
-        for k, (x_, fy, hh, bl, fg, idx, dl) in enumerate(self.rows):
-            row = 0 if hh < 240 else (1 if hh < 400 else 2)
+        for k, (x_, fy, hh, bl, fg, idx, dl, fl, tj) in enumerate(self.rows):
+            row = 0 if fy < 720 else (1 if fy < 880 else 2)
             bk = eio(clamp01((t - (V(CT(20, 4)) - 0.55) - dl) / 0.45))          # 依次鞠躬（左 → 右的浪）
-            fr, _ = BC.draw(fr, self.figs[idx], (x_ + pan * par[row], fy), hh, tilt=-16 + 22 * bk + 1.5 * math.sin(t * 2 + k), flip=True,
+            fr, _ = BC.draw(fr, self.figs[idx], (x_ + pan * par[row], fy), hh, tilt=-16 + tj + (18 + 0.6 * tj) * bk + 1.5 * math.sin(t * 2 + k), flip=fl,
                             expo=0.62 - 0.22 * fg, tint=(1.0, 0.95, 0.86), sat=0.5, rim_col=GOLD * 1.1, rim_amt=1.4 - 0.6 * fg, rim_dir=(-1.0, -0.4),
                             blur=bl, wet=0.35)
-            if fg > 0 and (k + 1 == len(self.rows) or self.rows[k + 1][2] > hh * 1.3):
+            nrow = (0 if self.rows[k + 1][1] < 720 else (1 if self.rows[k + 1][1] < 880 else 2)) if k + 1 < len(self.rows) else 9
+            if fg > 0 and nrow != row:
                 fr = fr * (1 - fg * 0.5) + np.array([0.20, 0.19, 0.18], np.float32) * fg * 0.5      # 远排压雾
         pr = prs(20, [0, 1, 2, 3, 4, 5], t)
         items = [dict(text='世人', x=-520, y=-170, z=1700, size=150, color='white', font='serif_sb', style='h', prog=pr[0:2]),
