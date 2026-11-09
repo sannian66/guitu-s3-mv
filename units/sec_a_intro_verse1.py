@@ -1495,7 +1495,7 @@ class V17(Shot):
         # 「正」只在坑底凹刻、靠左上侧光的阴影读出（不着金红、无框）；去砖墙、去橙色闪电、去白色碎屑
         import a_r7
         if not hasattr(self, 'cr'):
-            self.cr = R8.Crater8(c=(960, 585), size=(560, 470), rot=-4.0, seed=17, zheng=True, zsize=300)   # 第八棒：受光崩口 + 坑壁厚度 + 投影 + 暖光裂缝
+            self.cr = R9.Crater9(c=(960, 585), size=(560, 470), rot=-4.0, seed=17, zsize9=360)   # 第九棒：崩角 + 可读阴刻「正」+ 崩落石块   # 第八棒：受光崩口 + 坑壁厚度 + 投影 + 暖光裂缝
             self.fs, self.wet = a_r7.flagstones(7, n=55)
             yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
             self.lit = (0.55 + 0.75 * np.exp(-(((xx - 520) / 1300) ** 2 + ((yy + 100) / 900) ** 2)))[..., None]
