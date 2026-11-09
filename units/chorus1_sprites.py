@@ -175,7 +175,7 @@ def install(G):
         def render(self, t):
             u = self.u(t); e = eio(u)
             fr = self.bg.copy()
-            Lg = T.giant_layer('血', 'serif_black', 'red', 330, 540, 440)
+            Lg = T.giant_layer('血', 'serif_black', 'red', XUE_X, 540, 440)
             fr = T.compose(fr, Lg, **T.auto_style('red'))
             p0, p1 = (1520, 1180), (1150, -150)
             fr, bm = draw_blade(fr, p0, p1, 380, shine=0.6 - 0.3 * e, shine_w=0.12, return_mask=True, seed=8)

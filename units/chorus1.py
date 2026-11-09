@@ -514,8 +514,6 @@ class S034(Shot):
         fall = 1.35 * np.exp(-xx * 1.6) + 0.12
         lum = wall.mean(-1) * rake * fall
         self.wall = np.stack([lum * 0.86, lum * 0.95, lum * 1.12], -1).astype(np.float32); self.seam = seam
-        L = T.giant_layer('墙', MAIN_FONT['墙'], 'white', 900, 540, 440 if MAIN_FONT['墙'].startswith('serif') else 500)
-        self.gA = L.A.copy()
         T.warm('铁壁铜墙', 'kai', 70)
 
     def quad(self, t):
@@ -536,20 +534,20 @@ class S034(Shot):
         y = np.arange(H, dtype=np.float32)[:, None, None]
         topy = q[0][1]
         fr = fr * np.clip((y - topy) / 520, 0, 1) ** 1.3         # 墙顶消失于黑
-        # 「墙」从砖缝里浮起：先缝里透光，再整字凸起
+        # r5 F组（用户 #22）：去掉「墙」巨字 —— 只留砖缝冷光：缝里先渗光，卡点 T_POP 冷光沿砖缝向外炸开一圈后回落
         p1 = clamp01((t - self.t0 - 0.1) / (self.T_POP - self.t0 - 0.1))
-        gA = self.gA
-        seamlight = gA * sw_ * eio(p1)
-        fill = gA * (eout((t - self.T_POP) / 0.12) if t >= self.T_POP else 0.15 * p1)
-        A = np.clip(np.maximum(seamlight * 1.4, fill), 0, 1)
-        # 石质浮雕：上亮下暗
-        bl = cv2.GaussianBlur(gA, (0, 0), 4)
-        gy = cv2.Sobel(bl, cv2.CV_32F, 0, 1, ksize=5) * 0.02
-        stone = (0.58 + np.clip(-gy, -0.3, 0.4))[..., None] * np.array([0.95, 0.97, 1.0], np.float32)
-        sh = K.blur_ds(A, 22)
-        fr = fr * (1 - 0.7 * sh[..., None] * (t >= self.T_POP))
-        fr = over(fr, A, stone)
-        fr += K.blur_ds(seamlight, 8)[..., None] * np.array([0.85, 0.88, 1.0], np.float32) * 0.6 * (1 - 0.7 * (t >= self.T_POP))
+        xg, yg = K.grid()
+        rr = np.sqrt(((xg - 900) / 1.25) ** 2 + (yg - 560) ** 2)
+        if t < self.T_POP:
+            gm = np.exp(-(rr / (120 + 220 * eio(p1))) ** 2) * eio(p1) * 0.55
+        else:
+            a = t - self.T_POP
+            R = 300 + 1500 * eout(a / 0.5, 2)
+            gm = (np.exp(-(rr / 340) ** 2) * (0.25 + 0.4 * math.exp(-a / 0.3))
+                  + np.exp(-((rr - R) / 110) ** 2) * 0.75 * math.exp(-a / 0.35))
+        seamlight = np.clip(sw_ * gm, 0, 1)
+        fr = fr + seamlight[..., None] * np.array([0.80, 0.86, 1.0], np.float32) * 0.8
+        fr += K.blur_ds(seamlight, 8)[..., None] * np.array([0.85, 0.88, 1.0], np.float32) * 0.5
         fr = K.dust(fr, t, 3401, n=90, amt=0.5, size=(1, 4), drift=(10, 40), blur=1.2)
         if t >= self.T_POP:
             fr = K.sparks(fr, t, 3402, (900, 540), n=70, life=1.0, speed=(200, 700), dirc=(0, 1), spread=1.5, grav=900,
@@ -747,6 +745,7 @@ class S037(Shot):
 
 # =====================================================================================
 # S038 74.10–75.19 CU 刃面倒映眼睛，血沿刃纹流下；巨字「血」左侧半出画
+XUE_X = 585      # r5 F组（用户 #24）：「血」330 → 585 右挪，与右侧刀身（中心≈1335）关于画面中线对称
 class S038(Shot):
     t0, t1 = 74.10, 75.186
     def __init__(self):
@@ -760,7 +759,7 @@ class S038(Shot):
         e = eio(u)
         fr = self.bg.copy()
         # 巨字 血（左侧半出画）
-        L = T.giant_layer('血', 'serif_black', 'red', 330, 540, 440)
+        L = T.giant_layer('血', 'serif_black', 'red', XUE_X, 540, 440)
         fr = T.compose(fr, L, **T.auto_style('red'))
         p0, p1 = (1520, 1180), (1150, -150)
         fr, bm = draw_blade(fr, p0, p1, 380, shine=0.6 - 0.3 * e, shine_w=0.12, return_mask=True, seed=8)
@@ -908,46 +907,71 @@ class S041(Shot):
 
 
 # =====================================================================================
-# S042 80.22–82.06 ELS 月被云吞没，「天」巨字在月晕中，被一道刀光划掉
+# S042 80.22–82.06 ELS 月被云吞没；「不」一道刀光划过月面，月洇成猩红之月（r5 去「天」字）
 class S042(Shot):
     t0, t1 = 80.225, 82.059
-    T_SL = V(81.14)
+    T_SL = V(81.14)     # 「不」：一道刀光横过月面，月从刀痕处洇成猩红（r5 F组 用户 #26：去「天」字）
     T_PAN = V(81.52)
+    MC = (960, 520)
     def __init__(self):
-        self.bg = K.sky(seed=42, cloud=0.3, top=(0.01, 0.012, 0.018), bot=(0.05, 0.055, 0.065)).copy()
+        sky = K.sky(seed=42, cloud=0.3, top=(0.01, 0.012, 0.018), bot=(0.05, 0.055, 0.065)).copy()
         rgb, A = K.moon_sprite(240)
-        self.bg = K.paste_sprite(self.bg, rgb, A, 960, 520)
+        self.bg = K.paste_sprite(sky.copy(), rgb, A, *self.MC)
+        # 猩红之月：同一月面纹理改色（月海更深）+ 血色晕；天幕近月处染一层暗红
+        lum = rgb.mean(-1, keepdims=True)
+        s_ = A.shape[0]; yy_, xx_ = np.mgrid[0:s_, 0:s_].astype(np.float32) - s_ / 2
+        disc = np.clip((240 - np.sqrt(xx_ ** 2 + yy_ ** 2)) / 2 + 0.5, 0, 1)[..., None]
+        dd_ = np.sqrt(xx_ ** 2 + yy_ ** 2)
+        moon_r = np.clip((lum - 0.62) / 0.33, 0, 1)                  # 月面纹理归一（月海暗、高地亮）
+        limb_r = np.clip(1 - 0.5 * (dd_ / 240) ** 3, 0, 1)[..., None]  # 红月边缘更沉（立体感）
+        rgb_r = (disc * limb_r * (np.array([0.60, 0.065, 0.05], np.float32) * (0.28 + 0.72 * moon_r) ** 1.2
+                                  + np.array([0.20, 0.07, 0.03], np.float32) * moon_r ** 3)
+                 + (1 - disc) * np.array([0.34, 0.02, 0.018], np.float32)).astype(np.float32)
+        x, y = K.grid()
+        d = np.sqrt((x - self.MC[0]) ** 2 + (y - self.MC[1]) ** 2)
+        tint = (np.exp(-(d / 700) ** 2) * 0.10)[..., None] * np.array([1.0, 0.05, 0.03], np.float32)
+        self.bg_r = K.paste_sprite(sky * np.array([1.05, 0.85, 0.85], np.float32) + tint, rgb_r, A, *self.MC)
+        self.halo_r = (np.exp(-(np.maximum(d - 240, 0) / 110) ** 2) * np.clip((d - 236) / 6, 0, 1)).astype(np.float32)
+        # 刀痕方向（沿用原「天」字被劈的 -32°）：点到刀线的有向距离
+        ang = math.radians(-32); self.dir = np.array([math.cos(ang), math.sin(ang)])
+        self.dline = np.abs(-(x - self.MC[0]) * self.dir[1] + (y - self.MC[1]) * self.dir[0]).astype(np.float32)
         self.cl = K.tile(1024, 421, 4, 6)
-        self.L = T.giant_layer('天', MAIN_FONT['天'], (0.03, 0.03, 0.035), 960, 540, 440 if MAIN_FONT['天'].startswith('serif') else 500)
         T.warm('不判', 'xing', 110)
 
     def render(self, t):
         u = self.u(t)
-        fr = self.bg.copy()
-        # 天字（月晕中，墨色剪影在月面上更有压迫感）
-        if t < self.T_SL:
-            fr = T.compose(fr, self.L, shadow=0.0, outline=2, outline_color=(0.75, 0.8, 0.9), glow=0.6, glow_color=(0.7, 0.78, 0.95),
-                           opacity=eout((t - self.t0 - 0.1) / 0.4))
+        a = t - self.T_SL
+        # 卡点：刀痕先亮，红从刀痕向两侧洇开（0.2s 内整月变红）
+        if a < 0:
+            fr = self.bg.copy(); rk = 0.0
         else:
-            fr = T.slash_layer(fr, self.L, clamp01((t - self.T_SL) / 0.8), (960, 540), -32, slide=0.35, sz=520, length=1700,
-                               style_kw=dict(shadow=0.0, outline=2, outline_color=(0.75, 0.8, 0.9), glow=0.6, glow_color=(0.7, 0.78, 0.95)), seed=42)
-        # 云吞月（前景云卷过）
+            R = 30 + 700 * eout(clamp01(a / 0.22), 2)
+            m = np.clip((R - self.dline) / 60, 0, 1)[..., None]
+            fr = self.bg * (1 - m) + self.bg_r * m
+            rk = clamp01(a / 0.22)
+            fl = math.exp(-a / 0.25)                         # 变色瞬间的血晕外扩
+            fr = fr + self.halo_r[..., None] * RED * (0.05 + 0.35 * fl)
+        # 云吞月（前景云卷过；红月后云被映红、并散开一点让红月露出来）
         sh = 200 + 900 * eio(u)
         cl = cv2.resize(K.tile_crop(self.cl, sh, 100 - 80 * u, H // 2, W // 2), (W, H))
         x, y = K.grid()
-        cov = np.clip((cl - 0.62 + 0.25 * u) * 3.5, 0, 1)
+        cov = np.clip((cl - 0.62 + 0.25 * u - 0.18 * eout(rk)) * 3.5, 0, 1)
         lit = np.exp(-((x - 960) ** 2 + (y - 520) ** 2) / (2 * 420 ** 2))
-        fr = over(fr, cov * 0.9, (0.05 + 0.25 * lit)[..., None] * np.array([0.9, 0.93, 1.0], np.float32))
-        fr = fr * (1 - 0.35 * eio(u))
-        # 81.62「判」冲击
+        ccol = np.array([0.9, 0.93, 1.0], np.float32) * (1 - rk) + np.array([0.75, 0.13, 0.10], np.float32) * rk
+        fr = over(fr, cov * 0.9, (0.05 + 0.25 * lit)[..., None] * ccol)
+        fr = fr * (1 - 0.35 * eio(u) * (1 - 0.5 * rk))
+        # 刀光横过月面（卡点 T_SL 前 1 帧起划）
+        q = (t - self.T_SL + 0.03) / 0.3
+        if 0 <= q < 0.6:
+            fr = T._slash_light(fr, self.MC, self.dir, q, 1700)
+        if 0 <= a < 1 / 30 + 1e-3: fr = fr * 0.6 + RED * 0.35 + 0.15        # 变色那一帧红闪
+        # 81.52「判」冲击
         k = pulse(t, self.T_PAN, 0.12) * (t >= self.T_PAN)
         z = (1.0 + 0.06 * eio(u)) * (1 + 0.10 * k)
         dx, dy, dr = shake(t, 12 * k, 14, 42)
         fr = cam(fr, z, dx, -30 * eio(u) + dy, 3 * eio(u) + dr)
         if self.T_PAN <= t < self.T_PAN + 2 / 30 + 1e-3: fr = fr * 0.5 + RED * 0.6
         if V(80.86) <= t < V(80.86) + 1 / 30 + 1e-3: fr = fr + 0.25
-        pr = tprog(18, [1, 2], t, 0.18)
-        pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
         return fr, (4 if k > 0.4 else 0)
 
 
