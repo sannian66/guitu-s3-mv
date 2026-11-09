@@ -868,10 +868,14 @@ tools/edit_audit.py            审计器（本轮新增，归 edit-audit 所有�
    **教训（已升级为硬规则，见 §0.0 第 9 条）**：故障/撕裂类转场不能用 p=0.5 单帧验收——那一帧恰好落在撕裂最轻的位置，看起来「有内容、不白不黑」，但前后 5 帧全幅撕裂才是真实观感。
 3. **A 段补刀后的「硬切 +3」是我刻意选的**：三个新镜用 `none`（纯硬切无闪）而不是 `hard`（提亮 22%），所以闪数不涨、只涨硬切。这是 A 段提速唯一不破坏「去白闪」目标的方案。
 
-4. **A 段 3 把新刀用 `none`，它的真实观感要说清楚**：`none` = **纯硬切 —— 无白闪、也无震屏**（A 的 `hard` 才会提亮 22%，`none` 连 2 帧冲击都没有）。
-   节奏上的「卡点感」来自两件事：① 切点落在 kick/军鼓上（low p94–p99）② 后半镜的运镜接着前半终点同向续推，切点处有 3–8% 的构图跳。
-   9 帧条 `tr_A3cut_V01b/V13b/V16b.jpg` 可见：字层跨刀继续擦入、不断裂，画面干净。
-   **若以后要「卡点震屏」**，A 段目前没有「无闪的冲击」实现（`punch` 只在 b_kit、`hard_cut_x` 只在 D）；需要给 A 的 `Section.raw` 加一个 no-flash impact 分支（仿 D 的 `hard_cut_x`：墨压暗 + 色散 + 顿挫，不出白帧）。**本轮没加**，因为 `none` 更干净、且不增加新代码面。
+4. **A 段 3 把新刀：从 `none` 升级成新造的 `impact_nf`（无闪顿挫）**。
+   `none` 是「什么都不做」——无闪但也无震屏，卡点感只靠重拍 + 构图跳。lead 批准后在 `sec_a` 的 `Section.raw` 里
+   **新增了一个名字 `impact_nf`**（不动 `hard`、不改任何现有名字的行为），效果只有三样且都很轻：
+   **① 切后 3 帧衰减 `(1.0, 0.45, 0.18)`；② 竖向位移抖 8→4→1px（不带旋转）；③ 1.02 倍推近。**
+   **不闪、不提亮、不做 RGB 分离** —— 这就是它与 `hard`（提亮 22%）的分水岭。三刀的名字已从 `none` 改为 `impact_nf`。
+   实测（与 `none` 版逐帧对比）：**亮度最大偏移 0.005**（要求 ≤±0.03）、**最亮帧 0.254**（要求 <0.55，0 帧发白）、
+   逐帧差在切点处 0.048/0.035/0.025（基线 0.017）→ **衰减 3 帧后回到基线 = 看得见的 1 帧顿挫**；
+   1:1 原图 `tr_A3cut_frame_1to1_{483,484,950,951,1115,1116}.png` 无重影（只是单帧 warp，不叠两镜）。
 
 ### 7.5 抽帧自检（20 帧，1080p，单进程串行，用新快照 `out/devsnap` + 仓库镜像）
 
@@ -882,7 +886,8 @@ tools/edit_audit.py            审计器（本轮新增，归 edit-audit 所有�
 | P0 二期 3 帧（18:33，devsnap） | 179（V04 luma）/4473/1513 | mean 0.110 / 0.244 / 0.111 | ⚠ 单帧全过，但 9 帧条推翻了 C30 与 P07（见 7.4-②） |
 | **9 帧连续条（19:2x，devsnap）** | `out/tr_C30_iris_moon.jpg`（4468–4476） | 逐帧 mean 0.26→0.10，圆内是下一镜、圆外是上一镜，无黑无白无撕裂 | ✅ 通过 |
 | 同上 | `out/tr_B1P07_smoke.jpg`（1509–1517） | 逐帧 mean .11 .11 .11 .18 .26 .17 .09 .09 .09，烟过 2 帧、主体可辨 | ✅ 通过 |
-| 同上 | `out/tr_A3cut_V01b.jpg`（479–487）/`tr_A3cut_V13b.jpg`（946–954）/`tr_A3cut_V16b.jpg`（1111–1119） | 逐帧 mean 平稳（0.14–0.25），无白无黑 | ✅ 通过（纯硬切，见 7.4-④） |
+| 同上 | `out/tr_A3cut_V01b.jpg`（479–487）/`tr_A3cut_V13b.jpg`（946–954）/`tr_A3cut_V16b.jpg`（1111–1119） | 逐帧 mean 0.143–0.254；与 `none` 版逐帧差 ≤0.005 | ✅ 通过（`impact_nf`，见 7.4-④） |
+| 同上（1:1 原图） | `out/tr_A3cut_frame_1to1_{483,484,950,951,1115,1116}.png` | 切点 2 帧 × 3 处全分辨率 | ✅ 无重影、无叠画 |
 | **A+3 刀 6 帧（18:41，devsnap）** | 482→484 / 949→951 / 1114→1116 | 切点前后各 1 帧 | 差 0.044 / 0.042 / 0.056（**不跳黑不跳白**，运镜同向续推，无反向回弹） |
 | 顺手体检：C 段尾收尾（19:3x） | `out/tr_Ctail_freeze_glitch_check.jpg`（4832–4840） | 4835–4836 撕裂 2 帧 → 4837–4840 黑场 → D 段开局 | **合格**（段落交界 + 进黑场，按 §0.0-9② 放行；非 CUTS 转场，本轮未改） |
 
@@ -906,3 +911,69 @@ tools/edit_audit.py            审计器（本轮新增，归 edit-audit 所有�
 - **副歌一**：`units/chorus1.py` 零改动（标杆）。
 - **A 段做到逐镜 ≤1.8s（12 刀）**：未做，只在 3 刀的最小干预档。
 - **加速镜配额（0.6–0.8s）**：A 段仍是 0 枚。**劈 1.83s 的镜造不出 0.6–0.8s**（拍网格 0.464s 一档，只能劈成 0.93+0.90）；要补加速镜必须按 onset（八分音符/鼓点）落刀，是另一件事。
+
+---
+
+## 8. 转场家族使用现状（本轮固化）
+
+### 8.1 C / B1 / E 三段的「可用 / 已用 / 别用」
+
+| 段 | 已在用（本轮后） | 干净未用（下次可挑） | 备注 |
+|---|---|---|---|
+| **B1**（导歌一，15 镜） | `cloud_wipe` `flashr` `glitch_cut` `ink_bleed` `match_cut` `none` `occlusion` `paper_tear` `punch`×2 `rain_curtain` `shatter` `slash_wipe` `smoke_through`（`shatter` 现仅 P15） | `iris_moon` `zoom_through` `zoom_dark` `split_slide` `fade_black` `whip_pan_blur` | 15 镜 = 一个 15 镜窗口，**同招只能出现 1 次**，可选池约 6 个 |
+| **C**（pre2+chorus2，43 镜） | `bolt_split` `hard`×9 `ink_bleed`×2 `ink_crack`×2 `iris_moon` `luma`×2 `match_cut` `match_line`×2 `occlusion`×2 `over` `paper_tear` `push`×5 `seam` `shatter` `slash_wipe`×4 `smoke_through`×2 `split_slide` `tip` `whip` `whip_pan_blur`×2 | **只剩 `zoom_through`、`fade_black`** | ⚠ **C 段转场库接近饱和**（22 个干净名里已用 20）；再要「不重样」只能新造招或换族 |
+| **E**（chorus3+outro，38 镜） | `blade_black` `blade_sweep` `cut` `door_open` `entry_flash` `gold_leaf` `hard`×7 `impact`×5 `ink_bleed` `ink_swallow`×2 `light_sweep` `match_cut`×2 `occlusion` `paper_tear` `push_h` `seal_cover` `slash_wipe`×2 `warm_veil`×2 | `iris_moon` `fog_wall` `smoke_through` `zoom_through` `whip_pan_blur` `split_slide` `plaque_sweep` `fade_black` | E 段唯一还超标的是「闪」：`hard`×7 + `impact`×5 = 12 处提亮/色闪，最差窗口仍闪 7 |
+
+### 8.2 黑名单 / 受限名单（硬规则）
+
+| 转场 | 状态 | 规则 |
+|---|---|---|
+| `freeze_glitch`（`lib/trans.py`） | **全片 0 处，禁止再引入** | 单帧 p=0.5 完全正常但 9 帧条里 5 帧全幅横向撕裂（C30 实测），观感=文件损坏 |
+| `freeze_glitch_keep`（D 本地） | **仍有 1 处：D `S28_Spin`（本轮未动，属 D 组）** | 只允许用在段落收尾/交界且 **≤2 帧撕裂 + 随后进黑场**；`S28_Spin` 待下一轮补 9 帧条复核 |
+| `bolt_split` | 1 处（C `C37`），**在本轮 C30 上被否** | 单帧看没问题，但**必须 9 帧条复核**才准用（雷劈裂开属半撕裂族） |
+| `glitch_cut` / `split_slide` / `shatter` | 1 / 2 / 6 处 | **9 帧条复核**后才准用；段内不得整幅撕裂 |
+| `flash_white` / `flash_red` / `gold` / `entry_flash` | 1 / 3 / 0 / 1 处 | **新刀一律不许用**（`entry_flash` 仅限 E 段段落入口那 1 处）；现存 5 处列为下一轮 P0 候选 |
+| `hard`（各段的提亮硬切） | 39 → 现 **27** 处 | 新刀不许用；已是「轻闪」，只在「必须靠提亮救卡点」时保留 |
+
+### 8.3 一句话总结现状（205 镜 / 199 刀）
+
+闪 49（24.6%）、硬切族 44、具名闪 12、`freeze_glitch` 0、不同转场名 64；
+每段最差 15 镜窗口：A 闪4/硬5、B1 3/3、C 4/4、B2 2/4、D 4/2、E 7/4、副歌一 7/6（标杆豁免）；
+段均值：A 1.376 ✅ / B1 1.018 / C 1.012 / D 1.064 / B2 1.264 / E 1.267 / 副歌一 1.409（标杆）。
+
+---
+
+## 9. HANDOFF 用：剪辑规范 + 转场家族现状（可直接抄，两屏内）
+
+```markdown
+## 剪辑规范（2026-11-09 定，205 镜 / 199 刀）
+
+1. 正文镜长 0.90–1.40s；派生硬指标：段均值 ≤1.40s ⇒ 段镜数 ≥ ⌈段长/1.4⌉。
+2. 加速镜 0.60–0.80s，占比 8–12%，每 8–10s 至少 1 枚；必须按 onset 落刀（拍网格 0.464s 一档劈不出来）。
+3. 同段 15 镜内入转场不重样：同名 ≤1 次、闪 ≤4、硬切 ≤5；同一转场名横跨 ≥3 段视为撞车。
+4. 刀不切字：切点必须落在重拍（kick/军鼓）上，且离最近字头 ≥0.10s。
+   字层 `t_start = 切点 + 0.6 × 该镜入转场 post` → 改 post 会推迟出字，改 pre 不会；post 不许越过本镜第一个字头。
+5. 同段最长镜 ≤1.80s。豁免：A01（开场墨滴）、A06/A07a（片名）、E30–E36（落版）、D S30_Da（「答」定格）。
+6. 闪占比 ≤35%（现 24.6%）；单个 15 镜窗口闪 ≤4（未达标：E 7、副歌一 7）。
+7. 副歌一 `units/chorus1.py` = 不重样正例、标杆只读，任何一轮都不许动它的切点与转场。
+8. 改法：只改各段 `CUTS` 的 name/pre/post/kwargs；加刀才动 `SHOTS`/`CUT_F`，且必须①落重拍②不切开正在写的字
+   ③后半用子类继承相位（`u()` 按原区间算）。每次改动在 `CUTS = {` 上方留 `# [round4-edit-audit 日期]` 记录块。
+9. 验收：**禁止 p=0.5 单帧验收任何转场**。故障/撕裂族（freeze_glitch / freeze_glitch_keep / glitch_cut /
+   split_slide / shatter / bolt_split）必须渲切点前后各 4 帧 = 9 帧条（`out/tr_<镜号>_<转场>.jpg`），
+   判：段内整幅撕裂 0 帧；段落交界 ≤2 帧且须进黑场；主体可辨；无整幅发白。其它族每批至少 1 条 9 帧条留档。
+
+## 转场家族现状
+
+- 全片：闪 49（24.6%）、硬切族 44、具名闪 12、不同转场名 64、`freeze_glitch` **0 处**。
+- 段均值：A 1.376 ✅ / B1 1.018 / C 1.012 / D 1.064 / B2 1.264 / E 1.267 / 副歌一 1.409（标杆）。
+- 最差 15 镜窗口闪数：A 4 / B1 3 / C 4 / B2 2 / D 4 / E 7 / 副歌一 7。
+- **可用未用（下次加刀/换招优先从这里挑）**：
+  B1 → iris_moon / zoom_through / zoom_dark / split_slide / fade_black / whip_pan_blur；
+  C  → 只剩 zoom_through / fade_black（**C 段已接近饱和**）；
+  E  → iris_moon / fog_wall / smoke_through / zoom_through / whip_pan_blur / split_slide / plaque_sweep / fade_black。
+- **拉黑**：`freeze_glitch` 全片清零，禁止再引入（9 帧条实测 5 帧全幅撕裂）。
+- **受限（须 9 帧条复核才准用）**：`bolt_split`（C37 在用）、`glitch_cut`（B1 P09）、`split_slide`（2 处）、
+  `shatter`（6 处）、`freeze_glitch_keep`（D S28_Spin，待复核）。
+- **新刀禁用**：`flash_white`/`flash_red`/`gold`/`entry_flash`（现存 5 处列为下一轮 P0 候选）、`hard`（27 处提亮硬切）。
+- A 段新增的无闪顿挫 `impact_nf`（`sec_a` 本地：3 帧 8→4→1px 抖 + 1.02 推近，不闪不提亮不做 RGB 分离）可复用。
+```

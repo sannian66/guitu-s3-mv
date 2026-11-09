@@ -11,7 +11,7 @@
 | A | A07a | 317–399 | 2.73 | `occlusion` | 前景遮挡 |  |  |  | 1 | 豁免 |
 | A | A08 | 399–455 | 1.87 | `smoke_through` | 墨/烟/烧 |  |  |  | 3 | 改 |
 | A | V01 | 455–483 | 0.93 | `a_seam` | 图形匹配 |  |  |  | 1 | 不改 |
-| A | V01b | 483–509 | 0.87 | `none` | 硬切 | 是 |  |  | 0 | 改 |
+| A | V01b | 483–509 | 0.87 | `impact_nf` | 硬切 | 是 |  |  | 0 | 改 |
 | A | V02 | 509–537 | 0.93 | `zoom_through` | 甩/推/穿 |  |  |  | 4 | 不改 |
 | A | V03 | 537–592 | 1.83 | `shatter` | 撕裂/刀切 |  |  |  | 1 | 改 |
 | A | V04 | 592–620 | 0.93 | `luma` | 图形匹配 |  |  |  | 4 | 不改 |
@@ -24,11 +24,11 @@
 | A | V11 | 867–895 | 0.93 | `flash_red` | 闪白/闪色 |  | 闪红 |  | 2 | 不改 |
 | A | V12 | 895–922 | 0.90 | `a_cleave` | 墨/烟/烧 |  |  |  | 1 | 不改 |
 | A | V13 | 922–950 | 0.93 | `a_glint` | 墨/烟/烧 |  |  |  | 1 | 不改 |
-| A | V13b | 950–977 | 0.90 | `none` | 硬切 | 是 |  |  | 0 | 不改 |
+| A | V13b | 950–977 | 0.90 | `impact_nf` | 硬切 | 是 |  |  | 0 | 不改 |
 | A | V14 | 977–1032 | 1.83 | `a_zoom2` | 甩/推/穿 |  |  |  | 1 | 改 |
 | A | V15 | 1032–1087 | 1.83 | `match_cut` | 图形匹配 |  |  |  | 2 | 改 |
 | A | V16 | 1087–1115 | 0.93 | `a_glyph` | 墨/烟/烧 |  |  |  | 1 | 不改 |
-| A | V16b | 1115–1142 | 0.90 | `none` | 硬切 | 是 |  |  | 0 | 不改 |
+| A | V16b | 1115–1142 | 0.90 | `impact_nf` | 硬切 | 是 |  |  | 0 | 不改 |
 | A | V17 | 1142–1183 | 1.37 | `paper_tear` | 撕裂/刀切 |  |  |  | 8 | 不改 |
 | A | V18 | 1183–1224 | 1.37 | `smoke_through` | 墨/烟/烧 |  |  |  | 5 | 不改 |
 | A | V19 | 1224–1252 | 0.93 | `hard` | 硬切 | 是 | 轻闪白 |  | 1 | 不改 |
@@ -242,7 +242,6 @@
 | `ink_bleed` | 7 | A×2, C×2, B1×1, B2×1, E×1 | A:A04 A:V06 B1:P05 B2:V15 C:C20 C:C38 E:E31 |
 | `whip` | 7 | C1×6, C×1 | C1:S030 C1:S034 C1:S035 C1:S039 C1:S042 C1:S044 C:C03 |
 | `smoke_through` | 6 | A×2, C×2, B1×1, D×1 | A:A08 A:V18 B1:P07 C:C27 C:C35 D:S04_Snow |
-| `none` | 6 | A×3, B2×2, B1×1 | A:V01b A:V13b A:V16b B1:P04 B2:V18 B2:V21 |
 | `shatter` | 6 | B2×2, A×1, B1×1, C×1, D×1 | A:V03 B1:P15 B2:V12 B2:V19 C:C26 D:S23_Eye |
 | `zoom_through` | 5 | C1×2, D×2, A×1 | A:V02 C1:S037 C1:S048 D:S07_Heap D:S16_Closed |
 | `push` | 5 | C×5 | C:C05 C:C08 C:C12 C:C14 C:C23 |
@@ -250,8 +249,10 @@
 | `punch` | 4 | B1×2, B2×2 | B1:P06 B1:P14 B2:V13 B2:V22 |
 | `rain_curtain` | 4 | B2×3, B1×1 | B1:P13 B2:V08 B2:V16 B2:V24 |
 | `ink_swallow` | 4 | E×4 | E:E02 E:E03 E:E13 E:E29 |
+| `impact_nf` | 3 | A×3 | A:V01b A:V13b A:V16b |
 | `luma` | 3 | C×2, A×1 | A:V04 C:C13 C:C22 |
 | `flash_red` | 3 | A×1, C1×1, D×1 | A:V11 C1:S038 D:S15_Hole |
+| `none` | 3 | B2×2, B1×1 | B1:P04 B2:V18 B2:V21 |
 | `hard_cut_x` | 3 | D×3 | D:S03_TypeSlam D:S12_Pierce D:S27_Bullet |
 | `a_glint` | 2 | A×2 | A:A03 A:V13 |
 | `a_cleave` | 2 | A×2 | A:V12 A:V21 |
@@ -293,7 +294,7 @@
 
 | 组 | 违规窗口数 | 最差窗口 | 时间 s | 闪 | 硬切 | 窗口内入转场序列 |
 |---|---|---|---|---|---|---|
-| A | 4 | A05…V10 | 7.3–28.9 | 4 | 5 | hard hard occlusion smoke_through a_seam none zoom_through shatter luma hard ink_bleed match_cut paper_tear a_brush hard |
+| A | 4 | A05…V10 | 7.3–28.9 | 4 | 5 | hard hard occlusion smoke_through a_seam impact_nf zoom_through shatter luma hard ink_bleed match_cut paper_tear a_brush hard |
 | B1 | 0 | — | — | — | — | — |
 | C1 | 8 | S033…S047 | 65.5–87.5 | 7 | 6 | hard whip whip hard zoom_through flash_red whip paper_tear hard whip hard whip slash_wipe hard cut |
 | B2 | 0 | — | — | — | — | — |
