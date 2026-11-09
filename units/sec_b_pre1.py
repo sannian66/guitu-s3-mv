@@ -528,7 +528,7 @@ class P09(Shot):
     T_MING = V(52.84)
     SC = (610, 470)
     def __init__(self):
-        self.a = spr('S024/fist'); self.b = spr('B_r4/pommel_thrust_pt')
+        self.a = spr('B_r4/fist_pt'); self.b = spr('B_r4/pommel_thrust_pt')
         self.bg = BK.dark_bg(909, 0.02, 0.06, tint=(1.1, 1.0, 1.0))
         self.seal = T.seal_layer('命', self.SC[0], self.SC[1], 470, style='yin', rot=-4, seed=9)
         T.warm('不信', 'kai', 120)
@@ -769,7 +769,7 @@ class P11(Shot):
 # P12 MCU：鬼屠竖刀当面，刀身一分为二的脸（blade_face）；「只信这柄」马善政竖排，逐字光洇
 class P12(Shot):
     def __init__(self):
-        self.sp = spr('B_r4/blade_face2')                       # 第七棒：束发版（全片造型统一）
+        self.sp = spr('B_r4/blade_face2_pt')                       # 第七棒：束发版（全片造型统一）
         self.bg = BK.dark_bg(912, 0.015, 0.05)
         T.warm('只信这柄', 'kai', 96)
 
