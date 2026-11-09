@@ -414,19 +414,57 @@ def install(G):
             return cam(fr, 1.02, sh * math.sin(97 * t), sh * math.cos(71 * t)), 0
         TIP = (1428 // 2, 540 // 2)                       # windup 刀尖（半分辨率）
 
-    # ---------------------------------------------------------------- S046 MCU 刀在镜前（代码刀身 + 刻字），人物精灵在后虚焦
+    # ---------------------------------------------------------------- S046 MCU 刀遮半脸（r5 #28：去刀身刻字「这里就是我的回答」+ 代码刀身 → 生图 bladeface_a）
     class S046Sprite(S046):
+        EYE = (0.61, 0.375)                               # bladeface_a：露出的琥珀右眼
+        BLADE = (0.312, 0.458)                            # 刀身左右缘（归一化 x），护手在 0.81
         def __init__(self):
-            super().__init__(); self.sp = L('S046/stare')
-            self.sw.pose = lambda *a, **k: None
-            self.sw.draw = self._draw
-        def _draw(self, fr, x, y, sc, **kw):
-            a, s = (0.52, 0.30), 1300 / self.sp.h
-            fr, _ = self.sp.draw(fr, self._t, a, (1330, 330), s, rim=dict(col=(0.8, 0.85, 1.0), amt=1.6, dir=(0.6, -0.8)),
-                                 grade=dict(expo=0.62, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.2), shade=None, wind_amp=4)
-            return fr, {}
+            super().__init__(); self.sp = L('R5_F/bladeface_a')
+            x, y = K.grid(); self.x, self.y = x, y; self.inkm = sstep(950, 870, x).astype(np.float32)
         def render(self, t):
-            self._t = t; return super().render(t)
+            tr = REAL_T[0] if REAL_T[0] is not None else t     # 画面定格慢放；风/刀光/闪光/墨爆按真实时间
+            x, y = self.x, self.y
+            fr = self.bg.copy() * 0.85
+            s = 0.50 * (1 + 0.035 * eio(clamp01((t - self.t0) / (self.t1 - self.t0))))
+            ex, ey = 1060, 405
+            sp = self.sp
+            x0 = ex - self.EYE[0] * sp.w * s; x1 = x0 + sp.w * s
+            hf = np.clip((x - x0) / 160, 0, 1) * np.clip((x1 - x) / 160, 0, 1)            # 肩线两侧（生图画幅边）渐隐进夜色
+            ea = 1 - (1 - hf) * sstep(560, 760, y)
+            fr, Aw = sp.draw(fr, tr, self.EYE, (ex, ey), s, breathe=0.004, wind_amp=5,
+                             grade=dict(expo=0.62, sat=0.50, tint=(0.90, 0.95, 1.05), lift=0.0, gamma=1.22),
+                             rim=dict(col=(0.80, 0.86, 1.0), amt=2.0, dir=(0.7, -0.7)), wrap=0.45, shade=None, extra_A=ea, keep_red=0.45)    # 压唇色（防只有唇红抢眼）
+            # 刀身：冷光扫过（入镜一次、「答」前再一次）
+            bx0 = x0 + self.BLADE[0] * sp.w * s; bx1 = x0 + self.BLADE[1] * sp.w * s
+            gy = ey + (0.81 - self.EYE[1]) * sp.h * s
+            bm = (sstep(bx0 - 2, bx0 + 8, x) * sstep(bx1 + 2, bx1 - 8, x) * sstep(gy, gy - 20, y) * Aw)
+            sh = 0.0
+            for ts, dur in ((self.t0 + 0.05, 0.55), (self.T_ANS - 0.30, 0.30)):
+                q = (tr - ts) / dur
+                if 0 <= q <= 1:
+                    yc = 60 + (gy - 60) * eio(q)
+                    sh = sh + np.exp(-((y - yc - (x - bx0) * 0.6) / 46) ** 2) * math.sin(math.pi * q)
+            if not isinstance(sh, float):
+                fr = fr + (bm * sh)[..., None] * np.array([0.85, 0.92, 1.05], np.float32) * 0.75
+            # 琥珀眼：「答」上金色眼光
+            ga = pulse(tr, self.T_ANS - 0.05, 0.25) * (tr >= self.T_ANS - 0.05)
+            if ga > 0.01:
+                fr += (np.exp(-(((x - ex) / 9) ** 2 + ((y - ey) / 3) ** 2)) * ga * 1.2)[..., None] * GOLD
+                fr += (np.exp(-(((x - ex) / 60) ** 2 + ((y - ey) / 6) ** 2)) * ga * 0.35)[..., None] * GOLD
+            # 定格 0.3s 后推
+            z = 1.0 + 0.04 * eio(clamp01((tr - self.t0 - 0.3) / 0.6))
+            k = pulse(tr, self.T_ANS, 0.12) * (tr >= self.T_ANS)
+            fr = cam(fr, z * (1 + 0.08 * k), 0, 0)
+            if self.T_CRASH <= tr < self.T_CRASH + 1 / 30 + 1e-3: fr = fr * 0.4 + 0.8          # 鼓回归：闪白
+            if self.T_ANS <= tr < self.T_ANS + 2 / 30 + 1e-3: fr = fr * 0.6 + GOLD * 0.5
+            # 朱墨爆开（左下角一角，金边）
+            if tr >= self.T_ANS + 1 / 30:
+                pb = 0.17 * eout((tr - self.T_ANS) / 0.2, 2)
+                m = K.ink_blot(pb, seed=46, center=(150, 950)) * self.inkm     # 墨点不溅上脸（只在刀身左侧）
+                edge = np.clip(K.blur_ds(m, 6) - m * 0.85, 0, 1)
+                fr = over(fr, m, RED * 0.22 + 0.015)
+                fr += edge[..., None] * GOLD * 1.2 * (1 - 0.5 * pb)
+            return fr, (3 if k > 0.5 else 0)
 
     out = {}
     for c in (S029Sprite, S030Sprite, S031Sprite, S035Sprite, S037Sprite, S038Sprite, S039Sprite, S041Sprite, S044Sprite, S045Sprite, S046Sprite):
