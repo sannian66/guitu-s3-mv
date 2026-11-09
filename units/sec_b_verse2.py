@@ -535,15 +535,15 @@ class V02(Shot):
         flick = 0.85 + 0.15 * math.sin(t * 17.0) * math.sin(t * 5.3)
         h, w = self.h, self.w
         b = self.bow(t)
-        my = (self.yy - b * self.hfig * 0.30).astype(np.float32)
+        my = (self.yy - b * self.hfig * 0.38).astype(np.float32)
         mx = (self.xx - b * self.hfig * 0.05 * np.sign(self.xx - w / 2)).astype(np.float32)
         F = cv2.remap(self.F, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)   # 整体位移场（人连同脚下水影一起下沉），不抠洞 → 无 inpaint 白晕
         A = cv2.remap(self.A, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)[..., None]
         bb = cv2.remap(b.astype(np.float32), mx, my, cv2.INTER_LINEAR)[..., None]
-        F = F * (1 - 0.40 * bb * A)                                     # 俯下去的背进阴影
+        F = F * (1 - 0.50 * bb * A)                                     # 俯下去的背进阴影
         tw = t - (self.t0 + 0.10)
         front = np.exp(-((self.persp * 1.05 - tw) / 0.07) ** 2)          # 波前：背上掠过冷光
-        P = F + (front * 0.13)[..., None] * np.array([0.82, 0.86, 0.95], np.float32) * (0.35 + 0.65 * A)
+        P = F + (front * 0.24)[..., None] * np.array([0.82, 0.86, 0.95], np.float32) * (0.35 + 0.65 * A)
         P = P * (1 + self.lan * (1.2 * flick)) * (1 + self.roof * 1.8 * env) * (1 + 0.35 * env)
         f1 = cv2.resize(np.roll(self.fog1, int(t * 40) % self.fog1.shape[1], 1), (w, h))
         f2 = cv2.resize(np.roll(self.fog2, -int(t * 22) % self.fog2.shape[1], 1), (w, h))
