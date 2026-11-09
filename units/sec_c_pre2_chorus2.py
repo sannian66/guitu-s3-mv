@@ -1574,11 +1574,12 @@ class C29(Shot):
 
 
 class C30(Shot):
-    """CU 腰带：暗红腰带在暴风里狂舞（S083，红绳母题）；「血」写成竖向长条朱红，像被风扯开的布。"""
+    """CU 腰带：暗红腰带在暴风里狂舞（S083，红绳母题）；「血」写成竖向长条朱红，像被风扯开的布。
+    第七棒（critic_C_r3 P1⑥ 裁在嘴上）：精灵再上移 185px，上沿裁在颈下/领口——纯胸腹特写，不露半张脸。"""
     def render(self, t):
         u = self.u(t)
         fr = storm(t, 30, horizon=1300, flash=0.25 + 0.6 * bolt_env(t, V(149.70)), ground=False)
-        fr, _ = put(fr, t, 'S083/sash', 900 - 80 * u, 560, 1500, anchor='src', src=(0.5, 0.62), rim=COLD, rim_amt=1.8, expo=1.0, sat=0.9,
+        fr, _ = put(fr, t, 'S083/sash', 900 - 80 * u, 515, 1500, anchor='src', src=(0.5, 0.62), rim=COLD, rim_amt=1.8, expo=1.0, sat=0.9,
                     wind=22, flash=0.4 * bolt_env(t, V(149.70)))
         fr = rain(fr, t, 300, inten=1.0, angle=20)
         self.ca = 3 if 0 <= t - V(149.70) < 0.1 else 0
