@@ -1014,7 +1014,7 @@ class C16(Shot):
         g = T.glyph('血', 'serif_black', 600, False).astype(np.float32)
         g = cv2.resize(g, (g.shape[1], int(g.shape[0] * 0.56)), interpolation=cv2.INTER_AREA)
         self.g = np.zeros((H, W), np.float32)
-        gh, gw = g.shape; y0, x0 = 735 - gh // 2, 960 - gw // 2   # 第九棒 P2⑨：上移 35px，下沿离开遮幅
+        gh, gw = g.shape; y0, x0 = 700 - gh // 2, 960 - gw // 2   # 第九棒 P2⑨：上移 35px；第十棒再上移 35px（下沿离遮幅 ≥ 110px，落点 770 仍在字内）
         self.g[y0:y0 + gh, x0:x0 + gw] = g
         r = np.random.default_rng(16)
         self.nz = cv2.resize(cv2.GaussianBlur(r.random((H // 8, W // 8)).astype(np.float32), (0, 0), 2), (W, H))
@@ -2230,7 +2230,7 @@ SENTS = [
     S(32, [1, 2], 1500, 860, size=70, mode='fly', exit='shatter', out=V(135.55)),                                    # 未冷（C16）
     S(32, [3, 4, 5], 960, 260, size=120, mode='fly', red='刀', exit='shatter', out=V(137.40), track=0.25),           # 刀不放
     S(33, [0, 1, 2], 560, 300, size=100, mode='fly', exit='shatter', out=V(138.33), offs=[(0, 0), (40, 60), (80, 120)]),   # 谁人来（斜）
-    S(33, [6, 7], 960, 850, size=112, mode='fly', exit='shatter', out=V(140.62), track=0.4, back=0.6),   # 第九棒 P2⑧：76→112px + 暗衬                        # 一方
+    S(33, [6, 7], 960, 815, size=150, mode='fly', exit='shatter', out=V(140.62), track=0.45, back=0.85),   # 第十棒 P2⑦：112→150px、暗衬加深，「一」在邪侧「方」在正侧，分屏线从两字间穿过   # 第九棒 P2⑧：76→112px + 暗衬                        # 一方
     S(34, [6, 7], 1560, 470, size=260, mode='fly', exit='shatter', out=V(144.70), sizes=[170, 260], back=0.4),   # 第五棒：补「铜」（143.48 落在 C24 开头，原来丢字）                                      # 墙（C24 低频震）
     S(35, [0, 1], 460, 300, size=84, mode='fly', exit='shatter', out=V(145.60), layout='v'),                        # 那就（C25）
     S(35, [3, 4], 1480, 830, size=84, mode='fly', exit='shatter', out=V(146.40)),                                    # 开它
