@@ -99,6 +99,47 @@ def install(G):
             gm = self.grass.mask(t, 1.2, dy=crane * 1.2, blur=10)
             return over(fr, gm, (0.01, 0.01, 0.012)), 0
 
+    # ---------------------------------------------------------------- S031 ELS 太上皇天幕巨像（r5 F组 用户 #21：代码建模 → 生图 R5_F/emp_a）
+    class S031Sprite(S031):
+        EYES = ((0.465, 0.280), (0.585, 0.280))          # emp_a 精灵内双眼（归一化）
+        ANC = (0.525, 0.280)                              # 锚点 = 两眼中点
+        def __init__(self):
+            super().__init__(); self.sp = L('R5_F/emp_a')
+        def render(self, t):
+            u = self.u(t)
+            cr = -240 * (1 - eio(u))                      # 机位从低处升起 + 上摇（同原镜）
+            fr = cam(self.bg, 1.0, 0, -cr * 0.25)
+            hx, hy = 960, 330 + cr
+            s = 0.50 * (1 + 0.025 * u)                    # 巨像缓慢逼近；整颗头留在画内（不切头顶）
+            ax, ay = hx, hy + 110
+            fr = K.paste_sprite(fr, *self.moon, hx, ay - 105, scale=1.0)    # 月在头后（日食般背光光环，发外缘露月）
+            # 天幕巨像：压暗偏冷 + 远景雾化（lift）+ 顶部月光 rim；长发随高空风慢飘
+            x, y = K.grid()
+            fade = np.clip(1.0 - (y - (ay + 330)) / 480, 0.25, 1.0).astype(np.float32)   # 胸以下渐隐入云
+            fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=6.0, breathe=0.0,
+                                 grade=dict(expo=0.50, sat=0.45, tint=(0.88, 0.93, 1.06), lift=0.035, gamma=1.3),
+                                 rim=dict(col=(0.85, 0.88, 0.95), amt=2.4, dir=(0, -1)), wrap=0.6,
+                                 shade=None, alpha=0.93, extra_A=fade)
+            # 云层在巨像前流过（天幕感）
+            cl = cv2.resize(K.tile_crop(self.cloud, t * 40, 0, H // 4, W // 4), (W, H))
+            ca_ = np.clip((cl - 0.5) * 2.2, 0, 1) * 0.45
+            fr = over(fr, ca_, (0.10, 0.11, 0.13))
+            # 眼中两点金光（按精灵眼位换算到屏幕）
+            for e in self.EYES:
+                ex = ax + (e[0] - self.ANC[0]) * self.sp.w * s; ey = ay + (e[1] - self.ANC[1]) * self.sp.h * s
+                g = 0.45 + 0.2 * math.sin(t * 9)
+                fr += (np.exp(-(((x - ex) / 7) ** 2 + ((y - ey) / 2.2) ** 2)) * g)[..., None] * GOLD
+                fr += (np.exp(-(((x - ex) / 22) ** 2 + ((y - ey) / 9) ** 2)) * g * 0.25)[..., None] * GOLD
+            # 地面草浪 + 一粒黑点（远景小剪影仍用代码 rig）
+            rg = self.ridge + cr
+            rm = K.ridge_mask(H, W, rg)
+            wave = cv2.resize(K.tile_crop(self.cloud, t * 120, 300, H // 4, W // 4), (W, H))
+            ground = (0.02 + 0.03 * wave)[..., None] * np.array([1, 1, 1.05], np.float32)
+            fr = fr * (1 - rm[..., None]) + ground * rm[..., None]
+            self.sw.pose('stand_wind', (t * 0.3) % 1, t, wind=300)
+            fr, _ = self.sw.draw(fr, 960, rg[960] + 6, 46, rim_color=(0.8, 0.85, 0.95), rim_dir=(0, -1))
+            return cam(fr, 1.0 + 0.04 * u, 0, 0), 0
+
     # ---------------------------------------------------------------- S035 MS 疾跑 → 腾空举刀 → 落地斜劈（命中闪白）
     class S035Sprite(S035):
         T_LEAP = V(69.86)
@@ -308,6 +349,6 @@ def install(G):
             self._t = t; return super().render(t)
 
     out = {}
-    for c in (S029Sprite, S030Sprite, S035Sprite, S037Sprite, S038Sprite, S039Sprite, S041Sprite, S044Sprite, S045Sprite, S046Sprite):
+    for c in (S029Sprite, S030Sprite, S031Sprite, S035Sprite, S037Sprite, S038Sprite, S039Sprite, S041Sprite, S044Sprite, S045Sprite, S046Sprite):
         nm = c.__name__.replace('Sprite', ''); c.__name__ = nm; out[nm] = c
     return out
