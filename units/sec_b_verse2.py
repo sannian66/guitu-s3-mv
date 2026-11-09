@@ -1794,6 +1794,8 @@ class V20(Shot):
     下半 = 同一画面的水中倒影（涟漪、冷暗、雨点圈）。上下各自完整，倒影头部在 y≈900、不出 2.39 有效区。
     后半拍（u>0.45）世界开始 roll，V21 接着转到 180° —— 倒影翻到上方成「正面」，正是「黑白颠倒」。"""
     WL = 540
+    TX, T_HI, T_LO, T_SZ = 1435, 330, 482, 170       # [r4-#33] 字列 x / 黑 y / 白 y / 字号
+
     def __init__(self):
         self.sp = spr('look_down')
         x, y = K.grid()
@@ -1809,11 +1811,26 @@ class V20(Shot):
         self.wn = K.tile(256, 6506, 6, 3)
         T.warm('若这世', 'serif_black', 140); T.warm('道黑白颠倒', 'serif_black', 140)
 
+    def water_text(self, fr, t):
+        """[r4-#33]「黑」「白」常驻字（用户新设计）——
+        · 位置：人物右侧留白（x=1435），上下排列（黑上 / 白下），不压人物、不进动作区、不碰右列字幕带（x≥1690）；
+        · 「白」镜像翻转 = 绕自身转 180°，等 V20→V21 的镜头转到 180° 时它正好转正（黑则随之倒过来 = 黑白颠倒）；
+        · 不做卡点出现：从 V20 第一帧就在，一直留到 V21 负片（负片里黑↔白自动互换，正是「颠倒」）。
+        · 关键：字画在「上半真实世界」里，下面的倒影由 scene() 原有的水面镜像统一生成 ——
+          所以字的倒影与人的倒影同源、同涟漪，两条竖（人 / 字列）× 两条横（水线 / 黑白分界）正好交成「#」。
+        """
+        L = T.Layer()
+        T.place(L, '黑', self.TX, self.T_HI, self.T_SZ, color=(0.030, 0.032, 0.038), fname='serif_black', alpha=0.94)
+        T.place(L, '白', self.TX, self.T_LO, self.T_SZ, color=(0.965, 0.960, 0.935), fname='serif_black', alpha=0.94, rot=180)
+        return T.compose(fr, L, shadow=0.0, glow=0.0, outline=2, outline_color=(0.17, 0.18, 0.21))
+
+
     def scene(self, t):
         x, y = K.grid()
         up = self.fog.draw(self.sky.copy(), t, density=0.8, y0=300, y1=self.WL, color=(0.30, 0.32, 0.36), speed=(25, 0), top_fade=200)
         up, _ = put(up, self.sp, t, 395, (760, self.WL + 4), rim=dict(col=(0.78, 0.86, 1.0), amt=3.0, dir=(0.5, -1.0)),
                     grade=dict(expo=0.80, sat=0.55, tint=(0.92, 0.97, 1.06), lift=0.0, gamma=1.12), wind_amp=7, shade=None, wrap=0.3)
+        up = self.water_text(up, t)                    # [r4-#33] 常驻「黑」「白」（画在上半真实世界里 → 倒影自动成立）
         # 倒影：上半关于水线翻转 + 涟漪 + 冷暗
         refl = np.zeros_like(up)
         refl[self.WL:] = up[self.WL - 1::-1][:H - self.WL]
@@ -1831,12 +1848,7 @@ class V20(Shot):
     def render(self, t):
         u = self.u(t)
         fr = self.scene(t)
-        pr = prs(26, [0, 1, 2], t)
-        L = T.Layer()
-        for i, (ch, pc) in enumerate(zip('若这世', pr)):
-            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
-            if pc > 0 and not (LYRIC_UNI and _is_lyric(ch)): T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2) * (1 - sstep(0.5, 0.75, u)), scale=1.2 - 0.2 * eout(pc))   # 第八棒：roll 前退场，不被甩出画
-        fr = T.compose(fr, L, shadow=0.85, glow=0.12)
+        # [r4-#33] 「若这世」三个字去掉（用户：这一拍文字全去掉，改由常驻的「黑」「白」承担）
         ang = 90 * ein(clamp01((u - 0.45) / 0.55), 2)
         fr = roll_cover(fr, ang, 1.0 + 0.06 * eio(u))
         return fr, 0
@@ -1867,26 +1879,12 @@ class V21(Shot):
     def render(self, t):
         u = self.u(t)
         fr = self.v20.scene(t)
-        # 90°→180°，同时反相（黑白颠倒）；「黑」「白」随反相互换
+        # 90°→180°，同时反相（黑白颠倒）
         e = eio(u)
         ang = 90 + 90 * eout(u, 2)
         fr = roll_cover(fr, ang, 1.04 + 0.04 * (1 - e))
-        pr = prs(26, [3, 4, 5, 6, 7], t)
-        L = T.Layer()
-        for i, (ch, pc) in enumerate(zip('道黑白颠倒', pr)):
-            if pc <= 0: continue
-            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
-            if LYRIC_UNI and _is_lyric(ch): continue
-            col = (0.04, 0.04, 0.045) if ch == '黑' else ('white' if ch != '白' else (0.98, 0.97, 0.94))
-            T.place(L, ch, self.CX + (20 if i % 2 else -20), self.CY + (i - 2) * 132, 140 if ch in '黑白' else 116, color=col, fname='serif_black',
-                    alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
-        x, y = K.grid()
-        band = K.blur_ds(((np.abs(x - self.CX) < 115) & (np.abs(y - self.CY) < 380)).astype(np.float32), 40)
-        M = cv2.getRotationMatrix2D((float(self.CX), float(self.CY)), ang, 1.0)
-        band = cv2.warpAffine(band, M, (W, H))
-        L.A = cv2.warpAffine(L.A, M, (W, H)); L.C = cv2.warpAffine(L.C, M, (W, H)); L.bb = [0, 0, W, H]
-        fr = fr * (1 - 0.45 * band[..., None])
-        fr = T.compose(fr, L, shadow=0.6, glow=0.15, outline=3, outline_color=(0.5, 0.5, 0.5))
+        # [r4-#33] 「道黑白颠倒」整列去掉：这一拍的文字只剩常驻的「黑」「白」，
+        # 转满 180° 时「白」（世界坐标里已翻转）正好转正、「黑」倒过来，负片再把黑白互换 —— 这就是「颠倒」
         k = sstep(0.2, 0.55, u)
         fr = fr * (1 - k) + neg_grade(fr) * k                         # 负片：S 曲线高反差 + 重暗角（第四棒：去灰）
         return fr, 0

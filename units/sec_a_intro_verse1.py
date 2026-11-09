@@ -42,6 +42,10 @@ INK = np.array([0.02, 0.022, 0.03], np.float32)
 # [r1-#7] 「殺」「放」共用同一字位与字号 —— 用户要求：同位置、繁体、构图一致、之间做文字转变动画。
 #   V12 写「殺」（朱红 = 杀），V13 写「放」（冷钢灰 = 放）；两镜都用同一个 BG() 笔序写法、同 seed，
 #   只有字和颜色不同；切点上由 a_char_morph 把「殺」的字形就地换成「放」。
+#   字体：马善政楷**没有「殺」字**（渲出来是豆腐框，实测 ink 只有框线）→ 两字统一改用
+#   思源宋 Black（有繁体、够重、像刻的），字面/字号/字位完全一致，只有字与颜色不同。
+T.FONTS['serif_black'] = ROOT + '/fonts/NotoSerifSC-Black.otf'
+R1_FONT = 'serif_black'
 R1_GLYPH = dict(x=470, y=392, size=340, seed=4)
 R1_COL_KILL = (0.88, 0.10, 0.07)
 R1_COL_FREE = (0.70, 0.76, 0.88)
@@ -50,7 +54,7 @@ R1_COL_FREE = (0.70, 0.76, 0.88)
 def r1_big_glyph(L, ch, p, col):
     """两镜共用的巨字层：同字位/同字号/同笔序写法，只有字与颜色不同。"""
     g = R1_GLYPH
-    L.paste(BG(ch, 'kai', g['size'], p, seed=g['seed']), g['x'], g['y'], col)
+    L.paste(BG(ch, R1_FONT, g['size'], p, seed=g['seed']), g['x'], g['y'], col)
 
 
 def V(t): return (round(t * FPS) - 1) / FPS            # 声音 → 视觉帧（早 1 帧）
@@ -968,10 +972,27 @@ class V08(Shot):
         fr = fr * (1 - 0.45 * np.clip((np.hypot(xx - 1300, yy - 300) - 500) / 1300, 0, 1))[..., None]     # 烛光衰减
         # 纸上原有墨书（诏文，淡）：右侧三列小楷
         if not hasattr(self, 'doc'):
+            # [r1-#5] 用户：25s「罪状」印章**保留**，右边这串文字**改成乱码**。
+            #   原来是三列可读诏文（奉旨查办…/目无王法…/罪证确凿…），读得出内容反而像假道具；
+            #   改成「不可读的伪字」—— 每字用 2~4 笔随机短划组成，保持原三列布局、字号、墨色与模糊，
+            #   观众读到的是「一纸看不懂的公文」，不再是编出来的判决书。
             L = T.Layer()
-            for ci, col in enumerate(('奉旨查办逆犯一名', '目无王法擅杀官兵', '罪证确凿着即拿问')):
-                for ri, ch in enumerate(col):
-                    T.place(L, ch, 1560 - ci * 92, 200 + ri * 84, 66, (0.06, 0.05, 0.05), 'kai', alpha=0.62, blur=0.9)
+            rr = np.random.default_rng(58)
+            for ci in range(3):
+                x0 = 1560 - ci * 92
+                n_ch = 9
+                for ri in range(n_ch):
+                    y0 = 200 + ri * 84
+                    for _ in range(2 + int(rr.integers(0, 3))):
+                        dx, dy = rr.uniform(-20, 20), rr.uniform(-22, 22)
+                        ang = rr.uniform(-1.2, 1.2); ln = rr.uniform(16, 34)
+                        p0 = (x0 + dx - math.cos(ang) * ln / 2, y0 + dy - math.sin(ang) * ln / 2)
+                        p1 = (x0 + dx + math.cos(ang) * ln / 2, y0 + dy + math.sin(ang) * ln / 2)
+                        g_ = np.zeros((H, W), np.float32)
+                        cv2.line(g_, (int(p0[0]), int(p0[1])), (int(p1[0]), int(p1[1])), 1.0,
+                                 int(rr.integers(4, 8)), cv2.LINE_AA)
+                        g_ = cv2.GaussianBlur(g_, (0, 0), 0.9)
+                        L.paste(g_, x0, y0, (0.06, 0.05, 0.05), alpha=0.62)
             self.doc = L
         fr = fr * (1 - 0.82 * self.doc.A[..., None]) + self.doc.A[..., None] * 0.02
         kk = 0.86 + 0.14 * clamp01(a2 / 0.15) if a2 >= 0 else 0.86
@@ -1159,8 +1180,13 @@ class V10(Shot):
         fr = fr * (1 - np.clip(cs, 0, 0.92)[..., None])
         # 人：单膝跪在盘中，盘沿以下被盘壁挡住（kneel_pan_fix：臂/刀/腿间封闭灰底洞清掉）
         z0 = np.zeros_like(fr)
+        # [r1-#6] 用户：25s 天平的纸人盘是剪纸，26s（= 这里进 V10）却变成写实主角 → **保持剪纸**。
+        #   不改美术、不新出图：给精灵套 sprite.py 的 'paper' look（暖白半透 + 边缘透光），并把饱和度
+        #   压到 0.18、对比提到 0.95 —— 读出来就是「纸剪的人形片」，与左盘那堆剪纸人同一材质；
+        #   顶光/倒影/接触影逻辑全不动，所以它仍然「跪在铜盘里」而不是贴上去。
         Pk, ik = A.place(z0, t, R8.kneel_pan_fix(), (930 + sway, 1030 + bob), h=820 * (1 + 0.02 * u), rim=COLD,
-                         rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
+                         rim_amt=3.6, rim_dir=(0.5, -0.85), wind=9, look='paper', alpha=1.38,
+                         grade=dict(expo=0.94, sat=0.16, gamma=0.92, tint=(1.06, 1.02, 0.93)))
         Ak = ik['A']
         y_c = int(self.CY + 60 + bob)
         hgt = 150
@@ -1794,7 +1820,10 @@ class V20(Shot):
 # V21 42.68–44.03 ECU 巨字「锋」压满屏，与巨印「正」一同被斩成两半错开，碎块飞散；末帧墨缝 → 交给 B 组（墨渗成纸）
 class V21(Shot):
     def __init__(self):
-        T.warm('锋芒', 'xing', 500)
+        # [r1-#12] 用户：43s「锋芒」两个字不好看。判断 = 重做而不是删（这一刀的字是这镜的主视觉）。
+        #   换成与 30/31s「殺」「放」同一套巨字语言：思源宋 Black（有繁体字、够重、像刻的）+ 略收字号
+        #   500→470，位置/时机/白+朱双色/斩线全不动 —— 保证 A 段巨字风格统一。
+        T.warm('锋芒', 'serif_black', 470)
         self.face = PR.seal_face('正', 760, style='bai', wear=0.35, seed=4)
     def render(self, t):
         u = self.u(t); ts = V(43.30)
@@ -1809,12 +1838,12 @@ class V21(Shot):
             pass
         elif t < tf:                                                                    # 第八棒（P1-6）：转场斩缝里就露出「锋」——随刀势自右滑入，42.80 落定
             s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
-            T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=0.9, blur=10 * math.sin(math.pi * s_))
+            T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 470, (0.97, 0.94, 0.88), 'serif_black', alpha=0.9, blur=10 * math.sin(math.pi * s_))
         elif p > 0:
             s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
-            T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=max(0.9, eout(p)), scale=1 + 0.08 * (1 - eout(p)))
+            T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 470, (0.97, 0.94, 0.88), 'serif_black', alpha=max(0.9, eout(p)), scale=1 + 0.08 * (1 - eout(p)))
         p2 = cprog(7, [9], t, 0.12)[0]
-        if p2 > 0: T.place(L, '芒', 1240, 530, 500, (0.86, 0.12, 0.08), 'xing', alpha=eout(p2), scale=1 + 0.3 * (1 - eout(p2)))
+        if p2 > 0: T.place(L, '芒', 1240, 530, 470, (0.86, 0.12, 0.08), 'serif_black', alpha=eout(p2), scale=1 + 0.3 * (1 - eout(p2)))
         if a < 0:
             fr = T.compose(fr, L, shadow=0.7, glow=0.25)
         else:
@@ -2069,12 +2098,12 @@ def a_zoom2(A_, B_, p, center=(960, 540), seed=0):
 def a_char_morph(A_, B_, p, ca='殺', cb='放', center=(470, 392), size=340, seed=7):
     """[r1-#7] 巨字转变：同一字位上「ca → cb」。字形内部按噪声乱序重写（约前 45% 完成），
     随后以字心为原点把 B 张开盖满画面；边缘保留墨刺/纸纤维，切换瞬间带一记朱红余温。"""
-    LA = T.Layer(); T.place(LA, ca, center[0], center[1], size, 'white', 'kai', texture=False)
-    LB = T.Layer(); T.place(LB, cb, center[0], center[1], size, 'white', 'kai', texture=False)
+    LA = T.Layer(); T.place(LA, ca, center[0], center[1], size, 'white', R1_FONT, texture=False)
+    LB = T.Layer(); T.place(LB, cb, center[0], center[1], size, 'white', R1_FONT, texture=False)
     uni = np.clip(np.maximum(LA.A, LB.A) * 1.6, 0, 1)                 # 两字覆盖的字位（=「字」的占地）
     nz = cv2.resize(A.ink_noise(seed + 61, 256), (W, H))
     nz2 = cv2.resize(A.ink_noise(seed + 67, 128), (W, H))
-    q = clamp01(p / 0.45)                                          # 字位内部重写进度
+    q = clamp01(p / 0.26)                                          # 字位内部重写进度（收短：丑的中间态只留 1 帧）
     m_stroke = np.clip((q * 1.5 - (1 - nz) * 0.95) * 5, 0, 1) * uni   # 按噪声乱序：一块块换成 cb
     yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32)
     d = np.hypot(xx * 2 - center[0], yy * 2 - center[1])          # 半分辨率算半径场（省内存）
@@ -2083,13 +2112,13 @@ def a_char_morph(A_, B_, p, ca='殺', cb='放', center=(470, 392), size=340, see
     m_spread = cv2.resize(np.clip((R + (cv2.resize(nz2, (W // 2, H // 2)) - 0.5) * 260 - d) / 34, 0, 1), (W, H))
     m = np.clip(np.maximum(m_stroke, m_spread), 0, 1)
     hair = cv2.resize(A.tex(seed + 63, 256, 40, 3)[:, :5], (W, H), interpolation=cv2.INTER_LINEAR)
-    band = np.clip(1 - np.abs(cv2.GaussianBlur(m, (0, 0), 22) - 0.5) * 2.0, 0, 1)
+    band = np.clip(1 - np.abs(cv2.GaussianBlur(m, (0, 0), 10) - 0.5) * 2.0, 0, 1)
     m = np.clip(m + (nz - 0.5) * 0.30 * band + (hair - 0.5) * 0.55 * band, 0, 1)
     rim = cv2.GaussianBlur(np.clip(np.abs(cv2.GaussianBlur(m, (0, 0), 6) - m) * 6, 0, 1), (0, 0), 2)
     out = A_ * (1 - m[..., None]) + B_ * m[..., None]
-    heat = math.exp(-((p - 0.33) / 0.16) ** 2) * (1 - p * 0.4)         # 切换瞬间：朱红余温
-    return out + rim[..., None] * (np.array([1.0, 0.35, 0.28], np.float32) * 1.5 * heat
-                                   + np.array([0.55, 0.65, 0.85], np.float32) * 0.7 * (1 - heat))
+    heat = math.exp(-((p - 0.30) / 0.10) ** 2)                       # 切换瞬间：一记很短的朱红余温
+    return out + rim[..., None] * (np.array([1.0, 0.35, 0.28], np.float32) * 0.55 * heat
+                                   + np.array([0.55, 0.65, 0.85], np.float32) * 0.45 * (1 - heat))
 
 
 def a_glint(A_, B_, p, angle=-12.0, center=(960, 560)):

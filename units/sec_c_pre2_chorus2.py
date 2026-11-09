@@ -867,19 +867,38 @@ class C10(Shot):
         fl = bolt_env(t, tc) * 0.7 + 0.35 * bolt_env(t, V(127.22))
         tins = [V(CT(30, k)) for k in (11, 12, 13, 14)]
         if C09_PLATE:
-            # [#38] 整帧替换（r1/c09_plaque.png：刀上撩 + 右侧吊牌「大局為上」已烧进图里）：
-            # 代码这层只剩轻推、雷光和 127.86 那一道刀光——不再贴字、不再卡点、匾也不掉。图自带雨，不叠加代码雨。
-            P = plate_frame(C09_PLATE)
-            fr = np.zeros((H, W, 3), np.float32) + 0.005
-            fr[BAR:BAR + P.shape[0]] = P
+            # [#38①②] 整帧替换（r1/c09_plaque.png：刀上撩 + 右侧吊牌「大局為上」已烧进图里），但匾**单独抠成一层**：
+            # 127.86 一刀落下后，匾绕顶部吊点旋转 + 坠落 + 右飘 + 运动拖尾，底下露出补好的原图（保住原来「匾被斩落」的动作）。
+            F_, BG_, Lc, La, lx, ly, lw, lh, Q = _plaque_split(C09_PLATE)
             s_ = 1.0 + 0.05 * eio(u)
-            M = np.float32([[s_, 0, W / 2 * (1 - s_)], [0, s_, H / 2 * (1 - s_)]])
-            fr = cv2.warpAffine(fr, M, (W, H), borderMode=cv2.BORDER_REPLICATE)
+            Zm = _aff(sc=s_, about=(W / 2, H / 2))
+            hinge = (lx + lw * 0.5, ly + 6)                  # 吊点 = 匾顶边中点（吊绳断在这里）
+            if t < tc:
+                fr = cv2.warpAffine(F_, Zm[:2], (W, H), borderMode=cv2.BORDER_REPLICATE)
+            else:
+                fr = cv2.warpAffine(BG_, Zm[:2], (W, H), borderMode=cv2.BORDER_REPLICATE)
+                # 运动拖尾：取 5 个略早的时刻叠上去（越早越淡）→ 真实的方向性残影
+                for j in (4, 3, 2, 1, 0):
+                    k = max(0.0, t - tc - 0.045 * j)
+                    ang = -46.0 * k * (0.55 + 1.6 * k)          # 断绳后从 0 开始转（不能有起始角，否则切点会跳一下）
+                    drop = 1500.0 * k * k + 40.0 * k
+                    sway = 120.0 * k + 60.0 * k * k
+                    Mw = _aff(rot=ang, dx=sway, dy=drop, about=hinge) @ _aff(dx=lx, dy=ly)   # crop→画幅 → 绕吊点旋转 → 坠落
+                    Mw2 = Zm @ Mw
+                    Lw = cv2.warpAffine(Lc * 1.22, Mw2[:2], (W, H), flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0))
+                    Aw = cv2.warpAffine(La, Mw2[:2], (W, H), flags=cv2.INTER_LINEAR, borderValue=0)[..., None]
+                    a_ = 0.30 if j else 1.0                  # 本体不透明，越早的拖尾越淡
+                    fr = fr * (1 - Aw * a_) + Lw * Aw * a_
+                # 断口：吊点一束金色火花 + 匾顶沿被斩的赤热白边（1 拍内衰减）
+                hot = math.exp(-(t - tc) / 0.18)
+                if hot > 0.02:
+                    fr = K.vol_light(fr, hinge, 78, (1.0, 0.72, 0.35), 0.55 * hot)
+                    fr = K.vol_light(fr, (hinge[0] - 46, hinge[1] + 14), 40, (1.0, 0.55, 0.2), 0.5 * hot)
             fr = fr * (0.92 + 0.45 * fl)
             fr = blade_smear(fr, (600, 322), (1160, 248), (t - tc) / 0.22, bend=-0.08, width=52, seed=10, amt=1.25)
             if t >= tc:
-                fr = sparks(fr, t, 101, (940, 300), n=90, life=0.5, speed=(200, 800), dirc=(1, -0.2), spread=1.2, grav=900, t0=tc, burst=True,
-                            color=(1.0, 0.8, 0.5), area=(500, 10))
+                fr = sparks(fr, t, 101, (hinge[0], hinge[1] + 4), n=60, life=0.45, speed=(160, 620), dirc=(0.5, 0.6), spread=1.1, grav=1300,
+                            t0=tc, burst=True, color=(1.0, 0.78, 0.48), area=(180, 8))
             return fr
         fr = (self.P if t < tc else self.bg) * (0.85 + 0.6 * fl)
         if t >= tc:
@@ -1420,12 +1439,15 @@ class C21(Shot):
         A = scene_glyph(A, '邪', 404, 300, 216, tint=(0.84, 0.20, 0.14), amt=0.82, glow=0.50, rot=-3)   # [#40] 先字（半掩在左人肩后）
         # [#40] 两张角色图改成同一张主角单体（右镜像）——积分耗尽不能单生"双人对称图"，同一张图左右各摆一次，
         # 对称性是准的：他 / 镜像的他。脚底共用 GY，身高 920（头留在 2.39 画幅内，脚被下遮幅切在脚踝 = 站在地上）。
-        A, _ = put(A, t, 'r1/g_c22_hero', 552 - 22 * u, self.GY, 920, rim=RED * 1.3, rim_amt=3.2, rim_dir=(0.9, -0.4), expo=0.85, wind=4,
-                   flash=0.6 * pulse(t, tx, 0.2))
+        # [#40①] 姿态/明暗做出差别（不能像复制粘贴）：左「邪」侧略塌、略小、压暗、肩往下沉 6px、微微前倾；
+        A, _ = put(A, t, 'r1/g_c22_hero', 552 - 22 * u, self.GY + 20, 884, rim=RED * 1.10, rim_amt=2.3, rim_dir=(0.85, -0.30),
+                   expo=0.70, sat=0.40, rot=-3.4, tint=(1.06, 0.90, 0.90), wind=1.6, flash=0.5 * pulse(t, tx, 0.2))
         A = rain(A, t, 211, inten=0.7, angle=10, color=np.array([1.0, 0.5, 0.45], np.float32))
         B = storm(t, 212, horizon=1300, flash=0.3, ground=False) * np.array([1.08, 0.98, 0.82], np.float32)
         B = scene_glyph(B, '正', 1516, 300, 216, tint=(0.94, 0.75, 0.42), amt=0.80, glow=0.45, rot=2)     # [#40] 先字（半掩在右人肩后）
-        B, _ = put(B, t, 'r1/g_c22_hero', 1368 + 22 * u, self.GY, 920, flip=True, rim=GOLD, rim_amt=3.0, rim_dir=(-0.9, -0.4), expo=0.9, wind=4)
+        # [#40①] 右「正」侧更挺、更高、更亮、肩线抬起 8px、微微后仰（腰杆直）——两侧一挺一塌，镜像才不像复制；
+        B, _ = put(B, t, 'r1/g_c22_hero', 1368 + 22 * u, self.GY - 14, 958, flip=True, rim=GOLD, rim_amt=3.6, rim_dir=(-0.88, -0.50),
+                   expo=1.02, sat=0.60, rot=2.2, tint=(1.0, 0.99, 1.03), wind=7.5, flash=0.35 * pulse(t, tx, 0.2))
         B = rain(B, t, 212, inten=0.7, angle=10, color=np.array([1.0, 0.85, 0.6], np.float32))
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         d = (xx - 960) * 0.88 + (yy - 540) * 0.47              # 斜线（约 62°）
@@ -2018,6 +2040,46 @@ class C35b(Shot):
 
 
 _PLATE = {}
+_PQS = {}
+def _plaque_split(src):
+    """[r4-c-r1 #38②] 从整帧图生图里把「大局為上」那块吊匾**单独抠成一层**（源图四点透视 → 画幅坐标多边形），
+    同时把底层匾的位置 inpaint 补好 → 127.86 可以让匾自己绕吊点旋转坠落，底下露出原图，
+    保住原来那套「匾是实物、被一刀斩落」的动作。返回 (整帧, 底层, 匾RGB crop, 匾 alpha crop, x, y, w, h, quad)。"""
+    if 'x' in _PQS:
+        return _PQS['x']
+    im = cv2.imread(ROOT_DIR + '/assets/gen/' + src, cv2.IMREAD_COLOR)[..., ::-1].astype(np.float32) / 255.0
+    g = im.mean(-1); rows = g.mean(1); nz = np.where(rows > 0.012)[0]
+    y0, y1 = int(nz.min()), int(nz.max()) + 1
+    crop = im[y0:y1]
+    ph, pw = crop.shape[:2]
+    sx, sy = W / float(pw), (H - 2 * BAR) / float(ph)          # 与 plate_frame 同一套换算
+    F = np.zeros((H, W, 3), np.float32) + 0.005
+    F[BAR:BAR + (H - 2 * BAR)] = cv2.resize(crop, (W, H - 2 * BAR), interpolation=cv2.INTER_AREA)
+    Q = np.array([[2978, 585], [3256, 556], [3268, 1330], [2986, 1360]], np.float32)   # 源图里量的匾四角（含上下装饰边）
+    Q = np.stack([Q[:, 0] * sx, (Q[:, 1] - y0) * sy + BAR], 1)
+    m = np.zeros((H, W), np.uint8); cv2.fillPoly(m, [Q.astype(np.int32)], 255)
+    m = cv2.dilate(m, np.ones((5, 5), np.uint8))
+    qx, qy, qw, qh = cv2.boundingRect(Q.astype(np.int32))
+    lx, ly = qx - 10, qy - 10; lw, lh = qw + 20, qh + 20
+    A = cv2.GaussianBlur(m, (0, 0), 1.0)[ly:ly + lh, lx:lx + lw].astype(np.float32) / 255.0
+    Lc = F[ly:ly + lh, lx:lx + lw].copy()
+    small = cv2.resize((np.clip(F, 0, 1) * 255).astype(np.uint8), (W // 2, H // 2))
+    hs = cv2.resize(m, (W // 2, H // 2))
+    bg = cv2.inpaint(small, hs, 9, cv2.INPAINT_TELEA).astype(np.float32) / 255
+    bg = cv2.GaussianBlur(bg, (0, 0), 2)
+    hf = cv2.GaussianBlur(m.astype(np.float32) / 255, (0, 0), 3)[..., None]
+    bgs = F * (1 - hf) + cv2.resize(bg, (W, H)) * hf
+    _PQS['x'] = (F, bgs, Lc, A, lx, ly, lw, lh, Q)
+    return _PQS['x']
+
+
+def _aff(rot=0.0, sc=1.0, dx=0.0, dy=0.0, about=(0.0, 0.0)):
+    """3×3 仿射：绕 about 旋转再缩放到 about，然后平移 (dx,dy)。"""
+    R = cv2.getRotationMatrix2D(tuple(about), rot, sc)
+    R[0, 2] += dx; R[1, 2] += dy
+    return np.vstack([R, [0, 0, 1]]).astype(np.float32)
+
+
 def plate_frame(path, w=W, h=H - 2 * BAR):
     """[r4-c-r1 #38] 图生图整帧底板（文件已自带 2.39 遮幅）：裁掉图里的黑边，只取内容区缩放到内容画幅，
     避免「图里的黑边 + finish() 的黑边」错位出一道缝。path 是相对 assets/gen 的 '_raw/_frame' 文件名（这里是 .png 原图）。"""

@@ -401,6 +401,71 @@ def compact(frames=None):
     return out
 
 
+# ---------------------------------------------------------------- ⑦ C 段字幕需求前后对照
+def cnotes():
+    """C 段：被整句删的 6 句 + 被留空/部分删的 4 处，各 1 帧「删前 / 删后」。"""
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    L = LU.lines()
+    rows_def = ([('整句删', i) for i in sorted(LU.SUPPRESS)] +
+                [('留空', i) for i in (28,)])      # 22:2x 之后只剩句29「谁定好规则」还有留空
+    jobs, rows = [], []
+    for kind, li in rows_def:
+        r = L[li]
+        f = fnum(t_of(r))
+        pb = os.path.join(TMP, f'cn_{li}_before.png')
+        pa = os.path.join(TMP, f'cn_{li}_after.png')
+        jobs += [(0, f, pb), (1, f, pa)]
+        rows.append((kind, r, f, pb, pa))
+    render(jobs)
+    os.environ['LYRIC_UNI'] = '1'
+    LU._maybe_out()
+    f_ttl = ImageFont.truetype(FONT, 26)
+    f_cap = ImageFont.truetype(FONT, 19)
+    f_sml = ImageFont.truetype(FONT_L, 16)
+    TW, TH = 560, 315
+    W = 20 + 2 * (TW + 16) + 300
+    H = 108 + len(rows) * (TH + 62)
+    sheet = Image.new('RGB', (W, H), (14, 14, 15))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), 'C 段字幕需求（crew/round4/C_notes_r1.md 12 行表）：左=删前（统一层原样）/ 右=删后', fill=(236, 232, 224), font=f_ttl)
+    d.text((20, 46), '整句删走 SUPPRESS 时间窗（不在段里硬删）；画面里已有的走 IN_SCENE 留空；通用规则：留空后 ≤2 可见字 → 整句不出（不留孤字）',
+           fill=(150, 165, 150), font=f_sml)
+    d.text((20, 70), '右端小图 = 删后字幕列原尺寸裁切', fill=(150, 165, 150), font=f_sml)
+    for i, (kind, r, f, pb, pa) in enumerate(rows):
+        y = 108 + i * (TH + 62)
+        left = Image.open(pb).convert('RGB') if os.path.exists(pb) else None
+        right = Image.open(pa).convert('RGB') if os.path.exists(pa) else None
+        if left is not None:
+            sheet.paste(_tile(left, TW, TH), (20, y))
+        if right is not None:
+            sheet.paste(_tile(right, TW, TH), (36 + TW, y))
+            sheet.paste(_tile(right.crop((1400, 120, 1920, 960)), 200, 315), (56 + 2 * TW, y))
+        lay_b = LU.vis_layout(r, set())
+        lay_a = LU.vis_layout(r, LU.OUT_CHARS | LU.IN_SCENE_HIDE)
+        tb = ''.join(c['ch'] for c in r['chars'])
+        ta = ''.join(p2['ch'] for p2 in lay_a['pos'])
+        d.text((20, y + TH + 3), '%s 第 %d 句 f%d（%.2fs）' % (kind, r['line'] + 1, f, f / 30.0),
+               fill=(232, 200, 120), font=f_cap)
+        d.text((20, y + TH + 25), ('删前 %d 字「%s」 → 整句不出（SUPPRESS 时间窗 %.2f–%.2fs）' %
+                                   (r['n'], tb, LU.SUPPRESS[r['line']][0], LU.SUPPRESS[r['line']][1]))
+               if LU.suppressed(r) else ('删前 %d 字「%s」 → 删后 %d 字「%s」' % (r['n'], tb, lay_a['n'], ta)),
+               fill=(160, 156, 148), font=f_sml)
+    os.environ.pop('LYRIC_UNI', None)
+    out = os.path.join(OUTDIR, 'c_notes_before_after.jpg')
+    sheet.save(out, quality=91)
+    print('sheet', out, flush=True)
+    for kind, r, f, pb, pa in rows:
+        la = LU.vis_layout(r, LU.IN_SCENE_HIDE)
+        print('   %-9s 第%2d句 f%5d  → %s' % (
+            kind, r['line'] + 1, f,
+            '整句不出（SUPPRESS %.2f–%.2f）' % (LU.SUPPRESS[r['line']][0], LU.SUPPRESS[r['line']][1])
+            if LU.suppressed(r) else '%d 字「%s」' % (la['n'], ''.join(x['ch'] for x in la['pos']))))
+    return out
+
+
 # ---------------------------------------------------------------- ⑤ 重复出字：审计 + 像素检测
 PROP_JSON = os.path.join(ROOT, 'out', 'props_dev', 'prop_boxes.json')
 
@@ -944,6 +1009,8 @@ if __name__ == '__main__':
         strips([int(x) for x in sys.argv[2:]] or None)
     elif c == 'audit':
         audit()
+    elif c == 'cnotes':
+        cnotes()
     elif c == 'compact':
         compact([int(x) for x in sys.argv[2:] if not x.startswith('--')] or None)
     elif c == 'dupcheck':

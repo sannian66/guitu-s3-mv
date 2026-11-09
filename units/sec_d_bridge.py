@@ -965,14 +965,25 @@ class S17_Eye(Shot):
     """ECU 睁眼：瞳孔里一点火光；宋体「我的」落在画右，朱红宋体巨字「刀」伴一道白刃寒光横扫"""
     t0, t1 = 179.17, 180.09
     def __init__(self):
-        im = Image.open(ROOT + '/assets/gen/S102/eye_open_raw.png').convert('RGB').resize((W, H), Image.LANCZOS)
-        F = np.asarray(im).astype(np.float32) / 255
-        lum = F.mean(-1, keepdims=True)
-        F = lum + (F - lum) * 0.75
-        x, y = K.grid()
-        light = 0.35 + 0.75 * np.exp(-(((x - 640) / 700) ** 2 + ((y - 600) / 420) ** 2))
-        self.F = (F ** 1.2 * light[..., None] * np.array([1.05, 0.92, 0.82], np.float32)).astype(np.float32)
-        self.pupil = (0.29 * W, 0.555 * H)
+        # [r4-DE#45] 用户：3m 主角图重出（画风不一致）→ 换 r1 生图 `s_d17_eye_crop.png`。
+        #   该图是把原帧当参考重绘的，画里烙进了「我的」「刀」两个大字 → 已按 tools/clean_gen_text.py 的口径
+        #   **裁切**到不含字的安全区（x 0.02–0.665），所以这里既不用 inpaint 也不会露补丁。
+        #   同时删掉原来的代码字（D.song 的 我/的/刀）—— 与 #46「180–241s 去文字」一致。
+        _p = ROOT + '/assets/gen/r1/s_d17_eye_crop.png'
+        if os.path.exists(_p):
+            self.F = np.asarray(Image.open(_p).convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+            self.pupil = (0.27 * W, 0.60 * H)                            # 新图的瞳心（裁切后位置）
+            self.plate = True
+        else:                                                            # 兜底：图不在就回到旧眼睛图 + 旧调色
+            im = Image.open(ROOT + '/assets/gen/S102/eye_open_raw.png').convert('RGB').resize((W, H), Image.LANCZOS)
+            F = np.asarray(im).astype(np.float32) / 255
+            lum = F.mean(-1, keepdims=True)
+            F = lum + (F - lum) * 0.75
+            x, y = K.grid()
+            light = 0.35 + 0.75 * np.exp(-(((x - 640) / 700) ** 2 + ((y - 600) / 420) ** 2))
+            self.F = (F ** 1.2 * light[..., None] * np.array([1.05, 0.92, 0.82], np.float32)).astype(np.float32)
+            self.pupil = (0.29 * W, 0.555 * H)
+            self.plate = False
 
     def render(self, t):
         u = self.u(t)
@@ -982,9 +993,10 @@ class S17_Eye(Shot):
         fr = fr + g[..., None] * EMBER * (1.2 + 0.5 * math.sin(t * 20))
         fr = D.ash(fr, t, 17, n=30, amt=0.4, size=(4, 12))
         tk = V(O[44][6])
-        its = [('我', 1330, 300, 125, cp(t, O[44][4], 0.16), 'w'), ('的', 1330, 440, 125, cp(t, O[44][5], 0.16), 'w'),
-               ('刀', 1490, 600, 340, cp(t, O[44][6], 0.1), 'r')]
-        fr = D.song(fr, its)
+        if not getattr(self, 'plate', False):          # [r4-DE#46] 新图不带字；兜底路径才画原来的「我的刀」
+            its = [('我', 1330, 300, 125, cp(t, O[44][4], 0.16), 'w'), ('的', 1330, 440, 125, cp(t, O[44][5], 0.16), 'w'),
+                   ('刀', 1490, 600, 340, cp(t, O[44][6], 0.1), 'r')]
+            fr = D.song(fr, its)
         if tk - 0.02 <= t < tk + 0.2:   # 白刃寒光横扫
             q = (t - tk + 0.02) / 0.22
             fr = TR._slash_streak(fr, (lerp(-200, 2100, eo(q, 2)), 520), np.array((math.cos(math.radians(-12)), math.sin(math.radians(-12)))), q, length=2600, width=4)

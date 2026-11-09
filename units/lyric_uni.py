@@ -129,6 +129,28 @@ def out_chars(validate=True):
     return out
 
 
+# ---------------------------------------------------------------- C 段字幕需求（crew/round4/C_notes_r1.md 12 行表）
+# 组长 2026-11-09 22:0x 转成规范：**整句删走 suppression 表，不在段里硬删**；部分删走 CHAR_DEL；
+# 画面里已有的走 IN_SCENE（留空）。三档在 vis_layout 里统一「抽掉 + 上顺排」，不留洞。
+# 句号一律 0 基（= 第 N+1 句）；字序为 lyrics.json 逐字下标。
+SUPPRESS = {          # 整句删：(t0, t1, 理由) —— 时间窗来自 C 组实测
+    29: (121.66, 124.84, 'C 组整句删（改为画内演出）'),
+    30: (124.84, 128.83, 'C 组整句删（原「删 0–10 + 留空 11–14」= 0 字，2026-11-09 22:2x 组长改判为整句删）'),
+    31: (128.92, 131.95, 'C 组整句删'),
+    32: (134.44, 137.56, 'C 组整句删'),
+    33: (137.56, 141.03, 'C 组整句删（原只剩「定」1 字 → 不留孤字，组长改判）'),
+    34: (141.26, 144.56, 'C 组整句删'),
+    35: (144.56, 149.24, 'C 组整句删'),
+    38: (155.90, 159.11, 'C 组整句删（原只剩「天不」2 字 → 不留孤字，组长改判）'),
+    39: (159.14, 162.52, 'C 组整句删'),
+}
+CHAR_DEL = {}         # 部分删：句号0基 → {字序}（当前为空：C 段三处已按「不留孤字」规则改判为整句删）
+
+# 通用规则（2026-11-09 22:2x 组长定）：**留空后剩余 ≤2 个可见字 → 整句不出**（竖列上挂 1–2 个字比没有更难看）；
+# 剩余 ≥3 字才按 compaction 出。对所有 suppression 都适用，以后加表不用再单独判断。
+MIN_VISIBLE = 3
+
+
 # 画面内（in-scene）已经有字的词：字幕层要把这些字**留空**（不删画面里的字）。
 # 来源 = tools/lyric_uni_cmp.py audit 查出来的「LYRIC_UNI=1 时仍在画字」的站点，逐站点人工分类：
 #   键 = (文件, 行号)；值 = (句号0基, 画面里已有的词, 分类说明)
@@ -146,6 +168,9 @@ IN_SCENE = {
     ('sec_e_final_outro.py', 284): (48, '刀不放', '拳上朱印（stamp_seal 118–132px），画内道具'),
     ('chorus1.py', 866):      (17, '是非对错', '朱印阵（seal_grid 540px），画内道具'),
     ('sec_e_final_outro.py', 359): (49, '天理昭彰', '鎏金 3D 巨字（匾额，镜内演出）'),
+    # ---- C 段：画内已有，字幕留空（C_notes_r1 表）
+    ('c_pre2_chorus2 C01–C03', 0): (28, '谁写好剧本提纲', 'C01–C03 同一句在画内与字幕各一份；只留「纲」那个钢字在画内'),
+    # C10「大局为上」/ 正邪朱印 / 「判」巨字 三条随句 31/34/39 改判为整句删，留空项一并撤掉（22:2x）
 }
 
 # 场景高光（枪尖/盔缨/刀身高光）在字幕带里也会被「像字」检测抓到 —— 人工核对过的白名单，
@@ -364,13 +389,29 @@ def _build():
                         chars=[dict(ch=c, t=times[k], dur=dur[k], k=k) for k, c in enumerate(chars)],
                         n=n, ncol=ncol, size=size, accent=acc,
                         accent_src=('标注' if i in RED_MANUAL else '时长')))
-    # 出/入场时刻（6 号规则）
+    # 先按 IN_SCENE 表预置留空集合（「可见字数 ≤2 → 整句不出」要用它，且在 active() 之前定下来）
+    global IN_SCENE_HIDE
+    hid = set()
+    for (fn, l0), (li, w, why) in IN_SCENE.items():
+        t_ = ''.join(c['ch'] for c in out[li]['chars'])
+        k_ = t_.find(w)
+        if k_ >= 0:
+            hid |= {(li, k_ + i) for i in range(len(w))}
+    IN_SCENE_HIDE = hid
+    # 整句删的判定先用字头时刻算（此时还没有 t_on/t_off）
+    for r in out:
+        r['_t0'] = r['chars'][0]['t']
+        r['_t1'] = r['chars'][-1]['t']
+        r['_sup'] = bool(SUPPRESS.get(r['line'])) and (r['_t0'] < SUPPRESS[r['line']][1] and SUPPRESS[r['line']][0] < r['_t1'])
+    # 出/入场时刻（6 号规则）—— 只和「没被整句删」的下一句衔接
+    keep = [r for r in out if not r['_sup']]
     for i, r in enumerate(out):
         heads = [c['t'] for c in r['chars']]
         last = heads[-1]
         r['t_on'] = heads[0] - IN_LEAD
-        if i + 1 < len(out):
-            nxt = out[i + 1]['chars'][0]['t'] - IN_LEAD
+        j = keep.index(r) + 1 if r in keep else len(keep)
+        if j < len(keep):
+            nxt = keep[j]['chars'][0]['t'] - IN_LEAD
             if nxt - last <= GAP_HOLD + OUT_HOLD:        # 句内衔接：不提空档，淡出正好收在下一句起
                 r['t_out'] = nxt - OUT_DUR
             else:                                        # 长器乐空档：末字后 0.55s 正常退
@@ -405,8 +446,29 @@ def lines():
     return _LINES
 
 
+def visible_count(r):
+    """留空/删字之后还剩几个可见字（compaction 后真正画出来的）。"""
+    hide = set(IN_SCENE_HIDE) | {(r['line'], k) for k in CHAR_DEL.get(r['line'], ())} | set(OUT_CHARS)
+    return sum(1 for c in r['chars'] if (r['line'], c['k']) not in hide)
+
+
+def suppressed(r):
+    """整句删：显式 SUPPRESS 时间窗命中，或者「留空后 ≤MIN_VISIBLE-1 个可见字」（不留孤字）。"""
+    if r['_sup'] if '_sup' in r else False:
+        return True
+    if visible_count(r) < MIN_VISIBLE:
+        return True
+    w = SUPPRESS.get(r['line'])
+    if not w:
+        return False
+    t0, t1 = w[0], w[1]
+    a = r.get('_t0', r.get('t_on', 0.0))
+    b = r.get('_t1', r.get('t_off', 0.0))
+    return a < t1 and t0 < b
+
+
 def active(t):
-    return [r for r in lines() if r['t_on'] <= t < r['t_off']]
+    return [r for r in lines() if r['t_on'] <= t < r['t_off'] and not suppressed(r)]
 
 
 # ---------------------------------------------------------------- 重复出字审计（LYRIC_UNI_AUDIT=1）
@@ -643,6 +705,7 @@ def vis_layout(r, hide):
     字号与列宽仍按**整句**定（不因留空而变化），只是列内字数变少；
     逐字时间不动 —— 抽掉的字跳过，后面字的出现时刻仍按 align 走。
     """
+    hide = set(hide) | {(r['line'], k) for k in CHAR_DEL.get(r['line'], ())}
     hk = tuple(sorted(k for (ln, k) in hide if ln == r['line']))
     key = (r['line'], hk)
     v = _VLC.get(key)

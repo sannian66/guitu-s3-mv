@@ -90,6 +90,24 @@ NO_GLYPH = {'E02', 'E08', 'E20'}
 def glyph_off(sid): return sid in NO_GLYPH
 
 
+# [r4-DE#45/47/48] r1 生图当整帧底版。这三张都带「烙进像素」的大字，处理见 tools/clean_gen_text.py：
+#   s_d17_eye_crop   = 原图裁到 x0.02–0.665（「我的」「刀」出画）
+#   s_e218_hilt_crop = 裁到 x0.02–0.635（「刀」出画）+ 左下小字「就」矩形 inpaint
+#   e22_scale_crop   = 原图干净（无字），直接缩放
+# 无字新版（文件名带 2）到了以后，只要把文件名和后缀改掉即可替换，挂载参数不用动。
+_PLATES = {}
+
+
+def plate(name):
+    if name in _PLATES: return _PLATES[name]
+    from PIL import Image as _I
+    p = ROOT + '/assets/gen/r1/' + name + '.png'
+    if not os.path.exists(p):
+        _PLATES[name] = None; return None
+    _PLATES[name] = np.asarray(_I.open(p).convert('RGB').resize((W, H), _I.LANCZOS)).astype(np.float32) / 255
+    return _PLATES[name]
+
+
 def _lp(a, b, t): return a + (b - a) * t
 
 
@@ -1216,6 +1234,7 @@ class E22(Shot):   # S128 LS 横刀于胸，太阳恰落在刀身正中（支点
         self.sky = E.dawn_sky(1280, horizon=0.86, mid=(0.42, 0.30, 0.16), cloud=0.6, sun=None)
         self.rd, self.ra = E.ridges(n=2, base=0.82, step=0.05, seed=128, amp=0.05, far=0.35, near=0.03)
         self.cal = None
+        self.ts = [CT(54, 3), CT(54, 4), CT(54, 5)]      # [r4-DE#47] 底版路径不跑 _calib，这里先备好时标
 
     def _calib(self, t, dy):
         """刀身行：精灵 alpha 在 y∈[200,620] 内横向最宽的一行；刀身水平范围取该行 alpha>0.5 的首末列。"""
@@ -1238,6 +1257,17 @@ class E22(Shot):   # S128 LS 横刀于胸，太阳恰落在刀身正中（支点
 
     def render(self, t):
         u = self.u(t); dy = -20 * u
+        # [r4-DE#47] 用户：3m37 主角用刀当天平 → 直接出图（代码画会漂移）。整帧替换成 e22_scale_crop，
+        #   推镜 + 刃口金线高光 + 一点呼吸光都还在；原来的代码 rig（刀身/日轮/秤绳秤盘）只作兜底。
+        pl = plate('e22_scale_crop')
+        if pl is not None:
+            z = 1.02 + 0.06 * eio(u)
+            fr = K.cam(pl, z, -14 + 28 * u, dy)
+            yy = np.arange(H, dtype=np.float32)[:, None]; xx = np.arange(W, dtype=np.float32)[None, :]
+            kx = np.interp(t, [self.t0, self.ts[1], self.ts[2], self.t1], [300, 760, 960, 1500])
+            sw = np.exp(-((xx - kx) / 90) ** 2) * np.exp(-((yy - (470 + dy)) / 26) ** 2)
+            fr = fr + sw[..., None] * GOLDW * 0.55 + cv2.GaussianBlur(sw, (0, 0), 20)[..., None] * GOLDW * 0.35
+            return bloom(fr, 0.82, 0.45)
         if self.cal is None: self._calib(self.t0, 0.0)
         by = self.cal['y'] + dy
         fr = self.sky.copy()
@@ -1261,6 +1291,7 @@ class E22(Shot):   # S128 LS 横刀于胸，太阳恰落在刀身正中（支点
         return bloom(fr, 0.8, 0.5)
 
     def text(self, fr, t):
+        if plate('e22_scale_crop') is not None: return fr      # [r4-DE#47] 秤绳/秤盘已在天平的图里
         if not self.cal: return fr
         dy = getattr(self, 'by', self.cal['y']) - self.cal['y']
         y = self.cal['y'] + dy
@@ -1304,6 +1335,11 @@ class E23(Shot):   # S129 MCU 后撤蓄力，速度坡度推近（吸气）
 
     def render(self, t):
         u = self.u(t)
+        # [r4-DE#48] 用户：3m38 两镜应是同一张图 → E23/E24 共用 `s_e218_hilt_crop`（r1 生图，已裁掉烙字「刀」）。
+        pl = plate('s_e218_hilt_crop')
+        if pl is not None:
+            fr = K.cam(pl, 1.00 + 0.05 * ein(u, 2), -10 + 20 * u, -8 * u)      # 速度坡度：慢慢推近 = 吸气蓄力
+            return bloom(fr + self.zoom_lines(t, u) * 0.8, 0.8, 0.35)
         fr = self.bg.copy()
         fr = fr + self.zoom_lines(t, u)
         fr, info = put(fr, t, 'S129/coil', (1000, 1140), h=1080, rim=GOLDW, rim_amt=2.8, wind=12)
@@ -1320,6 +1356,17 @@ class E24(Shot):   # S129b ECU 刃身满屏，寒光自柄扫到尖；巨字「�
 
     def render(self, t):
         u = self.u(t)
+        # [r4-DE#48] 与 E23 同一张图；这里推到刃身 = ECU（放大 + 旋转，寒光自柄扫到尖）
+        pl = plate('s_e218_hilt_crop')
+        if pl is not None:
+            z = 1.55 + 0.10 * eio(u)
+            c = (960 - 60 * u, 470)
+            M = cv2.getRotationMatrix2D((W / 2, H / 2), -6.0, z)
+            M[0, 2] += c[0] - W / 2; M[1, 2] += c[1] - H / 2
+            fr = cv2.warpAffine(pl, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            sx = -300 + 2600 * eio(u)
+            fr = E.flare_streak(fr, (sx, 420 + (sx - 960) * 0.18), amt=1.1, angle=10)
+            return bloom(fr, 0.78, 0.5)
         fr = self.bg.copy()
         fr, info = put(fr, t, 'S129/coil|crop=0,0,0.46,0.42', (900 - 60 * u, 470), w=2300, anc=(0.5, 0.5), rot=-12, rim=GOLDW, rim_amt=3.0, wind=0, grade=G_HOT)
         sx = -300 + 2600 * eio(u)
