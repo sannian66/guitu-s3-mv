@@ -1582,7 +1582,7 @@ class V24(Shot):
         self.fog = fx2.Fog(6804)
         self.rain = fx2.RainSheet(6805, density=0.8)
         self.spl = fx2.Splashes(6807)
-        T.warm('出方', 'xing', 200)
+        T.warm('出方', 'kai', 200)
 
     def render(self, t):
         u = self.u(t)
@@ -1600,7 +1600,7 @@ class V24(Shot):
         fy = HOR + FF * CH / 12.0
         # 第七棒：人物放大到画面 ~1/2 高、不再纯黑平贴——冷月轮廓光（上）+ 刀痕红光从脚下反打（下），边缘被雨溅打
         fx0 = 960 + FF * (X0 + AX * 12 - 0.9) / 12.0
-        fr, Am = put(fr, self.sp, t, 540, (fx0, fy + 40), rim=dict(col=(0.78, 0.86, 1.0), amt=3.4, dir=(0.4, -1.0)),
+        fr, Am = put(fr, self.sp, t, 500, (fx0 - 300, fy + 40),   # 人在刀痕左侧，字在右侧不压人 rim=dict(col=(0.78, 0.86, 1.0), amt=3.4, dir=(0.4, -1.0)),
                      grade=dict(expo=0.42, sat=0.5, tint=(1.05, 0.92, 0.88), lift=0.0, gamma=1.15), wind_amp=8, shade=None, wrap=0.35)
         x_, y_ = K.grid()
         fr = fr + (Am * np.clip((y_ - (fy - 300)) / 340, 0, 1))[..., None] * RED * 0.22
@@ -1611,7 +1611,7 @@ class V24(Shot):
             if pc <= 0: continue
             sx_ = 960 + FF * (X0 + AX * Zc + Xs) / Zc; sy_ = HOR + FF * CH / Zc
             sz = (210, 170)[i]
-            L = T.Layer(); T.place(L, ch, sx_, sy_ - sz * 0.45, sz, color=(0.98, 0.22, 0.08), fname='xing', alpha=min(1, pc * 2), sy=0.8)
+            L = T.Layer(); T.place(L, ch, sx_, sy_ - sz * 0.45, sz, color=(0.98, 0.22, 0.08), fname='kai', alpha=min(1, pc * 2), sy=0.85)   # 第七棒：行书「出」读成「生」→ 马善政楷
             fr = T.compose(fr, L, shadow=0.6, glow=0.7, glow_color=(1.0, 0.3, 0.08))
         fr = self.rain.draw(fr, t, intensity=0.9, angle=10)
         fr = cam(fr, 1.10 - 0.10 * e, 0, 60 - 60 * e)          # 摇臂升：画面下压 + 拉开
