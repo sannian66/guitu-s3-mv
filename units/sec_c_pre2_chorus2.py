@@ -2210,7 +2210,7 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 CUTS = {
     'C02': ('match_line', 0.0, 0.12, {}),                                # 朱笔竖笔 ↔ 红丝线（图形匹配）
     'C03': ('whip', 0.10, 0.12, dict(direction=1)),                      # 全段唯一甩镜：沿丝线甩到皮影幕
-    'C04': ('glitch_cut', 0.07, 0.10, dict(seed=4)),
+    'C04': ('paper_tear', 0.06, 0.10, dict(angle=-10, seed=4)),         # 第十二棒（critic_C_r6 P2⑦）：glitch_cut 数码扫描线 → 皮影幕纸被撕开（古装质感）
     'C05': ('push', 0.10, 0.12, dict(center=(1620, 640))),               # 秤盘 → 箱口（推进穿越）
     'C06': ('hard', 0, 0, {}),
     'C07': ('seam', 0.0, 0.20, dict(y=880)),                             # 箱盖金缝张开 → 闪电照亮的脸
@@ -2234,7 +2234,7 @@ CUTS = {
     'C25': ('hard', 0, 0, {}),
     'C26': ('shatter', 0.0, 0.22, dict(center=(960, 540))),        # 第六棒：从 C25 中轴劈缝炸开
     'C27': ('smoke_through', 0.08, 0.14, dict(direction=1, density=1.0, color=(0.62, 0.64, 0.68))),   # 第九棒 P2⑪：luma 中间帧碎片+天光糊团、露出 C27 方边 → 崩墙石尘冲过镜头
-    'C28': ('flash_white', 0.0, 0.10, dict(peak=0.40, width=0.5, color=(0.92, 0.95, 1.0))),   # 第九棒 P2⑪：push 中间帧「亮」与人脸叠鬼影 → 伪天亮那道电光过曝切入
+    'C28': ('ink_crack', 0.05, 0.12, dict(center=(960, 470), seed=28)),   # 第十二棒（critic_C_r6 P2⑦ 白闪同质化）：电光过曝 → 墨裂：崩墙的墨皮裂开、缝里透出伪天亮   # 第九棒 P2⑪：push 中间帧「亮」与人脸叠鬼影 → 伪天亮那道电光过曝切入
     'C29': ('hard', 0, 0, {}),                                           # 第四棒：luma 会在 C28 亮眼处开洞（像面具）→ 落拍硬切冲击
     'C30': ('flash_red', 0.0, 0.14, {}),
     'C31': ('hard', 0, 0, {}),
@@ -2244,7 +2244,7 @@ CUTS = {
     'C35': ('smoke_through', 0.06, 0.12, dict(direction=-1, density=1.1, color=(0.40, 0.38, 0.36))),   # 第七棒：巨印压下扬起泥尘冲过镜头
     'C35b': ('hard', 0, 0, {}),                                          # 同轴跳切：全身硬扛 → 中近景咬牙（「扛」）
     'C36': ('flash_red', 0.0, 0.12, dict(one_frame=True)),               # 扛印 → 1 帧朱闪 → 全景
-    'C37': ('flash_white', 0.0, 0.10, dict(peak=0.42, width=0.5, color=(0.9, 0.95, 1.0))),   # 第七棒：「天」那道闪电过曝 → 雷光照出御匾
+    'C37': ('bolt_split', 0.04, 0.12, dict(x0=1000, seed=37)),          # 第十二棒（白闪同质化）：整幅过曝 → 「天」那道雷竖着劈开画面，御匾从雷缝里展开   # 第七棒：「天」那道闪电过曝 → 雷光照出御匾
     'C38': ('ink_bleed', 0.05, 0.12, {}),                                # 第五棒：斩开的匾缝墨渗 → 握刀手（去掉擦除边缘亮线）
     'C39': ('hard', 0, 0, {}),
     'C40': ('whip_pan_blur', 0.05, 0.10, dict(direction='right')),     # 第七棒：蓄力 → 甩出去的那一刀（甩镜 = 出刀）
@@ -2254,7 +2254,7 @@ CUTS = {
 # 第七棒（critic_C_r3 转场：硬切只靠同一种推近提亮，花样单一）：硬切冲击分 4 种，按镜头内容选——
 # flash 电白闪（雷/光）、slam 下砸（重物落下：竖向震 + 赤热色偏）、zoom 冲推（径向模糊）、ink 墨眨（落拍那帧压黑再弹亮）
 HARD_FX = {'C06': 'slam', 'C10': 'flash', 'C15': 'flash', 'C17': 'slam', 'C19': 'zoom', 'C22': 'strike', 'C25': 'zoom',
-           'C29': 'strike', 'C31': 'slam', 'C35b': 'slam', 'C39': 'strike'}   # 第十棒 P2⑧：三处 ink（全黑暗角压场）→ strike
+           'C29': 'quake', 'C31': 'slam', 'C35b': 'slam', 'C39': 'strike'}   # 第十棒 P2⑧：三处 ink（全黑暗角压场）→ strike
 BREATH = {'C16': 3, 'C07': 2}      # 进副歌 / 进「我不低头」前压暗吸气（帧）
 
 # 每镜运镜（叠加在镜头内运动上）：z 推拉、x/y 平移、rot 滚转、hh 手持幅度、ease
@@ -2419,6 +2419,12 @@ class Sec:
                         sx_ = (14, -5)[k - 1]
                         fr = camxf(fr, 1 + 0.025 * a, sx_, r_[1] * 0.5) * (1 + 0.25 * a)
                         fr = fr * np.array([1 + 0.30 * a, 1 - 0.12 * a, 1 - 0.18 * a], np.float32) + 0.05 * a * np.array([0.9, 0.12, 0.06], np.float32)
+                elif st == 'quake':      # 第十二棒（critic_C_r6 P2⑦）：不提亮——落拍地震：竖向大抖 + 竖向拖影 + 轻压暗，朱偏只在第 1 帧
+                    dy = (26, -14, 5)[k]
+                    g = camxf(fr, 1 + 0.03 * a, r_[0] * 0.6, dy)
+                    g = (g + camxf(fr, 1 + 0.03 * a, r_[0] * 0.6, dy * 0.4) + camxf(fr, 1 + 0.03 * a, r_[0] * 0.6, dy * 1.6)) / 3
+                    fr = g * (1 - 0.12 * a)
+                    if k == 0: fr = fr * np.array([1.18, 0.92, 0.88], np.float32)
                 elif st == 'ink':
                     fr = ink_vignette(fr, 0.85) * 0.75 if k == 0 else camxf(fr, 1 + 0.03 * a, r_[0], r_[1]) * (1 + 0.6 * a)
                 else:
@@ -2436,7 +2442,7 @@ class Sec:
             fr = fr * 0.45 + np.clip(1.0 - l * 1.6, 0, 1) ** 2 * np.array([0.55, 0.05, 0.04], np.float32); ca = max(ca, 5)   # 朱红负片叠原画（保留结构，不是色卡）
         sid = self.ids[self.idx(t)]
         # 第六棒（critic_C_r3 P0④）：RGB 分离只留 C04 glitch_cut（含入切前 0.07s）和 INSERTS 闪切帧，其余一律关掉（原来成了底噪）
-        if not (ins or sid == 'C04' or self.ids[self.idx(t + 0.075)] == 'C04'): ca = 0
+        if not ins: ca = 0   # 第十二棒：C04 入切改纸撕，色差只留 INSERTS 闪切帧
         fr = fr * (EXPO_ALL * EXPO.get(sid, 1.0))
         fr = fr + 0.014 * (1 - np.clip(fr, 0, 1))
         dx, dy, z = cm
