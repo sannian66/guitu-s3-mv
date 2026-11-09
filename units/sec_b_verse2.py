@@ -1098,56 +1098,89 @@ class V15(Shot):
 
 
 # =====================================================================================
-# V16 104.30–105.88 ELS 仰天：雨从天心直落向镜头（放射雨丝），云眼里金色宋体「上苍」，被暴雨冲刷溶解；「不问」毛草
+# V16 104.30–105.88 低机位仰拍：第七棒——不再是只有字和放射线。暴雨天幕下一通龙首天碑（生图 heaven_stele）顶天立地，
+#   云眼金光在碑首后；「上」「苍」随字头被天雷一记记凿进碑心（阴刻嵌金、石屑迸溅），「苍」读满一拍后，
+#   105.62 一道刀光自画外斜劈，碑身沿刀线断开、上半截错落下滑、碎石崩飞——「不问上苍」。「不问」志莽行书在左（鬼屠的话），不出画。
 class V16(Shot):
+    T_SLASH = 105.62
+    SRC, DST, WPX = (0.50, 0.50), (1080, 640), 1900
+    CH = [('上', (0.500, 0.365), 225), ('苍', (0.500, 0.625), 225)]
     def __init__(self):
         x, y = K.grid()
-        self.c = (960, 470)
-        d = np.sqrt((x - 960) ** 2 + (y - 470) ** 2); a = np.arctan2(y - 470, x - 960)
+        self.c = (1080, 120)
+        d = np.sqrt((x - 1080) ** 2 + ((y - 120) * 1.4) ** 2); a = np.arctan2(y - 120, x - 1080)
         n = cv2.resize(K.fbm(H // 4, W // 4, 6101, 5, 6), (W, H))
         swirl = cv2.resize(K.tile(512, 6102, 6, 5), (W, H))
         self.d, self.a, self.n, self.sw = d, a, n, swirl
-        r = np.random.default_rng(6103)
-        self.streaks = r.uniform(0, 1, (900, 3))
-        T.warm('上苍', 'serif_black', 330); T.warm('不问', 'xing', 170)
+        self.sp = spr('B_r4/heaven_stele')
+        self.rain = fx2.RainSheet(6104, density=1.0)
+        self.bolt = fx2.Lightning(6105, p0=(300, 120), p1=(560, 760), branches=5)
+        T.warm('不问', 'xing', 190)
+
+    def sky(self, t):
+        d, a = self.d, self.a
+        rot = a + 0.20 * t + 500 / (d + 200)
+        tex = self.sw[(np.clip(d * 0.4 + t * 40, 0, 1e6).astype(np.int32)) % H, ((rot % (2 * math.pi)) / (2 * math.pi) * W).astype(np.int32) % W]
+        cloud = 0.025 + 0.15 * np.clip(tex * 0.7 + self.n * 0.5 - 0.2, 0, 1) ** 1.4
+        eye = np.exp(-(d / 330) ** 2)
+        return lum3(cloud, (0.95, 0.98, 1.08)) * (1 - eye[..., None] * 0.6) + eye[..., None] * GOLD * 0.30
 
     def render(self, t):
         u = self.u(t)
         x, y = K.grid()
-        d, a = self.d, self.a
-        rot = a + 0.25 * t + 600 / (d + 200)
-        tex = self.sw[(np.clip(d * 0.4 + t * 40, 0, 1e6).astype(np.int32)) % H, ((rot % (2 * math.pi)) / (2 * math.pi) * W).astype(np.int32) % W]
-        cloud = 0.02 + 0.13 * np.clip(tex * 0.7 + self.n * 0.5 - 0.2, 0, 1) ** 1.4
-        eye = np.exp(-(d / 260) ** 2)
-        fr = lum3(cloud, (0.95, 0.98, 1.08)) * (1 - eye[..., None]) + eye[..., None] * GOLD * 0.35
-        # 「上苍」金宋体悬于云眼 → 被雨冲刷溶解（粒子化 + 下流）
-        diss = clamp01((t - (V(CT(24, 7)) - 0.0)) / 0.7)
-        pr = prs(24, [6, 7], t)
-        L = T.Layer()
-        for i, ch in enumerate('上苍'):
-            if pr[i] > 0: T.place(L, ch, 790 + i * 340, 470, 330, color='gold', fname='serif_black', alpha=min(1, pr[i] * 2))
-        if diss > 0:
-            nz = cv2.resize(K.fbm(H // 4, W // 4, 6104, 12, 4), (W, H))
-            L.A = L.A * np.clip((nz - diss * 1.1 + 0.15) * 6, 0, 1)
-            run = cv2.resize(L.A[::4, ::4], (W, H))
-            M = np.float32([[1, 0, 0], [0, 1, 160 * diss]])
-            L.A = np.maximum(L.A, cv2.warpAffine(run, M, (W, H)) * 0.45 * diss * np.clip(nz * 2 - 0.6, 0, 1))
-        fr = T.compose(fr, L, shadow=0.4, glow=0.6, glow_color=(1.0, 0.6, 0.25))
-        # 放射雨丝（从天心落向镜头）
-        buf = np.zeros((H // 2, W // 2), np.float32)
-        for k, (s0, aa, sp) in enumerate(self.streaks):
-            ph = (t * (0.6 + sp) + s0) % 1.0
-            ang = aa * 2 * math.pi
-            r0 = 40 + 900 * ph ** 2; r1 = r0 + 30 + 160 * ph ** 2
-            p0 = (int((960 + math.cos(ang) * r0) / 2), int((470 + math.sin(ang) * r0) / 2)); p1 = (int((960 + math.cos(ang) * r1) / 2), int((470 + math.sin(ang) * r1) / 2))
-            cv2.line(buf, p0, p1, 0.25 + 0.6 * ph, 1, cv2.LINE_AA)
-        fr += cv2.resize(buf, (W, H))[..., None] * COLDC * 0.6
+        fr = self.sky(t)
+        tb = V(CT(24, 4))                                                       # 「不」104.34 的远雷
+        env = math.exp(-max(0.0, t - tb) / 0.25) * (t >= tb - 0.02)
+        fr = fr * (1 + 1.6 * env)
+        if t >= tb - 0.04: fr = self.bolt.draw(fr, t, tb, intensity=0.9)
+        z = np.zeros_like(fr)
+        Fz, Aw = put_at(z, self.sp, t, self.SRC, self.DST, self.WPX,
+                        grade=dict(expo=0.95, sat=0.35, tint=(0.94, 0.97, 1.04), lift=0.0, gamma=1.05),
+                        rim=dict(col=GOLD * 1.1, amt=2.2, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=(400, 1900, 0.0, 300, 0.55), wrap=0.0)
+        Fz = Fz * (0.55 + 0.6 * np.exp(-(((x - 1080) / 500) ** 2 + ((y - 380) / 420) ** 2)))[..., None] * (1 + 0.8 * env)
+        chips = []
+        for i, (ch, nrm, sz) in enumerate(self.CH):
+            tk = V(CT(24, 6 + i))
+            p = clamp01((t - (tk - 0.04)) / 0.14)
+            if p <= 0: continue
+            c = (self.DST[0] + (nrm[0] - self.SRC[0]) * self.WPX, self.DST[1] + (nrm[1] - self.SRC[1]) * self.WPX * self.sp.h / self.sp.w)
+            A = BV.mask([(ch, c[0], c[1], sz, 0)], fname='serif_black')
+            A, front = BV.reveal(A, p)
+            hot = pulse(t, tk, 0.35) * (t >= tk)
+            Fz = BV.engrave(Fz, A, light=(0.0, -1.0), depth=6, groove=0.7, fill=(0.92, 0.70, 0.34), fill_k=0.75, hl=0.35,
+                            surface=Aw, glow=0.2 + 0.8 * hot, glow_col=(1.0, 0.62, 0.25))
+            if front is not None and p < 1: chips.append((front, tk))
+        ts = V(self.T_SLASH)
+        p0, p1 = (600, 300), (1560, 412)                                        # 刀线：斜穿碑首下、「上」字下沿之上，「苍」不被切
+        if t >= ts:
+            q = t - ts
+            fall = eout(clamp01(q / 0.22), 2)
+            Fz, Aw2, line = BV.split_layer(Fz, Aw, p0, p1, (-34 * fall, 46 * fall + 120 * q * q), (0, 4 * fall))
+            Aw = Aw2
+            crack = line * Aw * math.exp(-q / 0.25)
+            Fz = Fz + crack[..., None] * np.array([1.0, 0.55, 0.25], np.float32) * 1.5
+        fr = fr * (1 - Aw[..., None]) + Fz
+        for (fx_, fy_), tk in chips:
+            fr = K.sparks(fr, t, 6110 + int(fy_), (fx_, fy_), n=70, life=0.4, speed=(200, 800), dirc=(0, -1), spread=2.0, grav=1600,
+                          size=1.5, area=(40, 10), color=(1.0, 0.8, 0.5), amt=1.1, t0=tk - 0.04, burst=True)
+        if t >= ts - 0.05:                                                     # 刀光：自左上画外斜劈过碑
+            ql = clamp01((t - (ts - 0.05)) / 0.10)
+            dx_, dy_ = p1[0] - p0[0], p1[1] - p0[1]; nn = math.hypot(dx_, dy_)
+            dist = ((x - p0[0]) * dy_ - (y - p0[1]) * dx_) / nn
+            along = ((x - p0[0]) * dx_ + (y - p0[1]) * dy_) / nn
+            band = np.exp(-(dist / (2 + 14 * (1 - ql))) ** 2) * (along < -500 + 2400 * ql) * math.exp(-max(0.0, t - ts) / 0.18)
+            fr = fr + band[..., None] * np.array([1.0, 0.92, 0.85], np.float32) * 1.6 + K.blur_ds(band, 16)[..., None] * RED * 0.9
+            fr = K.sparks(fr, t, 6120, (1080, 350), n=70, life=0.7, speed=(200, 800), dirc=(0.3, -1), spread=2.0, grav=1600,
+                          size=1.6, area=(220, 20), color=(0.42, 0.40, 0.38), amt=0.9, t0=ts, burst=True)
+        fr = self.rain.draw(fr, t, intensity=1.0, angle=8, light=(1080, 120), light_r=700)
         pb = prs(24, [4, 5], t)
-        fr = T.scatter_stack(fr, '不问', pb, places=[dict(ch='不', x=330, y=300, size=170, rot=-8, font='xing', idx=0, emph=False),
-                                                       dict(ch='问', x=420, y=520, size=200, rot=6, font='xing', idx=1, emph=True)],
-                             color='white', emph_color=(0.84, 0.10, 0.07), t_local=u, style_kw=dict(shadow=0.8))
-        fr = cam(fr, 1.0 + 0.08 * eio(u), 0, 0, -8 * eio(u), center=self.c)
-        return fr, 0
+        fr = T.scatter_stack(fr, '不问', pb, places=[dict(ch='不', x=360, y=360, size=180, rot=-6, font='xing', idx=0, emph=False),
+                                                       dict(ch='问', x=440, y=600, size=210, rot=5, font='xing', idx=1, emph=True)],
+                             color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85))
+        hk = hitp(t, self.T_SLASH, 0.14)
+        dx, dy, dr = shake(t, 3 + 22 * hk, 12, 616)
+        fr = cam(fr, 1.0 + 0.06 * eio(u) + 0.04 * hk, dx, dy + 20 * eio(u), dr)
+        return fr, (4 if hk > 0.5 else 0)
 
 
 # =====================================================================================

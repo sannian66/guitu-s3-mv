@@ -1695,7 +1695,7 @@ CUTS = {
     'S07_Heap': ('zoom_through', 0.1, 0.15, dict(center=(1348, 640))),
     'S08_Seals': ('seal_iris', 0.1, 0.14, dict(center=(760, 400), ch='理')),
     'S09_Brush': ('ink_bleed_hd', 0.001, 0.28, dict(seed=9, center=(1560, 260))),
-    'S10_Giant': ('hard_cut_x', 0, 0.07, dict(impact=0.07, tint=(0.05, 0.05, 0.06), amt=0.5, ca=6, jolt=(0, 20))),
+    'S10_Giant': ('ink_press', 0.1, 0.12, dict(seed=10)),   # [r8] 巨笔墨压：浓墨笔肚自上压下，前沿干笔毛锋（替换 hard_cut_x）
     'S11_Answer': ('match_cut', 0, 0.2, dict(shape='line', center=(1300, 760), angle=-35, mode='cut')),
     'S12_Pierce': ('hard_cut_x', 0, 0.07, dict(impact=0.1, tint=(0.07, 0.10, 0.17), amt=0.5, ca=9, jolt=(0, -22))),   # [r6] 冷墨压暗（不白闪）+ 色散 + 上顶（刀从下刺上）
     'S13_PaperCut': ('paper_tear', 0.1, 0.3, dict(seed=12, angle=6)),
@@ -1706,7 +1706,7 @@ CUTS = {
     'S18_Draw': ('slash_wipe', 0.05, 0.2, dict(angle=-12, center=(960, 860))),
     'S19_Forge': ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.3)),
     'S20_Wall': ('occlusion', 0.1, 0.15, dict(kind='pillar', direction=-1)),   # [r5] 柱从右侧入画：先遮「张」的右半「长」，不再露出错字
-    'S21_Charge': ('hard_cut_x', 0, 0.07, dict(impact=0.08, tint=(1.0, 0.72, 0.38), amt=0.3, ca=7, jolt=(-18, 0))),
+    'S21_Charge': ('plaque_sweep', 0.08, 0.12, dict(seed=21)),   # [r8] 律令木牌贴镜头横扫遮挡（替换 hard_cut_x）
     'S22_Chuang': ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.2)),
     'S23_Eye': ('shatter', 0.04, 0.14, dict(center=(1060, 560), seed=23, n=60)),
     'S24_Defy': ('bolt_cut', 0, 0.14, dict(seed=24)),   # [r7b] 闪电劈过切点 + 冷偏色散（替换两帧闪白）
@@ -1824,6 +1824,69 @@ def gold_beam(A, B, p, x0=960, seed=0):
     return out
 
 
+def ink_press(A, B, p, seed=0, band=150):
+    """[r8] 巨笔墨压（critic_D_r5 P1-4：S10 入点替换 hard_cut_x）：一整幅浓墨像巨笔横扫的笔肚从画面上沿压下来，
+    墨块前沿是参差的干笔毛锋（逐列噪声 + 细丝飞白），前沿之上露出下一镜（巨像），前沿之下是上一镜（被压暗、微下沉）；
+    墨带本身浓淡不匀、带竖向笔丝。切点 = 墨压过画面中线，下一镜的巨像正好「随墨压下」。"""
+    x, y = K.grid()
+    key = ('ipress', seed)
+    if key not in _TOPSEAL:
+        r1 = cv2.resize(D._tile(seed + 811)[:1, :], (W, 1), interpolation=cv2.INTER_CUBIC)[0] - 0.5
+        r2 = cv2.resize(D._tile(seed + 812)[:1, :256], (W, 1), interpolation=cv2.INTER_CUBIC)[0] - 0.5
+        fib = cv2.resize(D._tile(seed + 813)[:8, :], (W, H), interpolation=cv2.INTER_LINEAR)
+        _TOPSEAL[key] = (r1 * 220 + r2 * 60, np.clip((fib - 0.35) * 2.2, 0, 1).astype(np.float32))
+    off, fib = _TOPSEAL[key]
+    yf = lerp(-band - 160, H + 160, eo(p, 1.4)) + off[None, :]
+    d = yf - y                                                          # >0：已被墨压过
+    mB = np.clip((d - band) / 10, 0, 1)
+    ink = np.clip(d / 18, 0, 1) * (1 - mB)
+    ink = ink * (0.78 + 0.22 * fib) * np.clip(1.15 - 0.35 * np.clip((d - 20) / band, 0, 1) * (1 - fib), 0, 1)
+    As = cv2.warpAffine(A, np.float32([[1, 0, 0], [0, 1, 26 * p]]), (W, H), borderMode=cv2.BORDER_REFLECT)
+    shade = 1 - 0.35 * np.exp(-np.clip(-d, 0, None) / 120) * (d < 0)  # 墨前沿下方的投影
+    out = As * shade[..., None] * (1 - mB[..., None]) + B * mB[..., None]
+    inkc = np.array([0.045, 0.04, 0.042], np.float32)
+    out = out * (1 - ink[..., None]) + inkc * ink[..., None]
+    sheen = np.exp(-((d - 12) / 6) ** 2) * (d > 0) * 0.18 * fib          # 湿墨前沿一线反光
+    return out + sheen[..., None] * np.array([0.9, 0.88, 0.85], np.float32)
+
+
+def plaque_sweep(A, B, p, seed=0, pw=980, tilt=-6.0):
+    """[r8] 律令木牌横扫遮挡（critic_D_r5 P1-4：S21 入点替换 hard_cut_x）：一块被风甩过的巨大律令木牌贴着镜头从右向左横扫，
+    木牌（深色木纹、刻字凹槽、两端麻绳、暖色边缘受光、横向动态模糊）扫过之处由 S20 竹简地面换成 S21 木牌林。"""
+    x, y = K.grid()
+    th = math.radians(tilt)
+    xr = (x - W / 2) * math.cos(th) + (y - H / 2) * math.sin(th) + W / 2
+    xl = lerp(W + 140, -pw - 140, ei(p, 1.25) * 0.5 + p * 0.5)       # 木牌左缘（前沿）
+    xt = xl + pw
+    inside = np.clip((xr - xl) / 3, 0, 1) * np.clip((xt - xr) / 3, 0, 1)
+    passed = np.clip((xr - xt) / 3, 0, 1)
+    key = ('plaque', seed)
+    if key not in _TOPSEAL:
+        g1 = cv2.resize(D._tile(seed + 821)[:, :32], (pw + 400, H), interpolation=cv2.INTER_CUBIC)
+        g2 = cv2.resize(D._tile(seed + 822)[:, :8], (pw + 400, H), interpolation=cv2.INTER_CUBIC)
+        grain = 0.6 * g1 + 0.4 * np.sin(g2 * 40.0) * 0.5 + 0.2
+        _TOPSEAL[key] = grain.astype(np.float32)
+    grain = _TOPSEAL[key]
+    gx = np.clip((xr - xl + 200).astype(np.int32), 0, grain.shape[1] - 1)
+    gy = np.clip(y.astype(np.int32), 0, H - 1)
+    gr = grain[gy, gx]
+    wood = np.stack([0.20 + 0.16 * gr, 0.12 + 0.10 * gr, 0.07 + 0.06 * gr], -1).astype(np.float32)
+    lx = (xr - xl) / pw
+    groove = (np.abs(lx - 0.5) < 0.18) * (np.abs(((y - 60) % 260) - 130) < 70) * 0.0   # 中间刻字槽位：只留暗槽边
+    edge_v = np.exp(-((lx - 0.5) / 0.012) ** 2) * 0.0 + np.exp(-((np.abs(lx - 0.5) - 0.2) / 0.006) ** 2) * 0.5
+    wood = wood * (1 - 0.45 * edge_v[..., None]) * (1 - groove)
+    rimL = np.exp(-((xr - xl) / 10) ** 2) * 1.2 + np.exp(-((xr - xl) / 50) ** 2) * 0.25
+    rimR = np.exp(-((xt - xr) / 14) ** 2) * 0.5
+    wood = wood + (rimL + rimR)[..., None] * np.array([1.0, 0.72, 0.42], np.float32) * 0.6
+    wood = wood * (0.75 + 0.35 * (1 - y / H))[..., None]
+    blur = int(18 + 40 * math.sin(math.pi * cl(p)))
+    wood = cv2.blur(wood, (blur, 1))
+    out = A * (1 - inside - passed)[..., None] + B * passed[..., None] + wood * inside[..., None]
+    shadowL = np.exp(-np.clip(xl - xr, 0, None) / 160) * (xr < xl) * 0.45   # 木牌前沿投在上一镜的影
+    out = out * (1 - shadowL[..., None])
+    return out
+
+
 def ink_bleed_hd(A, B, p, seed=0, center=None, edge=0.8, from_cut=False):
     """[r4] 半分辨率场 + 羽化的墨晕转场（替代 trans.ink_bleed 的 1/4 块状边），边缘浓墨带有毛笔纤维感。"""
     if from_cut: p = cl((p - 0.5) * 2)
@@ -1890,6 +1953,10 @@ class Bridge:
                 out = burn_wipe(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             elif name == 'bolt_cut':
                 out = bolt_cut(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), t - c, **kw2)
+            elif name == 'ink_press':
+                out = ink_press(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
+            elif name == 'plaque_sweep':
+                out = plaque_sweep(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             elif name == 'gold_tip':
                 out = gold_tip(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             else:
