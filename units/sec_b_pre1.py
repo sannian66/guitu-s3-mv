@@ -528,7 +528,7 @@ class P09(Shot):
     T_MING = V(52.84)
     SC = (610, 470)
     def __init__(self):
-        self.a = spr('S024/fist'); self.b = spr('S024/pommel_thrust')
+        self.a = spr('S024/fist'); self.b = spr('B_r4/pommel_thrust_pt')
         self.bg = BK.dark_bg(909, 0.02, 0.06, tint=(1.1, 1.0, 1.0))
         self.seal = T.seal_layer('命', self.SC[0], self.SC[1], 470, style='yin', rot=-4, seed=9)
         T.warm('不信', 'kai', 120)

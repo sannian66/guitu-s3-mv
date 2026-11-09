@@ -1329,7 +1329,7 @@ class V13(Shot):
 class V14(Shot):
     FOOT = (760, 1040)
     def __init__(self):
-        self.sp = spr('B_r4/stand_defy')
+        self.sp = spr('B_r4/stand_defy_pt')
         self.figs = BC.figs('crowd_bow')
         sk = night_sky(5901, top=(0.02, 0.022, 0.03), bot=(0.12, 0.12, 0.13), horizon=0.75)
         x, y = K.grid()
@@ -1397,7 +1397,7 @@ class V14(Shot):
 class V15(Shot):
     T_BOLT = 103.987
     def __init__(self):
-        self.sp = spr('S055/walk_look_up')
+        self.sp = spr('B_r4/walk_look_up_pt')
         sk = night_sky(6001, top=(0.02, 0.022, 0.03), bot=(0.10, 0.105, 0.12), horizon=0.8)
         # 第十棒：去城墙（避开副歌一墙段）→ 旷野两层山脊（远淡近黑，雨雾大气透视）
         x, y = K.grid()
