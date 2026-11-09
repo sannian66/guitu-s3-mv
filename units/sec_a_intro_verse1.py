@@ -18,6 +18,7 @@ import vcam as VC
 import a_kit as A
 import a_r7 as R7
 import a_r8 as R8
+import a_r9 as R9
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
 READY = False
@@ -267,7 +268,8 @@ class A06(Shot):
         # 第五棒：片名镜不再近静止——血月缓升 + 每拍脉动、云层快速横流（腰斩月盘）、三层山脊强视差、每拍一阵火星、9.68 云内赤色闪电、
         #         地面雾浪横扫；配合 MOVES3 的持续推 + 横移
         bp = sum(math.exp(-max(0.0, t - V(b)) / 0.16) * (t >= V(b)) for b in (8.75, 9.22, 9.68, 10.15))
-        my = 360 - 60 * eio(u)
+        cr = eio(u)                                                                       # 第九棒（critic_A_r6 P0-1）：crane down —— 机位下降，近山升起越过远山，血月沉向山脊后
+        my = 330 + 70 * cr
         fr = A.moon(fr, 1480, my, 150, 0.95, col=(1.0, 0.42, 0.32), halo=0.6 + 0.3 * bp)          # 血月：被云腰斩
         fr = A.glow(fr, (1480, my), 520, 0.22 + 0.18 * bp, (0.6, 0.12, 0.08))
         fr = A.clouds(fr, t, 21, speed=(-150, 0), y0=150, y1=620, amt=0.95, col=(0.10, 0.08, 0.09), light=(1480, my), light_r=380,
@@ -283,8 +285,11 @@ class A06(Shot):
             Lb = cv2.resize(Lb, (W, H))
             fr = fr + (Lb * 1.2 + cv2.GaussianBlur(Lb, (0, 0), 10) * 1.5)[..., None] * np.array([1.0, 0.6, 0.5], np.float32) * env
         for i, (by, amp, tone) in enumerate(((760, 230, (0.05, 0.035, 0.04)), (860, 170, (0.025, 0.02, 0.025)), (960, 120, (0.006, 0.005, 0.007)))):
+            Di = (90, 200, 340)[i]
+            by = int(by + Di * (0.75 - cr))                                               # 远山升 90px、中山 200px、近山 340px（视差）
             fr, _ = A.ridge(fr, by, amp, 60 + i, tone=tone, rim=(0.9, 0.35, 0.25), rim_amt=0.25 - 0.06 * i + 0.15 * bp, dx=-t * (30 + 70 * i))
             fr = fog(fr, t, i, by - 70, by + 50, 0.35, (0.25, 0.17, 0.17), speed=(90 + 80 * i, 0))
+        fr = R9.fg_bokeh(fr, t, self.t0, seed=6, n=7, col=(1.0, 0.5, 0.22), vel=(-900, -260), size=(28, 70), amt=0.55)   # 前景焦外火星穿过
         if k >= 0:
             fr = EMB.draw(fr, t, (1.6 * max(0.35, 1 - k / 2.5)) * (1 + 0.8 * bp), wind=(220, -60), burst=(960, TITLE_Y, 900) if k < 0.6 else None, t0=TITLE_HIT if k < 0.6 else None)
         if 0 <= k < 0.14:                                                               # 闪白（全段唯一一处，HANDOFF §1；第三棒压短压轻，片名不被洗掉）
@@ -1712,7 +1717,7 @@ MOVES3 = {
     'A03': M3('sine_io', 'beat', x=(40, -60), z=(1.0, 1.06), note='沿刀身滑移 + 推'),
     'A04': M3('sine_io', 'beat', z=(1.0, 1.09), x=(20, -20), note='推 + 手持'),
     'A05': M3('expo_in', None, z=(1.0, 1.10), note='急推（蓄力）'),
-    'A06': M3('sine_io', 'beat', z=(1.02, 1.13), x=(60, -60), rot=(-1.2, 0.6), note='第五棒：持续推 + 横移（不再 punch 后静止）'),
+    'A06': M3('sine_io', 'beat', z=(1.12, 1.02), y=(-60, 40), pitch=(4, -2), rot=(-1.0, 0.4), note='第九棒：crane down 降镜 + 拉（片名屏幕层不动，山脊视差升起）'),
     'A07a': M3('sine_io', 'beat', z=(1.0, 1.16), x=(50, -70), y=(-40, 60), pitch=(-5, 2), note='第五棒：2.7s 低机位推轨 + 升镜仰（合并 A07b）'),
     'A07b': M3('sine_io', 'beat', x=(60, -60), z=(1.02, 1.06), note='横移（城墙纵深视差）'),
     'A08': M3('sine_io', 'beat', z=(1.0, 1.10), note='背影推进'),
