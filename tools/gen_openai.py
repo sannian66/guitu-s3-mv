@@ -16,7 +16,8 @@ job 表（JSON 数组）：
 import base64, json, os, pathlib, subprocess, sys, time, urllib.request, uuid
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-KEY = pathlib.Path(os.path.expanduser('~/.dsh/secrets/wentoken.key')).read_text().strip()
+KEY = (os.environ.get('WENTOKEN_KEY')
+       or pathlib.Path(os.path.expanduser('~/.dsh/secrets/wentoken.key')).read_text().strip())
 BASE = os.environ.get('WENTOKEN_BASE', 'https://api.wentoken.si/v1')
 MODEL = os.environ.get('GEN_MODEL', 'gpt-image-2')
 
