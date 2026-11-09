@@ -1716,7 +1716,7 @@ CUTS = {
     'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
     'V14': ('hard', 0, 0, {}),
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
-    'V16': ('a_glyph', 0.08, 0.24, dict(ch='主', center=(750, 650), size=230)),          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
+    'V16': ('a_glyph', 0.08, 0.34, dict(ch='主', center=(750, 650), size=230)),   # 第九棒：post 0.24→0.34          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
     'V17': ('hard', 0, 0, {}),
     'V18': ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）
     'V19': ('hard', 0, 0, {}),
@@ -1944,7 +1944,7 @@ def a_split(A_, B_, p, angle=32.0, center=(1200, 620)):
 
 def a_glyph(A_, B_, p, ch='主', center=(960, 540), size=230):
     """第六棒：字形遮罩转场 —— B 从「主」字的墨槽里硬边涌出，字形放大到盖满全屏；边缘带墨的毛刺，不叠化。"""
-    sc = 1 + 16 * TR.ease_in(p, 2.4)
+    sc = 1 + 2.6 * eio(min(1.0, p / 0.8)) + 16 * clamp01((p - 0.8) / 0.2) ** 2   # 第九棒（P1-4）：前 80% 只放大到 3.6×，「主」整字可读，最后 20% 才炸开盖满
     L = T.Layer(); T.place(L, ch, center[0], center[1], size, 'white', 'kai', scale=sc, texture=False)
     m = L.A
     nz = cv2.resize(A.ink_noise(77, 256), (W, H))
@@ -1955,7 +1955,7 @@ def a_glyph(A_, B_, p, ch='主', center=(960, 540), size=230):
     mb2 = cv2.GaussianBlur(m, (0, 0), 14 + 30 * p)
     bandw = np.clip(1 - np.abs(mb2 - 0.5) * 2.0, 0, 1)
     m = np.clip((mb - 0.5 + (nz - 0.5) * 0.25 + (hair - 0.5) * 1.1 * bandw) * 8 + 0.5, 0, 1)
-    if p > 0.75: m = np.maximum(m, (p - 0.75) / 0.25)
+    if p > 0.88: m = np.maximum(m, (p - 0.88) / 0.12)   # 第九棒：0.75→0.88，膨胀阶段不再整屏半透
     edge = np.clip(m * (1 - m) * 4, 0, 1)
     halo = np.clip(cv2.GaussianBlur(m, (0, 0), 14) - m, 0, 1) * (1 - p)
     A_ = A_ * (1 - 0.75 * halo[..., None])
