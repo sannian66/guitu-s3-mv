@@ -1764,43 +1764,46 @@ BOUNDS = [s[1] for s in SHOTS] + [F1]
 CHORUS_END = 6638
 
 # 入点转场：(名称, pre 秒, post 秒, kw)；'hard' = 切后 2 帧冲击（推近+提亮）
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
+#   P0 转场去重 7 处：E02→ink_swallow、E04→seal_cover、E07→blade_black、E08→paper_tear、E11→occlusion、E13→ink_swallow、E21 flash_red→door_open
+#   P1 过渡长度 5 处：E16/E22/E26 pre 0→0.08、E31 pre 0→0.08+post 0.40→0.20、E34 post 0.30→0.20
 CUTS = {   # 第三棒：亮底上不再用白色系转场（flash_white 0 处、whip 1 处、zoom_through 0 处），换成暗色系：墨晕吞屏 / 刀光黑切 / 印章盖屏
     'E01': ('entry_flash', 0, 0.22, {}),
-    'E02': ('hard', 0, 0, {}),
+    'E02': ('ink_swallow', 0.14, 0.08, dict(center=(900, 380), seed=202)),   # [r4-P0] 原 hard（提亮闪）→ 墨吞屏
     'E03': ('ink_swallow', 0.10, 0.22, dict(center=(1150, 360), seed=3)),
-    'E04': ('hard', 0, 0, {}),
+    'E04': ('seal_cover', 0.10, 0.08, dict(center=(820, 470), rot=-5)),   # [r4-P0] 原 hard（提亮闪）→ 印章盖屏
     'E05': ('impact', 0, 0, dict(col=(1.0, 0.82, 0.45), amp=10)),   # 第七棒：whip 中间帧纯黄横糊 → 金闪冲击硬切（昭彰开裂的冲击）
     'E06': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=-1, color=(0.03, 0.02, 0.015))),
-    'E07': ('hard', 0, 0, {}),
-    'E08': ('hard', 0, 0, {}),
+    'E07': ('blade_black', 0.10, 0.12, dict(angle=-28, width=210, seed=7)),   # [r4-P0] 原 hard（提亮闪）→ 刀光黑切
+    'E08': ('paper_tear', 0.08, 0.12, dict(seed=8, angle=5)),   # [r4-P0] 原 hard（提亮闪）→ 撕纸
     'E09': ('paper_tear', 0.06, 0.18, dict(seed=5)),
     'E10': ('blade_black', 0.06, 0.12, dict(angle=-25, width=200)),
-    'E11': ('hard', 0, 0, {}),
+    'E11': ('occlusion', 0.10, 0.14, dict(kind='pillar', direction=-1, color=(0.03, 0.02, 0.015))),   # [r4-P0] 原 hard（提亮闪）→ 前景遮挡
     'E12': ('seal_cover', 0.08, 0.16, dict(center=(820, 500), rot=-4)),
-    'E13': ('hard', 0, 0, {}),
+    'E13': ('ink_swallow', 0.16, 0.08, dict(center=(1000, 520), seed=13)),   # [r4-P0] 原 hard（提亮闪）→ 墨吞屏
     'E14T': ('hard', 0, 0, {}),
     'E15': ('hard', 0, 0, {}),
-    'E16': ('door_open', 0.0, 0.20, dict(cx=960)),             # 第四棒：E15 沿竖缝裂开两扇滑出 → E16 自己的中缝（图形匹配）
+    'E16': ('door_open', 0.08, 0.20, dict(cx=960)),             # [r4-P1] pre 0→0.08（原注释：第四棒：E15 沿竖缝裂开两扇滑出 → E16 自己的中缝（图形匹配））
     'E17': ('push_h', 0.07, 0.13, {}),                         # 第四棒：横推，中间帧 = 金脸 | 朱缝 | 朱脸 正面相对
     'E18': ('hard', 0, 0, {}),
     'E19': ('gold_leaf', 0.04, 0.22, dict(center=(960, 540), seed=19, red_frac=0.07)),   # 第六棒：三角碎片 → 有厚度的金箔碎片（与镜内箔片同质）
     'E20': ('light_sweep', 0.06, 0.22, dict(y=770)),           # 第六棒：圆形 iris → 贴地平线的横向光线扫入
-    'E21': ('flash_red', 0.0, 0.16, {}),
-    'E22': ('match_cut', 0.0, 0.18, dict(shape='circle', center=(960, 330), radius=120)),
+    'E21': ('door_open', 0.0, 0.08, dict(cx=960)),   # [r4-P0] 原 flash_red → 门缝开
+    'E22': ('match_cut', 0.08, 0.18, dict(shape='circle', center=(960, 330), radius=120)),   # [r4-P1] pre 0→0.08
     'E23': ('impact', 0, 0, dict(col=(1.0, 0.86, 0.6), amp=10, soft=True)),     # 第五棒：硬切加冲击；第八棒 soft：冲白减半护暗部、色散减半
     'E24': ('hard', 0, 0, {}),
     'E25': ('slash_wipe', 0.03, 0.12, dict(angle=-8)),
-    'E26': ('match_cut', 0.0, 0.22, dict(shape='line', center=(960, 600), angle=0)),
+    'E26': ('match_cut', 0.08, 0.22, dict(shape='line', center=(960, 600), angle=0)),   # [r4-P1] pre 0→0.08
     'E27a': ('impact', 0, 0, dict(col=(1.0, 0.25, 0.12), amp=12)),   # 第五棒：朱红闪 + 抖
     'E27b': ('impact', 0, 0, dict(col=(1.0, 0.9, 0.7), amp=12)),     # 第五棒：白金闪 + 抖
     'E27c': ('slash_wipe', 0.03, 0.10, dict(angle=-78)),               # 第五棒：E27b 刀光延续成斩线 → 匾
     'E28': ('impact', 0, 0, dict(col=(0.9, 0.2, 0.1), amp=10)),      # 第六棒：入转场不再带出匾（匾只在 E04/E05/E27c）
     'E29': ('ink_swallow', 0.18, 0.18, dict(center=(1000, 500), seed=9)),
     'E30': ('hard', 0, 0, {}),
-    'E31': ('ink_bleed', 0.0, 0.40, dict(center=(960, 540), white=False, seed=9)),
+    'E31': ('ink_bleed', 0.08, 0.20, dict(center=(960, 540), white=False, seed=9)),   # [r4-P1] pre 0→0.08、post 0.40→0.20
     'E32': ('blade_sweep', 0.12, 0.16, dict(direction=1)),      # 第五棒：平灰板 → 近景刀身掠镜（钢纹/脊线/刃口暖光/运动模糊）
     'E33': ('warm_veil', 0.14, 0.20, dict(axis='x', direction=-1, seed=7301, cap=0.66)),   # 第七棒：fog_wall 中间帧满屏平灰 → 暖雾封顶 66%（刀柄/刀穗剪影始终透出）+ 斜入光束 + 翻卷亮边
-    'E34': ('warm_veil', 0.20, 0.30, dict(axis='y', seed=7341, cap=0.62, warm=(1.0, 0.82, 0.52), dark=(0.13, 0.09, 0.06))),   # 第七棒：灰烟平涂 → 自下翻涌的暖金烟（封顶 62%，烟里带光束与亮边）
+    'E34': ('warm_veil', 0.20, 0.20, dict(axis='y', seed=7341, cap=0.62, warm=(1.0, 0.82, 0.52), dark=(0.13, 0.09, 0.06))),   # [r4-P1] post 0.30→0.20（原注释：第七棒：灰烟平涂 → 自下翻涌的暖金烟（封顶 62%，烟里带光束与亮边））
     'E35': ('hard', 0, 0, {}),
     'E36': ('cut', 0, 0, {}),
 }

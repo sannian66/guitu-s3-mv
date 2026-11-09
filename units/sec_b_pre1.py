@@ -989,19 +989,23 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
     _S.t0, _S.t1 = _a / FPS, _b / FPS
 P01.t0 = 44.048
 
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
+#   P0 转场去重 3 处：P07 flash_white→shatter、P11 gold→occlusion、P13 flash_red→rain_curtain
+#   P1 过渡长度 1 处：P12 match_cut pre 0→0.08
+#   P0 二期 1 处：P07 shatter→freeze_glitch（原与 P15 隔 8 刀重名）
 CUTS = {
     'P02': ('flashr', 0, 0, {}),                                    # 落墨帧朱红闪（第三棒：去白闪）
     'P03': ('paper_tear', 0.06, 0.20, dict(seed=3, angle=10)),
     'P04': ('none', 0, 0, {}),                                      # 同一机位连续后拉（图形匹配）
     'P05': ('ink_bleed', 0.06, 0.16, dict(seed=5)),                 # 第三棒：去 whip，墨从指尖洇成宫门
     'P06': ('punch', 0, 0, {}),                                     # 第七棒：红闪 → 推近色散（闪类转场压到 4 处）
-    'P07': ('flash_white', 0.0, 0.17, {}),                          # 雷闪
+    'P07': ('freeze_glitch', 0.06, 0.07, dict(seed=7)),                          # [r4-P0] 雷闪闪白 → 定格故障（P0 二期：shatter 与 P15 隔 8 刀重名，改此招；post 0.07 = 不压切后 0.09 的「潢」字头）
     'P08': ('cloud_wipe', 0.10, 0.16, dict(seed=8)),                # 第四棒：灰雾 smoke → 云幕下压（b_kit，冷光云边，中点上天下人）
     'P09': ('glitch_cut', 0.03, 0.06, dict(seed=9)),                # 第五棒：缩短，让 52.84「命」干净砸进
     'P10': ('slash_wipe', 0.05, 0.14, dict(angle=-28)),
-    'P11': ('gold', 0, 0, {}),                                      # 金属火花金闪（第三棒：去白闪）
-    'P12': ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 470), radius=140)),
-    'P13': ('flash_red', 0.03, 0.12, {}),
+    'P11': ('occlusion', 0.10, 0.14, dict(kind='spear', direction=-1, seed=11)),                                      # [r4-P0] 金属火花金闪 → 枪林遮挡（原注释：金属火花金闪（第三棒：去白闪））
+    'P12': ('match_cut', 0.08, 0.12, dict(shape='rect', center=(960, 470), radius=140)),   # [r4-P1] pre 0→0.08（补出两镜同框的匹配帧）
+    'P13': ('rain_curtain', 0.06, 0.12, dict(seed=13)),   # [r4-P0] 朱闪 → 雨帘落幕
     'P14': ('punch', 0, 0, {}),                                     # 第五棒：斜刀特写落拍硬切（色散冲击）
     'P15': ('shatter', 0.06, 0.10, dict(seed=15)),                   # 第五棒：特写碎裂 → LS 举刀（换景别）
 }

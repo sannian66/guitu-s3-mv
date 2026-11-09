@@ -2155,15 +2155,16 @@ class V25(Shot):
 
 # ===================================================================================== 段落装配
 SHOTS = [V01, V02, V03, V04, V05, V06, V07, V08, V09, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20, V21, V22, V23, V24, V25]
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表：P1 过渡长度 2 处：V06 / V09 match_cut pre 0→0.08。切点帧/字层/SHOTS 未动。
 CUTS = {
     'V02': ('ring_wipe', 0.06, 0.16, dict(center=(1300, 600))),    # 第六棒：钟声折射环开门（钟口圆 → 广场声波环）
     'V03': ('zoom_iris', 0.08, 0.14, dict(center=(960, 560))),     # 第十二棒：zoom_dark 交叉叠化在 f2679 留残影 → 无叠化的推镜圆开门；第六棒：顶拍压进跪拜的人群 → 平视纸人队列
     'V04': ('paper_tear', 0.05, 0.12, dict(seed=4, angle=-6)),   # 第十棒：punch 压到 ≤5 处 → 纸扎队列撕开露出笏板                                     # 第七棒：金闪 → 落拍推近色散（刻刀第一记）
     'V05': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=1, seed=5)),
-    'V06': ('match_cut', 0.0, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # 第五棒：去金圈（≈副歌一 S045 光圈）
+    'V06': ('match_cut', 0.08, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # [r4-P1] pre 0→0.08（原注释：第五棒：去金圈（≈副歌一 S045 光圈））
     'V07': ('lattice_open', 0.06, 0.12, dict(seed=7)),          # 第十棒：窗格一格格亮开（同 V07 窗棂尺度）                                     # 第七棒：金闪 → 推近色散（窗棂光一跳）
     'V08': ('rain_curtain', 0.06, 0.14, dict(seed=8)),            # 第九棒：split_slide 中间帧全黑 → 雨帘落幕（由暗殿进雨夜外景）
-    'V09': ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160)),
+    'V09': ('match_cut', 0.08, 0.12, dict(shape='rect', center=(960, 520), radius=160)),   # [r4-P1] pre 0→0.08
     'V10': ('slash_wipe', 0.04, 0.10, dict(angle=84)),                # 第十棒：punch → 沿算盘档竖线一记竖擦                                     # 第七棒：hard → 推近色散冲击
     'V11': ('slash_wipe', 0.05, 0.12, dict(angle=-70)),
     'V12': ('shatter', 0.04, 0.14, dict(seed=12, center=(960, 520), n=60)),
