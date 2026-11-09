@@ -857,8 +857,13 @@ def _spiral_layer(rr, th, t, key, seed, twist, omega, flow, z, arms, base=4, rep
     u = (thp / (2 * np.pi)) * 512 * rep
     v = (lr * 16 + flow * t * 0.25) % 512                         # 沿旋臂方向慢变 → 纹理被拉成顺着螺旋的长条
     d = cv2.remap(n, (u % 512).astype(np.float32), v.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
-    band = 0.5 + 0.5 * np.cos(arms * thp + 2.4 * (d - 0.5))          # 旋臂
-    den = np.clip((d * 0.55 + band * 0.80 - 0.66) * 2.4, 0, 1)
+    # 第十一棒：旋臂边缘被细噪声打碎（原来是一条硬边对数螺旋，读成同心 CG 环线）
+    n2 = K.tex(key + 'd', seed=seed + 7, base=18, octaves=4)
+    d2 = cv2.remap(n2, ((u * 2.0) % 512).astype(np.float32), ((v * 3.0) % 512).astype(np.float32), cv2.INTER_LINEAR,
+                   borderMode=cv2.BORDER_WRAP)
+    band = 0.5 + 0.5 * np.cos(arms * thp + 2.4 * (d - 0.5) + 3.2 * (d2 - 0.5))   # 旋臂
+    den = np.clip((d * 0.45 + d2 * 0.40 + band * 0.62 - 0.70) * 1.7, 0, 1)
+    den = cv2.GaussianBlur(den, (0, 0), 1.1)
     edge = np.clip(den - cv2.GaussianBlur(den, (0, 0), 2.0), 0, 1) * 2.5
     return den, edge
 
