@@ -555,3 +555,25 @@
 - ✔ `green_hero_front`（60s）→ `assets/gen/green/green_hero_front_cut.png`
 
 ## 2026-11-09 22:53 · 渠道恢复后自动补跑：jobs/green_respr.json
+
+## 2026-11-09 22:57 · OpenAI 协议渠道批量生图（green_sprites.json，19 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `g_hero_front`（42s）→ `assets/gen/green/g_hero_front_cut.png`
+- ✔ `g_hero_tq_bl`（49s）→ `assets/gen/green/g_hero_tq_bl_cut.png`
+- ✔ `g_hero_tq_br`（56s）→ `assets/gen/green/g_hero_tq_br_cut.png`
+- ✔ `g_hero_side_l`（56s）→ `assets/gen/green/g_hero_side_l_cut.png`
+- ✔ `g_hero_side_r`（52s）→ `assets/gen/green/g_hero_side_r_cut.png`
+- ✔ `g_hero_back`（36s）→ `assets/gen/green/g_hero_back_cut.png`
+- ✔ `g_hero_pose_raise`（51s）→ `assets/gen/green/g_hero_pose_raise_cut.png`
+- ✔ `g_hero_pose_slash`（48s）→ `assets/gen/green/g_hero_pose_slash_cut.png`
+- ✔ `g_hero_pose_draw`（46s）→ `assets/gen/green/g_hero_pose_draw_cut.png`
+- ✔ `g_hero_pose_thrust`（47s）→ `assets/gen/green/g_hero_pose_thrust_cut.png`
+- ✔ `g_hero_pose_crouch`（48s）→ `assets/gen/green/g_hero_pose_crouch_cut.png`
+- ✔ `g_hero_pose_walk`（47s）→ `assets/gen/green/g_hero_pose_walk_cut.png`
+- ✔ `g_hero_pose_run`（44s）→ `assets/gen/green/g_hero_pose_run_cut.png`
+- ✔ `g_hero_pose_sheathe`（47s）→ `assets/gen/green/g_hero_pose_sheathe_cut.png`
+- ✔ `g_hero_pose_point`（47s）→ `assets/gen/green/g_hero_pose_point_cut.png`
+- ✔ `g_hero_pose_spin`（45s）→ `assets/gen/green/g_hero_pose_spin_cut.png`
+- ✔ `g_hero_pose_kneel`（47s）→ `assets/gen/green/g_hero_pose_kneel_cut.png`
+- ✔ `g_emperor_full_front`（53s）→ `assets/gen/green/g_emperor_full_front_cut.png`
+- ✔ `g_emperor_tq`（45s）→ `assets/gen/green/g_emperor_tq_cut.png`
