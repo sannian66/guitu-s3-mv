@@ -353,11 +353,11 @@ class P05(Shot):
         A = L.A * (1 - np.clip(seam * 1.8, 0, 1))
         hl = np.clip(A - np.roll(A, 3, 0), 0, 1)
         sh = np.clip(A - np.roll(A, -4, 0), 0, 1)
-        leaf = GOLD * (0.65 + 0.35 * cv2.resize(K.fbm(H // 8, W // 8, 953, 6, 4), (W, H)))[..., None]
+        leaf = np.array([0.62, 0.63, 0.66], np.float32) * (0.75 + 0.4 * cv2.resize(K.fbm(H // 8, W // 8, 953, 6, 4), (W, H)))[..., None]   # 第十棒：金箔 → 冷银锡箔（去金同质，与匾「规矩」同材质）
         fr = fr * (1 - A[..., None]) + A[..., None] * leaf
-        fr = fr + hl[..., None] * np.array([1.0, 0.92, 0.7], np.float32) * 0.45 - sh[..., None] * 0.25
+        fr = fr + K.blur_ds(hl, 1)[..., None] * np.array([0.85, 0.88, 0.95], np.float32) * 1.1 - sh[..., None] * 0.25
         glow = sum(pulse(t, V(CT(9, k)), 0.18) * (t >= V(CT(9, k))) for k in range(4))
-        fr = fr + K.blur_ds(A, 14)[..., None] * GOLD * (0.12 + 0.4 * glow)
+        fr = fr * (1 - K.blur_ds(A, 10)[..., None] * 0.6) + K.blur_ds(A, 6)[..., None] * np.array([0.6, 0.62, 0.7], np.float32) * 0.15 * glow
         fr = np.clip(fr, 0, None)
         fr = BK.rain(fr, t, 951, amt=0.3, n=400, angle=6)
         fr = K.fog(fr, t, 952, amt=0.2, y0=0.65, y1=1.0)
