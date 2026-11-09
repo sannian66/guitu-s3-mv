@@ -178,7 +178,7 @@ def pick_keyword(li, prefer_red=True, maxlen=2, ban=''):
         for w in _SEM:
             j = text.find(w)
             if j >= 0 and j <= bi < j + len(w):
-                return w[:max(1, maxlen)], '语义重音：整词「%s」' % w
+                return (w if len(w) <= 4 else w[:4]), '语义重音：整词「%s」' % w
     if bi is None:
         bi, bd = best_of([i for i in range(len(ch)) if ch[i] in _RED])   # ② 朱红
         tag = '朱红加权'
@@ -1420,8 +1420,8 @@ _ITEMS = [
          kw=dict(press=1.0, wear=0.24, bleed=1.6, frame_box=False, seed=25)),
     dict(id='L07', sec='a', f=1176, text='若正义由权势执掌', key='权势', box=(560, 320, 1240, 860), fn='擦',
          kw=dict(wipe=0.72, keep=0.24, front=0.5, wipe_dir=(0, 1), seed=17)),
-    dict(id='L08', sec='a', f=1196, text='那我宁愿做乱世的锋芒', key='芒', box=(1020, 380, 1300, 660), fn='烧',
-         kw=dict(ink=(0.20, 0.05, 0.03), seed=48)),
+    dict(id='L08', sec='a', f=1196, text='那我宁愿做乱世的锋芒', key='芒', box=(1050, 405, 1230, 585), fn='烧',
+         kw=dict(ink=(0.14, 0.09, 0.07), seed=48)),
     dict(id='L11', sec='b_pre1', f=1632, text='我不信天不信命不信谁的理所应当', key='理所', box=(200, 220, 700, 880), fn='擦',
          kw=dict(wipe=0.78, keep=0.22, front=0.4, wipe_dir=(1, -0.4), seed=19)),
     dict(id='L13', sec='chorus1', f=1841, text='血未冷 刀不放', key='刀不', box=(600, 200, 1400, 640), fn='穿线',
