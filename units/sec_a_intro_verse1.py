@@ -1574,6 +1574,15 @@ class V15(Shot):
 
 
 # V16 36.27–38.10 LS 仰拍太上皇举手召印：头顶云涡旋开，金光中一方巨印的阴影成形
+def _seal_spr():
+    """[r1-#10] 用户：37s 的玉玺太假、没立体感 → 换成新渠道出的绿幕单体青玉方玺（真厚度/印面阴刻/磕碰缺口）。
+    文件不在就退回旧的程序化巨印，保证任何环境都能渲。"""
+    import a_r6, os
+    if os.path.exists(ROOT + '/assets/gen/r1/g_v16_seal_cut.png'):
+        return a_r6.clean('r1/g_v16_seal', lo=0.15, erode=2)
+    return a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
+
+
 class V16(Shot):
     def render(self, t):
         u = self.u(t)
@@ -1589,7 +1598,7 @@ class V16(Shot):
         k = eio(clamp01((t - V(36.9)) / 1.0))
         if k > 0:
             import a_r6
-            if not hasattr(self, 'seal'): self.seal = a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
+            if not hasattr(self, 'seal'): self.seal = _seal_spr()
             fr, _ = A.place(fr, t, self.seal, (c[0] + 20, 470 + 90 * k), w=520 + 80 * k, anc=(0.5, 1.0), look='sil', rim=GOLD,
                             rim_amt=5.0 * k, rim_dir=(0.2, -1.0), alpha=0.92 * k, wind=0, breathe=0.0,
                             grade=dict(expo=0.2, sat=0.3))
@@ -1622,7 +1631,7 @@ class V17(Shot):
     def __init__(self):
         import a_r6
         self.R = a_r6
-        self.seal = a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
+        self.seal = _seal_spr()
         r = np.random.default_rng(17)
         self.cracks = [K.crack_path((960 + math.cos(a) * 300, 540 + math.sin(a) * 260), (960 + math.cos(a) * 1400, 540 + math.sin(a) * 800), 17 + i)
                        for i, a in enumerate(r.uniform(0, 2 * math.pi, 9))] if hasattr(K, 'crack_path') else []

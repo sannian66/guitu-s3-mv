@@ -661,6 +661,14 @@ def dupcheck(extra=None):
             if not (0.30 <= ar <= 3.0):
                 continue
             big.append((a_, w_, h_, int(st[0]), int(st[1])))
+        # 该帧若根本没有字幕（整句删 / 空档），就没有「重复」可言 —— 残留只能是画面自带的
+        os.environ['LYRIC_UNI'] = '1'
+        LU._maybe_out()
+        act_now = LU.active(f / 30.0)
+        os.environ.pop('LYRIC_UNI', None)
+        if not act_now:
+            rows.append((name, ln, f, 0, 0, ['帧内无字幕（整句删/空档）'], True, [], [], []))
+            continue
         # 归因：该帧还有哪些「画面内字」（来自 audit 记录 + IN_SCENE 分类表）
         att = []
         ap = os.path.join(TMP, f'audit_{f}.png.audit.json')
