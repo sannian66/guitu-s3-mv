@@ -212,6 +212,7 @@ def ring_warp(fr, c, r, w, amp, sy=1.0):
 class V01(Shot):
     T_HIT = 86.66
     BELL = (1300, 560)
+    HIT_X = 60
     def __init__(self):
         self.P = _plate('v01_bell', 1.14)
         h, w = self.P.shape[:2]
@@ -244,11 +245,11 @@ class V01(Shot):
 
     def ram_off(self, t):
         th = V(self.T_HIT)
-        if t < th:
+        if t < th:                                           # 第十棒：拉后 → 加速撞进钟体（+HIT_X 越过原位，撞木头真的顶上钟沿）
             q = clamp01((t - self.t0) / (th - self.t0))
-            return -110 * (1 - q ** 2.2)                     # 拉后 → 加速撞上
+            return -120 + (120 + self.HIT_X) * q ** 2.6
         q = t - th
-        return -55 * math.sin(min(q / 0.32, 1.0) * math.pi * 0.5) * math.exp(-max(0, q - 0.32) / 0.6)   # 回弹
+        return self.HIT_X * math.exp(-q / 0.05) - 75 * math.sin(min(q / 0.34, 1.0) * math.pi * 0.5) * math.exp(-max(0, q - 0.34) / 0.6)   # 弹开
 
     def plate_at(self, t):
         o = self.ram_off(t); o2 = self.ram_off(t - 1 / 60)
@@ -265,41 +266,66 @@ class V01(Shot):
         u = self.u(t); e = eio(u)
         th = V(self.T_HIT)
         hk = 0.0 if t < th else math.exp(-(t - th) / 0.35)
+        hk2 = 0.0 if t < th else math.exp(-(t - th) / 0.09)          # 撞击瞬间（2–3 帧）
         ring_t = max(0.0, t - th)
-        # 远雷：撞钟后 0.25s 窗外云层亮一下
         thunder = pulse(t, th + 0.28, 0.18) * (t > th)
-        P = self.plate_at(t) * (1 + self.win * (0.25 + 2.2 * thunder))
+        P = self.plate_at(t) * (1 + self.win * (0.20 + 1.6 * thunder))
+        # 第十棒：钟体被撞后真的在震——钟区（撞点右侧）做衰减高频横摆 + 轻微摆角，撞木与梁不动
+        h_, w_ = P.shape[:2]
+        if hk > 0.01:
+            if not hasattr(self, '_bm'):
+                xx, yy = np.meshgrid(np.arange(w_, dtype=np.float32), np.arange(h_, dtype=np.float32))
+                self._xx, self._yy = xx, yy
+                self._bm = (np.clip((xx - 1120 * 1.14) / 200, 0, 1) * np.clip((yy - 140 * 1.14) / 80, 0, 1)).astype(np.float32)
+            osc = math.sin(ring_t * 2 * math.pi * 11.0) * hk * 5.0 + 8.0 * hk2
+            ang = math.sin(ring_t * 2 * math.pi * 3.2 + 0.4) * hk * 0.003
+            dxm = self._bm * (osc + (self._yy - 140 * 1.14) * ang)
+            P = cv2.remap(P, (self._xx - dxm).astype(np.float32), self._yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
         bx, by = self.BELL[0] * 1.14, self.BELL[1] * 1.14
-        zoom = 0.93 + 0.07 * e
-        dx, dy, dr = shake(t, 3 + 22 * hk, 13, 471)
+        zoom = (0.93 + 0.07 * e) * (1 + 0.05 * hk2)                    # 撞击帧镜头被震得一顶
+        dx, dy, dr = shake(t, 3 + 26 * hk, 13, 471)
         fr = plate_view(P, zoom, W * 1.14 / 2 + 60 * e, H * 1.14 / 2 - 20 * e, 0.0, dx, dy)
         fr = fr * 1.25
+        # 雨先画：声波环之后再折射，雨丝在环带处被推弯 → 声音「推开雨幕」
+        fr = fx2.ripples(fr, t, [(1290, 960), (900, 1000), (1600, 990)], [th, th + 0.05, th + 0.1], amt=0.7, flat=0.2, speed=260, life=1.0)
+        fr = self.spl.draw(fr, t, y_far=900, y_near=1060, rate=90, size=0.9, amt=0.6)
+        fr = self.rain.draw(fr, t, intensity=0.8, angle=12, light=(1600, 380), light_r=800)
         bell = (self.BELL[0], self.BELL[1] + 40)
-        if t >= th:                                   # 声波：两道折射环从钟体扩散；钟面一道冷光掠过（金属鸣响）
-            for k in range(3):
-                rr = 120 + 1500 * (ring_t - 0.12 * k) ** 0.8 if ring_t > 0.12 * k else -1
-                if rr > 0:
-                    fr, edge = ring_warp(fr, bell, rr, 26 + 10 * k, 16 * hk, sy=0.85)
-                    fr = fr + edge[..., None] * COLDC * 0.10 * hk
-            x, y = K.grid()
-            sheen = np.exp(-(((x - (1050 + 520 * clamp01(ring_t / 0.5))) / 60) ** 2)) * np.exp(-(((y - 560) / 330) ** 4))
-            fr = fr + sheen[..., None] * np.array([0.45, 0.50, 0.58], np.float32) * hk * 0.5
-        # 梁上积尘震落（撞钟后）
+        hit = (1000, 640)                                            # 撞木头顶上钟沿的点
         if t >= th:
+            x, y = K.grid()
+            for k in range(3):
+                rr = 90 + 1500 * (ring_t - 0.10 * k) ** 0.8 if ring_t > 0.10 * k else -1
+                if rr > 0:
+                    fr, edge = ring_warp(fr, hit if k == 0 else bell, rr, 30 + 10 * k, 30 * hk, sy=0.85)
+                    fr = fr + edge[..., None] * np.array([0.80, 0.82, 0.86], np.float32) * 0.16 * hk
+            # 撞点：冷白冲击核 + 放射铜屑（2–3 帧）
+            d = np.sqrt((x - hit[0]) ** 2 + ((y - hit[1]) * 1.3) ** 2)
+            fr = fr + (np.exp(-(d / 55) ** 2) * 0.9 + np.exp(-(d / 240) ** 2) * 0.15)[..., None] * np.array([0.92, 0.93, 0.95], np.float32) * hk2
+            sheen = np.exp(-(((x - (1050 + 520 * clamp01(ring_t / 0.5))) / 60) ** 2)) * np.exp(-(((y - 560) / 330) ** 4))
+            fr = fr + sheen[..., None] * np.array([0.50, 0.52, 0.55], np.float32) * hk * 0.55
             buf = np.zeros((H // 2, W // 2), np.float32)
-            for (a, b, c_, d_) in self.dust:
+            for (a, b, c_, d_) in self.dust:                       # 梁尘震落
                 tt = ring_t - c_ * 0.15
                 if tt < 0: continue
                 px = (200 + a * 1600 + 20 * math.sin(tt * 3 + d_ * 9)) / 2; py = (60 + b * 120 + 420 * tt * tt + 160 * tt) / 2
                 cv2.circle(buf, (int(px), int(py)), 1, 0.6 + 0.4 * d_, -1, cv2.LINE_AA)
-            fr = fr + cv2.GaussianBlur(buf, (0, 0), 0.8).repeat(2, 0).repeat(2, 1)[..., None] * np.array([0.55, 0.55, 0.6], np.float32) * 0.7
-        fr = fx2.ripples(fr, t, [(1290, 960), (900, 1000), (1600, 990)], [th, th + 0.05, th + 0.1], amt=0.7, flat=0.2, speed=260, life=1.0)
-        fr = self.spl.draw(fr, t, y_far=900, y_near=1060, rate=90, size=0.9, amt=0.6)
-        fr = self.rain.draw(fr, t, intensity=0.8, angle=12, light=(1600, 380), light_r=800)
-        fr = fr * np.array([0.94, 0.98, 1.06], np.float32)
-        # 墨退（与副歌一 S047 同一遮罩、同一时间、同一墨色）：接缝处朱墨斑连续
-        if t < T_IN + 0.3:
+            for (a, b, c_, d_) in self.dust[:90]:                  # 撞点崩出的铜屑火星（冷白，放射 + 下坠）
+                ang_ = -math.pi * (0.15 + 0.95 * a); sp_ = 500 + 900 * b
+                tt = ring_t
+                if tt > 0.45: continue
+                px = (hit[0] + math.cos(ang_) * sp_ * tt) / 2; py = (hit[1] + math.sin(ang_) * sp_ * tt + 900 * tt * tt) / 2
+                px2 = (hit[0] + math.cos(ang_) * sp_ * max(0, tt - 0.03)) / 2; py2 = (hit[1] + math.sin(ang_) * sp_ * max(0, tt - 0.03)) / 2
+                cv2.line(buf, (int(px2), int(py2)), (int(px), int(py)), 1.4 * (1 - tt / 0.45), 1, cv2.LINE_AA)
+            fr = fr + cv2.GaussianBlur(buf, (0, 0), 0.8).repeat(2, 0).repeat(2, 1)[..., None] * np.array([0.62, 0.62, 0.66], np.float32) * 0.8
+        # 第十棒：调色压回全段冷灰（原图饱和冷蓝 → 去饱和 82%，微冷）
+        lum = fr.mean(-1, keepdims=True)
+        fr = (lum + (fr - lum) * 0.18) * np.array([0.95, 0.98, 1.03], np.float32)
+        # 墨退：只留接缝 1 帧的朱墨斑（与副歌一 2585 连续），随后 3 帧被雨冲淡、往下淌走，不在钟楼上留红团
+        if t < T_IN + 0.12:
+            q = clamp01((t - T_IN) / 0.12)
             m = K.ink_blot(0.93 + 0.07 * eout((t - T_IN) / 0.2, 2), seed=47, center=(960, 600), reverse=True)
+            m = np.roll(m, int(160 * q * q), 0) * (1 - q) ** 1.5
             fr = over(fr, m, RED * 0.22 + 0.015)
         return fr, (3 if abs(t - th) < 0.04 else 0)
 
