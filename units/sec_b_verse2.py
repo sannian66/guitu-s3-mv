@@ -1224,6 +1224,11 @@ class V12(Shot):
         self.mist = fx2.Fog(5705)
         T.warm('被牺牲的人', 'kai', 110)
         self.wn = K.tile(256, 5707, 6, 3); self.rr = np.random.default_rng(5708).uniform(0, 1, (22, 3))
+        # 第十一棒（critic_B_r4 P1-5 施加者）：一枚吊着的铁秤砣（生图 weight，与 V11 杆秤同一套「权衡」物件）悬在纸人头顶，
+        #   随字压低、「人」字头一记砸进积水地面（溅水 + 涟漪 + 震），被牺牲 = 被秤砣压下去的人
+        from PIL import Image
+        wt = np.asarray(Image.open(GEN_B + 'weight_cut.png').convert('RGBA')).astype(np.float32) / 255
+        self.wt = wt
 
     def pose(self, t):
         q = clamp01((t - self.t0) / (self.t1 - self.t0))
@@ -1256,6 +1261,26 @@ class V12(Shot):
             wet = 0.25 + 0.6 * clamp01(q * 1.2)                # 第四棒：雨打湿更重（墨晕开）、整体压暗冷调，去「奶油色纸板」感
             fr, _ = BC.draw(fr, self.fig, (980 + 80 * q + 40 * math.sin(q * 2.6), 620 + 300 * q), 500 + 300 * q ** 1.3, tilt=-6 + 30 * q + 4 * math.sin(q * 9),
                             expo=0.95, sat=0.5, tint=(0.94, 0.97, 1.04), rim_col=(0.80, 0.86, 1.0), rim_amt=0.7, rim_dir=(-0.6, -0.8), alpha=(0.15, 0.25, 1.0)[k], blur=(6, 3, 0.6)[k] + 1.2 * q, wet=wet)
+        # 第十一棒：秤砣（施加者）——左上悬着、缓缓压低，「人」字头砸地
+        T_REN = V(CT(23, 4)); tl_ = T_REN - 0.07
+        if t < tl_:
+            wy = 330 + 150 * eio(clamp01((t - self.t0) / (tl_ - self.t0))) + 6 * math.sin(t * 5)
+        else:
+            wy = min(905.0, 480 + 5200 * (t - tl_) ** 2 + 2600 * (t - tl_))
+        wx = 470 + 14 * math.sin(t * 2.2)
+        ww = 560; wh = int(ww * self.wt.shape[0] / self.wt.shape[1])
+        im = cv2.resize(self.wt, (ww, wh), interpolation=cv2.INTER_AREA)
+        L = np.zeros((H, W, 4), np.float32)
+        y0_ = int(wy) - wh; x0_ = int(wx - ww / 2)
+        ys0, ys1 = max(0, y0_), min(H, y0_ + wh); xs0, xs1 = max(0, x0_), min(W, x0_ + ww)
+        if ys1 > ys0 and xs1 > xs0:
+            L[ys0:ys1, xs0:xs1] = im[ys0 - y0_:ys1 - y0_, xs0 - x0_:xs1 - x0_]
+        if t >= tl_ and wy < 905: L = cv2.GaussianBlur(L, (1, 0), 0, sigmaY=6)        # 下砸的竖向动态模糊
+        wa = L[..., 3:4]; wc = L[..., :3] / np.maximum(wa, 1e-3)
+        wl = wc.mean(-1, keepdims=True); wc = (wl + (wc - wl) * 0.35) * 0.75
+        sh = np.exp(-(((x - wx - 150) / 260) ** 2 + ((y - wy - 160) / 220) ** 2))[..., None]   # 秤砣挡住顶光，阴影罩在纸人身上
+        fr = fr * (1 - 0.30 * sh) * (1 - wa) + wc * wa
+        fr = fr + np.clip(wa - cv2.GaussianBlur(wa[..., 0], (0, 0), 3)[..., None], 0, 1) * COLDC * 0.5 * (x < wx)[..., None]
         # 第八棒（P2-14：纸人贴在黑底上没有空间）：单一冷顶光柱（左上 → 右下）+ 积水地面 GL=880 + 坠落纸人在水面上的倒影与雨点涟漪
         GL = 880
         beam = np.exp(-(((x - 0.45 * (y - 0)) - 640) / 260) ** 2) * np.clip(1 - y / 1300, 0.2, 1)
@@ -1269,14 +1294,19 @@ class V12(Shot):
         fr += np.exp(-((y - GL) / 3.0) ** 2)[..., None] * np.array([0.16, 0.17, 0.20], np.float32) * (0.5 + beam[..., None])
         cs = [(a_ * W, GL + 20 + b_ * 180) for a_, b_, _ in self.rr]; ts = [math.floor(t * 2 + c_ * 2) / 2 - c_ * 0.5 for _, _, c_ in self.rr]
         fr = fx2.ripples(fr, t, cs, ts, amt=0.5, flat=0.3, speed=150, life=0.9)
+        fr = fx2.ripples(fr, t, [(wx, GL + 30), (wx + 30, GL + 60)], [T_REN, T_REN + 0.04], amt=1.2, flat=0.25, speed=520, life=0.6, rings=5)
+        fr = K.sparks(fr, t, 5709, (wx, GL - 10), n=70, life=0.40, speed=(250, 900), dirc=(0, -1), spread=1.1, grav=2600, size=0.9,
+                      area=(200, 6), color=(0.6, 0.65, 0.75), amt=0.55, t0=T_REN, burst=True)
         pr = prs(23, [0, 1, 2, 3, 4], t, 0.22)
-        P = [dict(ch=c, x=1360, y=250 + i * 128 + 60 * eio(u), size=112, rot=0, font='kai', idx=i, emph=c in '牺牲') for i, c in enumerate('被牺牲的人')]
-        fr = fr * (1 - 0.65 * K.blur_ds(((np.abs(x - 1360) < 95) & (y > 180) & (y < 980)).astype(np.float32), 30)[..., None])   # 第七棒：暗衬加重，「的人」可读
+        P = [dict(ch=c, x=1360, y=230 + i * 124 + 40 * eio(u), size=112 + 16 * (c in '的人'), rot=0, font='kai', idx=i, emph=c in '牺牲') for i, c in enumerate('被牺牲的人')]
+        fr = fr * (1 - 0.88 * K.blur_ds(((np.abs(x - 1360) < 110) & (y > 160) & (y < 920)).astype(np.float32), 34)[..., None])   # 第十一棒：暗衬再加重、「的人」放大一号   # 第七棒：暗衬加重，「的人」可读
         fr = T.ink_bleed_in(fr, '被牺牲的人', pr, places=P, color='white', emph_color=(0.90, 0.14, 0.09), bleed=1.4,
                             style_kw=dict(shadow=0.9, glow=0.1))
         fr = self.rain.draw(fr, t * 0.6 + self.t0 * 0.4, intensity=0.8, angle=4)
-        fr = cam(fr, 1.04, 0, 0, 2 * u)
-        return fr, 0
+        hk = hitp(t, 100.367 if False else T_REN, 0.10)
+        dx, dy, _ = shake(t, 14 * hk, 14, 571)
+        fr = cam(fr, 1.04 + 0.02 * hk, dx, dy, 2 * u)
+        return fr, (3 if hk > 0.5 else 0)
 
 
 # =====================================================================================
