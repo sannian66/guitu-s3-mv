@@ -460,3 +460,11 @@
 - ✔ `hero_expr_closed` 3 点（task 88e6b88f）→ `assets/gen/char/hero_expr_closed_raw.png` + `_cut.png`
 - ✔ `emperor_full_front` 3 点（task 368cc040）→ `assets/gen/char/emperor_full_front_raw.png` + `_cut.png`
 - ✔ `emperor_tq` 3 点（task d44f7855）→ `assets/gen/char/emperor_tq_raw.png` + `_cut.png`
+
+## 2026-11-09 19:39 · 批量生图（rig_shots.json，5 张 / 15 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `s043_angry` 3 点（task 3d4848f6）→ `assets/gen/rig/s043_angry_raw.png` + `_cut.png`
+- ✔ `s039_walk_a` 3 点（task 95c7d585）→ `assets/gen/rig/s039_walk_a_raw.png` + `_cut.png`
+- ✔ `s039_walk_b` 3 点（task 1606f19b）→ `assets/gen/rig/s039_walk_b_raw.png` + `_cut.png`
+- ✔ `s039_walk_c` 3 点（task 9f2cc2a0）→ `assets/gen/rig/s039_walk_c_raw.png` + `_cut.png`
+- ✔ `s039_walk_d` 3 点（task f04908b1）→ `assets/gen/rig/s039_walk_d_raw.png` + `_cut.png`
