@@ -955,7 +955,7 @@ class V12(Shot):
                             expo=0.95, sat=0.5, tint=(0.94, 0.97, 1.04), rim_col=(0.80, 0.86, 1.0), rim_amt=0.7, rim_dir=(-0.6, -0.8), alpha=(0.15, 0.25, 1.0)[k], blur=(6, 3, 0.6)[k] + 1.2 * q, wet=wet)
         pr = prs(23, [0, 1, 2, 3, 4], t, 0.22)
         P = [dict(ch=c, x=1360, y=250 + i * 128 + 60 * eio(u), size=112, rot=0, font='kai', idx=i, emph=c in '牺牲') for i, c in enumerate('被牺牲的人')]
-        fr = fr * (1 - 0.4 * K.blur_ds(((np.abs(x - 1360) < 90) & (y > 180) & (y < 960)).astype(np.float32), 30)[..., None])
+        fr = fr * (1 - 0.65 * K.blur_ds(((np.abs(x - 1360) < 95) & (y > 180) & (y < 980)).astype(np.float32), 30)[..., None])   # 第七棒：暗衬加重，「的人」可读
         fr = T.ink_bleed_in(fr, '被牺牲的人', pr, places=P, color='white', emph_color=(0.90, 0.14, 0.09), bleed=1.4,
                             style_kw=dict(shadow=0.9, glow=0.1))
         fr = self.rain.draw(fr, t * 0.6 + self.t0 * 0.4, intensity=0.8, angle=4)
@@ -1268,7 +1268,7 @@ class V18(Shot):
         fr = self.bg + np.exp(-(((x - 900) / 600) ** 2 + ((y - 450) / 400) ** 2))[..., None] * COLDC * 0.10
         hk = hitp(t, self.T_WO, 0.12)
         fr, _ = put_at(fr, self.sp, t, (0.38, 0.28), (860, 470), 2300 * (1 + 0.05 * hk), rim=dict(col=(0.75, 0.82, 1.0), amt=2.0, dir=(0.4, -1.0)),
-                       grade=dict(expo=0.66, sat=0.95, tint=(1.10, 0.93, 0.82), lift=0.0, gamma=1.22),       # 第五棒：去灰白石膏感 → 与 P14/V17 同一冷光下的苍白肤色
+                       grade=dict(expo=0.70, sat=0.45, tint=(0.96, 0.97, 1.03), lift=0.0, gamma=1.18),   # 第七棒：压成场景冷色温（评审 P1）       # 第五棒：去灰白石膏感 → 与 P14/V17 同一冷光下的苍白肤色
                        wind_amp=2, mblur=(0, -30 * hk), shade=(1100, 1900, 0.3, 700, 0.3))
         fr = K.sparks(fr, t, 6303, (820, 420), n=160, life=0.6, speed=(300, 1300), dirc=(0, -1), spread=3.0, grav=1500, size=1.6,
                       area=(160, 60), color=(0.8, 0.85, 0.95), amt=1.1, t0=V(self.T_WO), burst=True)
@@ -1535,7 +1535,7 @@ class V23(Shot):
         self.bg = mud
         self.fog = fx2.Fog(6702)
         self.rain = fx2.RainSheet(6703, density=0.7)
-        T.warm('锋重新划', 'xing', 150)
+        T.warm('锋重新划', 'kai', 150)
 
     def render(self, t):
         u = self.u(t)
@@ -1556,7 +1556,7 @@ class V23(Shot):
         for i, (ch, pc) in enumerate(zip('锋重新划', pr)):
             if pc <= 0: continue
             xx = 700 + i * 205 - 200 * e                                 # 第五棒：字距 290→205（评审 P2：字距过大）、烫金→亮朱 + 暗衬
-            T.place(L, ch, xx, 680 - i * 8, 210 - i * 6, color=(1.0, 0.92, 0.70) if pc < 1 else (1.0, 0.30, 0.12), fname='xing',
+            T.place(L, ch, xx, 680 - i * 8, 210 - i * 6, color=(1.0, 0.92, 0.70) if pc < 1 else (1.0, 0.30, 0.12), fname='kai',
                     alpha=min(1, pc * 2), rot=-2)
         if L.box(4) is not None:
             fr = fr * (1 - 0.55 * K.blur_ds(L.A, 26)[..., None])

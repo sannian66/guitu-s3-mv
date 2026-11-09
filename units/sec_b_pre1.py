@@ -855,7 +855,7 @@ class P13(Shot):
     def __init__(self):
         self.sp = spr('slash_up')
         self.p7 = P07()
-        T.warm('刀', 'xing', 340); T.warm('还', 'kai', 110)
+        T.warm('刀', 'kai', 340); T.warm('还', 'kai', 110)
         self.tip = spt(self.sp, self.SRC, self.DST, self.WPX, (0.735, 0.035))
         self.sh = spt(self.sp, self.SRC, self.DST, self.WPX, (0.40, 0.20))
 
@@ -886,8 +886,9 @@ class P13(Shot):
         # 「刀」被刀弧斩出（右下，朱红）
         pd = clamp01((t - (self.T_DAO - 0.08)) / 0.2)
         if pd > 0:
-            P = [dict(ch='刀', x=1480, y=600, size=360, rot=-8, font='xing', idx=0, emph=True)]
-            fr = T.slash_cut(fr, '刀', clamp01(0.2 + pd * 0.25 + (t - self.T_DAO) * 0.3), places=P, color='white', emph=('刀',),
+            P = [dict(ch='刀', x=1480, y=600, size=360, rot=-8, font='kai', idx=0, emph=True)]   # 第七棒：行书「刀」读成「刃」→ 楷
+            fr = T.slash_cut(fr, '刀', clamp01(0.2 + pd * 0.04 + max(0.0, t - self.T_DAO - 0.2) * 0.6), places=P,   # 第七棒：完整停 6 帧再斩开
+                             color='white', emph=('刀',),
                              emph_color=(0.88, 0.12, 0.08), cut_at=0.25, slide=0.12, angle=35, appear=0.15)
         ph = tp(11, [5], t, 0.18)[0]
         if ph > 0:
