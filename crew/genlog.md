@@ -514,3 +514,8 @@
 - ✔ `g_p12_hero` 3 点（task d2027d0d）→ `assets/gen/r1/g_p12_hero_raw.png` + `_cut.png`
 - ✔ `s_d17_eye` 3 点（task c724a5b6）→ `assets/gen/r1/s_d17_eye.png` + `_cut.png`
 - ✔ `s_e218_hilt` 3 点（task d90fa859）→ `assets/gen/r1/s_e218_hilt.png` + `_cut.png`
+
+## 2026-11-09 21:35 · 积分耗尽（阻塞）
+- 第 2 批 6 张落地后调用返回 `402 insufficient_points`：套餐积分 0、永久积分 1、单张需 3。
+- **所有生图类条目暂停**，等用户充值/换 key。代码类改动（删字、构图、转场、特效、卡点）不受影响，继续。
+- 待出图清单（恢复后第一批）：3m 眼特写重出（s_d17_eye2，含无文字约束）、3m38 握柄重出（s_e218_hilt2）、C 段 =22s 拍点图、B 段 #33 黑白镜像若需底图、A 段 #10/#11/#13 若单体图不够用。
