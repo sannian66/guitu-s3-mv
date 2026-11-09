@@ -790,7 +790,9 @@ class V08(Shot):
     def __init__(self):
         import a_r6
         self.R = a_r6
-        self.spr = a_r6.tsh_seal_dof()
+        import a_r7
+        self.R7 = a_r7
+        self.spr = a_r7.tsh_seal_noface()
         self.anc = a_r6.anc_for(self.spr, (0.402, 0.80))          # 玺底前沿中点
         self.pap = a_r6.paper(21)
         T.warm('定对错', 'kai', 96)
@@ -800,10 +802,9 @@ class V08(Shot):
         return self.top(t, th, tsw)
     def side(self, t, th):
         q = clamp01((t - self.t0) / (th - self.t0)); a = t - th
-        fr = night((0.012, 0.009, 0.008), (0.04, 0.03, 0.024), y1=800)
-        fr = A.glow(fr, (1500, 260), 700, 0.45, (1.0, 0.62, 0.30))                       # 烛光（右后上）
-        fr = A.glow(fr, (1620, 330), 90, 0.9, (1.0, 0.75, 0.42), aspect=1.6)              # 烛焰本身（焦外光斑）
-        fr = fx2.god_rays(fr, (1620, 300), strength=0.25, length=0.8, color=(1.0, 0.7, 0.4), t=t, src_r=90)
+        # 第七棒（critic_A_r4 P0-2）：后景那张虚焦脸去掉 → 殿内屏风窗棂透烛光 + 两团烛焰焦外光斑（手玺仍是唯一焦点）
+        fr = self.R7.candle_screen(t)
+        fr = fx2.god_rays(fr, (1500, 300), strength=0.18, length=0.7, color=(1.0, 0.7, 0.4), t=t, src_r=80)
         # 宣纸桌面：低机位看成一条带透视的亮带（y 800–960），纸纹纵向压扁
         yy = np.arange(H, dtype=np.float32)[:, None, None]
         band = np.clip((yy - 878) / 5, 0, 1)
@@ -818,7 +819,7 @@ class V08(Shot):
         cv2.ellipse(sh, (int((at[0] - 60 * (1 - q)) / 2), 442), (int(sw / 2), int(7 + 6 * (1 - q))), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
         sh = cv2.resize(cv2.GaussianBlur(sh, (0, 0), 3 + 16 * (1 - q)), (W, H))[..., None] * band
         fr = fr * (1 - (0.35 + 0.5 * q) * sh)
-        fr, info = A.place(fr, t, self.spr, at, w=1760, anc=self.anc, rim=GOLD, rim_amt=2.4, rim_dir=(0.8, -0.5),
+        fr, info = A.place(fr, t, self.spr, at, w=964, anc=self.anc, rim=GOLD, rim_amt=2.4, rim_dir=(0.8, -0.5),
                            grade=dict(expo=1.12, sat=1.25, tint=(1.0, 1.04, 0.94), gamma=0.95), wind=2, breathe=0.0)
         # 桌面在玺/袖之前：低机位下纸面是一条掠射亮带，桌沿以下（袖摆）被桌前沿挡住
         fr = fr * (1 - band) + pap * band * (0.35 + 0.9 * lit)
@@ -832,7 +833,7 @@ class V08(Shot):
             fr = K.sparks(fr, t, 82, (700, 883), n=16, life=0.35, speed=(200, 600), dirc=(0, -1), spread=2.2, grav=1400,
                           area=(220, 4), amt=0.8, t0=th, burst=True, color=(0.75, 0.10, 0.06))      # 印泥飞点
         fr = GDUST.draw(fr, t, 0.25, wind=(20, -30))
-        return fr, (3 if 0 <= a < 0.08 else 0)
+        return fr, (1 if 0 <= a < 0.08 else 0)
     def top(self, t, th, tsw):
         k = t - tsw; a2 = t - CT(2, 8)
         lit = A.vgrad((1.0, 0.96, 0.9), (0.55, 0.48, 0.42))
@@ -1727,7 +1728,7 @@ LY2 = [
     (0, [(k, 84, _R if k == 5 else _Wt) for k in range(2, 9)], 1300, 330, 17.92, False),             # 压在我刀锋之上
     (1, [(4, 190, _Wt), (5, 190, _Wt), (6, 190, _R), (7, 90, _Wt), (8, 90, _Wt)], 600, 330, 20.78, False),   # 拦不住·一道（第五棒：移到上方天幕，21.13 前退净，给 20.82「寒」让下方）
     (2, [(0, 190, _Wt), (1, 190, _Wt), (2, 190, _G), (3, 190, _G)], 960, 900, 23.44, False),        # 谁在高处（自殿檐压下）
-    (2, [(4, 96, _Wt), (5, 96, _Wt), (6, 96, _Wt)], 1660, 820, 24.40, False),                       # 定对错（第六棒：移到右下太上皇袍面暗区，切俯拍前退净）
+    (2, [(4, 96, _Wt), (5, 96, _Wt), (6, 96, _Wt)], 1580, 820, 24.40, False),                       # 定对错（第七棒：后景脸已去，落在右下屏风暗部，不压人）
     (4, [(k, 80, _R if k == 1 else _Wt) for k in range(0, 5)], 420, 905, 30.74, False),             # 我杀过恶徒（第六棒：挪到左下暗区鬼屠刀下，不贴恶徒腿）
     (4, [(k, 80, _Wt) for k in range(5, 10)], 640, 880, 32.55, False),                              # 也放过混账
     (6, [(0, 120, _Wt), (1, 220, _R), (2, 220, _R)], 600, 905, 38.08, False),   # 第六棒：挨着金光里的巨印剪影                       # 若「正义」

@@ -179,7 +179,7 @@ def tsh_seal_noface():
         yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
         xn, yn = xx / w, yy / h
         # 保留区：x < 0.545（玺右沿 ≈0.53），以及袖口下摆不越过 0.56；斜边羽化
-        k = np.clip((0.548 - xn + 0.02 * (yn - 0.5)) / 0.018, 0, 1)
+        k = np.clip((0.538 - xn + 0.02 * (yn - 0.5)) / 0.014, 0, 1)
         out = F.copy(); out[..., 3] = F[..., 3] * k
         return out
     return R6._cached('tsh_seal_noface', b)
@@ -191,7 +191,7 @@ def candle_screen(t, seed=3):
     fr = A.vgrad((0.020, 0.014, 0.010), (0.045, 0.032, 0.022))
     pan = np.zeros((H // 4, W // 4), np.float32)
     lat = np.zeros((H // 4, W // 4), np.float32)
-    for i, x0 in enumerate((1080, 1380, 1680)):
+    for i, x0 in enumerate((780, 1080, 1380, 1680)):
         cv2.rectangle(pan, (x0 // 4, 120 // 4), ((x0 + 270) // 4, 900 // 4), 1.0, -1)
         for gx in range(x0 + 30, x0 + 270, 48):
             cv2.line(lat, (gx // 4, 150 // 4), (gx // 4, 870 // 4), 1.0, 1)
@@ -199,7 +199,7 @@ def candle_screen(t, seed=3):
             cv2.line(lat, ((x0 + 20) // 4, gy // 4), ((x0 + 250) // 4, gy // 4), 1.0, 1)
     pan = cv2.resize(cv2.GaussianBlur(pan, (0, 0), 4), (W, H)); lat = cv2.resize(cv2.GaussianBlur(lat, (0, 0), 3), (W, H))
     paper = pan * (1 - 0.6 * lat)
-    glow = np.exp(-(((xx - 1560) / 520) ** 2 + ((yy - 420) / 380) ** 2))
+    glow = np.exp(-(((xx - 1450) / 650) ** 2 + ((yy - 420) / 400) ** 2))
     fl = 1 + 0.06 * math.sin(t * 11) + 0.04 * math.sin(t * 17 + 1)
     fr = fr + paper[..., None] * glow[..., None] * np.array([0.55, 0.33, 0.14], np.float32) * fl
     for (cx, cy, r, a) in ((1500, 300, 70, 1.0), (1760, 360, 55, 0.7)):     # 烛焰光斑（焦外圆斑）
