@@ -611,7 +611,7 @@ def zoom_iris(A, B, p, center=(W / 2, H / 2), strength=1.0):
     任一像素同一时刻只属于 A 或 B（羽化带 ≈50px），不出现整屏半透明残影。"""
     x, y = K.grid()
     e = eio(p)
-    a = TR._radial_blur(TR._zoom(A, 1 + 1.2 * ein(p, 2.2) * strength, center), center, 0.30 * ein(p, 2))
+    a = TR._radial_blur(TR._zoom(A, 1 + 1.2 * ein(p, 2.2) * strength, center), center, 0.30 * ein(p, 2), n=6, scale=1)   # 全分辨率，免得前 2 帧变软起白边
     b = TR._zoom(B, 1 + 0.6 * (1 - eout(p, 2.5)) * strength, center)
     d = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
     r = -80 + 2600 * e ** 1.6
