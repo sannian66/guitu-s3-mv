@@ -1590,18 +1590,21 @@ class V19(Shot):
         self.spr = S('A/look_up_mcu2')                                     # 自抠：色距 + 连通背景，发丝间灰底清掉
     def render(self, t):
         u = self.u(t)
-        fr = night((0.02, 0.02, 0.024), (0.06, 0.06, 0.065))
-        fr = A.glow(fr, (960, 100), 600, 0.4, (1.0, 0.82, 0.55))
-        fr = RAIN.draw(fr, t, 0.6, angle=4, light=(960, 100), layers=(0, 1))
-        hh = 1010 * (1 + 0.05 * eio(u))                                      # 第五棒：换 look_up_mcu（参考脸统一），顶边出画在黑边之上
-        fr, info = A.place(fr, t, self.spr, (1420, 1125 + 20 * u), h=hh, anc=(0.5, 1.0), rim=COLD, rim_amt=3.0,
-                           rim_dir=(0.3, -1.0), wind=10, grade=dict(expo=0.66, sat=0.30, gamma=1.18, tint=(0.94, 0.98, 1.06)),   # 第七棒：压亮部、冷调，与 A04/V14 同一张脸的硬朗
+        # 第九棒（critic_A_r6 P1-5 不重复）：与 V14 拉开 —— 脸换朝左（镜像）、改金色逆光剪影（巨印的光从右上背后压来），
+        #   脸只剩一线金轮廓 + 眼中一点寒光；冷灰正面光的「同光特写」去掉；机位 crane up 仰起
+        fr = night((0.015, 0.013, 0.012), (0.05, 0.045, 0.04))
+        fr = A.glow(fr, (1560, 160), 760, 0.95, (1.0, 0.70, 0.36))
+        fr = A.glow(fr, (1560, 160), 260, 0.45 + 0.1 * math.sin(t * 9), (1.0, 0.85, 0.6))
+        fr = fx2.god_rays(fr, (1560, 140), strength=0.35, length=1.0, color=(1.0, 0.75, 0.42), t=t, src_r=220)
+        fr = RAIN.draw(fr, t, 0.8, angle=4, light=(1560, 160), layers=(0, 1))
+        hh = 1010 * (1 + 0.05 * eio(u))
+        fr, info = A.place(fr, t, self.spr, (1300 - 40 * eio(u), 1125 + 20 * u), h=hh, anc=(0.5, 1.0), rim=GOLD, rim_amt=9.0, flip=True,
+                           rim_dir=(-0.75, -0.65), wind=10, grade=dict(expo=0.20, sat=0.25, gamma=1.35, tint=(1.04, 0.98, 0.92)),
                            mblur=(0, 10 * eio(u)))
         g = math.exp(-max(0, t - V(41.40)) / 0.12) * (t >= V(41.40))
-        for p in ((0.486, 0.26), (0.559, 0.26)):
-            fr = pupil_glint(fr, info['to_scr'](p), 0.6 * g, 1.0)
-        fr = fr * (1 - 0.35 * self.R7.face_shade(info, (0.52, 0.30)))            # 第七棒：脸右半侧阴影（光从左上），去柔白
-        fr = RAIN.draw(fr, t, 0.9, angle=4, layers=(1, 2))
+        for p in ((0.514, 0.26), (0.441, 0.26)):
+            fr = pupil_glint(fr, info['to_scr'](p), 0.45 * g, 0.7)
+        fr = RAIN.draw(fr, t, 0.9, angle=4, light=(1560, 160), layers=(1, 2))
         return fr, (3 if g > 0.5 else 0)
 
 
@@ -1753,7 +1756,7 @@ MOVES3 = {
     'V16': M3('sine_io', 'beat', y=(40, -30), pitch=(-5, 0), z=(1.0, 1.05), note='仰拍升'),
     'V17': M3('sine_io', 'beat', y=(-60, 40), note='跟印下摇'),
     'V18': M3('sine_io', 'beat', z=(1.08, 1.0), rot=(-2, 0), note='高机位拉 + 回旋'),
-    'V19': M3('sine_io', None, z=(1.0, 1.05), y=(30, -10), note='缓推 + 升'),
+    'V19': M3('sine_io', 'beat', z=(1.0, 1.06), y=(50, -40), pitch=(5, -3), note='第九棒：crane up 仰升（金色逆光剪影）'),
     'V20': M3('expo_out', None, y=(60, -20), pitch=(-5, 0), z=(1.06, 1.0), note='硬切冲击后仰摇'),
     'V21': M3('expo_out', None, z=(1.08, 1.0), rot=(2, 0), note='punch 后稳'),
 }
