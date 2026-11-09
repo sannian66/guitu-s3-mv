@@ -328,3 +328,14 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - 提交：d590282（1/n）、12d94c3（2/n 被 14:21 自动同步卷入）、b53e24f（3/n 预热）、385cc48（4/n 联系表）、9e6bdf5（5/n keys）、本节。
 - 仍弱：C26 碎片仍有三角感（试改更差已回退）；C13 风眼平面；C19 枪头无透视；C15 雷光未勾人；C26>C27 石尘中间帧偏素、「看个」暗衬在灰雾上显出一块暗斑；无 mp4。
 - 环境：git 用户名没配，提交需带 GIT_AUTHOR_*/GIT_COMMITTER_* 环境变量（sannian66）；联系表缓存 C_CACHE=/workspace/work/c7tmp/cache（换代码后要清空，文件名不含版本）；C18 单帧初始化约 53s，含 C18 的批次要单独跑。
+
+## A 组第八棒（2026-11-09 14:20–14:50 CST）
+- **对照**：`crew/round4/critic_A_r5.md`（80 分，八项过线，总分差 5）。逐镜记录见 `crew/round4/A_storyboard.md`「第八棒返工」。
+- **接线**：`units/a_r8.py` 接进 `units/sec_a_intro_verse1.py`（`import a_r8 as R8`）。新增 `INNER` 表（`_Lazy.render` 里对镜头层做 inner_push）、`R8.a_cleave8` 替换 `R7.a_cleave`、V17/V18 用 `R8.Crater8`、V10 用 `R8.kneel_pan_fix()`、V09 用 `R8.shear_beam`。a_r8 里 `sk` 改成 `c1kit`（sk 没有 draw_crack）。
+- **P0**：① 镜内运动：V09 横梁摆、V10 盘摆 + 人起伏 + 机位倾、V13 前景视差 + 跪者磕头发抖、A07a 升镜、V20 两档姿态 + 震屏、A01–A04/V19 缓推；② V17 坑壁受光/厚度/投影/暖光裂缝，V18 删灰折线；③ V10 膝部灰底清掉 + 接触阴影/倒影。
+- **P1**：Cait 竖排；V02 字号；V21 入露出「锋」、去衣摆碎片，末段留「锋芒」余烬（出口帧不变）；V12 入去衣角碎片/灰残片。**P2**：V09 入红块刷碎；V16 入墨边飞白（半改）。
+- **交付**：`out/round4/A_contact_v8.jpg`（+`_p0/_p1`）、`out/round4/A_keys_v7.jpg`（+`_p0–_p3`）、`out/round4/A_rhythm_v2.jpg`（+`_p0–_p3`）。
+- **积分**：本棒 0 点，A 组累计 60/80（含 slash_coil 3 点：任务停在 running，没有成图；本沙箱生图接口 401 没有 Key，取不回来）。
+- **提交**：2879af3（1/n）、f6cc668（2/n）、8011b38（3/n）、61bdb1a（4/n）、70c87ea（5/n）、V11 灰底与 V10 字位改动被自动同步 94aab27 / 之后的自动同步卷走、38226ed（7/n）、6fd684c（8/n）、13632df（10/n 三张表），本节 + storyboard 为 11/n。
+- **风险**：V20 蓄势是代码摆出来的姿态；V16 入后半段仍块状；无 mp4。
+- **下一步**：总导演派第六轮评审（看 A_contact_v8_p* + A_keys_v7_p* + A_rhythm_v2_p*）。
