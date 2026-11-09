@@ -87,7 +87,28 @@ def split(src, outdir, maxw=1920, maxh=1400):
     print(n)
 
 
+def pages_rhythm(out_prefix, per_row=2, rows=7, tw=320, th=180):
+    """第八棒：节奏表分页——每行 per_row 个镜头 × 起/中/止三帧（320×180），每页 rows 行（1920×1260）"""
+    font = ImageFont.truetype(ROOT + '/fonts/NotoSerifSC-Bold.otf', 16)
+    its = items('rhythm'); shots = [its[i:i + 3] for i in range(0, len(its), 3)]
+    per = per_row * rows; n = 0
+    for k in range(0, len(shots), per):
+        chunk = shots[k:k + per]; r = (len(chunk) + per_row - 1) // per_row
+        sh = Image.new('RGB', (per_row * 3 * tw, r * th))
+        for j, trip in enumerate(chunk):
+            for q, (key, f, lab) in enumerate(trip):
+                pth = f'{CACHE}/rhythm/{(k + j) * 3 + q:03d}.jpg'
+                if not os.path.exists(pth): continue
+                im = Image.open(pth).resize((tw, th), Image.LANCZOS)
+                ImageDraw.Draw(im).text((4, 2), f'{lab} f{f}', fill=(240, 220, 120), font=font)
+                if q == 0: ImageDraw.Draw(im).line([(0, 0), (0, th)], fill=(200, 60, 40), width=3)
+                sh.paste(im, (((j % per_row) * 3 + q) * tw, (j // per_row) * th))
+        sh.save(f'{out_prefix}_p{n}.jpg', quality=85); n += 1
+    print(out_prefix, n)
+
+
 if __name__ == '__main__':
+    if sys.argv[1] == 'pages_rhythm': pages_rhythm(sys.argv[2]); sys.exit()
     if sys.argv[1] == 'pages': pages(sys.argv[2], sys.argv[3]); sys.exit()
     if sys.argv[1] == 'split': split(sys.argv[2], sys.argv[3]); sys.exit()
     if sys.argv[1] == 'render': render(sys.argv[2], int(sys.argv[3]), int(sys.argv[4]))

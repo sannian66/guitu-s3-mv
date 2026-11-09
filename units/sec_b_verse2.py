@@ -1758,11 +1758,14 @@ def _bind():
     SHOTS[0].t0 = T_IN
 _bind()
 
+# 第八棒：节奏表（B_rhythm_v1）里起/中/止近乎同框、静止 >1 拍的镜头补镜内运镜 (z0, z1, dx, dy, rot)
+MOVE = {'V01': (1.02, 1.08, 30, 0, 0), 'V02': (1.03, 1.12, 0, 50, 0), 'V05': (1.04, 1.10, 60, 0, 0), 'V11': (1.04, 1.10, -60, 0, 0),
+        'V13': (1.0, 1.08, 0, -40, 0), 'V15': (1.0, 1.06, 0, 0, 0), 'V17': (1.03, 1.09, -40, 0, 0), 'V18': (1.03, 1.10, 0, 0, 2.0)}
 _SEC = [None]
 
 
 def section():
-    if _SEC[0] is None: _SEC[0] = Section(SHOTS, CUTS, FG, EXPO, expo_all=1.12)
+    if _SEC[0] is None: _SEC[0] = Section(SHOTS, CUTS, FG, EXPO, expo_all=1.12); _SEC[0].move = MOVE
     return _SEC[0]
 
 

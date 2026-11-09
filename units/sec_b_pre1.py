@@ -1009,12 +1009,14 @@ FG = {'P05': ('rain', 0.35), 'P07': ('rain', 0.45), 'P08': ('ash', 0.25), 'P09':
       'P12': ('ember', 0.35), 'P13': ('ember', 0.5), 'P14': ('ember', 0.7), 'P15': ('ember', 0.6)}
 EXPO = {'P01': 1.05, 'P02': 1.0, 'P03': 1.0, 'P04': 1.0, 'P07': 1.1, 'P12': 1.1}
 
+# 第八棒：节奏表（B_rhythm_v1）里起/中/止近乎同框、静止 >1 拍的镜头补镜内运镜 (z0, z1, dx, dy, rot)
+MOVE = {'P07': (1.0, 1.08, 0, -40, 0), 'P12': (1.0, 1.07, 0, 30, 0), 'P14': (1.03, 1.12, 50, 0, -1.5), 'P15': (1.03, 1.10, -40, 0, -1.0)}
 _SEC = [None]
 _C1 = [None]
 
 
 def section():
-    if _SEC[0] is None: _SEC[0] = Section(SHOTS, CUTS, FG, EXPO, expo_all=1.12)
+    if _SEC[0] is None: _SEC[0] = Section(SHOTS, CUTS, FG, EXPO, expo_all=1.12); _SEC[0].move = MOVE
     return _SEC[0]
 
 

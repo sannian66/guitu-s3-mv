@@ -300,6 +300,16 @@ class Section:
         self.cuts = cuts; self.fgk = fg or {}; self.expo = expo or {}; self.expo_all = expo_all
         self.fg = VC.FGLayer(23, n=24)
         self.outside = outside or {}
+        self.move = {}                                  # 第八棒：{镜名: (z0, z1, dx, dy, rot)} 镜内补充运镜（节奏表里静止 >1 拍的镜头）
+
+    def _render(self, j, t):
+        fr, ca = self.shots[j].render(t)
+        mv = self.move.get(self.ids[j])
+        if mv:
+            s = self.shots[j]; u = eio(clamp01((t - s.t0) / max(1e-3, s.t1 - s.t0)))
+            z0, z1, dx, dy, rot = mv
+            fr = cam(fr, z0 + (z1 - z0) * u, dx * (u - 0.5), dy * (u - 0.5), rot * u)
+        return fr, ca
 
     def idx(self, t):
         for i, s in enumerate(self.shots):
@@ -315,14 +325,14 @@ class Section:
             c = b.t0
             if name in ('hard', 'flash', 'flashr', 'gold', 'punch', 'none') or not (c - pre - 1e-6 <= t < c + post - 1e-6): continue
             a = self.shots[j - 1]
-            B, ca2 = b.render(t)
-            A, ca1 = a.render(t) if (pre > 0 or t < c) else (B, 0)
+            B, ca2 = self._render(j, t)
+            A, ca1 = self._render(j - 1, t) if (pre > 0 or t < c) else (B, 0)
             p = (t - (c - pre)) / (pre + post)
             if pre == 0: p = 0.5 + 0.5 * p
             A_ = np.clip(A, 0, 4).astype(np.float32); B_ = np.clip(B, 0, 4).astype(np.float32)
             out = BTRANS[name](A_, B_, float(np.clip(p, 0, 1)), **kw) if name in BTRANS else TR.transition(name, A_, B_, p, **kw)
             return out, max(ca1, ca2)
-        fr, ca = s.render(t)
+        fr, ca = self._render(i, t)
         name = self.cuts.get(self.ids[i], ('hard',))[0]
         if i > 0 and name in ('hard', 'flash', 'flashr', 'gold', 'punch'):
             k = int((t - s.t0) * 30 + 1e-6)
