@@ -430,3 +430,7 @@
 ## 国风长安版小样（2026-11-10 07:25 CST）
 - Hark generate_image，只用当前帧作参考（不再喂风格图），工笔+水墨、朱砂红点缀、长安城墙/角楼/大雁塔
 - out/style_test/gf_<秒>.png，三栏对比 gf_compare.jpg
+
+## Nano Banana 长安版小样（2026-11-10 07:27 CST）
+- gemini-3-pro-image-preview 3 分/张 ×4；参考=当前帧+风格图（只取配色线条）；脚本 tools/style_nb_test.py；任务号 out/style_test/nb_tasks.txt
+- 首次运行代理 502 中断，丢失 2 个已提交任务号（约 6 分），另测试提交 3 分
