@@ -1,0 +1,2491 @@
+{
+ "window": [
+  191.0,
+  241.34
+ ],
+ "method": "HPSS percussive (full mix) → band flux; whisper word times",
+ "downbeat_phase": 2,
+ "bpm": 129.2,
+ "hits": [
+  {
+   "t": 191.049,
+   "type": "kick",
+   "strength": 0.675,
+   "on_beat": true,
+   "frame": 5731
+  },
+  {
+   "t": 191.276,
+   "type": "kick+hat",
+   "strength": 1.0,
+   "on_beat": false,
+   "frame": 5738
+  },
+  {
+   "t": 191.403,
+   "type": "kick",
+   "strength": 0.445,
+   "on_beat": false,
+   "frame": 5742
+  },
+  {
+   "t": 191.508,
+   "type": "kick",
+   "strength": 0.574,
+   "on_beat": true,
+   "frame": 5745
+  },
+  {
+   "t": 191.734,
+   "type": "kick+hat",
+   "strength": 0.433,
+   "on_beat": false,
+   "frame": 5752
+  },
+  {
+   "t": 191.885,
+   "type": "kick",
+   "strength": 0.574,
+   "on_beat": false,
+   "frame": 5757
+  },
+  {
+   "t": 191.961,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 5759
+  },
+  {
+   "t": 192.582,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 5777
+  },
+  {
+   "t": 193.04,
+   "type": "kick",
+   "strength": 0.388,
+   "on_beat": false,
+   "frame": 5791
+  },
+  {
+   "t": 193.18,
+   "type": "kick+hat",
+   "strength": 0.733,
+   "on_beat": false,
+   "frame": 5795
+  },
+  {
+   "t": 193.934,
+   "type": "kick",
+   "strength": 0.278,
+   "on_beat": false,
+   "frame": 5818
+  },
+  {
+   "t": 194.103,
+   "type": "kick",
+   "strength": 0.294,
+   "on_beat": false,
+   "frame": 5823
+  },
+  {
+   "t": 194.254,
+   "type": "kick",
+   "strength": 0.646,
+   "on_beat": true,
+   "frame": 5828
+  },
+  {
+   "t": 195.171,
+   "type": "kick",
+   "strength": 0.509,
+   "on_beat": true,
+   "frame": 5855
+  },
+  {
+   "t": 195.629,
+   "type": "kick",
+   "strength": 0.813,
+   "on_beat": true,
+   "frame": 5869
+  },
+  {
+   "t": 195.711,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 5871
+  },
+  {
+   "t": 196.088,
+   "type": "kick",
+   "strength": 0.277,
+   "on_beat": true,
+   "frame": 5883
+  },
+  {
+   "t": 196.407,
+   "type": "kick",
+   "strength": 0.286,
+   "on_beat": false,
+   "frame": 5892
+  },
+  {
+   "t": 196.506,
+   "type": "kick+snare",
+   "strength": 0.95,
+   "on_beat": true,
+   "frame": 5895
+  },
+  {
+   "t": 196.999,
+   "type": "kick+snare",
+   "strength": 0.576,
+   "on_beat": true,
+   "frame": 5910
+  },
+  {
+   "t": 197.348,
+   "type": "hat",
+   "strength": 0.209,
+   "on_beat": false,
+   "frame": 5920
+  },
+  {
+   "t": 197.423,
+   "type": "kick",
+   "strength": 0.677,
+   "on_beat": false,
+   "frame": 5923
+  },
+  {
+   "t": 197.911,
+   "type": "kick+snare",
+   "strength": 1.0,
+   "on_beat": true,
+   "frame": 5937
+  },
+  {
+   "t": 198.183,
+   "type": "kick",
+   "strength": 0.318,
+   "on_beat": false,
+   "frame": 5945
+  },
+  {
+   "t": 198.834,
+   "type": "kick",
+   "strength": 0.469,
+   "on_beat": true,
+   "frame": 5965
+  },
+  {
+   "t": 198.909,
+   "type": "kick",
+   "strength": 0.451,
+   "on_beat": true,
+   "frame": 5967
+  },
+  {
+   "t": 199.002,
+   "type": "hat",
+   "strength": 0.277,
+   "on_beat": false,
+   "frame": 5970
+  },
+  {
+   "t": 199.368,
+   "type": "kick",
+   "strength": 0.441,
+   "on_beat": true,
+   "frame": 5981
+  },
+  {
+   "t": 199.745,
+   "type": "kick+snare",
+   "strength": 0.968,
+   "on_beat": true,
+   "frame": 5992
+  },
+  {
+   "t": 200.662,
+   "type": "kick+snare",
+   "strength": 0.597,
+   "on_beat": true,
+   "frame": 6020
+  },
+  {
+   "t": 200.854,
+   "type": "kick+hat",
+   "strength": 0.426,
+   "on_beat": false,
+   "frame": 6026
+  },
+  {
+   "t": 201.359,
+   "type": "kick",
+   "strength": 0.368,
+   "on_beat": false,
+   "frame": 6041
+  },
+  {
+   "t": 201.446,
+   "type": "kick",
+   "strength": 0.306,
+   "on_beat": false,
+   "frame": 6043
+  },
+  {
+   "t": 201.579,
+   "type": "kick+hat",
+   "strength": 0.547,
+   "on_beat": true,
+   "frame": 6047
+  },
+  {
+   "t": 202.038,
+   "type": "kick+hat",
+   "strength": 0.357,
+   "on_beat": true,
+   "frame": 6061
+  },
+  {
+   "t": 202.27,
+   "type": "kick+hat",
+   "strength": 0.341,
+   "on_beat": false,
+   "frame": 6068
+  },
+  {
+   "t": 202.462,
+   "type": "kick+snare",
+   "strength": 0.702,
+   "on_beat": false,
+   "frame": 6074
+  },
+  {
+   "t": 202.717,
+   "type": "snare",
+   "strength": 0.259,
+   "on_beat": false,
+   "frame": 6082
+  },
+  {
+   "t": 203.054,
+   "type": "kick",
+   "strength": 0.273,
+   "on_beat": false,
+   "frame": 6092
+  },
+  {
+   "t": 203.112,
+   "type": "kick",
+   "strength": 0.43,
+   "on_beat": false,
+   "frame": 6093
+  },
+  {
+   "t": 203.414,
+   "type": "kick",
+   "strength": 0.592,
+   "on_beat": true,
+   "frame": 6102
+  },
+  {
+   "t": 203.733,
+   "type": "hat",
+   "strength": 0.198,
+   "on_beat": false,
+   "frame": 6112
+  },
+  {
+   "t": 203.872,
+   "type": "kick",
+   "strength": 0.633,
+   "on_beat": true,
+   "frame": 6116
+  },
+  {
+   "t": 204.018,
+   "type": "kick+hat",
+   "strength": 0.707,
+   "on_beat": false,
+   "frame": 6121
+  },
+  {
+   "t": 204.105,
+   "type": "kick",
+   "strength": 0.375,
+   "on_beat": false,
+   "frame": 6123
+  },
+  {
+   "t": 204.203,
+   "type": "kick",
+   "strength": 0.999,
+   "on_beat": false,
+   "frame": 6126
+  },
+  {
+   "t": 204.285,
+   "type": "hat",
+   "strength": 0.198,
+   "on_beat": false,
+   "frame": 6129
+  },
+  {
+   "t": 204.563,
+   "type": "kick",
+   "strength": 0.776,
+   "on_beat": false,
+   "frame": 6137
+  },
+  {
+   "t": 204.737,
+   "type": "kick+hat",
+   "strength": 0.475,
+   "on_beat": false,
+   "frame": 6142
+  },
+  {
+   "t": 205.219,
+   "type": "kick+snare",
+   "strength": 0.529,
+   "on_beat": true,
+   "frame": 6157
+  },
+  {
+   "t": 205.324,
+   "type": "kick",
+   "strength": 0.538,
+   "on_beat": true,
+   "frame": 6160
+  },
+  {
+   "t": 205.44,
+   "type": "kick+snare",
+   "strength": 0.661,
+   "on_beat": false,
+   "frame": 6163
+  },
+  {
+   "t": 205.707,
+   "type": "kick",
+   "strength": 0.525,
+   "on_beat": true,
+   "frame": 6171
+  },
+  {
+   "t": 206.16,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 6185
+  },
+  {
+   "t": 206.247,
+   "type": "kick",
+   "strength": 0.534,
+   "on_beat": true,
+   "frame": 6187
+  },
+  {
+   "t": 206.334,
+   "type": "hat",
+   "strength": 0.198,
+   "on_beat": false,
+   "frame": 6190
+  },
+  {
+   "t": 206.392,
+   "type": "kick",
+   "strength": 0.384,
+   "on_beat": false,
+   "frame": 6192
+  },
+  {
+   "t": 206.508,
+   "type": "kick",
+   "strength": 0.278,
+   "on_beat": false,
+   "frame": 6195
+  },
+  {
+   "t": 206.618,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 6199
+  },
+  {
+   "t": 206.734,
+   "type": "kick",
+   "strength": 0.446,
+   "on_beat": false,
+   "frame": 6202
+  },
+  {
+   "t": 206.85,
+   "type": "kick",
+   "strength": 0.709,
+   "on_beat": false,
+   "frame": 6206
+  },
+  {
+   "t": 206.92,
+   "type": "kick",
+   "strength": 0.427,
+   "on_beat": false,
+   "frame": 6208
+  },
+  {
+   "t": 207.083,
+   "type": "kick",
+   "strength": 0.767,
+   "on_beat": true,
+   "frame": 6212
+  },
+  {
+   "t": 207.425,
+   "type": "kick",
+   "strength": 0.533,
+   "on_beat": false,
+   "frame": 6223
+  },
+  {
+   "t": 207.773,
+   "type": "kick",
+   "strength": 0.496,
+   "on_beat": false,
+   "frame": 6233
+  },
+  {
+   "t": 207.843,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 6235
+  },
+  {
+   "t": 208.609,
+   "type": "kick",
+   "strength": 0.465,
+   "on_beat": false,
+   "frame": 6258
+  },
+  {
+   "t": 208.87,
+   "type": "kick",
+   "strength": 0.308,
+   "on_beat": false,
+   "frame": 6266
+  },
+  {
+   "t": 209.37,
+   "type": "kick",
+   "strength": 0.364,
+   "on_beat": true,
+   "frame": 6281
+  },
+  {
+   "t": 209.828,
+   "type": "kick",
+   "strength": 0.316,
+   "on_beat": true,
+   "frame": 6295
+  },
+  {
+   "t": 210.287,
+   "type": "kick",
+   "strength": 0.645,
+   "on_beat": true,
+   "frame": 6309
+  },
+  {
+   "t": 210.397,
+   "type": "kick",
+   "strength": 0.653,
+   "on_beat": false,
+   "frame": 6312
+  },
+  {
+   "t": 210.507,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 6315
+  },
+  {
+   "t": 210.745,
+   "type": "kick",
+   "strength": 0.691,
+   "on_beat": true,
+   "frame": 6322
+  },
+  {
+   "t": 210.937,
+   "type": "hat",
+   "strength": 0.188,
+   "on_beat": false,
+   "frame": 6328
+  },
+  {
+   "t": 211.123,
+   "type": "kick",
+   "strength": 0.472,
+   "on_beat": false,
+   "frame": 6334
+  },
+  {
+   "t": 211.547,
+   "type": "kick",
+   "strength": 0.405,
+   "on_beat": false,
+   "frame": 6346
+  },
+  {
+   "t": 211.657,
+   "type": "kick",
+   "strength": 0.488,
+   "on_beat": true,
+   "frame": 6350
+  },
+  {
+   "t": 211.843,
+   "type": "kick+hat",
+   "strength": 0.4,
+   "on_beat": false,
+   "frame": 6355
+  },
+  {
+   "t": 211.906,
+   "type": "kick",
+   "strength": 0.496,
+   "on_beat": false,
+   "frame": 6357
+  },
+  {
+   "t": 211.982,
+   "type": "kick",
+   "strength": 0.505,
+   "on_beat": false,
+   "frame": 6359
+  },
+  {
+   "t": 212.063,
+   "type": "kick+hat",
+   "strength": 0.444,
+   "on_beat": false,
+   "frame": 6362
+  },
+  {
+   "t": 212.574,
+   "type": "kick",
+   "strength": 0.442,
+   "on_beat": true,
+   "frame": 6377
+  },
+  {
+   "t": 213.038,
+   "type": "kick",
+   "strength": 0.865,
+   "on_beat": true,
+   "frame": 6391
+  },
+  {
+   "t": 213.491,
+   "type": "kick",
+   "strength": 0.678,
+   "on_beat": true,
+   "frame": 6405
+  },
+  {
+   "t": 213.677,
+   "type": "kick+hat",
+   "strength": 0.856,
+   "on_beat": false,
+   "frame": 6410
+  },
+  {
+   "t": 214.043,
+   "type": "kick",
+   "strength": 0.518,
+   "on_beat": false,
+   "frame": 6421
+  },
+  {
+   "t": 214.194,
+   "type": "kick",
+   "strength": 0.406,
+   "on_beat": false,
+   "frame": 6426
+  },
+  {
+   "t": 214.408,
+   "type": "kick",
+   "strength": 0.488,
+   "on_beat": true,
+   "frame": 6432
+  },
+  {
+   "t": 214.617,
+   "type": "kick+hat",
+   "strength": 0.32,
+   "on_beat": false,
+   "frame": 6439
+  },
+  {
+   "t": 214.867,
+   "type": "kick",
+   "strength": 0.283,
+   "on_beat": true,
+   "frame": 6446
+  },
+  {
+   "t": 215.024,
+   "type": "kick",
+   "strength": 0.468,
+   "on_beat": false,
+   "frame": 6451
+  },
+  {
+   "t": 215.099,
+   "type": "kick",
+   "strength": 0.452,
+   "on_beat": false,
+   "frame": 6453
+  },
+  {
+   "t": 215.326,
+   "type": "kick",
+   "strength": 0.42,
+   "on_beat": true,
+   "frame": 6460
+  },
+  {
+   "t": 215.477,
+   "type": "kick+hat",
+   "strength": 0.398,
+   "on_beat": false,
+   "frame": 6464
+  },
+  {
+   "t": 215.854,
+   "type": "kick",
+   "strength": 0.638,
+   "on_beat": true,
+   "frame": 6476
+  },
+  {
+   "t": 216.237,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 6487
+  },
+  {
+   "t": 216.829,
+   "type": "kick",
+   "strength": 0.358,
+   "on_beat": false,
+   "frame": 6505
+  },
+  {
+   "t": 216.928,
+   "type": "kick",
+   "strength": 0.565,
+   "on_beat": false,
+   "frame": 6508
+  },
+  {
+   "t": 217.154,
+   "type": "kick",
+   "strength": 0.37,
+   "on_beat": true,
+   "frame": 6515
+  },
+  {
+   "t": 217.619,
+   "type": "kick",
+   "strength": 0.359,
+   "on_beat": true,
+   "frame": 6529
+  },
+  {
+   "t": 217.746,
+   "type": "kick",
+   "strength": 0.297,
+   "on_beat": false,
+   "frame": 6532
+  },
+  {
+   "t": 217.88,
+   "type": "kick",
+   "strength": 0.611,
+   "on_beat": false,
+   "frame": 6536
+  },
+  {
+   "t": 218.071,
+   "type": "kick",
+   "strength": 0.489,
+   "on_beat": true,
+   "frame": 6542
+  },
+  {
+   "t": 218.193,
+   "type": "kick",
+   "strength": 0.478,
+   "on_beat": false,
+   "frame": 6546
+  },
+  {
+   "t": 218.304,
+   "type": "kick",
+   "strength": 1.0,
+   "on_beat": false,
+   "frame": 6549
+  },
+  {
+   "t": 218.391,
+   "type": "kick+snare",
+   "strength": 0.488,
+   "on_beat": false,
+   "frame": 6552
+  },
+  {
+   "t": 218.524,
+   "type": "kick+snare",
+   "strength": 0.399,
+   "on_beat": true,
+   "frame": 6556
+  },
+  {
+   "t": 218.646,
+   "type": "kick",
+   "strength": 0.694,
+   "on_beat": false,
+   "frame": 6559
+  },
+  {
+   "t": 218.71,
+   "type": "kick+hat",
+   "strength": 0.408,
+   "on_beat": false,
+   "frame": 6561
+  },
+  {
+   "t": 218.768,
+   "type": "kick",
+   "strength": 0.724,
+   "on_beat": false,
+   "frame": 6563
+  },
+  {
+   "t": 218.872,
+   "type": "kick",
+   "strength": 0.828,
+   "on_beat": false,
+   "frame": 6566
+  },
+  {
+   "t": 219.11,
+   "type": "kick",
+   "strength": 0.419,
+   "on_beat": false,
+   "frame": 6573
+  },
+  {
+   "t": 219.331,
+   "type": "kick",
+   "strength": 0.452,
+   "on_beat": false,
+   "frame": 6580
+  },
+  {
+   "t": 220.602,
+   "type": "hat",
+   "strength": 0.242,
+   "on_beat": false,
+   "frame": 6618
+  },
+  {
+   "t": 221.282,
+   "type": "kick",
+   "strength": 0.6,
+   "on_beat": true,
+   "frame": 6638
+  },
+  {
+   "t": 221.525,
+   "type": "kick",
+   "strength": 0.89,
+   "on_beat": false,
+   "frame": 6646
+  },
+  {
+   "t": 221.74,
+   "type": "kick",
+   "strength": 0.451,
+   "on_beat": true,
+   "frame": 6652
+  },
+  {
+   "t": 221.972,
+   "type": "kick",
+   "strength": 0.564,
+   "on_beat": false,
+   "frame": 6659
+  },
+  {
+   "t": 222.199,
+   "type": "kick",
+   "strength": 0.333,
+   "on_beat": true,
+   "frame": 6666
+  },
+  {
+   "t": 222.564,
+   "type": "kick",
+   "strength": 0.303,
+   "on_beat": false,
+   "frame": 6677
+  },
+  {
+   "t": 222.652,
+   "type": "kick",
+   "strength": 0.518,
+   "on_beat": true,
+   "frame": 6680
+  },
+  {
+   "t": 222.802,
+   "type": "kick",
+   "strength": 0.451,
+   "on_beat": false,
+   "frame": 6684
+  },
+  {
+   "t": 223.11,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 6693
+  },
+  {
+   "t": 223.255,
+   "type": "kick",
+   "strength": 0.316,
+   "on_beat": false,
+   "frame": 6698
+  },
+  {
+   "t": 223.569,
+   "type": "kick",
+   "strength": 0.362,
+   "on_beat": true,
+   "frame": 6707
+  },
+  {
+   "t": 223.638,
+   "type": "kick",
+   "strength": 0.443,
+   "on_beat": true,
+   "frame": 6709
+  },
+  {
+   "t": 223.807,
+   "type": "kick",
+   "strength": 0.342,
+   "on_beat": false,
+   "frame": 6714
+  },
+  {
+   "t": 223.923,
+   "type": "kick",
+   "strength": 0.487,
+   "on_beat": false,
+   "frame": 6718
+  },
+  {
+   "t": 224.027,
+   "type": "kick",
+   "strength": 0.719,
+   "on_beat": true,
+   "frame": 6721
+  },
+  {
+   "t": 224.114,
+   "type": "kick",
+   "strength": 0.395,
+   "on_beat": false,
+   "frame": 6723
+  },
+  {
+   "t": 224.26,
+   "type": "kick+hat",
+   "strength": 0.536,
+   "on_beat": false,
+   "frame": 6728
+  },
+  {
+   "t": 224.381,
+   "type": "kick",
+   "strength": 0.462,
+   "on_beat": false,
+   "frame": 6731
+  },
+  {
+   "t": 224.445,
+   "type": "snare",
+   "strength": 0.43,
+   "on_beat": false,
+   "frame": 6733
+  },
+  {
+   "t": 224.944,
+   "type": "kick",
+   "strength": 0.399,
+   "on_beat": true,
+   "frame": 6748
+  },
+  {
+   "t": 225.177,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 6755
+  },
+  {
+   "t": 225.397,
+   "type": "kick+hat",
+   "strength": 0.352,
+   "on_beat": true,
+   "frame": 6762
+  },
+  {
+   "t": 225.525,
+   "type": "kick",
+   "strength": 0.537,
+   "on_beat": false,
+   "frame": 6766
+  },
+  {
+   "t": 225.862,
+   "type": "kick",
+   "strength": 0.3,
+   "on_beat": true,
+   "frame": 6776
+  },
+  {
+   "t": 226.088,
+   "type": "kick",
+   "strength": 0.392,
+   "on_beat": false,
+   "frame": 6783
+  },
+  {
+   "t": 226.216,
+   "type": "kick",
+   "strength": 0.31,
+   "on_beat": false,
+   "frame": 6786
+  },
+  {
+   "t": 226.314,
+   "type": "kick+hat",
+   "strength": 0.352,
+   "on_beat": true,
+   "frame": 6789
+  },
+  {
+   "t": 226.663,
+   "type": "kick",
+   "strength": 0.845,
+   "on_beat": false,
+   "frame": 6800
+  },
+  {
+   "t": 226.889,
+   "type": "kick",
+   "strength": 0.274,
+   "on_beat": false,
+   "frame": 6807
+  },
+  {
+   "t": 227.005,
+   "type": "kick",
+   "strength": 0.471,
+   "on_beat": false,
+   "frame": 6810
+  },
+  {
+   "t": 227.116,
+   "type": "kick+snare",
+   "strength": 0.819,
+   "on_beat": false,
+   "frame": 6813
+  },
+  {
+   "t": 227.232,
+   "type": "kick",
+   "strength": 0.646,
+   "on_beat": true,
+   "frame": 6817
+  },
+  {
+   "t": 227.458,
+   "type": "kick+hat",
+   "strength": 1.0,
+   "on_beat": false,
+   "frame": 6824
+  },
+  {
+   "t": 227.574,
+   "type": "kick",
+   "strength": 0.468,
+   "on_beat": false,
+   "frame": 6827
+  },
+  {
+   "t": 227.69,
+   "type": "kick",
+   "strength": 0.599,
+   "on_beat": true,
+   "frame": 6831
+  },
+  {
+   "t": 227.777,
+   "type": "snare",
+   "strength": 0.459,
+   "on_beat": true,
+   "frame": 6833
+  },
+  {
+   "t": 227.922,
+   "type": "kick",
+   "strength": 0.462,
+   "on_beat": false,
+   "frame": 6838
+  },
+  {
+   "t": 228.033,
+   "type": "kick",
+   "strength": 0.321,
+   "on_beat": false,
+   "frame": 6841
+  },
+  {
+   "t": 228.114,
+   "type": "kick+snare",
+   "strength": 0.561,
+   "on_beat": false,
+   "frame": 6843
+  },
+  {
+   "t": 228.381,
+   "type": "kick",
+   "strength": 0.438,
+   "on_beat": false,
+   "frame": 6851
+  },
+  {
+   "t": 228.77,
+   "type": "kick",
+   "strength": 0.401,
+   "on_beat": false,
+   "frame": 6863
+  },
+  {
+   "t": 228.845,
+   "type": "kick",
+   "strength": 0.665,
+   "on_beat": false,
+   "frame": 6865
+  },
+  {
+   "t": 228.956,
+   "type": "kick",
+   "strength": 0.312,
+   "on_beat": false,
+   "frame": 6869
+  },
+  {
+   "t": 229.066,
+   "type": "kick",
+   "strength": 0.286,
+   "on_beat": true,
+   "frame": 6872
+  },
+  {
+   "t": 229.188,
+   "type": "kick",
+   "strength": 0.305,
+   "on_beat": false,
+   "frame": 6876
+  },
+  {
+   "t": 229.983,
+   "type": "kick",
+   "strength": 0.659,
+   "on_beat": true,
+   "frame": 6899
+  },
+  {
+   "t": 230.215,
+   "type": "kick",
+   "strength": 0.356,
+   "on_beat": false,
+   "frame": 6906
+  },
+  {
+   "t": 230.668,
+   "type": "hat",
+   "strength": 0.188,
+   "on_beat": false,
+   "frame": 6920
+  },
+  {
+   "t": 230.784,
+   "type": "kick",
+   "strength": 0.281,
+   "on_beat": false,
+   "frame": 6924
+  },
+  {
+   "t": 230.895,
+   "type": "kick+hat",
+   "strength": 0.461,
+   "on_beat": true,
+   "frame": 6927
+  },
+  {
+   "t": 231.353,
+   "type": "kick+hat",
+   "strength": 0.357,
+   "on_beat": true,
+   "frame": 6941
+  },
+  {
+   "t": 231.585,
+   "type": "kick",
+   "strength": 0.377,
+   "on_beat": false,
+   "frame": 6948
+  },
+  {
+   "t": 232.044,
+   "type": "hat",
+   "strength": 0.153,
+   "on_beat": false,
+   "frame": 6961
+  },
+  {
+   "t": 232.386,
+   "type": "kick",
+   "strength": 0.501,
+   "on_beat": false,
+   "frame": 6972
+  },
+  {
+   "t": 232.503,
+   "type": "kick+hat",
+   "strength": 0.516,
+   "on_beat": false,
+   "frame": 6975
+  },
+  {
+   "t": 232.851,
+   "type": "kick",
+   "strength": 0.314,
+   "on_beat": false,
+   "frame": 6986
+  },
+  {
+   "t": 233.042,
+   "type": "kick",
+   "strength": 0.874,
+   "on_beat": false,
+   "frame": 6991
+  },
+  {
+   "t": 233.878,
+   "type": "kick",
+   "strength": 0.525,
+   "on_beat": false,
+   "frame": 7016
+  },
+  {
+   "t": 234.099,
+   "type": "kick+snare",
+   "strength": 0.427,
+   "on_beat": true,
+   "frame": 7023
+  },
+  {
+   "t": 234.912,
+   "type": "kick",
+   "strength": 0.363,
+   "on_beat": false,
+   "frame": 7047
+  },
+  {
+   "t": 235.016,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 7050
+  },
+  {
+   "t": 235.364,
+   "type": "kick",
+   "strength": 0.74,
+   "on_beat": false,
+   "frame": 7061
+  },
+  {
+   "t": 236.276,
+   "type": "snare",
+   "strength": 0.629,
+   "on_beat": false,
+   "frame": 7088
+  },
+  {
+   "t": 236.618,
+   "type": "kick+snare",
+   "strength": 0.642,
+   "on_beat": false,
+   "frame": 7099
+  },
+  {
+   "t": 236.851,
+   "type": "kick",
+   "strength": 0.45,
+   "on_beat": true,
+   "frame": 7106
+  },
+  {
+   "t": 236.955,
+   "type": "kick",
+   "strength": 0.367,
+   "on_beat": false,
+   "frame": 7109
+  },
+  {
+   "t": 237.193,
+   "type": "kick+snare",
+   "strength": 0.439,
+   "on_beat": false,
+   "frame": 7116
+  },
+  {
+   "t": 237.268,
+   "type": "kick",
+   "strength": 0.394,
+   "on_beat": false,
+   "frame": 7118
+  },
+  {
+   "t": 237.536,
+   "type": "kick+snare",
+   "strength": 0.67,
+   "on_beat": false,
+   "frame": 7126
+  },
+  {
+   "t": 238.453,
+   "type": "kick",
+   "strength": 0.406,
+   "on_beat": false,
+   "frame": 7154
+  },
+  {
+   "t": 238.679,
+   "type": "kick+snare",
+   "strength": 0.508,
+   "on_beat": true,
+   "frame": 7160
+  },
+  {
+   "t": 238.76,
+   "type": "kick",
+   "strength": 0.31,
+   "on_beat": true,
+   "frame": 7163
+  },
+  {
+   "t": 238.882,
+   "type": "kick+snare",
+   "strength": 0.654,
+   "on_beat": false,
+   "frame": 7166
+  },
+  {
+   "t": 238.987,
+   "type": "kick+hat",
+   "strength": 0.331,
+   "on_beat": false,
+   "frame": 7170
+  },
+  {
+   "t": 239.062,
+   "type": "kick+hat",
+   "strength": 0.577,
+   "on_beat": false,
+   "frame": 7172
+  },
+  {
+   "t": 239.138,
+   "type": "kick+snare",
+   "strength": 0.509,
+   "on_beat": true,
+   "frame": 7174
+  }
+ ],
+ "beats": [
+  {
+   "i": 415,
+   "t": 190.613,
+   "frame": 5718,
+   "pos": 2
+  },
+  {
+   "i": 416,
+   "t": 191.077,
+   "frame": 5732,
+   "pos": 3
+  },
+  {
+   "i": 417,
+   "t": 191.541,
+   "frame": 5746,
+   "pos": 4
+  },
+  {
+   "i": 418,
+   "t": 191.983,
+   "frame": 5759,
+   "pos": 1
+  },
+  {
+   "i": 419,
+   "t": 192.447,
+   "frame": 5773,
+   "pos": 2
+  },
+  {
+   "i": 420,
+   "t": 192.911,
+   "frame": 5787,
+   "pos": 3
+  },
+  {
+   "i": 421,
+   "t": 193.353,
+   "frame": 5801,
+   "pos": 4
+  },
+  {
+   "i": 422,
+   "t": 193.817,
+   "frame": 5815,
+   "pos": 1
+  },
+  {
+   "i": 423,
+   "t": 194.281,
+   "frame": 5828,
+   "pos": 2
+  },
+  {
+   "i": 424,
+   "t": 194.723,
+   "frame": 5842,
+   "pos": 3
+  },
+  {
+   "i": 425,
+   "t": 195.187,
+   "frame": 5856,
+   "pos": 4
+  },
+  {
+   "i": 426,
+   "t": 195.651,
+   "frame": 5870,
+   "pos": 1
+  },
+  {
+   "i": 427,
+   "t": 196.116,
+   "frame": 5883,
+   "pos": 2
+  },
+  {
+   "i": 428,
+   "t": 196.557,
+   "frame": 5897,
+   "pos": 3
+  },
+  {
+   "i": 429,
+   "t": 197.021,
+   "frame": 5911,
+   "pos": 4
+  },
+  {
+   "i": 430,
+   "t": 197.486,
+   "frame": 5925,
+   "pos": 1
+  },
+  {
+   "i": 431,
+   "t": 197.927,
+   "frame": 5938,
+   "pos": 2
+  },
+  {
+   "i": 432,
+   "t": 198.391,
+   "frame": 5952,
+   "pos": 3
+  },
+  {
+   "i": 433,
+   "t": 198.856,
+   "frame": 5966,
+   "pos": 4
+  },
+  {
+   "i": 434,
+   "t": 199.32,
+   "frame": 5980,
+   "pos": 1
+  },
+  {
+   "i": 435,
+   "t": 199.784,
+   "frame": 5994,
+   "pos": 2
+  },
+  {
+   "i": 436,
+   "t": 200.226,
+   "frame": 6007,
+   "pos": 3
+  },
+  {
+   "i": 437,
+   "t": 200.69,
+   "frame": 6021,
+   "pos": 4
+  },
+  {
+   "i": 438,
+   "t": 201.154,
+   "frame": 6035,
+   "pos": 1
+  },
+  {
+   "i": 439,
+   "t": 201.596,
+   "frame": 6048,
+   "pos": 2
+  },
+  {
+   "i": 440,
+   "t": 202.06,
+   "frame": 6062,
+   "pos": 3
+  },
+  {
+   "i": 441,
+   "t": 202.524,
+   "frame": 6076,
+   "pos": 4
+  },
+  {
+   "i": 442,
+   "t": 202.989,
+   "frame": 6090,
+   "pos": 1
+  },
+  {
+   "i": 443,
+   "t": 203.43,
+   "frame": 6103,
+   "pos": 2
+  },
+  {
+   "i": 444,
+   "t": 203.894,
+   "frame": 6117,
+   "pos": 3
+  },
+  {
+   "i": 445,
+   "t": 204.359,
+   "frame": 6131,
+   "pos": 4
+  },
+  {
+   "i": 446,
+   "t": 204.8,
+   "frame": 6144,
+   "pos": 1
+  },
+  {
+   "i": 447,
+   "t": 205.264,
+   "frame": 6158,
+   "pos": 2
+  },
+  {
+   "i": 448,
+   "t": 205.729,
+   "frame": 6172,
+   "pos": 3
+  },
+  {
+   "i": 449,
+   "t": 206.193,
+   "frame": 6186,
+   "pos": 4
+  },
+  {
+   "i": 450,
+   "t": 206.634,
+   "frame": 6199,
+   "pos": 1
+  },
+  {
+   "i": 451,
+   "t": 207.099,
+   "frame": 6213,
+   "pos": 2
+  },
+  {
+   "i": 452,
+   "t": 207.563,
+   "frame": 6227,
+   "pos": 3
+  },
+  {
+   "i": 453,
+   "t": 208.004,
+   "frame": 6240,
+   "pos": 4
+  },
+  {
+   "i": 454,
+   "t": 208.469,
+   "frame": 6254,
+   "pos": 1
+  },
+  {
+   "i": 455,
+   "t": 208.933,
+   "frame": 6268,
+   "pos": 2
+  },
+  {
+   "i": 456,
+   "t": 209.398,
+   "frame": 6282,
+   "pos": 3
+  },
+  {
+   "i": 457,
+   "t": 209.862,
+   "frame": 6296,
+   "pos": 4
+  },
+  {
+   "i": 458,
+   "t": 210.326,
+   "frame": 6310,
+   "pos": 1
+  },
+  {
+   "i": 459,
+   "t": 210.768,
+   "frame": 6323,
+   "pos": 2
+  },
+  {
+   "i": 460,
+   "t": 211.232,
+   "frame": 6337,
+   "pos": 3
+  },
+  {
+   "i": 461,
+   "t": 211.696,
+   "frame": 6351,
+   "pos": 4
+  },
+  {
+   "i": 462,
+   "t": 212.138,
+   "frame": 6364,
+   "pos": 1
+  },
+  {
+   "i": 463,
+   "t": 212.602,
+   "frame": 6378,
+   "pos": 2
+  },
+  {
+   "i": 464,
+   "t": 213.066,
+   "frame": 6392,
+   "pos": 3
+  },
+  {
+   "i": 465,
+   "t": 213.507,
+   "frame": 6405,
+   "pos": 4
+  },
+  {
+   "i": 466,
+   "t": 213.972,
+   "frame": 6419,
+   "pos": 1
+  },
+  {
+   "i": 467,
+   "t": 214.436,
+   "frame": 6433,
+   "pos": 2
+  },
+  {
+   "i": 468,
+   "t": 214.901,
+   "frame": 6447,
+   "pos": 3
+  },
+  {
+   "i": 469,
+   "t": 215.342,
+   "frame": 6460,
+   "pos": 4
+  },
+  {
+   "i": 470,
+   "t": 215.806,
+   "frame": 6474,
+   "pos": 1
+  },
+  {
+   "i": 471,
+   "t": 216.271,
+   "frame": 6488,
+   "pos": 2
+  },
+  {
+   "i": 472,
+   "t": 216.735,
+   "frame": 6502,
+   "pos": 3
+  },
+  {
+   "i": 473,
+   "t": 217.176,
+   "frame": 6515,
+   "pos": 4
+  },
+  {
+   "i": 474,
+   "t": 217.641,
+   "frame": 6529,
+   "pos": 1
+  },
+  {
+   "i": 475,
+   "t": 218.105,
+   "frame": 6543,
+   "pos": 2
+  },
+  {
+   "i": 476,
+   "t": 218.546,
+   "frame": 6556,
+   "pos": 3
+  },
+  {
+   "i": 477,
+   "t": 219.011,
+   "frame": 6570,
+   "pos": 4
+  },
+  {
+   "i": 478,
+   "t": 219.452,
+   "frame": 6584,
+   "pos": 1
+  },
+  {
+   "i": 479,
+   "t": 219.87,
+   "frame": 6596,
+   "pos": 2
+  },
+  {
+   "i": 480,
+   "t": 220.381,
+   "frame": 6611,
+   "pos": 3
+  },
+  {
+   "i": 481,
+   "t": 220.868,
+   "frame": 6626,
+   "pos": 4
+  },
+  {
+   "i": 482,
+   "t": 221.309,
+   "frame": 6639,
+   "pos": 1
+  },
+  {
+   "i": 483,
+   "t": 221.774,
+   "frame": 6653,
+   "pos": 2
+  },
+  {
+   "i": 484,
+   "t": 222.215,
+   "frame": 6666,
+   "pos": 3
+  },
+  {
+   "i": 485,
+   "t": 222.679,
+   "frame": 6680,
+   "pos": 4
+  },
+  {
+   "i": 486,
+   "t": 223.144,
+   "frame": 6694,
+   "pos": 1
+  },
+  {
+   "i": 487,
+   "t": 223.585,
+   "frame": 6708,
+   "pos": 2
+  },
+  {
+   "i": 488,
+   "t": 224.049,
+   "frame": 6721,
+   "pos": 3
+  },
+  {
+   "i": 489,
+   "t": 224.514,
+   "frame": 6735,
+   "pos": 4
+  },
+  {
+   "i": 490,
+   "t": 224.978,
+   "frame": 6749,
+   "pos": 1
+  },
+  {
+   "i": 491,
+   "t": 225.419,
+   "frame": 6763,
+   "pos": 2
+  },
+  {
+   "i": 492,
+   "t": 225.884,
+   "frame": 6777,
+   "pos": 3
+  },
+  {
+   "i": 493,
+   "t": 226.348,
+   "frame": 6790,
+   "pos": 4
+  },
+  {
+   "i": 494,
+   "t": 226.789,
+   "frame": 6804,
+   "pos": 1
+  },
+  {
+   "i": 495,
+   "t": 227.254,
+   "frame": 6818,
+   "pos": 2
+  },
+  {
+   "i": 496,
+   "t": 227.718,
+   "frame": 6832,
+   "pos": 3
+  },
+  {
+   "i": 497,
+   "t": 228.182,
+   "frame": 6845,
+   "pos": 4
+  },
+  {
+   "i": 498,
+   "t": 228.624,
+   "frame": 6859,
+   "pos": 1
+  },
+  {
+   "i": 499,
+   "t": 229.088,
+   "frame": 6873,
+   "pos": 2
+  },
+  {
+   "i": 500,
+   "t": 229.552,
+   "frame": 6887,
+   "pos": 3
+  },
+  {
+   "i": 501,
+   "t": 230.017,
+   "frame": 6901,
+   "pos": 4
+  },
+  {
+   "i": 502,
+   "t": 230.458,
+   "frame": 6914,
+   "pos": 1
+  },
+  {
+   "i": 503,
+   "t": 230.922,
+   "frame": 6928,
+   "pos": 2
+  },
+  {
+   "i": 504,
+   "t": 231.387,
+   "frame": 6942,
+   "pos": 3
+  },
+  {
+   "i": 505,
+   "t": 231.828,
+   "frame": 6955,
+   "pos": 4
+  },
+  {
+   "i": 506,
+   "t": 232.292,
+   "frame": 6969,
+   "pos": 1
+  },
+  {
+   "i": 507,
+   "t": 232.757,
+   "frame": 6983,
+   "pos": 2
+  },
+  {
+   "i": 508,
+   "t": 233.221,
+   "frame": 6997,
+   "pos": 3
+  },
+  {
+   "i": 509,
+   "t": 233.662,
+   "frame": 7010,
+   "pos": 4
+  },
+  {
+   "i": 510,
+   "t": 234.127,
+   "frame": 7024,
+   "pos": 1
+  },
+  {
+   "i": 511,
+   "t": 234.591,
+   "frame": 7038,
+   "pos": 2
+  },
+  {
+   "i": 512,
+   "t": 235.056,
+   "frame": 7052,
+   "pos": 3
+  },
+  {
+   "i": 513,
+   "t": 235.497,
+   "frame": 7065,
+   "pos": 4
+  },
+  {
+   "i": 514,
+   "t": 235.961,
+   "frame": 7079,
+   "pos": 1
+  },
+  {
+   "i": 515,
+   "t": 236.402,
+   "frame": 7092,
+   "pos": 2
+  },
+  {
+   "i": 516,
+   "t": 236.867,
+   "frame": 7106,
+   "pos": 3
+  },
+  {
+   "i": 517,
+   "t": 237.331,
+   "frame": 7120,
+   "pos": 4
+  },
+  {
+   "i": 518,
+   "t": 237.796,
+   "frame": 7134,
+   "pos": 1
+  },
+  {
+   "i": 519,
+   "t": 238.237,
+   "frame": 7147,
+   "pos": 2
+  },
+  {
+   "i": 520,
+   "t": 238.701,
+   "frame": 7161,
+   "pos": 3
+  },
+  {
+   "i": 521,
+   "t": 239.166,
+   "frame": 7175,
+   "pos": 4
+  }
+ ],
+ "words": [
+  {
+   "line": 48,
+   "k": 0,
+   "ch": "血",
+   "t": 193.24,
+   "frame": 5797
+  },
+  {
+   "line": 48,
+   "k": 1,
+   "ch": "未",
+   "t": 193.48,
+   "frame": 5804
+  },
+  {
+   "line": 48,
+   "k": 2,
+   "ch": "冷",
+   "t": 193.7,
+   "frame": 5811
+  },
+  {
+   "line": 48,
+   "k": 3,
+   "ch": "刀",
+   "t": 194.14,
+   "frame": 5824
+  },
+  {
+   "line": 48,
+   "k": 4,
+   "ch": "不",
+   "t": 194.9,
+   "frame": 5847
+  },
+  {
+   "line": 48,
+   "k": 5,
+   "ch": "放",
+   "t": 195.3,
+   "frame": 5859
+  },
+  {
+   "line": 49,
+   "k": 0,
+   "ch": "世",
+   "t": 195.82,
+   "frame": 5875
+  },
+  {
+   "line": 49,
+   "k": 1,
+   "ch": "间",
+   "t": 196.1,
+   "frame": 5883
+  },
+  {
+   "line": 49,
+   "k": 2,
+   "ch": "从",
+   "t": 196.42,
+   "frame": 5893
+  },
+  {
+   "line": 49,
+   "k": 3,
+   "ch": "来",
+   "t": 196.66,
+   "frame": 5900
+  },
+  {
+   "line": 49,
+   "k": 4,
+   "ch": "没",
+   "t": 196.9,
+   "frame": 5907
+  },
+  {
+   "line": 49,
+   "k": 5,
+   "ch": "有",
+   "t": 197.1,
+   "frame": 5913
+  },
+  {
+   "line": 49,
+   "k": 6,
+   "ch": "什",
+   "t": 197.3,
+   "frame": 5919
+  },
+  {
+   "line": 49,
+   "k": 7,
+   "ch": "么",
+   "t": 197.5,
+   "frame": 5925
+  },
+  {
+   "line": 49,
+   "k": 8,
+   "ch": "天",
+   "t": 197.7,
+   "frame": 5931
+  },
+  {
+   "line": 49,
+   "k": 9,
+   "ch": "理",
+   "t": 198.04,
+   "frame": 5941
+  },
+  {
+   "line": 49,
+   "k": 10,
+   "ch": "昭",
+   "t": 198.4,
+   "frame": 5952
+  },
+  {
+   "line": 49,
+   "k": 11,
+   "ch": "彰",
+   "t": 198.86,
+   "frame": 5966
+  },
+  {
+   "line": 50,
+   "k": 0,
+   "ch": "若",
+   "t": 199.96,
+   "frame": 5999
+  },
+  {
+   "line": 50,
+   "k": 1,
+   "ch": "规",
+   "t": 200.22,
+   "frame": 6007
+  },
+  {
+   "line": 50,
+   "k": 2,
+   "ch": "则",
+   "t": 200.54,
+   "frame": 6016
+  },
+  {
+   "line": 50,
+   "k": 3,
+   "ch": "是",
+   "t": 200.8,
+   "frame": 6024
+  },
+  {
+   "line": 50,
+   "k": 4,
+   "ch": "谎",
+   "t": 201.04,
+   "frame": 6031
+  },
+  {
+   "line": 50,
+   "k": 5,
+   "ch": "言",
+   "t": 201.38,
+   "frame": 6041
+  },
+  {
+   "line": 50,
+   "k": 6,
+   "ch": "伪",
+   "t": 202.18,
+   "frame": 6065
+  },
+  {
+   "line": 50,
+   "k": 7,
+   "ch": "装",
+   "t": 202.48,
+   "frame": 6074
+  },
+  {
+   "line": 51,
+   "k": 0,
+   "ch": "那",
+   "t": 203.46,
+   "frame": 6104
+  },
+  {
+   "line": 51,
+   "k": 1,
+   "ch": "就",
+   "t": 203.48,
+   "frame": 6104
+  },
+  {
+   "line": 51,
+   "k": 2,
+   "ch": "撕",
+   "t": 203.72,
+   "frame": 6112
+  },
+  {
+   "line": 51,
+   "k": 3,
+   "ch": "碎",
+   "t": 203.98,
+   "frame": 6119
+  },
+  {
+   "line": 51,
+   "k": 4,
+   "ch": "它",
+   "t": 204.24,
+   "frame": 6127
+  },
+  {
+   "line": 51,
+   "k": 5,
+   "ch": "自",
+   "t": 204.62,
+   "frame": 6139
+  },
+  {
+   "line": 51,
+   "k": 6,
+   "ch": "己",
+   "t": 204.9,
+   "frame": 6147
+  },
+  {
+   "line": 51,
+   "k": 7,
+   "ch": "定",
+   "t": 205.18,
+   "frame": 6155
+  },
+  {
+   "line": 51,
+   "k": 8,
+   "ch": "规",
+   "t": 205.76,
+   "frame": 6173
+  },
+  {
+   "line": 51,
+   "k": 9,
+   "ch": "章",
+   "t": 206.1,
+   "frame": 6183
+  },
+  {
+   "line": 52,
+   "k": 0,
+   "ch": "血",
+   "t": 207.3,
+   "frame": 6219
+  },
+  {
+   "line": 52,
+   "k": 1,
+   "ch": "未",
+   "t": 208.1,
+   "frame": 6243
+  },
+  {
+   "line": 52,
+   "k": 2,
+   "ch": "冷",
+   "t": 208.36,
+   "frame": 6251
+  },
+  {
+   "line": 52,
+   "k": 3,
+   "ch": "骨",
+   "t": 208.82,
+   "frame": 6265
+  },
+  {
+   "line": 52,
+   "k": 4,
+   "ch": "未",
+   "t": 209.54,
+   "frame": 6286
+  },
+  {
+   "line": 52,
+   "k": 5,
+   "ch": "凉",
+   "t": 209.98,
+   "frame": 6299
+  },
+  {
+   "line": 53,
+   "k": 0,
+   "ch": "对",
+   "t": 210.38,
+   "frame": 6311
+  },
+  {
+   "line": 53,
+   "k": 1,
+   "ch": "就",
+   "t": 210.64,
+   "frame": 6319
+  },
+  {
+   "line": 53,
+   "k": 2,
+   "ch": "是",
+   "t": 210.79,
+   "frame": 6324
+  },
+  {
+   "line": 53,
+   "k": 3,
+   "ch": "对",
+   "t": 210.94,
+   "frame": 6328
+  },
+  {
+   "line": 53,
+   "k": 4,
+   "ch": "错",
+   "t": 211.3,
+   "frame": 6339
+  },
+  {
+   "line": 53,
+   "k": 5,
+   "ch": "就",
+   "t": 211.58,
+   "frame": 6347
+  },
+  {
+   "line": 53,
+   "k": 6,
+   "ch": "是",
+   "t": 211.76,
+   "frame": 6353
+  },
+  {
+   "line": 53,
+   "k": 7,
+   "ch": "错",
+   "t": 211.94,
+   "frame": 6358
+  },
+  {
+   "line": 53,
+   "k": 8,
+   "ch": "何",
+   "t": 212.34,
+   "frame": 6370
+  },
+  {
+   "line": 53,
+   "k": 9,
+   "ch": "须",
+   "t": 212.8,
+   "frame": 6384
+  },
+  {
+   "line": 53,
+   "k": 10,
+   "ch": "伪",
+   "t": 213.18,
+   "frame": 6395
+  },
+  {
+   "line": 53,
+   "k": 11,
+   "ch": "装",
+   "t": 213.54,
+   "frame": 6406
+  },
+  {
+   "line": 54,
+   "k": 0,
+   "ch": "天",
+   "t": 214.58,
+   "frame": 6437
+  },
+  {
+   "line": 54,
+   "k": 1,
+   "ch": "不",
+   "t": 214.9,
+   "frame": 6447
+  },
+  {
+   "line": 54,
+   "k": 2,
+   "ch": "判",
+   "t": 215.34,
+   "frame": 6460
+  },
+  {
+   "line": 54,
+   "k": 3,
+   "ch": "我",
+   "t": 215.82,
+   "frame": 6475
+  },
+  {
+   "line": 54,
+   "k": 4,
+   "ch": "来",
+   "t": 216.82,
+   "frame": 6505
+  },
+  {
+   "line": 54,
+   "k": 5,
+   "ch": "量",
+   "t": 217.2,
+   "frame": 6516
+  },
+  {
+   "line": 55,
+   "k": 0,
+   "ch": "这",
+   "t": 217.82,
+   "frame": 6535
+  },
+  {
+   "line": 55,
+   "k": 1,
+   "ch": "一",
+   "t": 218.04,
+   "frame": 6541
+  },
+  {
+   "line": 55,
+   "k": 2,
+   "ch": "刀",
+   "t": 218.3,
+   "frame": 6549
+  },
+  {
+   "line": 55,
+   "k": 3,
+   "ch": "就",
+   "t": 218.44,
+   "frame": 6553
+  },
+  {
+   "line": 55,
+   "k": 4,
+   "ch": "是",
+   "t": 218.6,
+   "frame": 6558
+  },
+  {
+   "line": 55,
+   "k": 5,
+   "ch": "我",
+   "t": 218.76,
+   "frame": 6563
+  },
+  {
+   "line": 55,
+   "k": 6,
+   "ch": "的",
+   "t": 219.07,
+   "frame": 6572
+  },
+  {
+   "line": 55,
+   "k": 7,
+   "ch": "正",
+   "t": 219.38,
+   "frame": 6581
+  },
+  {
+   "line": 55,
+   "k": 8,
+   "ch": "道",
+   "t": 220.18,
+   "frame": 6605
+  },
+  {
+   "line": 55,
+   "k": 9,
+   "ch": "沧",
+   "t": 220.54,
+   "frame": 6616
+  },
+  {
+   "line": 55,
+   "k": 10,
+   "ch": "桑",
+   "t": 220.9,
+   "frame": 6627
+  }
+ ]
+}

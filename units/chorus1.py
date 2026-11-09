@@ -2,11 +2,13 @@
 实现 crew/shots.json 的 S027(尾)–S048：58.5–89.5s。
 接口：Chorus1().frame(t, dt) -> (float32 RGB 1080x1920x3 已收尾含黑边, ca)
 每镜一个类（render(t) -> (fr, ca)，fr 为未收尾的线性画面）；切点转场由 CUTS 表驱动。"""
+# [r4-props] 副歌一 6 处：S029/S032/S034/S039/S041/S043 末尾各加一层 PD.play（只加不删）。
 import sys, math
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+import props_dev as PD
 import os
 if os.environ.get('C1_RIG', 'live') == 'frozen':      # 默认用共享库 lib/rig.py（Skia）；C1_RIG=frozen 回退冻结版
     import c1_rig_frozen as rig
@@ -18,6 +20,7 @@ from c1kit import *
 import c1kit as K
 import json
 import vcam as VC
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 import vcam3 as V3
 import fx2
 import props as PR
@@ -274,6 +277,7 @@ class S029(Shot):
         # 文字（屏幕层，不随镜头）
         pr = tprog(12, [3], t, 0.16)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
+        fr = PD.play(fr, 'L13', t)  # [r4-props]
         return fr, 0
 
 
@@ -420,6 +424,7 @@ class S032(Shot):
         if tx <= t < tx + 1 / 30 + 1e-3: fr = fr * 0.6 + RED * 0.5
         pr = tprog(13, [6, 7], t, 0.25)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
+        fr = PD.play(fr, 'L14', t)  # [r4-props]
         return fr, 0
 
 
@@ -558,6 +563,7 @@ class S034(Shot):
         fr = cam(fr, 1.0 + 0.05 * u, dx, dy, dr)
         pr = tprog(14, [4, 5, 6, 7], t, 0.25)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
+        fr = PD.play(fr, 'L15', t)  # [r4-props]
         return fr, 0
 
 
@@ -838,6 +844,7 @@ class S039(Shot):
         fr = cam(fr, 1.04, dx, dy, dr)
         pr = tprog(16, [3, 4, 5], t, 0.18)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
+        fr = PD.play(fr, 'L17', t)  # [r4-props]
         return fr, 0
 
 
@@ -904,6 +911,7 @@ class S041(Shot):
         fr = cam(fr, 1.0 + 0.05 * e, 0, -50 + 80 * e)
         pr = tprog(17, [4, 5, 6, 7], t, 0.3)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
+        fr = PD.play(fr, 'L18', t)  # [r4-props]
         return fr, 0
 
 
@@ -972,6 +980,7 @@ class S043(Shot):
         fr = cam(fr, z, 0, 0, center=(860, 500))
         pr = tprog(18, [3], t, 0.16)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
+        fr = PD.play(fr, 'L19', t)  # [r4-props]
         return fr, 0
 
 
@@ -1577,7 +1586,7 @@ class Chorus1:
         if os.environ.get('C1_LYR', '3') == '3':
             fr = self.lyr.draw(fr, t)                       # 统一字幕层（屏幕层，不随镜头）
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
-        return finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), 0
+        return GU.apply(finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), t, 'chorus1'), 0   # 统一 grade 层
 
 
 X = Chorus1

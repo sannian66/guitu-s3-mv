@@ -1,10 +1,16 @@
 #!/bin/bash
-# 每次 commit 后立刻同步推到 GitHub（前台、带重试、失败大声报错）。不靠定时任务。
-[ -n "$AUTOSYNC" ] && exit 0  # autosync.sh 自己会 pull --rebase + push
-cd "$(git rev-parse --show-toplevel)"
+# 每次 commit 后立刻推到 GitHub 的**当前分支**（永不推 main）。前台、带重试、失败大声报错。
+# 2026-11-09 用户硬规则：不 push main，改动走 PR。
+[ -n "$AUTOSYNC" ] && exit 0          # autosync.sh 自己会 pull --rebase + push
+cd "$(git rev-parse --show-toplevel)" || exit 0
+BR=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BR" = "main" ] || [ "$BR" = "master" ] || [ "$BR" = "HEAD" ]; then
+  echo "[post-commit] 当前在 $BR，按规则不推送（请切到工作分支）" >&2
+  exit 0
+fi
 for i in 1 2 3; do
-  git push -q origin HEAD:main 2>/tmp/push_err && { echo "[post-commit] pushed $(git log --oneline -1 | cut -c1-60)"; exit 0; }
-  git pull --rebase --autostash -q origin main 2>>/tmp/push_err; sleep 2
+  git push -q origin "$BR" 2>/tmp/push_err && { echo "[post-commit] pushed origin/$BR $(git log --oneline -1 | cut -c1-50)"; exit 0; }
+  sleep 2
 done
-echo "[post-commit] !!! PUSH FAILED: $(tail -2 /tmp/push_err)" >&2
+echo "[post-commit] !!! PUSH FAILED ($BR): $(tail -2 /tmp/push_err)" >&2
 exit 0

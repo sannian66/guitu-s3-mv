@@ -11,6 +11,8 @@ for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
 import numpy as np, cv2
 from b_kit import *
 import b_kit as BK
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
+from lyric_uni import is_lyric as _is_lyric                 # [lyric-uni] 只判「这段文本是否属于歌词」
 import c1kit as K
 import typo as T
 import trans as TR
@@ -806,6 +808,8 @@ class V05(Shot):
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('可大局背后', pr)):
             if pc <= 0: continue
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI and _is_lyric(ch): continue
             T.place(L, ch, 1480, 230 + i * 128, 112, color='ink', fname='serif_black', alpha=min(1, pc * 2) * 0.9, scale=1 + 0.25 * (1 - eout(pc)))
         fr = fr * (1 - L.A[..., None] * 0.95) + L.A[..., None] * np.array([0.05, 0.012, 0.008], np.float32)
         # 格栅木框（暗）
@@ -845,6 +849,8 @@ class V06(Shot):
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('是谁的', pr)):
             if pc <= 0: continue
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI and _is_lyric(ch): continue
             T.place(L, ch, 260, 330 + i * 110, 92, color='white', fname='serif_sb', alpha=min(1, pc * 2))     # 第十棒：去金「谁」
         fr = T.compose(fr, L, shadow=0.85, glow=0.0)
         # 烛焰在画外下方摇：底光的亮区左右晃（脸上的光真的在动）
@@ -1402,7 +1408,9 @@ class V13(Shot):
         fr = self.rain.draw(fr, t, intensity=1.1, angle=10)
         pr = prs(23, [5, 6, 7, 8, 9], t)
         P = [dict(ch=c, x=1480 + (i % 2) * 40, y=250 + i * 120, size=104, rot=0, font='kai', idx=i, emph=False) for i, c in enumerate('可曾有机会')]
-        fr = T.ink_bleed_in(fr, '可曾有机会', pr, places=P, color='white', style_kw=dict(shadow=0.85, glow=0.12))
+        # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕（右列 104px 楷体字幕层，f3050 双字幕就出在这）
+        if not (LYRIC_UNI and _is_lyric('可曾有机会')):
+            fr = T.ink_bleed_in(fr, '可曾有机会', pr, places=P, color='white', style_kw=dict(shadow=0.85, glow=0.12))
         e = eio(u)
         fr = cam(fr, 1.0 + 0.18 * e, 0, -60 * e)
         return fr, (3 if abs(t - tl) < 0.04 else 0)
@@ -1531,7 +1539,8 @@ class V15(Shot):
              dict(ch='天', x=380, y=300, size=120, rot=0, font='kai', idx=2, emph=False), dict(ch='命', x=380, y=430, size=120, rot=0, font='kai', idx=3, emph=False)]   # 第十棒：同句统一楷、白
         L = T.Layer()
         for pp, pc in zip(P, pr):
-            if pc > 0: T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='white',
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if pc > 0 and not (LYRIC_UNI and _is_lyric(pp['ch'])): T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='white',
                                fname=pp['font'], alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
         fr = T.compose(fr, L, shadow=0.85, glow=0.15)
         ps = clamp01((t - (V(CT(24, 3)) + 0.12)) / 0.16)
@@ -1825,7 +1834,8 @@ class V20(Shot):
         pr = prs(26, [0, 1, 2], t)
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('若这世', pr)):
-            if pc > 0: T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2) * (1 - sstep(0.5, 0.75, u)), scale=1.2 - 0.2 * eout(pc))   # 第八棒：roll 前退场，不被甩出画
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if pc > 0 and not (LYRIC_UNI and _is_lyric(ch)): T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2) * (1 - sstep(0.5, 0.75, u)), scale=1.2 - 0.2 * eout(pc))   # 第八棒：roll 前退场，不被甩出画
         fr = T.compose(fr, L, shadow=0.85, glow=0.12)
         ang = 90 * ein(clamp01((u - 0.45) / 0.55), 2)
         fr = roll_cover(fr, ang, 1.0 + 0.06 * eio(u))
@@ -1865,6 +1875,8 @@ class V21(Shot):
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('道黑白颠倒', pr)):
             if pc <= 0: continue
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI and _is_lyric(ch): continue
             col = (0.04, 0.04, 0.045) if ch == '黑' else ('white' if ch != '白' else (0.98, 0.97, 0.94))
             T.place(L, ch, self.CX + (20 if i % 2 else -20), self.CY + (i - 2) * 132, 140 if ch in '黑白' else 116, color=col, fname='serif_black',
                     alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
@@ -1915,11 +1927,12 @@ class V22(Shot):
         if q <= 0:
             L = T.Layer()
             for pp, pc in zip(P, pr):
-                if pc > 0: T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='red' if pp['emph'] else 'ink', fname='kai', alpha=min(1, pc * 2))
+                # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+                if pc > 0 and not (LYRIC_UNI and _is_lyric(pp['ch'])): T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='red' if pp['emph'] else 'ink', fname='kai', alpha=min(1, pc * 2))
             fr = T.compose(fr, L, shadow=0.0, glow=0.0)
         else:
             L = T.Layer()                                           # 第五棒：「那就用」保持完整可读，只有「刀」被刀线斩开
-            for pp in P[:3]: T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='ink', fname='kai')
+            for pp in (() if LYRIC_UNI else P[:3]): T.place(L, pp['ch'], pp['x'], pp['y'], pp['size'], color='ink', fname='kai')   # [lyric-uni] LYRIC_UNI=1 时统一层出字幕
             fr = T.compose(fr, L, shadow=0.0, glow=0.0)
             fr = T.slash_cut(fr, '刀', clamp01(0.25 + q * 0.75), places=[dict(P[3], idx=0)], fname='kai', color=(0.03, 0.03, 0.035), emph=('刀',),
                              emph_color=(0.86, 0.10, 0.06), angle=4, cut_at=0.25, slide=0.18, appear=0.0)
@@ -2025,6 +2038,8 @@ class V23(Shot):
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('锋重新划', pr)):
             if pc <= 0: continue
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI and _is_lyric(ch): continue
             xx = 700 + i * 205 - 200 * e                                 # 第五棒：字距 290→205（评审 P2：字距过大）、烫金→亮朱 + 暗衬
             T.place(L, ch, xx, 680 - i * 8, 210 - i * 6, color=(1.0, 0.92, 0.70) if pc < 1 else (1.0, 0.30, 0.12), fname='kai',
                     alpha=min(1, pc * 2), rot=-2)
@@ -2155,15 +2170,16 @@ class V25(Shot):
 
 # ===================================================================================== 段落装配
 SHOTS = [V01, V02, V03, V04, V05, V06, V07, V08, V09, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20, V21, V22, V23, V24, V25]
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表：P1 过渡长度 2 处：V06 / V09 match_cut pre 0→0.08。切点帧/字层/SHOTS 未动。
 CUTS = {
     'V02': ('ring_wipe', 0.06, 0.16, dict(center=(1300, 600))),    # 第六棒：钟声折射环开门（钟口圆 → 广场声波环）
     'V03': ('zoom_iris', 0.08, 0.14, dict(center=(960, 560))),     # 第十二棒：zoom_dark 交叉叠化在 f2679 留残影 → 无叠化的推镜圆开门；第六棒：顶拍压进跪拜的人群 → 平视纸人队列
     'V04': ('paper_tear', 0.05, 0.12, dict(seed=4, angle=-6)),   # 第十棒：punch 压到 ≤5 处 → 纸扎队列撕开露出笏板                                     # 第七棒：金闪 → 落拍推近色散（刻刀第一记）
     'V05': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=1, seed=5)),
-    'V06': ('match_cut', 0.0, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # 第五棒：去金圈（≈副歌一 S045 光圈）
+    'V06': ('match_cut', 0.08, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # [r4-P1] pre 0→0.08（原注释：第五棒：去金圈（≈副歌一 S045 光圈））
     'V07': ('lattice_open', 0.06, 0.12, dict(seed=7)),          # 第十棒：窗格一格格亮开（同 V07 窗棂尺度）                                     # 第七棒：金闪 → 推近色散（窗棂光一跳）
     'V08': ('rain_curtain', 0.06, 0.14, dict(seed=8)),            # 第九棒：split_slide 中间帧全黑 → 雨帘落幕（由暗殿进雨夜外景）
-    'V09': ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160)),
+    'V09': ('match_cut', 0.08, 0.12, dict(shape='rect', center=(960, 520), radius=160)),   # [r4-P1] pre 0→0.08
     'V10': ('slash_wipe', 0.04, 0.10, dict(angle=84)),                # 第十棒：punch → 沿算盘档竖线一记竖擦                                     # 第七棒：hard → 推近色散冲击
     'V11': ('slash_wipe', 0.05, 0.12, dict(angle=-70)),
     'V12': ('shatter', 0.04, 0.14, dict(seed=12, center=(960, 520), n=60)),

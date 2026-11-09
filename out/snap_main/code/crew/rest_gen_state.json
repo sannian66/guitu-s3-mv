@@ -1,0 +1,639 @@
+{
+ "spent": 150,
+ "jobs": {
+  "S002:back_wind": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "8948e101-627d-4966-bda8-2cd512fd8d9a",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S002/back_wind_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S003:thumb_push": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "30f49529-d62c-4041-ac99-c89646fd1709",
+     "status": "rejected",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S003/thumb_push_try1_0.png",
+     "verdict": "出现正脸，非拇指推刀特写"
+    },
+    {
+     "n": 2,
+     "task_id": "7fa643c0-1099-4e57-8a1a-c8d9d6ecca68",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S003/thumb_push_try2_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 2
+  },
+  "S004:profile": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "7b151b20-c744-4331-9176-bde8ed5c8175",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S004/profile_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S004:profile_open": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "ca4cc3ea-a14a-4e6d-8e40-f426ab206a78",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S004/profile_open_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S010:walk": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "112536e9-8f04-46c3-9764-953b3f9858aa",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S010/walk_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S010:draw": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "9118cf0d-5ef7-4fcc-923f-960335a85dac",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S010/draw_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S010:slash_h": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "95489d1c-3e52-4ce2-9554-62a51a6dcf91",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S010/slash_h_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S011:backlit": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d8fc8d71-ebfa-45d7-abf3-6f975375c414",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S011/backlit_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S014:slash_diag": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "4425f923-b434-4360-b67b-431a8298d8b6",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S014/slash_diag_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S014:sheath": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "9265a122-2fda-45a5-8f66-9112e7dc3427",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S014/sheath_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S015:hand_draw": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "c0e765c9-fe69-409c-aa8f-e7f685610e80",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S015/hand_draw_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S018:turn": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "ebe8616e-ffc6-42b7-9033-5c97458566e5",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S018/turn_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S018:look_up": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "fd9bfc54-d9a2-4b05-9a64-fc97a630f3f1",
+     "status": "rejected",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S018/look_up_try1_0.png",
+     "verdict": "高马尾缺失，像披发"
+    },
+    {
+     "n": 2,
+     "task_id": "a8efaa9f-e64b-4525-816d-fea2b3b73145",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S018/look_up_try2_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 2
+  },
+  "S021:finger": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "889b99e7-fcf5-4b85-8db3-8afaea34a23c",
+     "status": "failed",
+     "pts": 3,
+     "file": null,
+     "verdict": "api:http_502"
+    },
+    {
+     "n": 2,
+     "task_id": "dbdd1725-7784-414d-af42-951d9764608c",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S021/finger_try2_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 2
+  },
+  "S023:look_up_low": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "15969192-73db-429d-a0fb-0cc424cf3203",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S023/look_up_low_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S024:fist": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "0d8c52d8-122c-470c-885b-36d6c50fd2e6",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S024/fist_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S024:pommel_thrust": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "c81cdb2b-fe11-4eb1-9cc4-59621ded094b",
+     "status": "rejected",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S024/pommel_thrust_try1_0.png",
+     "verdict": "头顶马尾被画框裁掉"
+    },
+    {
+     "n": 2,
+     "task_id": "3d57f41c-11b0-4b6c-a978-886c86bb0174",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S024/pommel_thrust_try2_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 2
+  },
+  "S071:land_kneel": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "fcc9dcde-06e7-4993-b7b5-1c817773c157",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S071/land_kneel_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S072:rise_draw": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "b644400c-a65f-4e79-871d-16bf4f8d74f7",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S072/rise_draw_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S073:spin1": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d66bff2f-b371-4cd4-b17f-a814d949056f",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S073/spin1_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S073:spin2": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "b7ec0dd2-50c1-4e94-a504-c3dbd51ee25d",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S073/spin2_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S074:head_turn": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "f0b597db-dbde-4dc0-b1c4-cb9f73c87529",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S074/head_turn_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S078:run": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "f13672b0-b5d0-4f72-9671-8231c707e9cd",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S078/run_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S079:leap_slash_up": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "816c9d12-820a-4c35-a65d-c8cffd22c7a0",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S079/leap_slash_up_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S082:walk_front": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "b7d59ec0-ae6d-49e7-a612-13bce4976447",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S082/walk_front_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S083:sash": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "e754c2b2-6ea5-410c-8712-e4cd96b97c2d",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S083/sash_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S084:knock_back": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "0f188728-384a-4787-84a6-ffbdb165989a",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S084/knock_back_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S087:brace_overhead": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "67b90a44-4edb-425d-a5c8-247fd4707436",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S087/brace_overhead_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S090:wind_up": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "361f0415-4402-49e7-a03a-cff76affd89d",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S090/wind_up_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S112:sword_sky": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "fbfa31d6-bf32-431f-b46b-14e2847bc229",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S112/sword_sky_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S120:plant": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "fa7d026e-523d-4350-ab6d-f448b1f0adf8",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S120/plant_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S121:wind_sash": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "784dc4c1-cc94-4929-9ba0-f7acbd4b7ecb",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S121/wind_sash_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S123:front": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "da4487e9-bdf8-4ce2-881d-306f4ba89072",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S123/front_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S125:stare": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "624158e3-b1e3-4613-8bd3-5f820f9eb88d",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S125/stare_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S128:blade_level": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "fe1bcd6e-b166-4496-af99-0f560d291c38",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S128/blade_level_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S132:back_walk": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "ce11d6e9-bdf5-4eaf-821d-8487a558d9e2",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S132/back_walk_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S135:sheath_hand": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "7395222f-90b7-4ce8-ae61-d6c065cff3a6",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S135/sheath_hand_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S050:scepter": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "aa247105-b294-4bfd-91f6-77b9f28b670e",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S050/scepter_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S051:grip_scepter": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "171e0587-b815-4952-9d93-6d080c05aed6",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S051/grip_scepter_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S054:rise": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "e0af87e9-6ce8-4206-b3b5-bf53c37b8776",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S054/rise_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S055:walk_look_up": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "65e75bea-634e-4ab4-b275-66ee6da7a758",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S055/walk_look_up_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S056:palm_open": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "b6c65de4-f4c6-45ef-8c45-f2f4f5253d6a",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S056/palm_open_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S056:palm_fist": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "27006fb2-f304-4539-8814-f8a9b10147d4",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S056/palm_fist_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S057:grab_turn": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "0a896734-d003-4782-8175-a036a2a06d2c",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S057/grab_turn_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S062:puppeteer": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d67a90ee-8354-4582-a3cb-a118fcac28a7",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S062/puppeteer_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S065:chin_up": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "5c2b4926-6d67-413d-b42c-949550475cf5",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S065/chin_up_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S098:point_down": {
+   "tries": [],
+   "accepted": null
+  }
+ }
+}

@@ -14,6 +14,7 @@ import c1kit as K
 import typo as T
 import trans as TR
 import d_kit as D
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 import d_r5 as R5
 import d_r7 as R7
 from d_kit import V, cp, seal_p, INK, CINNABAR, GOLD, RED, W, H, BAR
@@ -1693,23 +1694,25 @@ SHOTS = [S01_Drop, S02_Steles, S03_TypeSlam, S04_Snow, S05_Ren, S06_Scale, S07_H
          S11_Answer, S12_Pierce, S13_PaperCut, S14_Burn, S15_Hole, S16_Closed, S17_Eye, S18_Draw, S19_Forge, S20_Wall,
          S21_Charge, S22_Chuang, S23_Eye, S24_Defy, S25_Leap, S26_Judge, S27_Bullet, S28_Spin, S29_Thrust, S30_Da]
 # 入点转场：镜头名 → (转场, 切前秒, 切后秒, 参数)
+# [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 pre/post 值，切点帧/字层/SHOTS 一律未动：
+#   P1 过渡长度 6 处：S02/S06/S11/S17/S26 match_cut pre 0→0.08；S13_PaperCut post 0.30→0.20
 CUTS = {
-    'S02_Steles': ('match_cut', 0, 0.35, dict(shape='circle', center=(960, 560), radius=60, glow=np.array([0.9, 0.2, 0.1], np.float32))),
+    'S02_Steles': ('match_cut', 0.08, 0.35, dict(shape='circle', center=(960, 560), radius=60, glow=np.array([0.9, 0.2, 0.1], np.float32))),   # [r4-P1] pre 0→0.08
     'S03_TypeSlam': ('hard_cut_x', 0, 0.07, dict(impact=0.08, tint=(0.10, 0.09, 0.09), amt=0.45, ca=7, jolt=(0, 16))),   # [r6] 纸面镜头不白闪：墨压暗 + 色散 + 下顿
     'S04_Snow': ('smoke_through', 0.12, 0.2, dict(color=(0.93, 0.91, 0.86), seed=4)),
     'S05_Ren': ('ink_bleed_hd', 0.1, 0.2, dict(seed=5, center=(1420, 560))),
-    'S06_Scale': ('match_cut', 0, 0.3, dict(shape='circle', center=(577, 726), radius=40, glow=np.array([0.74, 0.1, 0.06], np.float32))),
+    'S06_Scale': ('match_cut', 0.08, 0.3, dict(shape='circle', center=(577, 726), radius=40, glow=np.array([0.74, 0.1, 0.06], np.float32))),   # [r4-P1] pre 0→0.08
     'S07_Heap': ('zoom_through', 0.1, 0.15, dict(center=(1348, 640))),
     'S08_Seals': ('seal_iris', 0.1, 0.14, dict(center=(760, 400), ch='理')),
     'S09_Brush': ('ink_bleed_hd', 0.001, 0.28, dict(seed=9, center=(1560, 260))),
     'S10_Giant': ('ink_press', 0.1, 0.12, dict(seed=10)),   # [r8] 巨笔墨压：浓墨笔肚自上压下，前沿干笔毛锋（替换 hard_cut_x）
-    'S11_Answer': ('match_cut', 0, 0.2, dict(shape='line', center=(1300, 760), angle=-35, mode='cut')),
+    'S11_Answer': ('match_cut', 0.08, 0.2, dict(shape='line', center=(1300, 760), angle=-35, mode='cut')),   # [r4-P1] pre 0→0.08
     'S12_Pierce': ('hard_cut_x', 0, 0.07, dict(impact=0.1, tint=(0.07, 0.10, 0.17), amt=0.5, ca=9, jolt=(0, -22))),   # [r6] 冷墨压暗（不白闪）+ 色散 + 上顶（刀从下刺上）
-    'S13_PaperCut': ('paper_tear', 0.1, 0.3, dict(seed=12, angle=6)),
+    'S13_PaperCut': ('paper_tear', 0.1, 0.2, dict(seed=12, angle=6)),   # [r4-P1] post 0.30→0.20
     'S14_Burn': ('burn_wipe', 0.12, 0.12, dict(seed=14)),   # [r7b] 火线自下烧过剪纸 → 露出火烧近景（替换两帧闪白）
     'S15_Hole': ('flash_red', 0.04, 0.1, dict(one_frame=True)),
     'S16_Closed': ('zoom_through', 0.08, 0.14, dict(center=(960, 700))),
-    'S17_Eye': ('match_cut', 0, 0.3, dict(shape='circle', center=(int(0.29 * W), int(0.555 * H)), radius=8, glow=EMBER)),
+    'S17_Eye': ('match_cut', 0.08, 0.3, dict(shape='circle', center=(int(0.29 * W), int(0.555 * H)), radius=8, glow=EMBER)),   # [r4-P1] pre 0→0.08
     'S18_Draw': ('slash_wipe', 0.05, 0.2, dict(angle=-12, center=(960, 860))),
     'S19_Forge': ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.3)),
     'S20_Wall': ('occlusion', 0.1, 0.15, dict(kind='pillar', direction=-1)),   # [r5] 柱从右侧入画：先遮「张」的右半「长」，不再露出错字
@@ -1718,7 +1721,7 @@ CUTS = {
     'S23_Eye': ('shatter', 0.04, 0.14, dict(center=(1060, 560), seed=23, n=60)),
     'S24_Defy': ('bolt_cut', 0, 0.14, dict(seed=24)),   # [r7b] 闪电劈过切点 + 冷偏色散（替换两帧闪白）
     'S25_Leap': ('slash_wipe', 0.05, 0.2, dict(angle=-40)),
-    'S26_Judge': ('match_cut', 0, 0.25, dict(shape='line', center=(1080, 420), angle=-37, mode='grow', glow=np.array([1.0, 0.3, 0.2], np.float32))),
+    'S26_Judge': ('match_cut', 0.08, 0.25, dict(shape='line', center=(1080, 420), angle=-37, mode='grow', glow=np.array([1.0, 0.3, 0.2], np.float32))),   # [r4-P1] pre 0→0.08
     'S27_Bullet': ('hard_cut_x', 0, 0.07, dict(impact=0.1, tint=(0.62, 0.76, 1.0), amt=0.65, ca=8, jolt=(0, 18))),   # [r6] 冷白雨光闪 + 色散 + 下顿
     'S28_Spin': ('freeze_glitch_keep', 0.12, 0.10, dict(seed=28)),
     'S29_Thrust': ('gold_beam', 0.08, 0.14, dict(x0=960)),
@@ -1975,7 +1978,8 @@ class Bridge:
 
     def frame(self, t):
         fr, pm, ca = self.raw(t)
-        return D.d_finish(fr, t, ca=ca, vig=0.45 - 0.3 * pm, grain=0.04, paper_mode=pm)
+        return GU.apply(D.d_finish(fr, t, ca=ca, vig=0.45 - 0.3 * pm, grain=0.04, paper_mode=pm),
+                        t, 'd_bridge', None, hint={'pm': pm})   # 统一 grade 层（带 paper_mode）
 
 
 _B = [None]

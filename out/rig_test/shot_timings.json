@@ -1,0 +1,42 @@
+{
+  "S043": {
+    "n": 12,
+    "old_mean": 0.585,
+    "new_mean": 0.583,
+    "delta": -0.002,
+    "sprite_old_ms": 148.0,
+    "rig_new_ms": 153.2,
+    "sprite_delta_ms": 5.1,
+    "keys": [
+      "idle+angry"
+    ],
+    "note": "idle + expr='angry'（静态贴一次）"
+  },
+  "S039": {
+    "n": 19,
+    "old_mean": 0.752,
+    "new_mean": 0.74,
+    "delta": -0.012,
+    "sprite_old_ms": 219.0,
+    "rig_new_ms": 222.1,
+    "sprite_delta_ms": 3.1,
+    "keys": [
+      "idle"
+    ],
+    "note": "idle 两档微差（身高 ±0.9%）"
+  },
+  "S045": {
+    "n": 16,
+    "old_mean": 0.594,
+    "new_mean": 0.488,
+    "delta": -0.106,
+    "sprite_old_ms": 104.3,
+    "rig_new_ms": 37.3,
+    "sprite_delta_ms": -67.0,
+    "keys": [
+      "raise",
+      "slash"
+    ],
+    "note": "key='raise' → key='slash' + mblur"
+  }
+}

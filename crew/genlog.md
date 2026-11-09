@@ -422,3 +422,95 @@
 | 11-09 07:02 | B组/fist3 | RH_image2 | 4K 16:9 | 3 | a627b366-29e6-4c16-83dc-f50a8448fbac | submitted | - | try1 extreme close-up of ONLY his right hand and wrist, no face,  |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | completed | b_cands/fist3_try1_0.png | try1 |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | 采用 | assets/gen/B_r4/fist3_raw.png | try1 采用 |
+
+## 2026-11-09 18:00–18:10 · 分层立绘素材（主角 转身包，绿幕）
+- 渠道：`RH_image2`（全能图片G2，4K），报价 3 积分/张，参考图 `男主_鬼屠.webp`。
+- 4 张 1536×2048：正面 / 右 3-4 侧 / 正右侧 / 背面，A-pose，纯绿幕 #00FF00（用户 18:0x 指示改绿幕，灰板发丝抠不干净）。共 **12 积分**，全部 try1 采用。
+- 文件：`assets/gen/char/hero_{front,tq_r,side_r,back}_{raw,cut}.png`（cut = `tools/cutout_green.py` 纯色键，1.1s/张）。
+- task id：front 2af05541 / tq_r a14b38c6 / side_r 93a9ded3 / back 19cc229c。
+
+## 2026-11-09 18:20–18:45 · 分层立绘素材第二批（表情 + 关键姿势）
+- 渠道 `RH_image2` 4K，3 积分/张。8 个设计：4 表情（calm/angry/smirk/look）+ 3 姿势（raise/slash/draw）+ 左 3/4 全身。
+- **计费说明（诚实记）**：第一批提交时我的 id 解析 bug（响应 id 在顶层，不在 task 里）导致 8 个任务拿不到 id、结果取不回，白花 **24 点**；重提 8 张成功，**24 点**。本批合计 **48 点**。已修脚本（稳取顶层 id）。
+- 资产：`assets/gen/char/hero_{expr_*,pose_*,view_tq_l}_{raw,cut}.png`；`hero_back_cut.png` 已从「正+背」双人同框中裁出背面（816×2051 原生）。
+- 汇总对比图：`out/char_sheet.jpg`。
+
+## 2026-11-09 18:39 · 歌词道具化 #3/#4（props 组）
+- 报价：`POST /api/skills/images/quote`，model=`RH_image2`，size=4K，16:9 → **各 3 points，kind=fixed，合计 6**（控制组同价，确认按张固定计费）。lead 已批准。
+- `seal`（#3 手执玉玺压下）task `f0d8483c-ac7d-48c6-97d9-529f39293fdd`：completed，71s。3840×2160 → `assets/gen/props/seal_raw.png` → `tools/cutout_green.py` → `seal_cut.png`（bg_green=0.843, alpha_mean=0.720）。
+- `blood`（#4 血手印按状纸）task `6acd55b2-a6cb-4320-885a-0015cc55033d`：completed。3840×2160 → `blood_raw.png` → `blood_cut.png`（alpha_mean=0.647）。
+- 背景按要求用纯绿幕 #00FF00（本片新规矩，灰板发丝抠不干净）；印面篆书已要求正字非镜像。
+- 无失败/重抽，本次消耗 6 points。
+
+## 2026-11-09 19:28 · 批量生图（hero_matrix.json，16 张 / 48 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `hero_side_l` 3 点（task 0a8244cc）→ `assets/gen/char/hero_side_l_raw.png` + `_cut.png`
+- ✔ `hero_tq_bl` 3 点（task 0250c022）→ `assets/gen/char/hero_tq_bl_raw.png` + `_cut.png`
+- ✔ `hero_tq_br` 3 点（task cf918ef9）→ `assets/gen/char/hero_tq_br_raw.png` + `_cut.png`
+- ✔ `hero_pose_thrust` 3 点（task 044567b6）→ `assets/gen/char/hero_pose_thrust_raw.png` + `_cut.png`
+- ✔ `hero_pose_crouch` 3 点（task a1bf48db）→ `assets/gen/char/hero_pose_crouch_raw.png` + `_cut.png`
+- ✔ `hero_pose_walk` 3 点（task 812fb5fb）→ `assets/gen/char/hero_pose_walk_raw.png` + `_cut.png`
+- ✔ `hero_pose_run` 3 点（task ea6f3d54）→ `assets/gen/char/hero_pose_run_raw.png` + `_cut.png`
+- ✔ `hero_pose_sheathe` 3 点（task 5eeb37d5）→ `assets/gen/char/hero_pose_sheathe_raw.png` + `_cut.png`
+- ✔ `hero_pose_point` 3 点（task 8d728794）→ `assets/gen/char/hero_pose_point_raw.png` + `_cut.png`
+- ✔ `hero_pose_spin` 3 点（task add584e2）→ `assets/gen/char/hero_pose_spin_raw.png` + `_cut.png`
+- ✔ `hero_pose_kneel` 3 点（task 757bcce6）→ `assets/gen/char/hero_pose_kneel_raw.png` + `_cut.png`
+- ✔ `hero_expr_shout` 3 点（task 43dc2d26）→ `assets/gen/char/hero_expr_shout_raw.png` + `_cut.png`
+- ✔ `hero_expr_pain` 3 点（task 940affaa）→ `assets/gen/char/hero_expr_pain_raw.png` + `_cut.png`
+- ✔ `hero_expr_closed` 3 点（task 88e6b88f）→ `assets/gen/char/hero_expr_closed_raw.png` + `_cut.png`
+- ✔ `emperor_full_front` 3 点（task 368cc040）→ `assets/gen/char/emperor_full_front_raw.png` + `_cut.png`
+- ✔ `emperor_tq` 3 点（task d44f7855）→ `assets/gen/char/emperor_tq_raw.png` + `_cut.png`
+
+## 2026-11-09 19:39 · 批量生图（rig_shots.json，5 张 / 15 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `s043_angry` 3 点（task 3d4848f6）→ `assets/gen/rig/s043_angry_raw.png` + `_cut.png`
+- ✔ `s039_walk_a` 3 点（task 95c7d585）→ `assets/gen/rig/s039_walk_a_raw.png` + `_cut.png`
+- ✔ `s039_walk_b` 3 点（task 1606f19b）→ `assets/gen/rig/s039_walk_b_raw.png` + `_cut.png`
+- ✔ `s039_walk_c` 3 点（task 9f2cc2a0）→ `assets/gen/rig/s039_walk_c_raw.png` + `_cut.png`
+- ✔ `s039_walk_d` 3 点（task f04908b1）→ `assets/gen/rig/s039_walk_d_raw.png` + `_cut.png`
+
+## 2026-11-09 20:18 · 批量生图（s039_walk.json，4 张 / 12 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `s039w2_a` 3 点（task f85962e7）→ `assets/gen/rig/s039w2_a_raw.png` + `_cut.png`
+- ✔ `s039w2_b` 3 点（task 2c44fa75）→ `assets/gen/rig/s039w2_b_raw.png` + `_cut.png`
+- ✔ `s039w2_c` 3 点（task f195870a）→ `assets/gen/rig/s039w2_c_raw.png` + `_cut.png`
+- ✔ `s039w2_d` 3 点（task 6429a40d）→ `assets/gen/rig/s039w2_d_raw.png` + `_cut.png`
+
+## 2026-11-09 21:12 · 批量生图（r1_fixes.json，12 张 / 36 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `v14_char` 3 点（task 53f4f261）→ `assets/gen/r1/v14_char.png` + `_cut.png`
+- ✔ `v16_seal` 3 点（task 988ddce8）→ `assets/gen/r1/v16_seal.png` + `_cut.png`
+- ✔ `v20_char` 3 点（task b2317a01）→ `assets/gen/r1/v20_char.png` + `_cut.png`
+- ✔ `v21_hand` 3 点（task eadf9fb0）→ `assets/gen/r1/v21_hand.png` + `_cut.png`
+- ✔ `p12_char` 3 点（task 025f737e）→ `assets/gen/r1/p12_char.png` + `_cut.png`
+- ✔ `s031_emperor` 3 点（task 92b64dca）→ `assets/gen/r1/s031_emperor.png` + `_cut.png`
+- ✔ `s046_blade_face` 3 点（task fdaa55d5）→ `assets/gen/r1/s046_blade_face.png` + `_cut.png`
+- ✔ `c09_plaque` 3 点（task 5e4694e0）→ `assets/gen/r1/c09_plaque.png` + `_cut.png`
+- ✔ `c22_pair` 3 点（task 78c22ef9）→ `assets/gen/r1/c22_pair.png` + `_cut.png`
+- ✔ `d17_char` 3 点（task 24032221）→ `assets/gen/r1/d17_char.png` + `_cut.png`
+- ✔ `e22_scale` 3 点（task eb1ecc83）→ `assets/gen/r1/e22_scale.png` + `_cut.png`
+- ✔ `e218_fix` 3 点（task bf39925f）→ `assets/gen/r1/e218_fix.png` + `_cut.png`
+
+## 2026-11-09 21:15 · 批量生图（r1_fixes.json，12 张 / 36 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `v14_char` 3 点（task fab8c7f1）→ `assets/gen/r1/v14_char.png` + `_cut.png`
+- ✔ `v16_seal` 3 点（task 46c364bd）→ `assets/gen/r1/v16_seal.png` + `_cut.png`
+- ✔ `v20_char` 3 点（task 84999ad1）→ `assets/gen/r1/v20_char.png` + `_cut.png`
+- ✔ `v21_hand` 3 点（task bfd074df）→ `assets/gen/r1/v21_hand.png` + `_cut.png`
+- ✔ `p12_char` 3 点（task b3c19a68）→ `assets/gen/r1/p12_char.png` + `_cut.png`
+- ✔ `s031_emperor` 3 点（task ea3625e5）→ `assets/gen/r1/s031_emperor.png` + `_cut.png`
+- ✔ `s046_blade_face` 3 点（task 4b2f64a2）→ `assets/gen/r1/s046_blade_face.png` + `_cut.png`
+- ✔ `c09_plaque` 3 点（task 5c903bf4）→ `assets/gen/r1/c09_plaque.png` + `_cut.png`
+- ✔ `c22_pair` 3 点（task 34c7ae91）→ `assets/gen/r1/c22_pair.png` + `_cut.png`
+- ✔ `d17_char` 3 点（task 4eda7dad）→ `assets/gen/r1/d17_char.png` + `_cut.png`
+- ✔ `e22_scale` 3 点（task e3d02dc2）→ `assets/gen/r1/e22_scale.png` + `_cut.png`
+- ✔ `e218_fix` 3 点（task 302f6a57）→ `assets/gen/r1/e218_fix.png` + `_cut.png`
+
+## 2026-11-09 21:26 · 批量生图（r1_fixes2.json，6 张 / 18 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `g_v16_seal` 3 点（task 42a3e6b0）→ `assets/gen/r1/g_v16_seal_raw.png` + `_cut.png`
+- ✔ `g_v21_hand` 3 点（task afbf3c83）→ `assets/gen/r1/g_v21_hand_raw.png` + `_cut.png`
+- ✔ `g_c22_hero` 3 点（task 6dd351ce）→ `assets/gen/r1/g_c22_hero_raw.png` + `_cut.png`
+- ✔ `g_p12_hero` 3 点（task d2027d0d）→ `assets/gen/r1/g_p12_hero_raw.png` + `_cut.png`
+- ✔ `s_d17_eye` 3 点（task c724a5b6）→ `assets/gen/r1/s_d17_eye.png` + `_cut.png`
+- ✔ `s_e218_hilt` 3 点（task d90fa859）→ `assets/gen/r1/s_e218_hilt.png` + `_cut.png`

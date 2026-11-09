@@ -1,0 +1,5881 @@
+[
+ {
+  "id": "S001",
+  "t0": 0.0,
+  "t1": 2.206,
+  "dur": 2.206,
+  "section": "intro",
+  "size": "ELS",
+  "subject": "漆黑中一滴墨落入画面中央晕开成云海；残月从墨晕中显出，云层三层视差缓移",
+  "layers": {
+   "fg": "墨滴与飞白粒子",
+   "mg": "云海 fbm 三层",
+   "bg": "残月+月晕 glow"
+  },
+  "camera": "crane down 1.0→0.0 (y -120px→0) + push 1.00→1.04",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "出品人 西几王传媒",
+   "pos": "x=0.84 y=0.30 竖排",
+   "size": "role 30 / name 64 思源宋+马善政",
+   "red": "西几王传媒 后盖朱印「西几王」",
+   "extra": "印章 stamp_seal 在 1.76 拍落下"
+  },
+  "transition_in": "fade_black(墨滴晕开 ink_bleed 从中心)",
+  "accents": [
+   {
+    "t": 0.37,
+    "fx": "墨滴落点 ink-burst 小"
+   },
+   {
+    "t": 1.76,
+    "fx": "stamp: shake 4px"
+   }
+  ],
+  "palette": {
+   "ink": 95,
+   "red": 3,
+   "gold": 2
+  },
+  "notes": "保留原 Intro 署名节奏（每小节一条），全新机位"
+ },
+ {
+  "id": "S002",
+  "t0": 2.206,
+  "t1": 4.063,
+  "dur": 1.857,
+  "section": "intro",
+  "size": "LS",
+  "subject": "山脊剪影上鬼屠背影 stand_wind，高马尾与黑袍下摆随风；暗红腰带是画面唯一色点",
+  "layers": {
+   "fg": "前景松枝剪影(虚焦 blur 18)横扫",
+   "mg": "鬼屠背影 stand_wind 立于山脊",
+   "bg": "远山三层+月"
+  },
+  "camera": "truck right 0→160px，前景松枝视差 x2.2 产生遮挡入画",
+  "action": "stand_wind",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "编剧 / 导演 苏打",
+   "pos": "x=0.14 y=0.28 竖排",
+   "size": "30 / 72",
+   "red": "苏打 旁朱印",
+   "extra": "墨晕显出 ink_bleed_in"
+  },
+  "transition_in": "occlusion(前景松枝扫过)",
+  "accents": [
+   {
+    "t": 2.206,
+    "fx": "cut-accent: occlusion"
+   }
+  ],
+  "palette": {
+   "ink": 93,
+   "red": 5,
+   "gold": 2
+  },
+  "notes": "腰带 = 红绳母题第一次出现"
+ },
+ {
+  "id": "S003",
+  "t0": 4.063,
+  "t1": 5.968,
+  "dur": 1.905,
+  "section": "intro",
+  "size": "ECU",
+  "subject": "刀镡与刀身大特写：拇指推刀出鞘三寸，月光高光沿刃口从左滑到右（sheen）",
+  "layers": {
+   "fg": "刀鞘口(暗部)",
+   "mg": "刀身斜 12°，刃口细高光线",
+   "bg": "黑底+极淡雾"
+  },
+  "camera": "slide along blade x 0→-220px + rack focus 刀镡→刃尖",
+  "action": "draw_sword",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "美术设计 Cait",
+   "pos": "随刀身刻出，高光扫过时字发光",
+   "size": "38 / 60",
+   "red": "—",
+   "extra": "字随 sheen 逐字亮起"
+  },
+  "transition_in": "match_cut(山脊地平线 → 刀身直线 同角度)",
+  "accents": [
+   {
+    "t": 4.063,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 2,
+   "gold": 8
+  },
+  "notes": "刀母题；金只用在刃口高光"
+ },
+ {
+  "id": "S004",
+  "t0": 5.968,
+  "t1": 7.848,
+  "dur": 1.88,
+  "section": "intro",
+  "size": "CU",
+  "subject": "鬼屠侧脸剪影（逆光勾边），发丝飘动；7.6s 双眼一线寒光亮起，随即拔刀前倾",
+  "layers": {
+   "fg": "飘过的发丝/火星",
+   "mg": "侧脸剪影 rim light",
+   "bg": "月晕虚焦大光斑(景深)"
+  },
+  "camera": "push 1.00→1.12 + handheld 0.3，7.6s 起 speed-ramp 慢放 0.5x 到 7.8",
+  "action": "turn_head",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "AI画师 沉溺　雪晴　索恩",
+   "pos": "x=0.80 竖排三列",
+   "size": "30 / 54",
+   "red": "—",
+   "extra": "三名逐拍 typewriter_brush"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 5.968,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 7.6,
+    "fx": "眼中寒光 glint 2f"
+   },
+   {
+    "t": 7.73,
+    "fx": "slash 预光条"
+   }
+  ],
+  "palette": {
+   "ink": 94,
+   "red": 4,
+   "gold": 2
+  },
+  "notes": "为片名重击蓄力：最后 4 帧画面压暗"
+ },
+ {
+  "id": "S005",
+  "t0": 7.848,
+  "t1": 11.517,
+  "dur": 3.669,
+  "section": "intro",
+  "size": "LS",
+  "subject": "片名《谁定正邪》重击：刀光横斩画面，四字随刀光炸出，火星爆散，墨溅",
+  "layers": {
+   "fg": "火星爆发 Embers 260",
+   "mg": "片名四字 志莽行书 250px",
+   "bg": "山水夜景 + 月"
+  },
+  "camera": "punch-zoom 1.12→1.0 (7.85) + shake 14px 衰减 0.6s + 缓推 1.0→1.05",
+  "action": "slash_h",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "谁定正邪",
+   "pos": "中心 y=0.43",
+   "size": "250",
+   "red": "邪",
+   "extra": "片名重击；副标「鬼屠 · 第三季」思源宋 40px；9.68 起左下「音乐 西几王」vertical"
+  },
+  "transition_in": "slash_wipe(刀光左→右)",
+  "accents": [
+   {
+    "t": 7.848,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 7.85,
+    "fx": "flash_white 3f + shake 14px + ink-burst"
+   },
+   {
+    "t": 9.68,
+    "fx": "音乐署名 stamp"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 12,
+   "gold": 8
+  },
+  "notes": "片名 7.85 重击保留"
+ },
+ {
+  "id": "S006",
+  "t0": 11.517,
+  "t1": 13.351,
+  "dur": 1.834,
+  "section": "intro",
+  "size": "MS",
+  "subject": "金色光泽从片名上扫过（sheen），镜头后拉揭示：片名其实映在一柄横刀的刀面上",
+  "layers": {
+   "fg": "刀面反射(片名镜像 + 高光)",
+   "mg": "横刀 占画面 70%",
+   "bg": "夜雾"
+  },
+  "camera": "pull 1.25→1.0 + roll -3°→0°",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "谁定正邪",
+   "pos": "刀面反射，透视贴合",
+   "size": "随刀",
+   "red": "邪",
+   "extra": "反射字带 0.4 透明度与刀纹"
+  },
+  "transition_in": "match_cut(片名横排 → 刀面上的同一片名)",
+  "accents": [
+   {
+    "t": 11.517,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 6,
+   "gold": 10
+  },
+  "notes": "炫技点：字变成物体的一部分"
+ },
+ {
+  "id": "S007",
+  "t0": 13.351,
+  "t1": 15.209,
+  "dur": 1.858,
+  "section": "intro",
+  "size": "ELS",
+  "subject": "刀面倾斜，反光扫过镜头后切远景：月下城墙绵延，云上投出太上皇巨大背光剪影（一闪而逝的伏笔）",
+  "layers": {
+   "fg": "雾带横移",
+   "mg": "城墙 bricks 远景 + 城楼",
+   "bg": "云层上太上皇剪影 0.35 不透明"
+  },
+  "camera": "dolly in 1.0→1.08 + tilt up 4°",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "flash_white(刀面反光晃镜)",
+  "accents": [
+   {
+    "t": 13.351,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 14.28,
+    "fx": "云层闪电内亮显出巨影 1 拍"
+   }
+  ],
+  "palette": {
+   "ink": 92,
+   "red": 3,
+   "gold": 5
+  },
+  "notes": "母题：墙、高处的权力"
+ },
+ {
+  "id": "S008",
+  "t0": 15.209,
+  "t1": 17.949,
+  "dur": 2.74,
+  "section": "verse1",
+  "size": "ECU",
+  "subject": "横刀刃口占满画面，上方乌云如墨压下逼近刀锋（长夜压在刀锋上），刃上凝霜微光",
+  "layers": {
+   "fg": "飘雪般的灰烬粒子",
+   "mg": "刃口 横贯画面 y=0.62",
+   "bg": "乌云 fbm 下压，速度随 rms"
+  },
+  "camera": "push 1.0→1.10 + tilt down 2°；乌云层向下位移 0→80px",
+  "action": "stand_wind",
+  "lyric_line": 0,
+  "lyric_text": "长夜压在我刀锋之上",
+  "lyric_style": {
+   "type": "brush_write",
+   "text": "长夜压在我刀锋之上",
+   "pos": "右侧 x=0.86 竖排",
+   "size": "92 马善政",
+   "red": "刀",
+   "extra": "逐笔书写，笔锋飞白；刀字朱红"
+  },
+  "transition_in": "ink_bleed(片头雾 → 乌云)",
+  "accents": [
+   {
+    "t": 15.209,
+    "fx": "cut-accent: ink_bleed"
+   },
+   {
+    "t": 16.86,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 94,
+   "red": 5,
+   "gold": 1
+  },
+  "notes": "主歌一排版体系：楷书逐笔竖排，冷静克制"
+ },
+ {
+  "id": "S009",
+  "t0": 17.949,
+  "t1": 20.225,
+  "dur": 2.276,
+  "section": "verse1",
+  "size": "ELS",
+  "subject": "俯瞰平原：五百重甲方阵，枪林如麦，雾中火把点点；方阵缓缓推进",
+  "layers": {
+   "fg": "前景雾带(快)",
+   "mg": "army 方阵 7 排、枪林",
+   "bg": "远山+城"
+  },
+  "camera": "crane down 高机位 → 45° + truck left 0→-200px",
+  "action": null,
+  "lyric_line": 1,
+  "lyric_text": "五百重甲拦不住一道寒光",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "五百",
+   "pos": "左上 x=0.18 y=0.25",
+   "size": "300 马善政 半透明 0.25 叠在方阵上",
+   "red": "—",
+   "extra": "后续「重甲」小字竖排随后"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 17.949,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 93,
+   "red": 2,
+   "gold": 5
+  },
+  "notes": "群像；火把用金色小点"
+ },
+ {
+  "id": "S010",
+  "t0": 20.225,
+  "t1": 22.523,
+  "dur": 2.298,
+  "section": "verse1",
+  "size": "MS",
+  "subject": "方阵最前排，鬼屠逆向独行入画；20.8 拔刀，21.2 一道横向寒光贯穿前排，盔甲裂线",
+  "layers": {
+   "fg": "前排枪尖虚焦遮挡",
+   "mg": "鬼屠 walk→draw_sword→slash_h",
+   "bg": "方阵纵深 + 雾"
+  },
+  "camera": "handheld 0.4 + truck right 跟走；21.24 speed-ramp 1.0→0.3→1.0",
+  "action": "slash_h",
+  "lyric_line": 1,
+  "lyric_text": "五百重甲拦不住一道寒光",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "拦不住一道寒光",
+   "pos": "下方 y=0.80 横排",
+   "size": "84 马善政",
+   "red": "—",
+   "extra": "「寒光」二字被刀光斩断上下错位 18px"
+  },
+  "transition_in": "occlusion(枪林前景横移遮挡)",
+  "accents": [
+   {
+    "t": 20.225,
+    "fx": "cut-accent: occlusion"
+   },
+   {
+    "t": 21.24,
+    "fx": "寒光 slash 全幅 + flash 2f"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 4,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S011",
+  "t0": 22.523,
+  "t1": 25.287,
+  "dur": 2.764,
+  "section": "verse1",
+  "size": "LS",
+  "subject": "仰拍城楼高台：太上皇高大背光剪影立于其上，满月在其身后成光环；广袖与长发随风",
+  "layers": {
+   "fg": "城楼檐角剪影",
+   "mg": "太上皇剪影 stand_backlit 占高 60%",
+   "bg": "满月 + 体积光束(god rays)"
+  },
+  "camera": "crane up + tilt up 6°，低机位广角感",
+  "action": null,
+  "lyric_line": 2,
+  "lyric_text": "谁在高处定对错罪状",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "谁在高处定对错罪状",
+   "pos": "左上 x=0.12 竖排",
+   "size": "70 马善政",
+   "red": "罪状",
+   "extra": "「罪状」以 stamp_seal 方印落下"
+  },
+  "transition_in": "match_cut(寒光横线 → 城墙顶边同高度)",
+  "accents": [
+   {
+    "t": 22.523,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 6,
+   "gold": 6
+  },
+  "notes": "太上皇第一次正面出现"
+ },
+ {
+  "id": "S012",
+  "t0": 25.287,
+  "t1": 27.539,
+  "dur": 2.252,
+  "section": "verse1",
+  "size": "MS",
+  "subject": "巨大天平悬空：左盘堆满微小人形剪影，右盘只有一枚金印，金印一侧仍压下",
+  "layers": {
+   "fg": "天平横梁扫过近景(虚焦)",
+   "mg": "天平 balance + 人群小人",
+   "bg": "雾月"
+  },
+  "camera": "orbit 弧形摇移 -15°→+10° + push 1.0→1.06",
+  "action": null,
+  "lyric_line": 3,
+  "lyric_text": "谁把人命装进天平里称量",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "谁把人命装进天平里称量",
+   "pos": "沿天平横梁透视排列",
+   "size": "64",
+   "red": "人命",
+   "extra": "字随横梁倾斜晃动"
+  },
+  "transition_in": "occlusion(天平臂扫过镜头)",
+  "accents": [
+   {
+    "t": 25.287,
+    "fx": "cut-accent: occlusion"
+   },
+   {
+    "t": 26.0,
+    "fx": "「命」punch-zoom 1.05"
+   },
+   {
+    "t": 26.7,
+    "fx": "「天」flash 1f(white 0.25)"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 8,
+   "gold": 6
+  },
+  "notes": "天平母题首现"
+ },
+ {
+  "id": "S013",
+  "t0": 27.539,
+  "t1": 29.861,
+  "dur": 2.322,
+  "section": "verse1",
+  "size": "ECU",
+  "subject": "左秤盘边缘：人形小剪影滑落，红绳从秤盘垂下滴下朱红墨滴",
+  "layers": {
+   "fg": "墨滴",
+   "mg": "秤盘边缘 + 红绳",
+   "bg": "虚化的月"
+  },
+  "camera": "tilt down 跟墨滴 + rack focus 盘沿→滴落点",
+  "action": null,
+  "lyric_line": 3,
+  "lyric_text": "谁把人命装进天平里称量",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "称量",
+   "pos": "墨滴落点处",
+   "size": "150 马善政",
+   "red": "称量",
+   "extra": "墨滴落地瞬间字晕开"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 27.539,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 28.48,
+    "fx": "「量」punch-zoom 1.05"
+   },
+   {
+    "t": 28.48,
+    "fx": "墨滴落地 ink-burst"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 14,
+   "gold": 2
+  },
+  "notes": "红绳母题"
+ },
+ {
+  "id": "S014",
+  "t0": 29.861,
+  "t1": 32.601,
+  "dur": 2.74,
+  "section": "verse1",
+  "size": "MS",
+  "subject": "分屏构图：左半鬼屠 slash_diag 斩倒恶徒剪影；右半收刀放过跪地求饶的混账",
+  "layers": {
+   "fg": "飞溅墨点",
+   "mg": "鬼屠 slash_diag → sheath；两个反派剪影",
+   "bg": "月下竹林 竖条纹"
+  },
+  "camera": "handheld 0.4 + truck left→right 跨越分屏线",
+  "action": "slash_diag",
+  "lyric_line": 4,
+  "lyric_text": "我杀过恶徒也放过混账",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "我杀过恶徒也放过混账",
+   "pos": "错落：杀 左大 / 放 右大",
+   "size": "杀 200 放 200 其余 60",
+   "red": "杀",
+   "extra": "杀朱红 放墨灰"
+  },
+  "transition_in": "slash_wipe(斜向刀光)",
+  "accents": [
+   {
+    "t": 29.861,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 30.1,
+    "fx": "「杀」slash+ink-burst"
+   },
+   {
+    "t": 30.1,
+    "fx": "杀 ink-burst"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 10,
+   "gold": 2
+  },
+  "notes": "反派周齐世/柳传智剪影可作恶徒与混账"
+ },
+ {
+  "id": "S015",
+  "t0": 32.601,
+  "t1": 34.9,
+  "dur": 2.299,
+  "section": "verse1",
+  "size": "CU",
+  "subject": "手握刀柄拔刀：慢放拔出，刃身映出跳动的火星；刀身刻字逐字亮起",
+  "layers": {
+   "fg": "手部剪影 + 袖口",
+   "mg": "刀柄→刀身",
+   "bg": "黑+火星"
+  },
+  "camera": "slide 沿刀身 + speed-ramp 33.6 慢 0.3x → 34.3 快 1.5x",
+  "action": "draw_sword",
+  "lyric_line": 5,
+  "lyric_text": "每一次拔刀都是我的主张",
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "每一次拔刀都是我的主张",
+   "pos": "刻在刀身，随拔出依次露出",
+   "size": "56",
+   "red": "刀",
+   "extra": "阴刻+高光扫过"
+  },
+  "transition_in": "match_cut(上镜收刀的刀柄 → 本镜拔刀的刀柄)",
+  "accents": [
+   {
+    "t": 32.601,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 34.1,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 4,
+   "gold": 10
+  },
+  "notes": ""
+ },
+ {
+  "id": "S016",
+  "t0": 34.9,
+  "t1": 37.175,
+  "dur": 2.275,
+  "section": "verse1",
+  "size": "ELS",
+  "subject": "月下山巅，鬼屠 sword_plant 刀插岩石，衣袍猎猎；云海在脚下流动",
+  "layers": {
+   "fg": "前景岩石近景",
+   "mg": "鬼屠剪影 sword_plant",
+   "bg": "巨月 + 云海 4 层视差"
+  },
+  "camera": "crane back + pull 1.15→1.0",
+  "action": "sword_plant",
+  "lyric_line": 5,
+  "lyric_text": "每一次拔刀都是我的主张",
+  "lyric_style": {
+   "type": "ink_bleed_in",
+   "text": "主张",
+   "pos": "月中 居中",
+   "size": "220 马善政 墨灰 0.6",
+   "red": "—",
+   "extra": "字从月面墨晕显出"
+  },
+  "transition_in": "zoom_through(穿过刀身反光)",
+  "accents": [
+   {
+    "t": 34.9,
+    "fx": "cut-accent: zoom_through"
+   }
+  ],
+  "palette": {
+   "ink": 92,
+   "red": 3,
+   "gold": 5
+  },
+  "notes": ""
+ },
+ {
+  "id": "S017",
+  "t0": 37.175,
+  "t1": 39.474,
+  "dur": 2.299,
+  "section": "verse1",
+  "size": "LS",
+  "subject": "太上皇抬手，天空降下巨大方印「正」，砸向大地，尘浪环形爆开",
+  "layers": {
+   "fg": "尘浪粒子",
+   "mg": "巨印 seal 从上落下",
+   "bg": "太上皇远处剪影 + 天空"
+  },
+  "camera": "tilt down 跟印 + shake 18px at 38.7",
+  "action": null,
+  "lyric_line": 6,
+  "lyric_text": "若正义由权势执掌",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "若正义由权势执掌",
+   "pos": "印面内阳文「正义」，余字横排下方",
+   "size": "印 360 / 字 60",
+   "red": "正义",
+   "extra": "权势 金"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 37.175,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 37.5,
+    "fx": "「正」flash 1f(gold)"
+   },
+   {
+    "t": 38.72,
+    "fx": "巨印落地 shake 18px + 尘爆"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 12,
+   "gold": 6
+  },
+  "notes": "印章母题：权力定义正义"
+ },
+ {
+  "id": "S018",
+  "t0": 39.474,
+  "t1": 41.773,
+  "dur": 2.299,
+  "section": "verse1",
+  "size": "MCU",
+  "subject": "鬼屠缓缓转头仰望巨印，眼中一线寒光；发丝被尘浪吹起",
+  "layers": {
+   "fg": "尘浪掠过",
+   "mg": "鬼屠 turn_head→look_up",
+   "bg": "巨印逆光大轮廓"
+  },
+  "camera": "push 1.0→1.15 + rack focus 印→脸",
+  "action": "look_up",
+  "lyric_line": 7,
+  "lyric_text": "那我宁愿做乱世的锋芒",
+  "lyric_style": {
+   "type": "brush_write",
+   "text": "那我宁愿做乱世的",
+   "pos": "左侧竖排 x=0.18",
+   "size": "80 马善政",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "flash_red(1 帧红闪)",
+  "accents": [
+   {
+    "t": 39.474,
+    "fx": "cut-accent: flash_red"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 8,
+   "gold": 2
+  },
+  "notes": ""
+ },
+ {
+  "id": "S019",
+  "t0": 41.773,
+  "t1": 44.048,
+  "dur": 2.275,
+  "section": "verse1",
+  "size": "ECU",
+  "subject": "刀尖 slash_up 自下而上，巨印「正」被斩成两半错开，碎块飞散",
+  "layers": {
+   "fg": "碎石",
+   "mg": "刀尖 slash_up",
+   "bg": "裂开的巨印"
+  },
+  "camera": "whip tilt up + punch-zoom 1.0→1.08",
+  "action": "slash_up",
+  "lyric_line": 7,
+  "lyric_text": "那我宁愿做乱世的锋芒",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "锋芒",
+   "pos": "满屏 锋 字 + 芒 小",
+   "size": "锋 520 志莽行书",
+   "red": "锋",
+   "extra": "锋字随印同时被斩裂 slash_cut 后 shatter_out"
+  },
+  "transition_in": "slash_wipe(竖向刀光)",
+  "accents": [
+   {
+    "t": 41.773,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 42.36,
+    "fx": "刀尖斩印 slash + shake 10px"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 14,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S020",
+  "t0": 44.048,
+  "t1": 45.883,
+  "dur": 1.835,
+  "section": "pre1",
+  "size": "CU",
+  "subject": "俯拍铺开的生死簿：朱笔自行书写人名，墨迹渗开；纸纤维纹理清晰",
+  "layers": {
+   "fg": "朱笔笔杆虚焦",
+   "mg": "生死簿纸面 paper + 名字列",
+   "bg": "暗角"
+  },
+  "camera": "top-down push 1.0→1.12 + roll 2°",
+  "action": null,
+  "lyric_line": 8,
+  "lyric_text": "谁配写生死簿谁配画善恶框",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "谁配写生死簿",
+   "pos": "写在纸面上竖排",
+   "size": "70 流江毛草",
+   "red": "生死",
+   "extra": "字即书写内容"
+  },
+  "transition_in": "ink_bleed(刀印裂缝墨渗成纸面)",
+  "accents": [
+   {
+    "t": 44.048,
+    "fx": "cut-accent: ink_bleed"
+   }
+  ],
+  "palette": {
+   "ink": 78,
+   "red": 18,
+   "gold": 4
+  },
+  "notes": "预副歌一排版：草书 + 物体互动"
+ },
+ {
+  "id": "S021",
+  "t0": 45.883,
+  "t1": 48.181,
+  "dur": 2.298,
+  "section": "pre1",
+  "size": "MS",
+  "subject": "纸上朱笔画框，把一个小人剪影框住（善恶框）；镜头后拉，框在太上皇巨大指尖下",
+  "layers": {
+   "fg": "朱红框线",
+   "mg": "小人剪影",
+   "bg": "太上皇手指剪影"
+  },
+  "camera": "pull 1.3→1.0 + crane up",
+  "action": null,
+  "lyric_line": 8,
+  "lyric_text": "谁配写生死簿谁配画善恶框",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "谁配画善恶框",
+   "pos": "错落；「框」字本身被画成方框围住小人",
+   "size": "善恶 140 其余 60",
+   "red": "善恶框",
+   "extra": ""
+  },
+  "transition_in": "paper_tear(纸撕开)",
+  "accents": [
+   {
+    "t": 45.883,
+    "fx": "cut-accent: paper_tear"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 16,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S022",
+  "t0": 48.181,
+  "t1": 50.457,
+  "dur": 2.276,
+  "section": "pre1",
+  "size": "LS",
+  "subject": "高墙正面，墙上金漆匾「规矩」，红墨从匾下流下染过砖缝",
+  "layers": {
+   "fg": "雨丝(细)",
+   "mg": "墙 bricks + 金匾",
+   "bg": "墙后夜空"
+  },
+  "camera": "tilt down 匾→墙脚 + push 1.0→1.06",
+  "action": null,
+  "lyric_line": 9,
+  "lyric_text": "谁的规矩用血来装潢",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "谁的规矩用血来装潢",
+   "pos": "刻在砖墙，字随砖缝断开",
+   "size": "72 流江毛草",
+   "red": "血",
+   "extra": "血字往下流淌 drip"
+  },
+  "transition_in": "whip_pan_blur(右)",
+  "accents": [
+   {
+    "t": 48.181,
+    "fx": "cut-accent: whip_pan_blur"
+   },
+   {
+    "t": 49.62,
+    "fx": "「血」ink-burst(red)+punch-zoom 1.06"
+   }
+  ],
+  "palette": {
+   "ink": 78,
+   "red": 16,
+   "gold": 6
+  },
+  "notes": "墙母题首现"
+ },
+ {
+  "id": "S023",
+  "t0": 50.457,
+  "t1": 52.291,
+  "dur": 1.834,
+  "section": "pre1",
+  "size": "MS",
+  "subject": "仰拍鬼屠 look_up，头顶雷云翻涌，云缝闪电预亮",
+  "layers": {
+   "fg": "雨",
+   "mg": "鬼屠 look_up",
+   "bg": "雷云 fbm 旋转"
+  },
+  "camera": "crane up 低机位 + roll -4°→0°",
+  "action": "look_up",
+  "lyric_line": 10,
+  "lyric_text": "我不信天不信命不信谁的理所应当",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "我不信天",
+   "pos": "三处错落：我 / 不信 / 天",
+   "size": "天 260 其余 90",
+   "red": "不信",
+   "extra": "每字逐拍落下叠放"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 50.457,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 52.14,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 52.14,
+    "fx": "天 flash"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 8,
+   "gold": 2
+  },
+  "notes": ""
+ },
+ {
+  "id": "S024",
+  "t0": 52.291,
+  "t1": 54.126,
+  "dur": 1.835,
+  "section": "pre1",
+  "size": "MCU",
+  "subject": "鬼屠握拳，背后「命」字方印逼近，刀柄一顶，印碎",
+  "layers": {
+   "fg": "碎印块",
+   "mg": "鬼屠 MCU 握拳",
+   "bg": "命 字方印"
+  },
+  "camera": "handheld 0.5 + punch-zoom at 52.84",
+  "action": "stand_wind",
+  "lyric_line": 10,
+  "lyric_text": "我不信天不信命不信谁的理所应当",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "不信命不信谁的",
+   "pos": "命字方印→被击碎 shatter_out",
+   "size": "命 300",
+   "red": "命",
+   "extra": ""
+  },
+  "transition_in": "glitch_cut",
+  "accents": [
+   {
+    "t": 52.291,
+    "fx": "cut-accent: glitch_cut"
+   },
+   {
+    "t": 52.84,
+    "fx": "「命」punch-zoom 1.05"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 12,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S025",
+  "t0": 54.126,
+  "t1": 55.96,
+  "dur": 1.834,
+  "section": "pre1",
+  "size": "ECU",
+  "subject": "「理所应当」四个宋体字像官文铅字整齐排列，被刀尖逐一挑飞",
+  "layers": {
+   "fg": "飞起的字块",
+   "mg": "宋体官文字阵",
+   "bg": "纸纹暗底"
+  },
+  "camera": "slide left 0→-300px + speed-ramp 54.5 快",
+  "action": null,
+  "lyric_line": 10,
+  "lyric_text": "我不信天不信命不信谁的理所应当",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "理所应当 / 只信这柄",
+   "pos": "宋体铅字 → 被挑起旋转",
+   "size": "110 思源宋",
+   "red": "—",
+   "extra": "对比：权力用宋体，鬼屠用手写体（全片规则）"
+  },
+  "transition_in": "slash_wipe",
+  "accents": [
+   {
+    "t": 54.126,
+    "fx": "cut-accent: slash_wipe"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 10,
+   "gold": 4
+  },
+  "notes": "字体即立场：官方=宋体，鬼屠=手写"
+ },
+ {
+  "id": "S026",
+  "t0": 55.96,
+  "t1": 57.794,
+  "dur": 1.834,
+  "section": "pre1",
+  "size": "MS",
+  "subject": "刀身由墨转红：内部像炭火一样透出暗红光，火星从刃口剥落（滚烫）",
+  "layers": {
+   "fg": "火星 Embers 上升",
+   "mg": "刀身 heat glow",
+   "bg": "黑"
+  },
+  "camera": "push 1.0→1.2 + heat-haze 位移",
+  "action": "stand_wind",
+  "lyric_line": 11,
+  "lyric_text": "只信这柄刀还滚烫",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "刀还滚烫",
+   "pos": "刀身上火烧显字",
+   "size": "70 志莽行书",
+   "red": "滚烫",
+   "extra": ""
+  },
+  "transition_in": "match_cut(宋体字阵横线 → 刀身横线)",
+  "accents": [
+   {
+    "t": 55.96,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 56.5,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   },
+   {
+    "t": 57.04,
+    "fx": "刀 heat flare"
+   },
+   {
+    "t": 57.76,
+    "fx": "「烫」heat-haze 0.4s"
+   }
+  ],
+  "palette": {
+   "ink": 70,
+   "red": 24,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S027",
+  "t0": 57.794,
+  "t1": 59.48,
+  "dur": 1.686,
+  "section": "pre1",
+  "size": "CU",
+  "subject": "极近刃口：一切热浪扭曲，画面推进刃口直到白光吞没（蓄力）",
+  "layers": {
+   "fg": "热浪",
+   "mg": "刃口",
+   "bg": "白"
+  },
+  "camera": "zoom 1.2→2.4 ease-in + shake 递增 0→8px",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "zoom_through",
+  "accents": [
+   {
+    "t": 57.794,
+    "fx": "cut-accent: zoom_through"
+   },
+   {
+    "t": 59.16,
+    "fx": "全帧压暗 1 拍再 flash"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 20,
+   "gold": 20
+  },
+  "notes": "副歌前 1.7s 的上冲（riser）"
+ },
+ {
+  "id": "S028",
+  "t0": 59.48,
+  "t1": 60.534,
+  "dur": 1.054,
+  "section": "chorus1",
+  "size": "ECU",
+  "subject": "一滴血落在刃面上溅开（慢放），背景满屏巨字「血」朱红墨晕",
+  "layers": {
+   "fg": "血滴慢放",
+   "mg": "刃面",
+   "bg": "巨字 血"
+  },
+  "camera": "push 1.0→1.06 + speed-ramp 0.4x",
+  "action": null,
+  "lyric_line": 12,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "血",
+   "pos": "满屏 居中",
+   "size": "700 志莽行书",
+   "red": "血",
+   "extra": "墨晕边缘飞白"
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 59.48,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 59.48,
+    "fx": "「血」ink-burst(red)+punch-zoom 1.06"
+   },
+   {
+    "t": 59.94,
+    "fx": "「冷」chroma-split 3px"
+   }
+  ],
+  "palette": {
+   "ink": 55,
+   "red": 40,
+   "gold": 5
+  },
+  "notes": "副歌一：立。行书巨字 + 朱印，背景仍是夜"
+ },
+ {
+  "id": "S029",
+  "t0": 60.534,
+  "t1": 61.463,
+  "dur": 0.929,
+  "section": "chorus1",
+  "size": "MCU",
+  "subject": "鬼屠握刀手收紧，骨节剪影，火星从指缝间掠过",
+  "layers": {
+   "fg": "火星",
+   "mg": "握刀手 MCU",
+   "bg": "虚焦月"
+  },
+  "camera": "handheld 0.3 + push 1.05→1.12",
+  "action": "stand_wind",
+  "lyric_line": 12,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "未冷",
+   "pos": "右下错落",
+   "size": "160 志莽行书",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 60.534,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 60.6,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 14,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S030",
+  "t0": 61.463,
+  "t1": 62.833,
+  "dur": 1.37,
+  "section": "chorus1",
+  "size": "LS",
+  "subject": "月下鬼屠 raise_sword_sky，刀尖指月，刃光一闪",
+  "layers": {
+   "fg": "前景草叶",
+   "mg": "鬼屠 raise_sword_sky",
+   "bg": "巨月"
+  },
+  "camera": "crane up + punch-zoom 1.08 at 61.2",
+  "action": "raise_sword_sky",
+  "lyric_line": 12,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "刀不放",
+   "pos": "刀 字方印盖在月面上",
+   "size": "印 280 + 字 90",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "match_cut(握拳圆 → 月圆)",
+  "accents": [
+   {
+    "t": 61.2,
+    "fx": "刀尖指月 glint"
+   },
+   {
+    "t": 61.463,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 12,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S031",
+  "t0": 62.833,
+  "t1": 64.203,
+  "dur": 1.37,
+  "section": "chorus1",
+  "size": "ELS",
+  "subject": "太上皇巨大剪影占满天幕，鬼屠是脚下一粒黑点；极端尺度对比",
+  "layers": {
+   "fg": "地面草浪",
+   "mg": "鬼屠微小剪影",
+   "bg": "太上皇天幕巨影 + 月在其眼位"
+  },
+  "camera": "crane up 0→240px + tilt up",
+  "action": null,
+  "lyric_line": 13,
+  "lyric_text": "谁人来定正邪一方",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "谁人来定",
+   "pos": "天幕上竖排巨字",
+   "size": "150 志莽行书",
+   "red": "—",
+   "extra": "字像天书悬于云间"
+  },
+  "transition_in": "iris_moon(月为光圈)",
+  "accents": [
+   {
+    "t": 62.833,
+    "fx": "cut-accent: iris_moon"
+   },
+   {
+    "t": 63.82,
+    "fx": "「正」flash 1f(gold)"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 6,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S032",
+  "t0": 64.203,
+  "t1": 66.038,
+  "dur": 1.835,
+  "section": "chorus1",
+  "size": "CU",
+  "subject": "画面中线一刀劈开：左「正」金印，右「邪」朱印，两印被刀光推开错位",
+  "layers": {
+   "fg": "刀光",
+   "mg": "正/邪 两方印",
+   "bg": "纸纹"
+  },
+  "camera": "whip-pan left→right + split 位移",
+  "action": "slash_h",
+  "lyric_line": 13,
+  "lyric_text": "谁人来定正邪一方",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "正邪一方",
+   "pos": "左正 右邪 中间被斩",
+   "size": "正邪 320",
+   "red": "邪",
+   "extra": "正 金"
+  },
+  "transition_in": "slash_wipe(竖)",
+  "accents": [
+   {
+    "t": 63.82,
+    "fx": "正 落印"
+   },
+   {
+    "t": 64.203,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 64.36,
+    "fx": "「邪」flash 1f(red)"
+   },
+   {
+    "t": 64.36,
+    "fx": "邪 落印"
+   },
+   {
+    "t": 65.573,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 24,
+   "gold": 16
+  },
+  "notes": "正邪二元母题"
+ },
+ {
+  "id": "S033",
+  "t0": 66.038,
+  "t1": 67.872,
+  "dur": 1.834,
+  "section": "chorus1",
+  "size": "LS",
+  "subject": "大地裂开，一堵砖墙从地面轰然升起，土石崩落",
+  "layers": {
+   "fg": "碎石",
+   "mg": "墙 bricks 升起",
+   "bg": "夜空"
+  },
+  "camera": "push 1.0→1.08 + shake 10px 持续",
+  "action": null,
+  "lyric_line": 14,
+  "lyric_text": "若规则是铁壁铜墙",
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "若规则是",
+   "pos": "字刻在升起的墙砖上（同一渲染，复用墙纹）",
+   "size": "90",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 66.038,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 6,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S034",
+  "t0": 67.872,
+  "t1": 69.76,
+  "dur": 1.888,
+  "section": "chorus1",
+  "size": "ECU",
+  "subject": "墙砖大特写仰拍，墙高无尽；「墙」巨字从砖缝里浮起",
+  "layers": {
+   "fg": "砖缝尘",
+   "mg": "砖墙透视 仰角",
+   "bg": "墙顶消失于黑"
+  },
+  "camera": "tilt up 10°→35° + slow push",
+  "action": null,
+  "lyric_line": 14,
+  "lyric_text": "若规则是铁壁铜墙",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "墙",
+   "pos": "满屏",
+   "size": "620 志莽行书",
+   "red": "—",
+   "extra": "铁壁铜墙其余小字竖排右侧"
+  },
+  "transition_in": "match_cut(地平线 → 墙砖横缝)",
+  "accents": [
+   {
+    "t": 67.872,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 68.88,
+    "fx": "「墙」shake 8px(低频)"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 6,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S035",
+  "t0": 69.76,
+  "t1": 71.053,
+  "dur": 1.293,
+  "section": "chorus1",
+  "size": "MS",
+  "subject": "鬼屠疾跑起跳 leap，70.02 空中 slash_diag 劈墙，一道裂缝炸开",
+  "layers": {
+   "fg": "飞散碎砖",
+   "mg": "鬼屠 run→leap→slash_diag",
+   "bg": "墙"
+  },
+  "camera": "whip-pan 跟跑 + speed-ramp 69.9 0.25x → 70.3 1.5x",
+  "action": "leap",
+  "lyric_line": 15,
+  "lyric_text": "那就劈开它看个天亮",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "那就劈开它",
+   "pos": "字被刀线斩断错位",
+   "size": "110",
+   "red": "劈",
+   "extra": ""
+  },
+  "transition_in": "whip_pan_blur",
+  "accents": [
+   {
+    "t": 69.76,
+    "fx": "cut-accent: whip_pan_blur"
+   },
+   {
+    "t": 70.02,
+    "fx": "「劈」slash+shake 14px+flash"
+   },
+   {
+    "t": 70.02,
+    "fx": "劈：flash + shake 14px"
+   },
+   {
+    "t": 70.147,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 12,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S036",
+  "t0": 71.053,
+  "t1": 72.446,
+  "dur": 1.393,
+  "section": "chorus1",
+  "size": "CU",
+  "subject": "墙上裂缝内透出一线金光，光束穿雾成体积光",
+  "layers": {
+   "fg": "雾中光束粒子",
+   "mg": "墙裂缝",
+   "bg": "墙后金光"
+  },
+  "camera": "push 1.0→1.15 沿裂缝",
+  "action": null,
+  "lyric_line": 15,
+  "lyric_text": "那就劈开它看个天亮",
+  "lyric_style": {
+   "type": "ink_bleed_in",
+   "text": "看个",
+   "pos": "沿裂缝方向",
+   "size": "100",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 71.053,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 72.1,
+    "fx": "「天」flash 1f(white 0.25)"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 4,
+   "gold": 16
+  },
+  "notes": "第一次见到金光——只是一线"
+ },
+ {
+  "id": "S037",
+  "t0": 72.446,
+  "t1": 74.1,
+  "dur": 1.654,
+  "section": "chorus1",
+  "size": "ELS",
+  "subject": "远景：长墙中只有一道细细金色裂缝，鬼屠剪影站在缝前；夜仍未尽",
+  "layers": {
+   "fg": "雾",
+   "mg": "鬼屠 stand_wind",
+   "bg": "长墙 + 一线金光"
+  },
+  "camera": "pull 1.1→1.0 + crane up",
+  "action": "stand_wind",
+  "lyric_line": 15,
+  "lyric_text": "那就劈开它看个天亮",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "天亮",
+   "pos": "裂缝上方",
+   "size": "180 志莽行书 金",
+   "red": "—",
+   "extra": "金色火烧显字，随即熄回墨色（天还没亮）"
+  },
+  "transition_in": "zoom_through(从缝中退出)",
+  "accents": [
+   {
+    "t": 72.446,
+    "fx": "cut-accent: zoom_through"
+   },
+   {
+    "t": 72.6,
+    "fx": "「亮」bloom ramp 0.5s"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 4,
+   "gold": 12
+  },
+  "notes": "副歌一结论：只劈开一线"
+ },
+ {
+  "id": "S038",
+  "t0": 74.1,
+  "t1": 75.186,
+  "dur": 1.086,
+  "section": "chorus1",
+  "size": "CU",
+  "subject": "刃面倒映鬼屠的眼睛；鲜血沿刃纹缓慢流下",
+  "layers": {
+   "fg": "血线",
+   "mg": "刃面倒影 眼",
+   "bg": "黑"
+  },
+  "camera": "slide down 跟血线",
+  "action": null,
+  "lyric_line": 16,
+  "lyric_text": "血未冷 骨未凉",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "血",
+   "pos": "左侧半出画",
+   "size": "560",
+   "red": "血",
+   "extra": ""
+  },
+  "transition_in": "flash_red",
+  "accents": [
+   {
+    "t": 74.1,
+    "fx": "cut-accent: flash_red"
+   },
+   {
+    "t": 74.1,
+    "fx": "「血」ink-burst(red)+punch-zoom 1.06"
+   },
+   {
+    "t": 74.6,
+    "fx": "「冷」chroma-split 3px"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 36,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S039",
+  "t0": 75.186,
+  "t1": 76.579,
+  "dur": 1.393,
+  "section": "chorus1",
+  "size": "MS",
+  "subject": "战后地面散落断枪、头盔，鬼屠缓步穿过，第一丝细雨落下",
+  "layers": {
+   "fg": "断枪前景",
+   "mg": "鬼屠 walk",
+   "bg": "雾+细雨"
+  },
+  "camera": "truck right + handheld 0.3",
+  "action": "walk",
+  "lyric_line": 16,
+  "lyric_text": "血未冷 骨未凉",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "未冷 骨未凉",
+   "pos": "错落 右上",
+   "size": "90",
+   "red": "骨",
+   "extra": ""
+  },
+  "transition_in": "occlusion(断枪旗杆横过)",
+  "accents": [
+   {
+    "t": 75.186,
+    "fx": "cut-accent: occlusion"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 8,
+   "gold": 4
+  },
+  "notes": "雨从这里开始，为主歌二铺垫"
+ },
+ {
+  "id": "S040",
+  "t0": 76.579,
+  "t1": 78.414,
+  "dur": 1.835,
+  "section": "chorus1",
+  "size": "CU",
+  "subject": "四方印逐拍落下拼成田字格：是 / 非 / 对 / 错",
+  "layers": {
+   "fg": "印泥飞溅",
+   "mg": "四印 2×2 网格",
+   "bg": "纸纹"
+  },
+  "camera": "push 1.0→1.1，每印落下 punch 1.03",
+  "action": null,
+  "lyric_line": 17,
+  "lyric_text": "是非对错我自己扛",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "是非对错",
+   "pos": "2×2 田字格",
+   "size": "每印 260",
+   "red": "非 错",
+   "extra": "是 对 墨"
+  },
+  "transition_in": "paper_tear",
+  "accents": [
+   {
+    "t": 76.579,
+    "fx": "cut-accent: paper_tear"
+   },
+   {
+    "t": 77.2,
+    "fx": "是"
+   },
+   {
+    "t": 77.485,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 77.6,
+    "fx": "非"
+   },
+   {
+    "t": 77.76,
+    "fx": "对"
+   },
+   {
+    "t": 78.06,
+    "fx": "错"
+   }
+  ],
+  "palette": {
+   "ink": 62,
+   "red": 30,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S041",
+  "t0": 78.414,
+  "t1": 80.225,
+  "dur": 1.811,
+  "section": "chorus1",
+  "size": "LS",
+  "subject": "背影：鬼屠刀横扛肩头（sword_on_shoulder），独对长墙",
+  "layers": {
+   "fg": "雨丝",
+   "mg": "鬼屠背影",
+   "bg": "长墙+裂缝金光"
+  },
+  "camera": "crane down + push 1.0→1.05",
+  "action": "stand_wind",
+  "lyric_line": 17,
+  "lyric_text": "是非对错我自己扛",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "我自己扛",
+   "pos": "画面右侧竖排",
+   "size": "120 志莽行书",
+   "red": "扛",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 78.414,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 8,
+   "gold": 6
+  },
+  "notes": "如角色组能加 sword_on_shoulder 则用，否则 stand_wind"
+ },
+ {
+  "id": "S042",
+  "t0": 80.225,
+  "t1": 82.059,
+  "dur": 1.834,
+  "section": "chorus1",
+  "size": "ELS",
+  "subject": "天空月面被云吞没，「天」巨字在月晕中，被一道刀光划掉",
+  "layers": {
+   "fg": "云",
+   "mg": "月晕 + 天 字",
+   "bg": "黑天"
+  },
+  "camera": "tilt up + roll 3°",
+  "action": null,
+  "lyric_line": 18,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "天不判",
+   "pos": "天 满屏，不判 小",
+   "size": "天 600",
+   "red": "—",
+   "extra": "天字被 slash_cut 划掉"
+  },
+  "transition_in": "whip_pan_blur(上)",
+  "accents": [
+   {
+    "t": 80.225,
+    "fx": "cut-accent: whip_pan_blur"
+   },
+   {
+    "t": 80.88,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 81.16,
+    "fx": "划掉天 slash"
+   },
+   {
+    "t": 81.62,
+    "fx": "「判」punch-zoom 1.10+flash_red 2f+shake 12px"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 8,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S043",
+  "t0": 82.059,
+  "t1": 82.988,
+  "dur": 0.929,
+  "section": "chorus1",
+  "size": "MCU",
+  "subject": "鬼屠转头正视镜头，眼中寒光；「量」字印在眼前",
+  "layers": {
+   "fg": "火星",
+   "mg": "鬼屠 turn_head",
+   "bg": "雾"
+  },
+  "camera": "push 1.0→1.18 快",
+  "action": "turn_head",
+  "lyric_line": 18,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "我来量",
+   "pos": "量 方印 右下",
+   "size": "量 280",
+   "red": "量",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 82.059,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 12,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S044",
+  "t0": 82.988,
+  "t1": 84.1,
+  "dur": 1.112,
+  "section": "chorus1",
+  "size": "CU",
+  "subject": "手按刀柄，拇指推刀，刀鞘口一线光",
+  "layers": {
+   "fg": "—",
+   "mg": "刀柄 刀鞘",
+   "bg": "黑"
+  },
+  "camera": "push 1.0→1.08 + 静止感（风停）",
+  "action": "draw_sword",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 82.988,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 92,
+   "red": 4,
+   "gold": 4
+  },
+  "notes": "吸气停顿 1 拍"
+ },
+ {
+  "id": "S045",
+  "t0": 84.1,
+  "t1": 85.287,
+  "dur": 1.187,
+  "section": "chorus1",
+  "size": "LS",
+  "subject": "鬼屠 spin_slash 一圈，刀光成圆环，雨滴被斩开",
+  "layers": {
+   "fg": "被切开的雨",
+   "mg": "鬼屠 spin_slash",
+   "bg": "夜墙"
+  },
+  "camera": "speed-ramp 0.3x→1.5x + orbit 30°",
+  "action": "spin_slash",
+  "lyric_line": 19,
+  "lyric_text": "这一刀就是我的回答",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "这一刀",
+   "pos": "沿刀光圆环环绕",
+   "size": "120",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe(圆形刀光)",
+  "accents": [
+   {
+    "t": 84.1,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 84.56,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   },
+   {
+    "t": 84.56,
+    "fx": "刀 环形 slash"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 14,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S046",
+  "t0": 85.287,
+  "t1": 86.192,
+  "dur": 0.905,
+  "section": "chorus1",
+  "size": "MCU",
+  "subject": "定格：刀停在镜头前，刀身浮现「就是我的回答」，随后墨爆吞没全画面",
+  "layers": {
+   "fg": "墨爆",
+   "mg": "刀身",
+   "bg": "黑"
+  },
+  "camera": "freeze 0.3s + push 1.0→1.04",
+  "action": "stand_wind",
+  "lyric_line": 19,
+  "lyric_text": "这一刀就是我的回答",
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "就是我的回答",
+   "pos": "刀身",
+   "size": "72",
+   "red": "答",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 85.287,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 85.9,
+    "fx": "「答」punch-zoom 1.08+flash 2f(gold)"
+   },
+   {
+    "t": 85.9,
+    "fx": "答 ink-burst 全屏"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 14,
+   "gold": 4
+  },
+  "notes": "副歌一收尾 = 墨"
+ },
+ {
+  "id": "S047",
+  "t0": 86.192,
+  "t1": 87.562,
+  "dur": 1.37,
+  "section": "interlude",
+  "size": "ELS",
+  "subject": "墨退去，夜雨倾盆；刀斜插泥地，雨水沿刀身流下",
+  "layers": {
+   "fg": "雨帘近",
+   "mg": "斜插的刀",
+   "bg": "远山雨雾"
+  },
+  "camera": "crane down 慢 + push 1.0→1.04",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "ink_bleed_in",
+   "text": "鬼屠",
+   "pos": "左下小款 + 朱印",
+   "size": "40 思源宋",
+   "red": "—",
+   "extra": "小款「鬼屠」，可选"
+  },
+  "transition_in": "ink_bleed",
+  "accents": [
+   {
+    "t": 86.192,
+    "fx": "cut-accent: ink_bleed"
+   }
+  ],
+  "palette": {
+   "ink": 94,
+   "red": 4,
+   "gold": 2
+  },
+  "notes": "色彩转入雨夜：更冷、更灰"
+ },
+ {
+  "id": "S048",
+  "t0": 87.562,
+  "t1": 89.397,
+  "dur": 1.835,
+  "section": "interlude",
+  "size": "ECU",
+  "subject": "一滴雨落下，镜头追进雨滴，雨滴中倒映城墙与巨影",
+  "layers": {
+   "fg": "雨滴 大",
+   "mg": "倒影：城墙+太上皇",
+   "bg": "虚化"
+  },
+  "camera": "zoom_through 雨滴 1.0→3.0",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "zoom_through",
+  "accents": [
+   {
+    "t": 87.562,
+    "fx": "cut-accent: zoom_through"
+   },
+   {
+    "t": 88.93,
+    "fx": "雷声 flash 1f"
+   }
+  ],
+  "palette": {
+   "ink": 94,
+   "red": 2,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S049",
+  "t0": 89.397,
+  "t1": 91.672,
+  "dur": 2.275,
+  "section": "verse2",
+  "size": "LS",
+  "subject": "雨中群像：无面纸人排成队列朝同一方向鞠躬（顾全大局）",
+  "layers": {
+   "fg": "雨",
+   "mg": "纸人群像 bow 循环",
+   "bg": "远处巨影"
+  },
+  "camera": "truck left 慢 + 雨层视差",
+  "action": null,
+  "lyric_line": 20,
+  "lyric_text": "世人教我顾全大局退让",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "世人教我顾全大局退让",
+   "pos": "宋体字悬在雨层中，近大远小 3 个深度",
+   "size": "大局 160 其余 56 思源宋",
+   "red": "—",
+   "extra": "大局 金"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 89.397,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 2,
+   "gold": 8
+  },
+  "notes": "主歌二排版：宋体官文（权力话语）作空间字"
+ },
+ {
+  "id": "S050",
+  "t0": 91.672,
+  "t1": 93.971,
+  "dur": 2.299,
+  "section": "verse2",
+  "size": "MS",
+  "subject": "镜头越过人群后方：屏风后太上皇手持权柄剪影，烛光把影子投得巨大",
+  "layers": {
+   "fg": "人群背影虚焦",
+   "mg": "屏风 + 剪影",
+   "bg": "烛光暖光（金）"
+  },
+  "camera": "dolly forward 穿过人群 + crane up",
+  "action": null,
+  "lyric_line": 21,
+  "lyric_text": "可大局背后是谁的权柄在嚣张",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "可大局背后是谁的",
+   "pos": "屏风上竖排",
+   "size": "68 思源宋",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "occlusion(人群背影遮挡入)",
+  "accents": [
+   {
+    "t": 91.672,
+    "fx": "cut-accent: occlusion"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 2,
+   "gold": 14
+  },
+  "notes": ""
+ },
+ {
+  "id": "S051",
+  "t0": 93.971,
+  "t1": 96.27,
+  "dur": 2.299,
+  "section": "verse2",
+  "size": "CU",
+  "subject": "太上皇手握权柄收紧，袖纹；「权」字金色扭曲变形",
+  "layers": {
+   "fg": "烛焰",
+   "mg": "手 + 权柄",
+   "bg": "暗"
+  },
+  "camera": "push 1.0→1.2 + handheld 0.2",
+  "action": null,
+  "lyric_line": 21,
+  "lyric_text": "可大局背后是谁的权柄在嚣张",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "权柄在嚣张",
+   "pos": "权 满屏 金 扭曲",
+   "size": "权 560",
+   "red": "—",
+   "extra": "嚣张 两字 glitch"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 93.971,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 2,
+   "gold": 18
+  },
+  "notes": ""
+ },
+ {
+  "id": "S052",
+  "t0": 96.27,
+  "t1": 98.545,
+  "dur": 2.275,
+  "section": "verse2",
+  "size": "MS",
+  "subject": "雨中天平：左盘不断落下纸人，越堆越高，天平纹丝不动（右盘金印）",
+  "layers": {
+   "fg": "雨",
+   "mg": "天平 + 纸人堆",
+   "bg": "暗墙"
+  },
+  "camera": "push 1.0→1.08 + 天平微摆",
+  "action": null,
+  "lyric_line": 22,
+  "lyric_text": "牺牲多少才算够分量",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "牺牲多少才算够分量",
+   "pos": "宋体字随纸人一同落进秤盘",
+   "size": "64",
+   "red": "牺牲",
+   "extra": ""
+  },
+  "transition_in": "match_cut(权柄竖直 → 天平立柱)",
+  "accents": [
+   {
+    "t": 96.27,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 8,
+   "gold": 6
+  },
+  "notes": "天平母题递进：雨中、纸人"
+ },
+ {
+  "id": "S053",
+  "t0": 98.545,
+  "t1": 100.821,
+  "dur": 2.276,
+  "section": "verse2",
+  "size": "ECU",
+  "subject": "纸人从秤盘边缘被挤落坠入黑暗，雨水打湿纸人，墨色化开",
+  "layers": {
+   "fg": "下坠纸人",
+   "mg": "秤盘边",
+   "bg": "深渊黑"
+  },
+  "camera": "tilt down 跟坠落 + speed 0.6x",
+  "action": null,
+  "lyric_line": 23,
+  "lyric_text": "被牺牲的人可曾有机会反抗",
+  "lyric_style": {
+   "type": "ink_bleed_in",
+   "text": "被牺牲的人",
+   "pos": "随纸人下坠的竖排",
+   "size": "80 马善政",
+   "red": "—",
+   "extra": "字遇雨晕开"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 98.545,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 92,
+   "red": 6,
+   "gold": 2
+  },
+  "notes": ""
+ },
+ {
+  "id": "S054",
+  "t0": 100.821,
+  "t1": 103.143,
+  "dur": 2.322,
+  "section": "verse2",
+  "size": "MS",
+  "subject": "坠落的纸人中，一个小剪影落地起身，逐渐长大——匹配成鬼屠",
+  "layers": {
+   "fg": "雨",
+   "mg": "纸人→鬼屠 fall_back_recover",
+   "bg": "雨夜远景"
+  },
+  "camera": "push 1.0→1.25 + crane up 跟起身",
+  "action": "fall_back_recover",
+  "lyric_line": 23,
+  "lyric_text": "被牺牲的人可曾有机会反抗",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "可曾有机会反抗",
+   "pos": "反抗 朱红火烧",
+   "size": "反抗 180 志莽行书 其余 60 马善政",
+   "red": "反抗",
+   "extra": "字体从宋体切换到行书 = 反抗"
+  },
+  "transition_in": "match_cut(纸人剪影 → 鬼屠剪影 同姿态)",
+  "accents": [
+   {
+    "t": 100.821,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 12,
+   "gold": 2
+  },
+  "notes": "关键匹配剪辑"
+ },
+ {
+  "id": "S055",
+  "t0": 103.143,
+  "t1": 105.883,
+  "dur": 2.74,
+  "section": "verse2",
+  "size": "LS",
+  "subject": "鬼屠在暴雨中行走，闪电照亮，他抬头 look_up",
+  "layers": {
+   "fg": "雨帘",
+   "mg": "鬼屠 walk→look_up",
+   "bg": "闪电云"
+  },
+  "camera": "truck right 跟走 + handheld 0.3",
+  "action": "walk",
+  "lyric_line": 24,
+  "lyric_text": "不听天命不问上苍",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "不听天命 不问上苍",
+   "pos": "两列竖排，天命/上苍 被斜线划掉",
+   "size": "80 马善政",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "flash_white(闪电)",
+  "accents": [
+   {
+    "t": 103.143,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 103.92,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 104.18,
+    "fx": "「命」punch-zoom 1.05"
+   },
+   {
+    "t": 104.18,
+    "fx": "闪电 flash"
+   }
+  ],
+  "palette": {
+   "ink": 92,
+   "red": 4,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S056",
+  "t0": 105.883,
+  "t1": 108.182,
+  "dur": 2.299,
+  "section": "verse2",
+  "size": "CU",
+  "subject": "张开的手掌承接雨水，掌心积水映出「命」字，随后猛然握拳水花四溅",
+  "layers": {
+   "fg": "雨滴",
+   "mg": "手掌",
+   "bg": "暗"
+  },
+  "camera": "push 1.0→1.15 + 107.6 punch",
+  "action": null,
+  "lyric_line": 25,
+  "lyric_text": "谁的命都握在自己手掌",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "命",
+   "pos": "掌心倒影 → 握拳炸散",
+   "size": "命 400",
+   "red": "命",
+   "extra": "其余字竖排左侧"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 105.883,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 107.08,
+    "fx": "「命」punch-zoom 1.05"
+   },
+   {
+    "t": 108.19,
+    "fx": "握拳 水花 burst"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 8,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S057",
+  "t0": 108.182,
+  "t1": 110.457,
+  "dur": 2.275,
+  "section": "verse2",
+  "size": "MCU",
+  "subject": "握拳顺势握住刀柄，转身 turn_head，雨水从马尾甩出",
+  "layers": {
+   "fg": "甩出的水珠",
+   "mg": "鬼屠 MCU",
+   "bg": "雨夜"
+  },
+  "camera": "whip-pan right + speed-ramp",
+  "action": "turn_head",
+  "lyric_line": 25,
+  "lyric_text": "谁的命都握在自己手掌",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "手掌",
+   "pos": "右下",
+   "size": "140",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "match_cut(拳 → 刀柄上的拳)",
+  "accents": [
+   {
+    "t": 108.182,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 8,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S058",
+  "t0": 110.457,
+  "t1": 112.756,
+  "dur": 2.299,
+  "section": "verse2",
+  "size": "LS",
+  "subject": "黑白颠倒：画面翻转 180°，整个世界变负片（白天黑山），积水倒影成为主画面",
+  "layers": {
+   "fg": "倒置雨",
+   "mg": "鬼屠倒影",
+   "bg": "负片山水"
+  },
+  "camera": "roll 0°→180° + invert 渐变",
+  "action": "stand_wind",
+  "lyric_line": 26,
+  "lyric_text": "若这世道黑白颠倒",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "若这世道黑白颠倒",
+   "pos": "字随画面一同旋转倒置，黑白二字互换颜色",
+   "size": "90",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "whip_pan_blur(旋转)",
+  "accents": [
+   {
+    "t": 110.457,
+    "fx": "cut-accent: whip_pan_blur"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 2,
+   "gold": 0
+  },
+  "notes": "炫技：负片 + 旋转；palette 以反相计（墨→白）"
+ },
+ {
+  "id": "S059",
+  "t0": 112.756,
+  "t1": 115.032,
+  "dur": 2.276,
+  "section": "verse2",
+  "size": "MS",
+  "subject": "负片世界中鬼屠 slash_h，刀线以上恢复正片、以下仍是负片",
+  "layers": {
+   "fg": "刀线",
+   "mg": "鬼屠 slash_h",
+   "bg": "半正半负世界"
+  },
+  "camera": "push 1.0→1.06 + 刀线处 shake",
+  "action": "slash_h",
+  "lyric_line": 27,
+  "lyric_text": "那就用刀锋重新划出方向",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "那就用刀锋重新划出",
+   "pos": "字沿刀线一分为二",
+   "size": "80",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe(刀线即分界)",
+  "accents": [
+   {
+    "t": 112.756,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 113.34,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   },
+   {
+    "t": 113.34,
+    "fx": "刀线 slash + flash"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 10,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S060",
+  "t0": 115.032,
+  "t1": 117.795,
+  "dur": 2.763,
+  "section": "verse2",
+  "size": "ELS",
+  "subject": "大地上留下一道发光朱红刀痕，从脚下延伸向远方城墙",
+  "layers": {
+   "fg": "雨",
+   "mg": "地面刀痕 红线",
+   "bg": "远方城墙"
+  },
+  "camera": "crane up 高机位 + tilt down",
+  "action": "stand_wind",
+  "lyric_line": 27,
+  "lyric_text": "那就用刀锋重新划出方向",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "方向",
+   "pos": "沿刀痕透视铺设，近大远小",
+   "size": "160→40",
+   "red": "方向",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 115.032,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 12,
+   "gold": 2
+  },
+  "notes": "红绳/红线母题 → 方向"
+ },
+ {
+  "id": "S061",
+  "t0": 117.795,
+  "t1": 119.606,
+  "dur": 1.811,
+  "section": "pre2",
+  "size": "CU",
+  "subject": "卷轴剧本自动展开，宋体铅字一行行打出，标题「大局」",
+  "layers": {
+   "fg": "卷轴边",
+   "mg": "宋体文本行",
+   "bg": "暗"
+  },
+  "camera": "pan right 沿卷轴 + push",
+  "action": null,
+  "lyric_line": 28,
+  "lyric_text": "谁定好规则谁写好剧本提纲",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "谁定好规则",
+   "pos": "宋体打字机逐字蹦出，带光标",
+   "size": "72 思源宋",
+   "red": "规则",
+   "extra": ""
+  },
+  "transition_in": "paper_tear",
+  "accents": [
+   {
+    "t": 117.795,
+    "fx": "cut-accent: paper_tear"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 10,
+   "gold": 8
+  },
+  "notes": "预副歌二：宋体打字机 + glitch"
+ },
+ {
+  "id": "S062",
+  "t0": 119.606,
+  "t1": 121.464,
+  "dur": 1.858,
+  "section": "pre2",
+  "size": "MS",
+  "subject": "牵线木偶：群像纸人身上连着朱红丝线，线向上汇聚到太上皇手指",
+  "layers": {
+   "fg": "红线",
+   "mg": "纸人木偶",
+   "bg": "太上皇手剪影"
+  },
+  "camera": "crane up 沿红线上升",
+  "action": null,
+  "lyric_line": 28,
+  "lyric_text": "谁定好规则谁写好剧本提纲",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "谁写好剧本提纲",
+   "pos": "字挂在红线上随线晃",
+   "size": "64",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 119.606,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 78,
+   "red": 18,
+   "gold": 4
+  },
+  "notes": "红绳母题反转：被操控"
+ },
+ {
+  "id": "S063",
+  "t0": 121.464,
+  "t1": 123.298,
+  "dur": 1.834,
+  "section": "pre2",
+  "size": "CU",
+  "subject": "天平变形为一只黑箱，金印与纸人被推入箱口",
+  "layers": {
+   "fg": "金币/印粒子",
+   "mg": "暗箱",
+   "bg": "暗"
+  },
+  "camera": "push 1.0→1.15 + glitch 位移",
+  "action": null,
+  "lyric_line": 29,
+  "lyric_text": "谁的正义成了交易的暗箱",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "谁的正义成了交易的",
+   "pos": "宋体，交易二字 RGB 错位",
+   "size": "64",
+   "red": "—",
+   "extra": "交易 金"
+  },
+  "transition_in": "match_cut(天平盘 → 箱口)",
+  "accents": [
+   {
+    "t": 121.464,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 121.98,
+    "fx": "「正」flash 1f(gold)"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 4,
+   "gold": 16
+  },
+  "notes": ""
+ },
+ {
+  "id": "S064",
+  "t0": 123.298,
+  "t1": 125.109,
+  "dur": 1.811,
+  "section": "pre2",
+  "size": "ECU",
+  "subject": "箱盖合上，黑屏闪烁故障帧，「暗箱」二字被盖进黑暗",
+  "layers": {
+   "fg": "故障条",
+   "mg": "箱盖",
+   "bg": "黑"
+  },
+  "camera": "punch-zoom + glitch frames",
+  "action": null,
+  "lyric_line": 29,
+  "lyric_text": "谁的正义成了交易的暗箱",
+  "lyric_style": {
+   "type": "shatter_out",
+   "text": "暗箱",
+   "pos": "居中",
+   "size": "260 思源宋",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "glitch_cut",
+  "accents": [
+   {
+    "t": 123.298,
+    "fx": "cut-accent: glitch_cut"
+   },
+   {
+    "t": 124.22,
+    "fx": "箱盖合 glitch-frame 3f"
+   }
+  ],
+  "palette": {
+   "ink": 96,
+   "red": 2,
+   "gold": 2
+  },
+  "notes": ""
+ },
+ {
+  "id": "S065",
+  "t0": 125.109,
+  "t1": 126.967,
+  "dur": 1.858,
+  "section": "pre2",
+  "size": "MCU",
+  "subject": "雨打在鬼屠脸侧剪影，马尾甩动，他不低头，缓慢抬起下颌",
+  "layers": {
+   "fg": "雨",
+   "mg": "鬼屠 MCU look_up",
+   "bg": "雨夜"
+  },
+  "camera": "push 1.0→1.12 + handheld 0.4",
+  "action": "look_up",
+  "lyric_line": 30,
+  "lyric_text": "我不低头不认命不信什么大局为上",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "我不低头 不认命",
+   "pos": "错落三层，每个「不」朱红逐拍落下",
+   "size": "不 180 其余 80",
+   "red": "不",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 125.109,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 126.14,
+    "fx": "「命」punch-zoom 1.05"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 10,
+   "gold": 2
+  },
+  "notes": ""
+ },
+ {
+  "id": "S066",
+  "t0": 126.967,
+  "t1": 128.778,
+  "dur": 1.811,
+  "section": "pre2",
+  "size": "LS",
+  "subject": "鬼屠 slash_up 连斩头顶红丝线，每个「不」一刀，丝线逐根崩断",
+  "layers": {
+   "fg": "断线飘落",
+   "mg": "鬼屠 slash_up×3",
+   "bg": "纸人木偶倒下"
+  },
+  "camera": "tilt up + shake at each slash",
+  "action": "slash_up",
+  "lyric_line": 30,
+  "lyric_text": "我不低头不认命不信什么大局为上",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "不信什么大局为上",
+   "pos": "大局为上 宋体被斩断",
+   "size": "80",
+   "red": "不",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe",
+  "accents": [
+   {
+    "t": 126.32,
+    "fx": "斩线"
+   },
+   {
+    "t": 126.967,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 127.0,
+    "fx": "斩线"
+   },
+   {
+    "t": 127.84,
+    "fx": "斩线"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 16,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S067",
+  "t0": 128.778,
+  "t1": 131.077,
+  "dur": 2.299,
+  "section": "pre2",
+  "size": "CU",
+  "subject": "雨点打在通红的刀身上瞬间蒸发，白汽升腾",
+  "layers": {
+   "fg": "蒸汽",
+   "mg": "刀身 heat glow",
+   "bg": "雨夜"
+  },
+  "camera": "slide along blade + heat-haze",
+  "action": "stand_wind",
+  "lyric_line": 31,
+  "lyric_text": "信这柄刀还在发烫",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "信这柄刀还在发烫",
+   "pos": "刀身火烧显字",
+   "size": "64 志莽行书",
+   "red": "发烫",
+   "extra": ""
+  },
+  "transition_in": "match_cut(丝线 → 刀身直线)",
+  "accents": [
+   {
+    "t": 128.778,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 129.52,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 72,
+   "red": 22,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S068",
+  "t0": 131.077,
+  "t1": 132.911,
+  "dur": 1.834,
+  "section": "pre2",
+  "size": "ECU",
+  "subject": "镜头钻进刃口反光，反光里闪电蓄能，画面亮度逐步拉高",
+  "layers": {
+   "fg": "电光",
+   "mg": "刃口反光",
+   "bg": "雷云"
+  },
+  "camera": "zoom 1.0→2.0 ease-in + shake 递增",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "zoom_through",
+  "accents": [
+   {
+    "t": 131.077,
+    "fx": "cut-accent: zoom_through"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 8,
+   "gold": 12
+  },
+  "notes": "riser 段"
+ },
+ {
+  "id": "S069",
+  "t0": 132.911,
+  "t1": 134.5,
+  "dur": 1.589,
+  "section": "pre2",
+  "size": "ELS",
+  "subject": "鬼屠高高跃起，闪电在背后炸开，剪影定格于空中",
+  "layers": {
+   "fg": "雨",
+   "mg": "鬼屠 leap 定格",
+   "bg": "闪电天幕"
+  },
+  "camera": "speed-ramp 1.0→0.1 freeze + crane up",
+  "action": "leap",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 132.911,
+    "fx": "cut-accent: flash_white"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 4,
+   "gold": 16
+  },
+  "notes": "副歌二前的悬停"
+ },
+ {
+  "id": "S070",
+  "t0": 134.5,
+  "t1": 135.651,
+  "dur": 1.151,
+  "section": "chorus2",
+  "size": "ECU",
+  "subject": "空中雨滴瞬间变红（血雨慢放），巨字「血」在雨幕中碎裂",
+  "layers": {
+   "fg": "红雨滴慢放",
+   "mg": "巨字 血",
+   "bg": "闪电黑天"
+  },
+  "camera": "push 1.0→1.08 + speed 0.3x",
+  "action": null,
+  "lyric_line": 32,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "shatter_out",
+   "text": "血",
+   "pos": "满屏后碎成雨滴",
+   "size": "700 志莽行书",
+   "red": "血",
+   "extra": ""
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 134.5,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 134.5,
+    "fx": "「血」ink-burst(red)+punch-zoom 1.06"
+   },
+   {
+    "t": 135.06,
+    "fx": "「冷」chroma-split 3px"
+   },
+   {
+    "t": 135.6,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 45,
+   "gold": 5
+  },
+  "notes": "副歌二：破。空间字 kinetic + 碎裂"
+ },
+ {
+  "id": "S071",
+  "t0": 135.651,
+  "t1": 136.557,
+  "dur": 0.906,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "鬼屠 land_kneel 落地，积水冲击波环形扩散，雨滴被弹起",
+  "layers": {
+   "fg": "溅起水环",
+   "mg": "鬼屠 land_kneel",
+   "bg": "雨夜战场"
+  },
+  "camera": "crane down + shake 16px at land",
+  "action": "land_kneel",
+  "lyric_line": 32,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "未冷",
+   "pos": "冲击波环上环绕",
+   "size": "120",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 135.651,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 136.13,
+    "fx": "落地 shock-ring + shake 16px"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 12,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S072",
+  "t0": 136.557,
+  "t1": 137.485,
+  "dur": 0.928,
+  "section": "chorus2",
+  "size": "LS",
+  "subject": "两侧重甲军阵同时冲锋，鬼屠起身拔刀",
+  "layers": {
+   "fg": "前景冲锋士兵虚焦掠过",
+   "mg": "鬼屠 draw_sword",
+   "bg": "两翼军阵"
+  },
+  "camera": "dolly in 快 + handheld 0.5",
+  "action": "draw_sword",
+  "lyric_line": 32,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "刀不放",
+   "pos": "三字从远处飞向镜头穿过",
+   "size": "80→600",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "occlusion(士兵掠过遮挡)",
+  "accents": [
+   {
+    "t": 136.557,
+    "fx": "cut-accent: occlusion"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 10,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S073",
+  "t0": 137.485,
+  "t1": 138.391,
+  "dur": 0.906,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "甩镜：鬼屠 spin_slash 一圈，三名士兵剪影同时断裂倒下",
+  "layers": {
+   "fg": "断枪碎片",
+   "mg": "鬼屠 spin_slash + 士兵",
+   "bg": "雨"
+  },
+  "camera": "whip-pan left + orbit 45°",
+  "action": "spin_slash",
+  "lyric_line": 33,
+  "lyric_text": "谁人来定正邪一方",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "谁人来",
+   "pos": "斜向错落随甩镜拖影",
+   "size": "100",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "whip_pan_blur",
+  "accents": [
+   {
+    "t": 137.485,
+    "fx": "cut-accent: whip_pan_blur"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 14,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S074",
+  "t0": 138.391,
+  "t1": 139.32,
+  "dur": 0.929,
+  "section": "chorus2",
+  "size": "CU",
+  "subject": "闪电一亮：太上皇剪影侧头，长发白丝在电光中闪现",
+  "layers": {
+   "fg": "雨",
+   "mg": "太上皇头部剪影",
+   "bg": "电光"
+  },
+  "camera": "push 1.0→1.1 + flash",
+  "action": null,
+  "lyric_line": 33,
+  "lyric_text": "谁人来定正邪一方",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "定",
+   "pos": "满屏 金",
+   "size": "600",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 138.391,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 138.88,
+    "fx": "「正」flash 1f(gold)"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 2,
+   "gold": 18
+  },
+  "notes": ""
+ },
+ {
+  "id": "S075",
+  "t0": 139.32,
+  "t1": 140.69,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "对角分屏：左鬼屠（朱红边光）右太上皇（金边光），一条斜刀线隔开",
+  "layers": {
+   "fg": "刀线",
+   "mg": "两剪影对峙",
+   "bg": "雨"
+  },
+  "camera": "split slide：两半反向平移 60px",
+  "action": null,
+  "lyric_line": 33,
+  "lyric_text": "谁人来定正邪一方",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "正邪一方",
+   "pos": "正在金侧 邪在红侧，沿刀线错位",
+   "size": "200",
+   "red": "邪",
+   "extra": "正 金"
+  },
+  "transition_in": "slash_wipe(对角)",
+  "accents": [
+   {
+    "t": 139.32,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 139.48,
+    "fx": "「邪」flash 1f(red)"
+   }
+  ],
+  "palette": {
+   "ink": 64,
+   "red": 18,
+   "gold": 18
+  },
+  "notes": "正邪二元递进：人物化"
+ },
+ {
+  "id": "S076",
+  "t0": 140.69,
+  "t1": 142.06,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "ELS",
+  "subject": "墙已高入云端，墙面密密麻麻刻满宋体律令（字砌成墙）",
+  "layers": {
+   "fg": "雨",
+   "mg": "字墙 text_wall",
+   "bg": "闪电云"
+  },
+  "camera": "crane up + tilt up 20°",
+  "action": null,
+  "lyric_line": 34,
+  "lyric_text": "若规则是铁壁铜墙",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "若规则是",
+   "pos": "墙面律令中被高亮的四字",
+   "size": "120",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 140.69,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 6,
+   "gold": 6
+  },
+  "notes": "墙母题递进：墙即文字"
+ },
+ {
+  "id": "S077",
+  "t0": 142.06,
+  "t1": 143.43,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "CU",
+  "subject": "仰拍字墙：砖即字，「铁壁铜墙」四字从墙面凸出逼近镜头",
+  "layers": {
+   "fg": "凸出字砖",
+   "mg": "字墙",
+   "bg": "黑"
+  },
+  "camera": "tilt up + push 1.0→1.2",
+  "action": null,
+  "lyric_line": 34,
+  "lyric_text": "若规则是铁壁铜墙",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "铁壁铜墙",
+   "pos": "字砖向镜头凸出 3D 透视",
+   "size": "260",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "match_cut(墙远景 → 同一墙面局部)",
+  "accents": [
+   {
+    "t": 142.06,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 4,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S078",
+  "t0": 143.43,
+  "t1": 144.823,
+  "dur": 1.393,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "鬼屠沿墙根疾奔，刀尖在墙上划出火星长线",
+  "layers": {
+   "fg": "火星长线",
+   "mg": "鬼屠 run",
+   "bg": "字墙"
+  },
+  "camera": "truck left 快 + handheld 0.6",
+  "action": "run",
+  "lyric_line": 34,
+  "lyric_text": "若规则是铁壁铜墙",
+  "lyric_style": null,
+  "transition_in": "whip_pan_blur",
+  "accents": [
+   {
+    "t": 143.43,
+    "fx": "cut-accent: whip_pan_blur"
+   },
+   {
+    "t": 143.94,
+    "fx": "「墙」shake 8px(低频)"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 10,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S079",
+  "t0": 144.823,
+  "t1": 145.728,
+  "dur": 0.905,
+  "section": "chorus2",
+  "size": "LS",
+  "subject": "鬼屠 leap 跃起 slash_up 自下而上劈墙，145.14 刀光贯穿全墙",
+  "layers": {
+   "fg": "碎砖",
+   "mg": "鬼屠 leap+slash_up",
+   "bg": "字墙"
+  },
+  "camera": "speed-ramp 0.2x at 145.1 → 2x + tilt up",
+  "action": "slash_up",
+  "lyric_line": 35,
+  "lyric_text": "那就劈开它看个天亮",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "那就劈开它",
+   "pos": "竖向斩断",
+   "size": "140",
+   "red": "劈",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 144.823,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 145.14,
+    "fx": "「劈」slash+shake 14px+flash"
+   },
+   {
+    "t": 145.14,
+    "fx": "劈 slash 全高 + flash + shake 16px"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 14,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S080",
+  "t0": 145.728,
+  "t1": 147.098,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "字墙从中裂成两半向两侧崩塌，字砖朝镜头炸飞（慢放）",
+  "layers": {
+   "fg": "飞向镜头的字砖",
+   "mg": "崩塌墙体",
+   "bg": "电光"
+  },
+  "camera": "speed-ramp 0.3x + pull 1.1→1.0",
+  "action": null,
+  "lyric_line": 35,
+  "lyric_text": "那就劈开它看个天亮",
+  "lyric_style": {
+   "type": "shatter_out",
+   "text": "它看个",
+   "pos": "跟字砖一起碎飞",
+   "size": "110",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "shatter",
+  "accents": [
+   {
+    "t": 145.728,
+    "fx": "cut-accent: shatter"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 8,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S081",
+  "t0": 147.098,
+  "t1": 148.492,
+  "dur": 1.394,
+  "section": "chorus2",
+  "size": "ELS",
+  "subject": "墙缺口后：天空被闪电照得惨白如昼（伪天亮），随即熄灭",
+  "layers": {
+   "fg": "雨",
+   "mg": "缺口剪影 + 鬼屠",
+   "bg": "闪电白天"
+  },
+  "camera": "push 1.0→1.06",
+  "action": "stand_wind",
+  "lyric_line": 35,
+  "lyric_text": "那就劈开它看个天亮",
+  "lyric_style": {
+   "type": "ink_bleed_in",
+   "text": "天亮",
+   "pos": "白光中墨字显出又被黑吞",
+   "size": "240",
+   "red": "—",
+   "extra": "闪烁 3 次"
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 147.098,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 147.28,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 147.74,
+    "fx": "「亮」bloom ramp 0.5s"
+   }
+  ],
+  "palette": {
+   "ink": 70,
+   "red": 2,
+   "gold": 28
+  },
+  "notes": "副歌二结论：只有闪电的伪天亮"
+ },
+ {
+  "id": "S082",
+  "t0": 148.492,
+  "t1": 149.397,
+  "dur": 0.905,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "鬼屠穿过缺口，碎石在身侧坠落",
+  "layers": {
+   "fg": "坠石",
+   "mg": "鬼屠 walk",
+   "bg": "墙洞"
+  },
+  "camera": "dolly back 后退跟拍",
+  "action": "walk",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "occlusion(坠石遮挡)",
+  "accents": [
+   {
+    "t": 148.492,
+    "fx": "cut-accent: occlusion"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 6,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S083",
+  "t0": 149.397,
+  "t1": 150.303,
+  "dur": 0.906,
+  "section": "chorus2",
+  "size": "CU",
+  "subject": "暗红腰带在暴风中狂舞（红绳母题）",
+  "layers": {
+   "fg": "雨",
+   "mg": "腰带布料",
+   "bg": "黑袍"
+  },
+  "camera": "handheld 0.5 + push",
+  "action": null,
+  "lyric_line": 36,
+  "lyric_text": "血未冷 骨未凉",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "血",
+   "pos": "右侧",
+   "size": "520",
+   "red": "血",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 149.397,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 149.7,
+    "fx": "「冷」chroma-split 3px"
+   }
+  ],
+  "palette": {
+   "ink": 70,
+   "red": 26,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S084",
+  "t0": 150.303,
+  "t1": 151.696,
+  "dur": 1.393,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "天空落下巨手阴影一掌拍下，鬼屠被震退 fall_back_recover 后立稳",
+  "layers": {
+   "fg": "尘浪",
+   "mg": "鬼屠 fall_back_recover",
+   "bg": "巨手剪影"
+  },
+  "camera": "shake 18px + pull 1.0→0.94",
+  "action": "fall_back_recover",
+  "lyric_line": 36,
+  "lyric_text": "血未冷 骨未凉",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "骨未凉",
+   "pos": "斜向错落",
+   "size": "130",
+   "red": "骨",
+   "extra": ""
+  },
+  "transition_in": "flash_red",
+  "accents": [
+   {
+    "t": 150.303,
+    "fx": "cut-accent: flash_red"
+   },
+   {
+    "t": 150.767,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 150.84,
+    "fx": "巨掌落 shake 18px"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 12,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S085",
+  "t0": 151.696,
+  "t1": 153.066,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "LS",
+  "subject": "巨印「是」「非」从天空接连砸下，鬼屠疾跑闪避",
+  "layers": {
+   "fg": "尘爆",
+   "mg": "鬼屠 run",
+   "bg": "天降方印"
+  },
+  "camera": "truck right + shake on each seal",
+  "action": "run",
+  "lyric_line": 37,
+  "lyric_text": "是非对错我自己扛",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "是非",
+   "pos": "印面即字",
+   "size": "300",
+   "red": "非",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 151.696,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 152.4,
+    "fx": "是 印落"
+   },
+   {
+    "t": 152.602,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 152.7,
+    "fx": "非 印落"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 16,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S086",
+  "t0": 153.066,
+  "t1": 153.972,
+  "dur": 0.906,
+  "section": "chorus2",
+  "size": "MS",
+  "subject": "鬼屠 slash_diag 两刀把「对」「错」两方巨印斩成两半",
+  "layers": {
+   "fg": "碎印",
+   "mg": "鬼屠 slash_diag",
+   "bg": "雨"
+  },
+  "camera": "whip tilt + punch-zoom",
+  "action": "slash_diag",
+  "lyric_line": 37,
+  "lyric_text": "是非对错我自己扛",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "对错",
+   "pos": "印裂字裂",
+   "size": "260",
+   "red": "错",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe",
+  "accents": [
+   {
+    "t": 153.066,
+    "fx": "cut-accent: slash_wipe"
+   }
+  ],
+  "palette": {
+   "ink": 78,
+   "red": 18,
+   "gold": 4
+  },
+  "notes": "印章母题递进：被斩"
+ },
+ {
+  "id": "S087",
+  "t0": 153.972,
+  "t1": 155.806,
+  "dur": 1.834,
+  "section": "chorus2",
+  "size": "LS",
+  "subject": "最大一方巨印压下，鬼屠举刀过顶硬扛，膝盖下沉，地面龟裂",
+  "layers": {
+   "fg": "碎石",
+   "mg": "鬼屠 raise_sword_sky 承重",
+   "bg": "巨印"
+  },
+  "camera": "crane down + slow push + shake 持续 6px",
+  "action": "raise_sword_sky",
+  "lyric_line": 37,
+  "lyric_text": "是非对错我自己扛",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "我自己扛",
+   "pos": "竖排在印侧",
+   "size": "120 志莽行书",
+   "red": "扛",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 153.972,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 82,
+   "red": 14,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S088",
+  "t0": 155.806,
+  "t1": 157.176,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "ELS",
+  "subject": "闪电在夜空中劈出一个「判」字形，被横向一刀划掉",
+  "layers": {
+   "fg": "雨",
+   "mg": "闪电字",
+   "bg": "黑天"
+  },
+  "camera": "tilt up + flash",
+  "action": null,
+  "lyric_line": 38,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "天不判",
+   "pos": "闪电写成的判",
+   "size": "560",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 155.806,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 155.96,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 156.7,
+    "fx": "「判」punch-zoom 1.10+flash_red 2f+shake 12px"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 4,
+   "gold": 10
+  },
+  "notes": ""
+ },
+ {
+  "id": "S089",
+  "t0": 157.176,
+  "t1": 158.546,
+  "dur": 1.37,
+  "section": "chorus2",
+  "size": "CU",
+  "subject": "刀横持如秤杆，雨珠沿刃面等距排列如刻度",
+  "layers": {
+   "fg": "雨珠",
+   "mg": "刀身 横",
+   "bg": "暗"
+  },
+  "camera": "slide along blade",
+  "action": "stand_wind",
+  "lyric_line": 38,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "我来量",
+   "pos": "刻度上的字",
+   "size": "90",
+   "red": "量",
+   "extra": ""
+  },
+  "transition_in": "match_cut(闪电横 → 刀身横)",
+  "accents": [
+   {
+    "t": 157.176,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 6,
+   "gold": 6
+  },
+  "notes": "刀=秤 母题预埋"
+ },
+ {
+  "id": "S090",
+  "t0": 158.546,
+  "t1": 159.475,
+  "dur": 0.929,
+  "section": "chorus2",
+  "size": "MCU",
+  "subject": "鬼屠后撤蓄力，刀拉至身后",
+  "layers": {
+   "fg": "—",
+   "mg": "鬼屠 MCU",
+   "bg": "雨"
+  },
+  "camera": "pull + speed-ramp 0.5x",
+  "action": "draw_sword",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 158.546,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 159.01,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 90,
+   "red": 6,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S091",
+  "t0": 159.475,
+  "t1": 160.38,
+  "dur": 0.905,
+  "section": "chorus2",
+  "size": "LS",
+  "subject": "spin_slash 横斩巨大天平：横梁断裂，两秤盘飞散",
+  "layers": {
+   "fg": "纸人飞散",
+   "mg": "天平断裂",
+   "bg": "雨夜"
+  },
+  "camera": "whip-pan + punch-zoom 1.1",
+  "action": "spin_slash",
+  "lyric_line": 39,
+  "lyric_text": "这一刀就是我的回答",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "这一刀就是",
+   "pos": "随天平一起断",
+   "size": "120",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe",
+  "accents": [
+   {
+    "t": 159.475,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 159.66,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   },
+   {
+    "t": 159.95,
+    "fx": "斩天平 slash + shake 16px"
+   }
+  ],
+  "palette": {
+   "ink": 78,
+   "red": 16,
+   "gold": 6
+  },
+  "notes": "天平母题：被斩断"
+ },
+ {
+  "id": "S092",
+  "t0": 160.38,
+  "t1": 161.309,
+  "dur": 0.929,
+  "section": "chorus2",
+  "size": "MCU",
+  "subject": "天平坠落，画面冻结、故障，切黑",
+  "layers": {
+   "fg": "故障",
+   "mg": "坠落秤盘",
+   "bg": "黑"
+  },
+  "camera": "freeze + glitch",
+  "action": null,
+  "lyric_line": 39,
+  "lyric_text": "这一刀就是我的回答",
+  "lyric_style": {
+   "type": "shatter_out",
+   "text": "我的回答",
+   "pos": "居中",
+   "size": "140",
+   "red": "答",
+   "extra": ""
+  },
+  "transition_in": "glitch_cut",
+  "accents": [
+   {
+    "t": 160.38,
+    "fx": "cut-accent: glitch_cut"
+   },
+   {
+    "t": 161.0,
+    "fx": "「答」punch-zoom 1.08+flash 2f(gold)"
+   },
+   {
+    "t": 161.0,
+    "fx": "答 glitch-frame 4f"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 10,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S093",
+  "t0": 161.309,
+  "t1": 162.679,
+  "dur": 1.37,
+  "section": "bridge",
+  "size": "ECU",
+  "subject": "全黑静默，一滴朱红墨滴入水面，涟漪扩散（声音空白处）",
+  "layers": {
+   "fg": "—",
+   "mg": "墨滴 + 涟漪",
+   "bg": "黑"
+  },
+  "camera": "push 1.0→1.03 极慢",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "fade_black",
+  "accents": [
+   {
+    "t": 161.309,
+    "fx": "cut-accent: fade_black"
+   }
+  ],
+  "palette": {
+   "ink": 96,
+   "red": 4,
+   "gold": 0
+  },
+  "notes": "Bridge 前的呼吸"
+ },
+ {
+  "id": "S094",
+  "t0": 162.679,
+  "t1": 164.978,
+  "dur": 2.299,
+  "section": "bridge",
+  "size": "ELS",
+  "subject": "画面反转为宣纸白色虚空，鬼屠是中心一个小墨点；宋体「什么叫」从天而降如雨",
+  "layers": {
+   "fg": "下落的宋体字",
+   "mg": "鬼屠小剪影",
+   "bg": "宣纸白"
+  },
+  "camera": "crane down 慢 + push 1.0→1.05",
+  "action": "stand_wind",
+  "lyric_line": 40,
+  "lyric_text": "什么叫大局什么叫牺牲什么叫忍让",
+  "lyric_style": {
+   "type": "char_rain",
+   "text": "什么叫大局",
+   "pos": "宋体字雨（新需求）",
+   "size": "字 40–90 随机",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "ink_bleed(墨涟漪扩成白)",
+  "accents": [
+   {
+    "t": 162.679,
+    "fx": "cut-accent: ink_bleed"
+   }
+  ],
+  "palette": {
+   "ink": 30,
+   "red": 2,
+   "gold": 0
+  },
+  "notes": "Bridge 色彩反转：白底黑墨（palette ink 为墨量）"
+ },
+ {
+  "id": "S095",
+  "t0": 164.978,
+  "t1": 167.253,
+  "dur": 2.275,
+  "section": "bridge",
+  "size": "MS",
+  "subject": "鬼屠在白空间中前行，脚边落下的字越积越厚如雪",
+  "layers": {
+   "fg": "近景落字",
+   "mg": "鬼屠 walk",
+   "bg": "白"
+  },
+  "camera": "orbit 0°→25° + truck",
+  "action": "walk",
+  "lyric_line": 40,
+  "lyric_text": "什么叫大局什么叫牺牲什么叫忍让",
+  "lyric_style": {
+   "type": "char_rain",
+   "text": "什么叫牺牲 什么叫忍让",
+   "pos": "堆积",
+   "size": "60",
+   "red": "牺牲",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 164.978,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 35,
+   "red": 4,
+   "gold": 0
+  },
+  "notes": ""
+ },
+ {
+  "id": "S096",
+  "t0": 167.253,
+  "t1": 169.088,
+  "dur": 1.835,
+  "section": "bridge",
+  "size": "LS",
+  "subject": "白空间中的天平：一人小剪影 vs 千人小剪影，竟然平衡",
+  "layers": {
+   "fg": "落字",
+   "mg": "天平 一人 vs 千人",
+   "bg": "白"
+  },
+  "camera": "dolly in + tilt",
+  "action": null,
+  "lyric_line": 41,
+  "lyric_text": "什么叫以一人换千人理所应当",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "以一人换千人",
+   "pos": "沿横梁",
+   "size": "80",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "match_cut(脚印圆 → 秤盘圆)",
+  "accents": [
+   {
+    "t": 167.253,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 6,
+   "gold": 0
+  },
+  "notes": ""
+ },
+ {
+  "id": "S097",
+  "t0": 169.088,
+  "t1": 171.363,
+  "dur": 2.275,
+  "section": "bridge",
+  "size": "CU",
+  "subject": "「理所应当」宋体方印连续盖下四次，把一人剪影盖住",
+  "layers": {
+   "fg": "印泥",
+   "mg": "印覆盖人影",
+   "bg": "白纸"
+  },
+  "camera": "push 1.0→1.1 + 每印 shake 6px",
+  "action": null,
+  "lyric_line": 41,
+  "lyric_text": "什么叫以一人换千人理所应当",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "理所应当",
+   "pos": "四次叠印",
+   "size": "300",
+   "red": "理所应当",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 169.088,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 169.38,
+    "fx": "印1"
+   },
+   {
+    "t": 169.6,
+    "fx": "印2"
+   },
+   {
+    "t": 169.82,
+    "fx": "印3"
+   },
+   {
+    "t": 170.06,
+    "fx": "印4"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 40,
+   "gold": 0
+  },
+  "notes": ""
+ },
+ {
+  "id": "S098",
+  "t0": 171.363,
+  "t1": 172.756,
+  "dur": 1.393,
+  "section": "bridge",
+  "size": "LS",
+  "subject": "白空间中太上皇巨影拔地而起（黑剪影），俯身指向下方",
+  "layers": {
+   "fg": "落字",
+   "mg": "太上皇巨影 point_down",
+   "bg": "白"
+  },
+  "camera": "crane down 仰拍 + push",
+  "action": null,
+  "lyric_line": 42,
+  "lyric_text": "若正义由你定义谁来定义你的罪状",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "若正义由你定义",
+   "pos": "宋体，从太上皇袖口垂下",
+   "size": "80",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "ink_bleed",
+  "accents": [
+   {
+    "t": 171.363,
+    "fx": "cut-accent: ink_bleed"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 2,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S099",
+  "t0": 172.756,
+  "t1": 174.591,
+  "dur": 1.835,
+  "section": "bridge",
+  "size": "MCU",
+  "subject": "反打：鬼屠举刀直指上方，刀尖顶着「罪状」二字",
+  "layers": {
+   "fg": "落字",
+   "mg": "鬼屠 raise_sword_sky 指向",
+   "bg": "白"
+  },
+  "camera": "push 1.0→1.15 + low angle",
+  "action": "raise_sword_sky",
+  "lyric_line": 42,
+  "lyric_text": "若正义由你定义谁来定义你的罪状",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "谁来定义你的罪状",
+   "pos": "罪状被刀尖挑破",
+   "size": "120 志莽行书",
+   "red": "罪状",
+   "extra": "字体切回手写 = 反问"
+  },
+  "transition_in": "match_cut(指尖 → 刀尖 同方向反打)",
+  "accents": [
+   {
+    "t": 172.756,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 14,
+   "gold": 0
+  },
+  "notes": ""
+ },
+ {
+  "id": "S100",
+  "t0": 174.591,
+  "t1": 176.425,
+  "dur": 1.834,
+  "section": "bridge",
+  "size": "LS",
+  "subject": "剪纸追忆：师兄、师姐、殷若、徒弟四个剪纸剪影排成一列，脚下开始起火",
+  "layers": {
+   "fg": "火星",
+   "mg": "四个剪纸剪影",
+   "bg": "白→暗"
+  },
+  "camera": "truck right 慢 + 背景逐渐变暗",
+  "action": null,
+  "lyric_line": 43,
+  "lyric_text": "谁又来为被牺牲的陪葬",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "谁又来为被牺牲的",
+   "pos": "每列在一个剪影旁",
+   "size": "70 马善政",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "smoke_through",
+  "accents": [
+   {
+    "t": 174.591,
+    "fx": "cut-accent: smoke_through"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 20,
+   "gold": 20
+  },
+  "notes": "情绪最低点：被牺牲的人。背景由白转灰"
+ },
+ {
+  "id": "S101",
+  "t0": 176.425,
+  "t1": 178.26,
+  "dur": 1.835,
+  "section": "bridge",
+  "size": "CU",
+  "subject": "剪纸烧成灰烬，火星托着灰往上升，镜头跟随上升",
+  "layers": {
+   "fg": "灰烬上升",
+   "mg": "燃烧边缘",
+   "bg": "暗"
+  },
+  "camera": "tilt up 跟火星 + speed 0.7x",
+  "action": null,
+  "lyric_line": 43,
+  "lyric_text": "谁又来为被牺牲的陪葬",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "陪葬",
+   "pos": "火烧显字后成灰飞散",
+   "size": "260",
+   "red": "陪葬",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 176.425,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 177.46,
+    "fx": "火光 bloom"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 22,
+   "gold": 18
+  },
+  "notes": ""
+ },
+ {
+  "id": "S102",
+  "t0": 178.26,
+  "t1": 180.094,
+  "dur": 1.834,
+  "section": "bridge",
+  "size": "ECU",
+  "subject": "灰烬落在鬼屠脸侧，他睁眼，眼中一线火光",
+  "layers": {
+   "fg": "飘落灰烬",
+   "mg": "眼部剪影 + 眼光",
+   "bg": "暗"
+  },
+  "camera": "push 1.0→1.25 极慢",
+  "action": "look_up",
+  "lyric_line": 44,
+  "lyric_text": "从今往后我的刀只听我主张",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "从今往后",
+   "pos": "竖排右侧",
+   "size": "90 志莽行书",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "match_cut(火星点 → 眼中光点)",
+  "accents": [
+   {
+    "t": 178.26,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 179.96,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 14,
+   "gold": 6
+  },
+  "notes": "转折：从这里开始反击"
+ },
+ {
+  "id": "S103",
+  "t0": 180.094,
+  "t1": 181.905,
+  "dur": 1.811,
+  "section": "bridge",
+  "size": "MS",
+  "subject": "鬼屠缓慢拔刀 draw_sword，刀身上刻字依次亮起",
+  "layers": {
+   "fg": "火星",
+   "mg": "鬼屠 draw_sword",
+   "bg": "暗"
+  },
+  "camera": "slide + speed-ramp 0.5x→1.2x",
+  "action": "draw_sword",
+  "lyric_line": 44,
+  "lyric_text": "从今往后我的刀只听我主张",
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "我的刀只听我主张",
+   "pos": "刀身",
+   "size": "64",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 180.094,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 80,
+   "red": 12,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S104",
+  "t0": 181.905,
+  "t1": 183.275,
+  "dur": 1.37,
+  "section": "bridge",
+  "size": "LS",
+  "subject": "前方升起宋体字墙「规矩」，层层叠叠",
+  "layers": {
+   "fg": "尘",
+   "mg": "字墙 text_wall",
+   "bg": "暗"
+  },
+  "camera": "push 1.0→1.1",
+  "action": null,
+  "lyric_line": 45,
+  "lyric_text": "谁定的规矩我偏要闯",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "谁定的规矩",
+   "pos": "字墙",
+   "size": "120 思源宋",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 181.905,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 86,
+   "red": 6,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S105",
+  "t0": 183.275,
+  "t1": 185.109,
+  "dur": 1.834,
+  "section": "bridge",
+  "size": "MS",
+  "subject": "鬼屠 run 正面冲向镜头，穿透字墙，「闯」巨字被他撞碎",
+  "layers": {
+   "fg": "碎字",
+   "mg": "鬼屠 run 正面",
+   "bg": "字墙碎"
+  },
+  "camera": "dolly back 快 + handheld 0.6 + zoom-blur",
+  "action": "run",
+  "lyric_line": 45,
+  "lyric_text": "谁定的规矩我偏要闯",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "我偏要闯",
+   "pos": "闯 满屏 → shatter_out",
+   "size": "600",
+   "red": "闯",
+   "extra": ""
+  },
+  "transition_in": "shatter",
+  "accents": [
+   {
+    "t": 183.275,
+    "fx": "cut-accent: shatter"
+   },
+   {
+    "t": 184.18,
+    "fx": "「闯」zoom-blur 3f+shake"
+   },
+   {
+    "t": 184.18,
+    "fx": "闯 碎裂 + shake 14px"
+   },
+   {
+    "t": 184.668,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 78,
+   "red": 16,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S106",
+  "t0": 185.109,
+  "t1": 186.503,
+  "dur": 1.394,
+  "section": "bridge",
+  "size": "ELS",
+  "subject": "仰拍苍穹，云层被风撕开旋转，雷光在云中游走",
+  "layers": {
+   "fg": "风",
+   "mg": "旋转云涡",
+   "bg": "雷光"
+  },
+  "camera": "roll 0→12° + crane up",
+  "action": null,
+  "lyric_line": 46,
+  "lyric_text": "天不判我来判",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "天不判",
+   "pos": "巨大竖排贯穿上下",
+   "size": "220 志莽行书",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "whip_pan_blur(上)",
+  "accents": [
+   {
+    "t": 185.109,
+    "fx": "cut-accent: whip_pan_blur"
+   },
+   {
+    "t": 185.26,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 185.574,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 186.02,
+    "fx": "「判」punch-zoom 1.10+flash_red 2f+shake 12px"
+   }
+  ],
+  "palette": {
+   "ink": 84,
+   "red": 8,
+   "gold": 8
+  },
+  "notes": ""
+ },
+ {
+  "id": "S107",
+  "t0": 186.503,
+  "t1": 188.337,
+  "dur": 1.834,
+  "section": "bridge",
+  "size": "LS",
+  "subject": "鬼屠 slash_h 横斩天空，刀光在云上刻出巨大朱红「判」字",
+  "layers": {
+   "fg": "刀光",
+   "mg": "鬼屠 slash_h",
+   "bg": "天空刻字"
+  },
+  "camera": "speed-ramp freeze 0.1x at 187.48 + punch 1.1",
+  "action": "slash_h",
+  "lyric_line": 46,
+  "lyric_text": "天不判我来判",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "我来判",
+   "pos": "判 以刀光笔画逐笔刻出（brush_write 速度 0.3s）",
+   "size": "700 志莽行书",
+   "red": "判",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe",
+  "accents": [
+   {
+    "t": 186.503,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 186.944,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 187.408,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 187.48,
+    "fx": "判：flash_red + shake 14px + freeze 6f"
+   },
+   {
+    "t": 187.94,
+    "fx": "「判」punch-zoom 1.10+flash_red 2f+shake 12px"
+   }
+  ],
+  "palette": {
+   "ink": 62,
+   "red": 32,
+   "gold": 6
+  },
+  "notes": "Bridge 高潮①"
+ },
+ {
+  "id": "S108",
+  "t0": 188.337,
+  "t1": 189.707,
+  "dur": 1.37,
+  "section": "bridge",
+  "size": "CU",
+  "subject": "时间静止：雨滴悬停空中，刀静立其中",
+  "layers": {
+   "fg": "悬停雨滴",
+   "mg": "刀身",
+   "bg": "暗"
+  },
+  "camera": "slow orbit 15°（bullet-time）",
+  "action": "stand_wind",
+  "lyric_line": 47,
+  "lyric_text": "刀不答我来答",
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "刀不答",
+   "pos": "悬停在雨滴间",
+   "size": "100",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 188.337,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 188.778,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 189.0,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   },
+   {
+    "t": 189.243,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 88,
+   "red": 6,
+   "gold": 6
+  },
+  "notes": "bullet-time"
+ },
+ {
+  "id": "S109",
+  "t0": 189.707,
+  "t1": 191.077,
+  "dur": 1.37,
+  "section": "bridge",
+  "size": "MS",
+  "subject": "spin_slash：悬停的雨滴全部被刀圈炸开成金色光点，「答」金色巨字",
+  "layers": {
+   "fg": "炸开光点",
+   "mg": "鬼屠 spin_slash",
+   "bg": "暗"
+  },
+  "camera": "orbit 60° + speed-ramp 0.2x→2x",
+  "action": "spin_slash",
+  "lyric_line": 47,
+  "lyric_text": "刀不答我来答",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "我来答",
+   "pos": "答 金色",
+   "size": "650 志莽行书",
+   "red": "—",
+   "extra": "答 金"
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 189.707,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 189.72,
+    "fx": "「答」punch-zoom 1.08+flash 2f(gold)"
+   },
+   {
+    "t": 190.148,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 191.22,
+    "fx": "答：flash(gold) + punch-zoom"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 10,
+   "gold": 30
+  },
+  "notes": "Bridge 高潮②"
+ },
+ {
+  "id": "S110",
+  "t0": 191.077,
+  "t1": 193.24,
+  "dur": 2.163,
+  "section": "bridge",
+  "size": "LS",
+  "subject": "鬼屠 raise_sword_sky，刀尖刺入云层，云层裂开，第一束金色晨光从缝中射下",
+  "layers": {
+   "fg": "体积光束",
+   "mg": "鬼屠 raise_sword_sky",
+   "bg": "裂开的云 + 金光"
+  },
+  "camera": "crane up 0→300px + push 1.0→1.15 ease-in",
+  "action": "raise_sword_sky",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 191.077,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 192.91,
+    "fx": "riser 顶点 bloom"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 6,
+   "gold": 34
+  },
+  "notes": "破晓的起点；最后 2 拍画面亮度拉满"
+ },
+ {
+  "id": "S111",
+  "t0": 193.24,
+  "t1": 194.281,
+  "dur": 1.041,
+  "section": "chorus3",
+  "size": "ECU",
+  "subject": "日光照上刃口，金色眩光横扫；巨字「血」朱红中带金边",
+  "layers": {
+   "fg": "镜头眩光 lens flare",
+   "mg": "刃口",
+   "bg": "朝霞"
+  },
+  "camera": "push 1.0→1.06 + flare sweep",
+  "action": null,
+  "lyric_line": 48,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "血未冷",
+   "pos": "血 巨字火烧，未冷小字",
+   "size": "血 600",
+   "red": "血",
+   "extra": "金边"
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 193.24,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 193.24,
+    "fx": "「血」ink-burst(red)+punch-zoom 1.06"
+   },
+   {
+    "t": 193.7,
+    "fx": "「冷」chroma-split 3px"
+   },
+   {
+    "t": 194.14,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 30,
+   "gold": 30
+  },
+  "notes": "副歌终：定。金色、火烧字、撕纸"
+ },
+ {
+  "id": "S112",
+  "t0": 194.281,
+  "t1": 195.651,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "LS",
+  "subject": "山巅鬼屠 raise_sword_sky，背后朝阳升起，光芒成放射线",
+  "layers": {
+   "fg": "飞云",
+   "mg": "鬼屠 raise_sword_sky",
+   "bg": "朝阳 + 光芒"
+  },
+  "camera": "crane up + pull 1.1→1.0",
+  "action": "raise_sword_sky",
+  "lyric_line": 48,
+  "lyric_text": "血未冷 刀不放",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "刀不放",
+   "pos": "朱印压在日轮中心",
+   "size": "300",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 194.281,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 194.723,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 195.187,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 16,
+   "gold": 34
+  },
+  "notes": "月→日 母题完成：刀指月 → 刀指日"
+ },
+ {
+  "id": "S113",
+  "t0": 195.651,
+  "t1": 197.486,
+  "dur": 1.835,
+  "section": "chorus3",
+  "size": "ELS",
+  "subject": "镜头掠过金色云海，晨光中字悬浮在云层间",
+  "layers": {
+   "fg": "近景云絮快速掠过",
+   "mg": "云海",
+   "bg": "朝阳"
+  },
+  "camera": "truck left 快 + crane down",
+  "action": null,
+  "lyric_line": 49,
+  "lyric_text": "世间从来没有什么天理昭彰",
+  "lyric_style": {
+   "type": "kinetic_track",
+   "text": "世间从来没有",
+   "pos": "字在云层不同深度",
+   "size": "100",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "smoke_through",
+  "accents": [
+   {
+    "t": 195.651,
+    "fx": "cut-accent: smoke_through"
+   },
+   {
+    "t": 196.557,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 4,
+   "gold": 46
+  },
+  "notes": ""
+ },
+ {
+  "id": "S114",
+  "t0": 197.486,
+  "t1": 199.32,
+  "dur": 1.834,
+  "section": "chorus3",
+  "size": "CU",
+  "subject": "金匾「天理昭彰」在晨光中裂开，碎屑剥落",
+  "layers": {
+   "fg": "碎屑",
+   "mg": "金匾",
+   "bg": "墙"
+  },
+  "camera": "push 1.0→1.15 + shake at 198.4",
+  "action": null,
+  "lyric_line": 49,
+  "lyric_text": "世间从来没有什么天理昭彰",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "什么天理昭彰",
+   "pos": "匾上四字裂开错位",
+   "size": "160 思源宋",
+   "red": "—",
+   "extra": "天理昭彰 金→墨"
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 197.486,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 197.7,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 198.391,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 198.856,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 6,
+   "gold": 34
+  },
+  "notes": ""
+ },
+ {
+  "id": "S115",
+  "t0": 199.32,
+  "t1": 200.69,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "MS",
+  "subject": "无数规则纸卷从高空垂下如帘，在晨风中翻飞",
+  "layers": {
+   "fg": "纸卷近景",
+   "mg": "纸帘",
+   "bg": "朝霞"
+  },
+  "camera": "dolly through 纸帘",
+  "action": null,
+  "lyric_line": 50,
+  "lyric_text": "若规则是谎言伪装",
+  "lyric_style": {
+   "type": "typewriter_brush",
+   "text": "若规则是",
+   "pos": "纸卷上的宋体",
+   "size": "72",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "occlusion(纸卷遮挡)",
+  "accents": [
+   {
+    "t": 199.32,
+    "fx": "cut-accent: occlusion"
+   },
+   {
+    "t": 199.784,
+    "fx": "kick: shake 5px + vignette pulse"
+   },
+   {
+    "t": 200.226,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 4,
+   "gold": 36
+  },
+  "notes": ""
+ },
+ {
+  "id": "S116",
+  "t0": 200.69,
+  "t1": 202.06,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "LS",
+  "subject": "纸帘后是太上皇巨影——镜头一转，发现巨影是纸糊的，边缘透光",
+  "layers": {
+   "fg": "纸边透光",
+   "mg": "纸糊太上皇",
+   "bg": "晨光"
+  },
+  "camera": "orbit 20° 揭示",
+  "action": null,
+  "lyric_line": 50,
+  "lyric_text": "若规则是谎言伪装",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "谎言",
+   "pos": "纸边火烧显字",
+   "size": "200",
+   "red": "谎言",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 200.69,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 56,
+   "red": 14,
+   "gold": 30
+  },
+  "notes": "权力被揭穿：只是纸"
+ },
+ {
+  "id": "S117",
+  "t0": 202.06,
+  "t1": 203.43,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "CU",
+  "subject": "纸糊巨影脸部从边缘燃起，烧穿后背后空无一物",
+  "layers": {
+   "fg": "火焰边缘",
+   "mg": "燃烧的纸",
+   "bg": "空"
+  },
+  "camera": "push 1.0→1.1",
+  "action": null,
+  "lyric_line": 50,
+  "lyric_text": "若规则是谎言伪装",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "伪装",
+   "pos": "居中",
+   "size": "240",
+   "red": "伪装",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 202.06,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 202.989,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 26,
+   "gold": 24
+  },
+  "notes": ""
+ },
+ {
+  "id": "S118",
+  "t0": 203.43,
+  "t1": 204.8,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "MS",
+  "subject": "鬼屠 slash_diag 交叉两刀，纸帘被撕成碎片",
+  "layers": {
+   "fg": "纸片",
+   "mg": "鬼屠 slash_diag",
+   "bg": "纸帘"
+  },
+  "camera": "whip-pan + shake",
+  "action": "slash_diag",
+  "lyric_line": 51,
+  "lyric_text": "那就撕碎它自己定规章",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "那就撕碎",
+   "pos": "撕裂边缘",
+   "size": "140",
+   "red": "撕碎",
+   "extra": ""
+  },
+  "transition_in": "paper_tear",
+  "accents": [
+   {
+    "t": 203.43,
+    "fx": "cut-accent: paper_tear"
+   },
+   {
+    "t": 203.72,
+    "fx": "「撕」paper-rip shake 10px"
+   },
+   {
+    "t": 203.72,
+    "fx": "撕 paper-rip"
+   },
+   {
+    "t": 203.98,
+    "fx": "「碎」glitch-frame 2f"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 16,
+   "gold": 24
+  },
+  "notes": ""
+ },
+ {
+  "id": "S119",
+  "t0": 204.8,
+  "t1": 205.729,
+  "dur": 0.929,
+  "section": "chorus3",
+  "size": "CU",
+  "subject": "纸片全部朝镜头飞来，慢放，金光透过纸片缝隙",
+  "layers": {
+   "fg": "飞向镜头纸片",
+   "mg": "鬼屠剪影",
+   "bg": "朝阳"
+  },
+  "camera": "speed-ramp 0.3x + push",
+  "action": null,
+  "lyric_line": 51,
+  "lyric_text": "那就撕碎它自己定规章",
+  "lyric_style": {
+   "type": "shatter_out",
+   "text": "它",
+   "pos": "纸片带字",
+   "size": "200",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "zoom_through(穿过纸片)",
+  "accents": [
+   {
+    "t": 204.8,
+    "fx": "cut-accent: zoom_through"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 8,
+   "gold": 42
+  },
+  "notes": ""
+ },
+ {
+  "id": "S120",
+  "t0": 205.729,
+  "t1": 207.3,
+  "dur": 1.571,
+  "section": "chorus3",
+  "size": "LS",
+  "subject": "鬼屠 sword_plant 刀插大地，朱红「我」字印以刀为中心盖在大地上",
+  "layers": {
+   "fg": "尘环",
+   "mg": "鬼屠 sword_plant",
+   "bg": "大地 + 朱印"
+  },
+  "camera": "crane up 俯拍",
+  "action": "sword_plant",
+  "lyric_line": 51,
+  "lyric_text": "那就撕碎它自己定规章",
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "自己定规章",
+   "pos": "大地即印面「鬼屠」朱印",
+   "size": "印 400 + 字 80",
+   "red": "自己",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 205.729,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 206.1,
+    "fx": "刀插地 shake 12px + 印盖"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 30,
+   "gold": 20
+  },
+  "notes": "印章母题完成：他自己盖印"
+ },
+ {
+  "id": "S121",
+  "t0": 207.3,
+  "t1": 208.469,
+  "dur": 1.169,
+  "section": "chorus3",
+  "size": "MCU",
+  "subject": "晨风中马尾与暗红腰带一同甩动，金色轮廓光（红绳母题收束）",
+  "layers": {
+   "fg": "金色光尘",
+   "mg": "鬼屠 MCU",
+   "bg": "朝阳虚焦"
+  },
+  "camera": "handheld 0.3 + push",
+  "action": "stand_wind",
+  "lyric_line": 52,
+  "lyric_text": "血未冷 骨未凉",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "血",
+   "pos": "左侧",
+   "size": "500",
+   "red": "血",
+   "extra": ""
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 207.3,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 207.3,
+    "fx": "「血」ink-burst(red)+punch-zoom 1.06"
+   },
+   {
+    "t": 208.36,
+    "fx": "「冷」chroma-split 3px"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 26,
+   "gold": 34
+  },
+  "notes": ""
+ },
+ {
+  "id": "S122",
+  "t0": 208.469,
+  "t1": 210.326,
+  "dur": 1.857,
+  "section": "chorus3",
+  "size": "LS",
+  "subject": "鬼屠从废墟中走出，两侧重甲军阵向两边分开让路、跪下",
+  "layers": {
+   "fg": "跪下的士兵前景",
+   "mg": "鬼屠 walk",
+   "bg": "朝阳"
+  },
+  "camera": "dolly back + crane up",
+  "action": "walk",
+  "lyric_line": 52,
+  "lyric_text": "血未冷 骨未凉",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "骨未凉",
+   "pos": "错落",
+   "size": "130",
+   "red": "骨",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 208.469,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 10,
+   "gold": 40
+  },
+  "notes": "群像递进：从阻挡到让路"
+ },
+ {
+  "id": "S123",
+  "t0": 210.326,
+  "t1": 211.696,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "MCU",
+  "subject": "左半屏金色：「对」巨字；鬼屠正面左侧",
+  "layers": {
+   "fg": "金尘",
+   "mg": "鬼屠半身",
+   "bg": "金"
+  },
+  "camera": "slide right 80px",
+  "action": null,
+  "lyric_line": 53,
+  "lyric_text": "对就是对错就是错何须伪装",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "对就是对",
+   "pos": "对 金 满左半屏",
+   "size": "560",
+   "red": "—",
+   "extra": "对 金"
+  },
+  "transition_in": "slash_wipe(竖)",
+  "accents": [
+   {
+    "t": 210.326,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 211.232,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 4,
+   "gold": 56
+  },
+  "notes": ""
+ },
+ {
+  "id": "S124",
+  "t0": 211.696,
+  "t1": 212.602,
+  "dur": 0.906,
+  "section": "chorus3",
+  "size": "MCU",
+  "subject": "右半屏朱红：「错」巨字；镜像构图",
+  "layers": {
+   "fg": "红尘",
+   "mg": "鬼屠半身镜像",
+   "bg": "红"
+  },
+  "camera": "slide left 80px",
+  "action": null,
+  "lyric_line": 53,
+  "lyric_text": "对就是对错就是错何须伪装",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "错就是错",
+   "pos": "错 朱 满右半屏",
+   "size": "560",
+   "red": "错",
+   "extra": ""
+  },
+  "transition_in": "match_cut(镜像构图对称)",
+  "accents": [
+   {
+    "t": 211.696,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 212.138,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 56,
+   "gold": 4
+  },
+  "notes": ""
+ },
+ {
+  "id": "S125",
+  "t0": 212.602,
+  "t1": 213.972,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "CU",
+  "subject": "鬼屠 turn_head 直视镜头，所有字碎裂飘散",
+  "layers": {
+   "fg": "碎字",
+   "mg": "鬼屠 turn_head",
+   "bg": "朝阳"
+  },
+  "camera": "push 1.0→1.15",
+  "action": "turn_head",
+  "lyric_line": 53,
+  "lyric_text": "对就是对错就是错何须伪装",
+  "lyric_style": {
+   "type": "shatter_out",
+   "text": "何须伪装",
+   "pos": "碎散",
+   "size": "120",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "shatter",
+  "accents": [
+   {
+    "t": 212.602,
+    "fx": "cut-accent: shatter"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 14,
+   "gold": 36
+  },
+  "notes": ""
+ },
+ {
+  "id": "S126",
+  "t0": 213.972,
+  "t1": 215.342,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "ELS",
+  "subject": "巨大日轮占据画面，「天」字在日轮中央被烧化",
+  "layers": {
+   "fg": "光芒",
+   "mg": "日轮 + 天",
+   "bg": "云"
+  },
+  "camera": "push 1.0→1.08 + crane",
+  "action": null,
+  "lyric_line": 54,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "天不判",
+   "pos": "天 在日中 被烧化",
+   "size": "600",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "iris_moon(日轮为光圈，呼应片头月)",
+  "accents": [
+   {
+    "t": 213.972,
+    "fx": "cut-accent: iris_moon"
+   },
+   {
+    "t": 214.58,
+    "fx": "「天」flash 1f(white 0.25)"
+   },
+   {
+    "t": 215.34,
+    "fx": "「判」punch-zoom 1.10+flash_red 2f+shake 12px"
+   }
+  ],
+  "palette": {
+   "ink": 30,
+   "red": 6,
+   "gold": 64
+  },
+  "notes": ""
+ },
+ {
+  "id": "S127",
+  "t0": 215.342,
+  "t1": 216.735,
+  "dur": 1.393,
+  "section": "chorus3",
+  "size": "CU",
+  "subject": "鬼屠侧脸剪影被晨光勾出金边（呼应片头月光侧脸）",
+  "layers": {
+   "fg": "光尘",
+   "mg": "侧脸剪影",
+   "bg": "朝阳虚焦"
+  },
+  "camera": "push 1.0→1.1",
+  "action": "look_up",
+  "lyric_line": 54,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "giant_char",
+   "text": "我",
+   "pos": "右侧",
+   "size": "600",
+   "red": "我",
+   "extra": ""
+  },
+  "transition_in": "match_cut(片头月下侧脸 → 晨光侧脸 同构图)",
+  "accents": [
+   {
+    "t": 215.342,
+    "fx": "cut-accent: match_cut"
+   },
+   {
+    "t": 215.806,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 14,
+   "gold": 36
+  },
+  "notes": "首尾呼应"
+ },
+ {
+  "id": "S128",
+  "t0": 216.735,
+  "t1": 217.82,
+  "dur": 1.085,
+  "section": "chorus3",
+  "size": "LS",
+  "subject": "鬼屠横刀于胸前，太阳恰好落在刀身正中——刀成天平横梁",
+  "layers": {
+   "fg": "光芒",
+   "mg": "横刀 + 鬼屠",
+   "bg": "朝阳在刀上"
+  },
+  "camera": "crane down 对齐 + slow push",
+  "action": "stand_wind",
+  "lyric_line": 54,
+  "lyric_text": "天不判 我来量",
+  "lyric_style": {
+   "type": "carved_on_blade",
+   "text": "来量",
+   "pos": "刀身",
+   "size": "100",
+   "red": "量",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 216.735,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 217.2,
+    "fx": "「量」punch-zoom 1.05"
+   },
+   {
+    "t": 217.641,
+    "fx": "kick: shake 5px + vignette pulse"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 10,
+   "gold": 50
+  },
+  "notes": "天平母题完成：他自己就是秤"
+ },
+ {
+  "id": "S129",
+  "t0": 217.82,
+  "t1": 219.011,
+  "dur": 1.191,
+  "section": "chorus3",
+  "size": "MCU",
+  "subject": "后撤蓄力，刀拉至身后，speed-ramp",
+  "layers": {
+   "fg": "—",
+   "mg": "鬼屠",
+   "bg": "朝阳"
+  },
+  "camera": "pull + speed-ramp 0.4x",
+  "action": "draw_sword",
+  "lyric_line": 55,
+  "lyric_text": "这一刀就是我的正道沧桑",
+  "lyric_style": {
+   "type": "scatter_stack",
+   "text": "这一刀",
+   "pos": "错落",
+   "size": "110",
+   "red": "刀",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 217.82,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 218.3,
+    "fx": "「刀」slash(白刃)+shake 6px"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 10,
+   "gold": 40
+  },
+  "notes": ""
+ },
+ {
+  "id": "S130",
+  "t0": 219.011,
+  "t1": 220.381,
+  "dur": 1.37,
+  "section": "chorus3",
+  "size": "LS",
+  "subject": "终极 spin_slash：整个画面沿刀线裂开，裂缝中金光喷涌",
+  "layers": {
+   "fg": "金光",
+   "mg": "鬼屠 spin_slash",
+   "bg": "裂开的画面"
+  },
+  "camera": "punch-zoom 1.12 + shake 18px",
+  "action": "spin_slash",
+  "lyric_line": 55,
+  "lyric_text": "这一刀就是我的正道沧桑",
+  "lyric_style": {
+   "type": "slash_cut",
+   "text": "就是我的",
+   "pos": "随画面一同裂开",
+   "size": "140",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "slash_wipe",
+  "accents": [
+   {
+    "t": 219.011,
+    "fx": "cut-accent: slash_wipe"
+   },
+   {
+    "t": 219.07,
+    "fx": "全幅斩 flash + shake 18px"
+   },
+   {
+    "t": 219.38,
+    "fx": "「正」flash 1f(gold)"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 14,
+   "gold": 46
+  },
+  "notes": "全片最大冲击"
+ },
+ {
+  "id": "S131",
+  "t0": 220.381,
+  "t1": 221.309,
+  "dur": 0.928,
+  "section": "chorus3",
+  "size": "ELS",
+  "subject": "拉远：刀线化为地平线，朝阳升起；「正道沧桑」大字逐笔书写",
+  "layers": {
+   "fg": "飞鸟/光尘",
+   "mg": "鬼屠小剪影",
+   "bg": "地平线 + 朝阳"
+  },
+  "camera": "pull 1.3→1.0 + crane up",
+  "action": "stand_wind",
+  "lyric_line": 55,
+  "lyric_text": "这一刀就是我的正道沧桑",
+  "lyric_style": {
+   "type": "brush_write",
+   "text": "正道沧桑",
+   "pos": "居中上方",
+   "size": "260 志莽行书",
+   "red": "—",
+   "extra": "正道 金"
+  },
+  "transition_in": "match_cut(刀线 → 地平线)",
+  "accents": [
+   {
+    "t": 220.381,
+    "fx": "cut-accent: match_cut"
+   }
+  ],
+  "palette": {
+   "ink": 40,
+   "red": 6,
+   "gold": 54
+  },
+  "notes": ""
+ },
+ {
+  "id": "S132",
+  "t0": 221.309,
+  "t1": 224.049,
+  "dur": 2.74,
+  "section": "outro",
+  "size": "LS",
+  "subject": "鬼屠背影沿山脊走向朝阳，衣袂与马尾飘动",
+  "layers": {
+   "fg": "前景松枝(呼应片头)",
+   "mg": "鬼屠背影 walk",
+   "bg": "朝阳群山"
+  },
+  "camera": "crane up 慢 + truck right",
+  "action": "walk",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "ink_bleed",
+  "accents": [
+   {
+    "t": 221.309,
+    "fx": "cut-accent: ink_bleed"
+   }
+  ],
+  "palette": {
+   "ink": 55,
+   "red": 5,
+   "gold": 40
+  },
+  "notes": "呼应片头 S002 构图，但已是白天"
+ },
+ {
+  "id": "S133",
+  "t0": 224.049,
+  "t1": 227.718,
+  "dur": 3.669,
+  "section": "outro",
+  "size": "MS",
+  "subject": "片名《谁定正邪》再现：金色火烧显字，随后一刀斩过，朱印「鬼屠」盖下",
+  "layers": {
+   "fg": "金尘",
+   "mg": "片名 志莽行书 240",
+   "bg": "朝阳山水"
+  },
+  "camera": "push 1.0→1.05 + punch at 225.0",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "burn_in",
+   "text": "谁定正邪",
+   "pos": "中心 y=0.42",
+   "size": "240",
+   "red": "邪",
+   "extra": "副标「鬼屠 · 第三季」思源宋 44；225.42 刀光斩过 + 朱印"
+  },
+  "transition_in": "flash_white",
+  "accents": [
+   {
+    "t": 224.049,
+    "fx": "cut-accent: flash_white"
+   },
+   {
+    "t": 225.42,
+    "fx": "刀光斩过片名 + 朱印 stamp"
+   }
+  ],
+  "palette": {
+   "ink": 45,
+   "red": 15,
+   "gold": 40
+  },
+  "notes": "片名再现"
+ },
+ {
+  "id": "S134",
+  "t0": 227.718,
+  "t1": 230.922,
+  "dur": 3.204,
+  "section": "outro",
+  "size": "ELS",
+  "subject": "出品信息①：群山雾中缓移，竖排署名逐列墨晕显出",
+  "layers": {
+   "fg": "雾带",
+   "mg": "署名竖排",
+   "bg": "晨光山水"
+  },
+  "camera": "truck left 慢 0→-120px",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "出品人 西几王传媒 / 编剧 / 导演 苏打",
+   "pos": "右侧两列竖排",
+   "size": "role 32 / name 68",
+   "red": "—",
+   "extra": "名下各盖小朱印"
+  },
+  "transition_in": "smoke_through",
+  "accents": [
+   {
+    "t": 227.718,
+    "fx": "cut-accent: smoke_through"
+   }
+  ],
+  "palette": {
+   "ink": 60,
+   "red": 8,
+   "gold": 32
+  },
+  "notes": ""
+ },
+ {
+  "id": "S135",
+  "t0": 230.922,
+  "t1": 234.127,
+  "dur": 3.205,
+  "section": "outro",
+  "size": "CU",
+  "subject": "出品信息②：刀缓缓入鞘 sheath，刃口最后一道金光",
+  "layers": {
+   "fg": "金尘",
+   "mg": "刀 sheath",
+   "bg": "暗"
+  },
+  "camera": "slide along blade",
+  "action": "sheath",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "美术设计 Cait / AI画师 沉溺　雪晴　索恩",
+   "pos": "左侧竖排",
+   "size": "32 / 60",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 230.922,
+    "fx": "cut-accent: hard_cut_on_beat"
+   }
+  ],
+  "palette": {
+   "ink": 70,
+   "red": 6,
+   "gold": 24
+  },
+  "notes": ""
+ },
+ {
+  "id": "S136",
+  "t0": 234.127,
+  "t1": 237.331,
+  "dur": 3.204,
+  "section": "outro",
+  "size": "ELS",
+  "subject": "出品信息③：日出全景，鸟群飞过",
+  "layers": {
+   "fg": "鸟群",
+   "mg": "远山",
+   "bg": "朝阳"
+  },
+  "camera": "crane up + pull 1.05→1.0",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "vertical_column",
+   "text": "音乐 西几王 / 鬼屠 · 第三季",
+   "pos": "居中竖排",
+   "size": "32 / 64",
+   "red": "—",
+   "extra": ""
+  },
+  "transition_in": "ink_bleed",
+  "accents": [
+   {
+    "t": 234.127,
+    "fx": "cut-accent: ink_bleed"
+   }
+  ],
+  "palette": {
+   "ink": 50,
+   "red": 6,
+   "gold": 44
+  },
+  "notes": ""
+ },
+ {
+  "id": "S137",
+  "t0": 237.331,
+  "t1": 239.166,
+  "dur": 1.835,
+  "section": "outro",
+  "size": "CU",
+  "subject": "刀完全入鞘，咔一声，朱印「鬼屠」盖在画面中心",
+  "layers": {
+   "fg": "—",
+   "mg": "刀鞘口 + 朱印",
+   "bg": "暗"
+  },
+  "camera": "push 1.0→1.04",
+  "action": "sheath",
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": {
+   "type": "stamp_seal",
+   "text": "鬼屠",
+   "pos": "中心",
+   "size": "印 220",
+   "red": "鬼屠",
+   "extra": ""
+  },
+  "transition_in": "hard_cut_on_beat",
+  "accents": [
+   {
+    "t": 237.331,
+    "fx": "cut-accent: hard_cut_on_beat"
+   },
+   {
+    "t": 238.24,
+    "fx": "入鞘 + 盖印 shake 4px"
+   }
+  ],
+  "palette": {
+   "ink": 70,
+   "red": 24,
+   "gold": 6
+  },
+  "notes": ""
+ },
+ {
+  "id": "S138",
+  "t0": 239.166,
+  "t1": 241.34,
+  "dur": 2.174,
+  "section": "outro",
+  "size": "ELS",
+  "subject": "墨从四角收拢，最终只剩中心一点朱红，淡出至黑",
+  "layers": {
+   "fg": "—",
+   "mg": "朱红一点",
+   "bg": "墨"
+  },
+  "camera": "push 1.0→1.02",
+  "action": null,
+  "lyric_line": null,
+  "lyric_text": null,
+  "lyric_style": null,
+  "transition_in": "iris_moon(反向收拢)",
+  "accents": [
+   {
+    "t": 239.166,
+    "fx": "cut-accent: iris_moon"
+   }
+  ],
+  "palette": {
+   "ink": 96,
+   "red": 4,
+   "gold": 0
+  },
+  "notes": "结束"
+ }
+]
