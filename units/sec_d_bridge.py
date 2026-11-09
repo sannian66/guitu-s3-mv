@@ -883,9 +883,18 @@ class S15_Hole(Shot):
         dark = 0.02 + 0.03 * cv2.resize(K.fbm(H // 8, W // 8, 151, base=3, octaves=4), (W, H))
         fr = np.stack([dark * 1.4, dark * 0.9, dark * 0.7], -1).astype(np.float32)
         fr = fr + np.exp(-(((x - 960) / 600) ** 2 + ((y - 980) / 260) ** 2))[..., None] * EMBER * 0.25
-        fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), (960, 935), D.fit_scale(self.sp, 430), expo=0.7, sat=0.7,
-                              tint=(1.08, 0.88, 0.72), rim=(1.0, 0.55, 0.2), rim_amt=3.5, rim_dir=(0.0, 1.0), wind=4)
+        fr, Aw = D.real_figure(fr, self.sp, t, D.feet(self.sp), (960, 935), D.fit_scale(self.sp, 430), expo=0.78, sat=0.7,
+                               tint=(1.08, 0.88, 0.72), rim=(1.0, 0.55, 0.2), rim_amt=3.5, rim_dir=(0.0, 1.0), wind=4)
+        # [r8] P1-3：洞缘火线从脚下 / 两侧打上来的暖橙轮廓光，勾出肩、发、刀柄；脚下一圈火光漫反射
+        fl = 0.85 + 0.15 * math.sin(t * 19) * math.sin(t * 7.3)
+        under = np.clip((y - 560) / 380, 0, 1)
+        fr = fr + (Aw * under * 0.16 * fl)[..., None] * EMBER
+        Ar = Aw * np.clip((905 - y) / 40, 0, 1)                    # 精灵底边（裁切线）不吃轮廓光
+        fr = R7.rim_edge(fr, Ar, (-0.92, -0.38), 3, 0.9 * fl, (1.0, 0.56, 0.2), glow=7, gamt=0.35)   # 左肩 / 发
+        fr = R7.rim_edge(fr, Ar, (0.92, -0.38), 3, 0.9 * fl, (1.0, 0.56, 0.2), glow=7, gamt=0.35)    # 右肩 / 刀柄
+        fr = fr + (Aw * np.clip((y - 700) / 200, 0, 1) * 0.12 * fl)[..., None] * EMBER                # 袍摆受火光
         fr = D.embers(fr, t, 15, n=120, amt=1.0, rise=(60, 200))
+        fr = D.embers(fr, t, 1515, n=70, area=(700, 420, 1220, 960), rise=(50, 160), amt=1.2)   # 余烬集中在人物周围
         # 纸：中心烧开
         R = 40 + 1500 * eo(cl((t - self.t0) / 1.1), 1.6)
         n = cv2.resize(D._tile(79)[:H // 4, :W // 4], (W, H))
