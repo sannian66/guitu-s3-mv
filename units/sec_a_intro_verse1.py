@@ -44,6 +44,17 @@ def cprog(li, ks, t, dur=0.22):
 def S(key, mode='cut', **kw): return A.src(key, mode, **kw)
 
 
+_BGF = {}
+def BG(ch, fname, size, p, seed=0, **kw):
+    """第十一棒（critic_A_r7 P0-1 逐字错读）：笔序书写时半截笔画会读成别的字（「不」先出一横 → 「一」）。
+    书写前 1/3 先铺一层整字淡墨影（墨影完整可读），笔触在墨影上走完 → 任何时刻屏上都是整字，不出残笔错读。"""
+    g = T.brush_glyph(ch, fname, size, p, seed=seed, **kw)
+    if p >= 0.999 or p <= 0: return g
+    k = (ch, fname, size, seed)
+    if k not in _BGF: _BGF[k] = T.brush_glyph(ch, fname, size, 1.0, seed=seed, **kw)
+    return np.maximum(g, _BGF[k] * 0.55 * eout(clamp01(p * 3.0)))
+
+
 class Shot:
     t0 = t1 = 0.0
     def u(self, t): return clamp01((t - self.t0) / (self.t1 - self.t0))
@@ -689,7 +700,7 @@ class V03(Shot):
             if p > 0: L.paste(T.ink_bleed_glyph(c, 'kai', s, p, seed=i, bleed=0.9), x, y + 20 * (1 - p), (0.92, 0.90, 0.86))
         for i, (c, k) in enumerate((('重', 2), ('甲', 3))):
             p = cprog(1, [k], t, 0.2)[0]
-            if p > 0: L.paste(T.brush_glyph(c, 'kai', 120, p, seed=i), 960, 330 + i * 130, (0.86, 0.12, 0.08) if c == '甲' else (0.92, 0.9, 0.86))
+            if p > 0: L.paste(BG(c, 'kai', 120, p, seed=i), 960, 330 + i * 130, (0.86, 0.12, 0.08) if c == '甲' else (0.92, 0.9, 0.86))
         out_ = clamp01((t - (self.t1 - 0.32)) / 0.18)                 # 第六棒：「五百」在 V04 遮挡物过画前退净（critic_A_r3 P1-14）
         fr = T.compose(fr, L, shadow=0.5, glow=0.15, opacity=0.82 * (1 - out_))
         return fr, 0
@@ -747,7 +758,7 @@ class V05(Shot):
         fr = RAIN.draw(fr, t, 0.5, angle=10, layers=(2,))
         p = cprog(1, [9], t, 0.16)[0]                                   # 第五棒：「寒」20.82 随刃口寒光落下（与 V06 同位，跨切点连续）
         if p > 0:
-            L = T.Layer(); L.paste(T.brush_glyph('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
+            L = T.Layer(); L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
             fr = T.compose(fr, L, shadow=0.8, shadow_sigma=16, glow=0.2)
         return fr, (3 if g > 0.5 else 0)
 
@@ -788,8 +799,8 @@ class V06(Shot):
         p = cprog(1, [9], t, 0.25)[0]
         if p > 0:
             L = T.Layer()
-            L.paste(T.brush_glyph('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
-            L.paste(T.brush_glyph('光', 'kai', 230, cprog(1, [10], t, 0.12)[0], seed=2), 1080, 760, (0.86, 0.12, 0.08))
+            L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
+            L.paste(BG('光', 'kai', 230, cprog(1, [10], t, 0.12)[0], seed=2), 1080, 760, (0.86, 0.12, 0.08))
             a2 = t - ts2
             if a2 < 0:
                 fr = T.compose(fr, L, shadow=0.7, glow=0.2 + 0.9 * lit, glow_color=(0.7, 0.85, 1.0))
@@ -1005,7 +1016,7 @@ class V09(Shot):
             for i, (c, p) in enumerate(zip(txt, cprog(3, ks, t, 0.22))):
                 if p <= 0: continue
                 red = c in '人命'
-                g_ = T.brush_glyph(c, 'kai', 92, p, seed=30 + i + ks[0])
+                g_ = BG(c, 'kai', 92, p, seed=30 + i + ks[0])
                 (Lr if red else L).paste(g_, x0, y0 + 46 + i * 98, (0.98, 0.22, 0.12) if red else (0.96, 0.93, 0.86))
         fr = T.compose(fr, L, shadow=0.85, shadow_sigma=12, glow=0.15)
         fr = T.compose(fr, Lr, shadow=0.9, shadow_sigma=12, outline=2, outline_color=(1.0, 0.78, 0.40), glow=0.35, glow_color=(0.9, 0.15, 0.06))
@@ -1213,7 +1224,7 @@ class V12(Shot):
             fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
             fr = K.sparks(fr, t, 31, (1200, 620), n=60, life=0.6, speed=(200, 800), dirc=(1, -0.4), spread=1.0, grav=1200, area=(60, 60), amt=0.8, t0=ts, burst=True)
         L = T.Layer(); p = cprog(4, [1], t, 0.16)[0]
-        if p > 0: L.paste(T.brush_glyph('杀', 'kai', 360, p, seed=4), 330, 400, (0.88, 0.10, 0.07))
+        if p > 0: L.paste(BG('杀', 'kai', 360, p, seed=4), 330, 400, (0.88, 0.10, 0.07))
         fr = T.compose(fr, L, shadow=0.6, glow=0.45, glow_color=(0.9, 0.1, 0.06))
         return fr, (5 if 0 <= a < 0.1 else 0)
 
@@ -1694,7 +1705,9 @@ class V21(Shot):
         L = T.Layer()
         p = cprog(7, [8], t, 0.12)[0]
         tf = CT(7, 8)
-        if t < tf:                                                                      # 第八棒（P1-6）：转场斩缝里就露出「锋」——随刀势自右滑入，42.80 落定
+        if t < tf - 0.14:                                                               # 第十一棒（P0-1）：斩缝里不再露半截「锋」（缝里残块读不出字）→ 42.70 前不出字
+            pass
+        elif t < tf:                                                                    # 第八棒（P1-6）：转场斩缝里就露出「锋」——随刀势自右滑入，42.80 落定
             s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
             T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=0.9, blur=10 * math.sin(math.pi * s_))
         elif p > 0:
@@ -1861,8 +1874,9 @@ LY_TXT = {0: '长夜压在我刀锋之上', 1: '五百重甲拦不住一道寒�
 # (行, [(字序, 字号, 颜色)], 中心 x, 基线 y, 退场秒, 点亮扫光)
 _Wt, _R, _G = (0.95, 0.93, 0.88), (0.86, 0.12, 0.08), (1.0, 0.78, 0.40)
 LY2 = [
-    (0, [(0, 230, _Wt), (1, 230, _Wt)], 560, 470, 17.00, False),                                   # 「长夜」压在乌云下
-    (0, [(k, (230 if k in (5, 6) else 132), (_R if k == 5 else (_G if k == 6 else _Wt))) for k in range(2, 9)], 1200, 400, 17.92, False),   # 第九棒（P1-3）：「刀锋」230 与「长夜」同级，其余 132   # 第八棒（P1-5）：压在我「刀锋」之上 84→100/150，进主词体系
+    # 第十一棒（critic_A_r7 P0-1）：原「长夜」与「压在我刀锋之上」两组分开排，「压」落在「夜」字底下被盖住 → 16.85 读成「长夜在我刀」。
+    #   整句并成一行、按歌词顺序从左到右逐字排开；17.70 起整句统一淡出（0.20s），17.90 前退净，不与 V03「五百」同屏
+    (0, [(k, (230 if k in (0, 1, 5, 6) else 132), (_R if k == 5 else (_G if k == 6 else _Wt))) for k in range(0, 9)], 960, 440, 17.75, False),   # 第九棒（P1-3）：「刀锋」230 与「长夜」同级，其余 132   # 第八棒（P1-5）：压在我「刀锋」之上 84→100/150，进主词体系
     (1, [(4, 190, _Wt), (5, 190, _Wt), (6, 190, _R), (7, 90, _Wt), (8, 90, _Wt)], 1380, 330, 20.78, False),   # 第七棒：移到右上袍面暗区，不压拳头 # 拦不住·一道（第五棒：移到上方天幕，21.13 前退净，给 20.82「寒」让下方）
     (2, [(0, 190, _Wt), (1, 190, _Wt), (2, 190, _G), (3, 190, _G)], 960, 900, 23.44, False),        # 谁在高处（自殿檐压下）
     (2, [(4, 96, _Wt), (5, 96, _Wt), (6, 96, _Wt)], 1580, 820, 24.40, False),                       # 定对错（第七棒：后景脸已去，落在右下屏风暗部，不压人）
@@ -1871,7 +1885,7 @@ LY2 = [
     (6, [(0, 120, _Wt), (1, 220, _R), (2, 220, _R)], 600, 905, 37.90, False),   # 第七棒：38.30 前退净，不与「由权势」叠成残字   # 第六棒：挨着金光里的巨印剪影                       # 若「正义」
     (6, [(3, 80, _Wt), (4, 140, _G), (5, 140, _G), (6, 80, _Wt), (7, 80, _Wt)], 960, 925, 39.85, False),  # 由「权势」执掌（第六棒：离开印面，放到下三分之一）
     (7, [(0, 160, _Wt), (1, 160, _Wt), (2, 180, _G), (3, 180, _G), (4, 96, _Wt), (5, 180, _R), (6, 180, _R), (7, 96, _Wt)],
-     730, 300, 42.40, True),   # 第七棒：中心 640→730，首字「那」不出左边画                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
+     730, 300, 42.48, True),   # 第十一棒：42.40→42.48 + 0.15s 等量淡出，「的」(42.36) 完整露出后 42.63 切点前退净   # 第七棒：中心 640→730，首字「那」不出左边画                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
 ]
 
 
@@ -1881,7 +1895,7 @@ def lyrics(fr, t):
         if li == 2 and chars[0][0] == 0: t_on = max(t_on, V(22.52))          # 第五棒：「谁在高处」等 V06「寒光」切走后再落（不叠团）
         if li == 6 and chars[0][0] == 3: t_on = max(t_on, V(38.30))          # 第六棒：「由权势执掌」等 V16「若正义」切走后再落
         if not (t_on <= t < t_out + 0.4): continue
-        out = clamp01((t - t_out) / 0.35)
+        out = clamp01((t - t_out) / (0.15 if li in (0, 7) else 0.25))
         adv = [s * 1.04 for (_, s, _) in chars]
         x = cx - sum(adv) / 2
         L = T.Layer(); pmax = 0.0; big = max(s for (_, s, _) in chars)
@@ -1893,7 +1907,7 @@ def lyrics(fr, t):
                 cxx = x + a / 2; cyy = by - s / 2
                 if s >= 150:
                     pop = 1 + 0.12 * math.exp(-max(0, t - CT(li, k)) / 0.09) * (t >= CT(li, k))
-                    g = T.brush_glyph(LY_TXT[li][k], 'kai', s, p, seed=li * 13 + k)
+                    g = BG(LY_TXT[li][k], 'kai', s, p, seed=li * 13 + k)
                     if pop > 1.001: g = cv2.resize(g, None, fx=pop, fy=pop)
                     L.paste(g, cxx, cyy, c)
                 else:
@@ -1903,9 +1917,9 @@ def lyrics(fr, t):
                     if 0 <= a_ < 0.5: fr = A.glow(fr, (cxx, cyy), s * 0.9, 0.5 * math.exp(-a_ / 0.15), (1.0, 0.8, 0.5))
             x += a
         if pmax <= 0: continue
-        if out > 0:
-            nz = cv2.resize(A.ink_noise(li * 3 + 7, 256), (W, H))
-            L.A *= np.clip((nz - out * 1.15) * 5 + 0.5, 0, 1)
+        if out > 0:                     # 第十一棒（P0-1「乱世」→「乱七」）：退场不再用墨噪蚀字（会把「世」蚀成「七」）→ 整句等量淡出 + 上浮虚化，每字始终完整
+            L.A *= (1 - eout(out))
+            if out > 0.05: L.A = cv2.GaussianBlur(L.A, (0, 0), 0.5 + 5 * out)
         # 暗衬条：基线下沿到字顶的柔边暗带（只压字背后，让字在任何底上都可读）
         w_ = sum(adv) + 80; bx0 = int(cx - w_ / 2); bx1 = int(cx + w_ / 2)
         band = np.zeros((H // 4, W // 4), np.float32)

@@ -55,8 +55,13 @@ def piying_sprite(seed, h=300):
     # 颈
     poly([(-0.018, 0.17), (0.022, 0.17), (0.028, 0.215), (-0.022, 0.215)], (0.95, 0.82, 0.62))
     # 头：侧脸（额-鼻-唇-下巴轮廓）
+    # 第十二棒（critic_C_r6 P1②）：脸谱 3 种 —— 0 生（空脸镂空，只留眉眼唇）/ 1 净（朱红实脸，刻眼刻眉）/ 2 末（墨色实脸 + 髯口）
+    ftype = int((seed * 5 + 1) % 3)
+    fcol = ((0.97, 0.86, 0.66), (0.78, 0.20, 0.10), (0.22, 0.17, 0.14))[ftype]
     face = poly([(-0.045, 0.085), (0.035, 0.085), (0.05, 0.115), (0.062, 0.135), (0.048, 0.142), (0.052, 0.158), (0.040, 0.165),
-                 (0.034, 0.185), (-0.01, 0.19), (-0.05, 0.16), (-0.058, 0.12)], (0.97, 0.86, 0.66))
+                 (0.034, 0.185), (-0.01, 0.19), (-0.05, 0.16), (-0.058, 0.12)], fcol)
+    if ftype == 2:   # 髯口（三绺长须，从唇下垂到胸前）
+        poly([(0.005, 0.172), (0.045, 0.170), (0.05, 0.25), (0.03, 0.33), (0.012, 0.30), (-0.005, 0.24)], (0.10, 0.08, 0.07))
     if hat == 0:     # 高冠（帽翅后飘）
         poly([(-0.06, 0.095), (-0.05, 0.035), (0.0, 0.0), (0.045, 0.03), (0.048, 0.092)], pal[0])
         poly([(-0.05, 0.05), (-0.16, 0.025), (-0.17, 0.045), (-0.055, 0.075)], pal[0])
@@ -97,31 +102,59 @@ def piying_sprite(seed, h=300):
     limb((-0.04, 0.235), (-0.04 + 0.12 * math.cos(b1) * 0.6, 0.235 + 0.12 * math.sin(b1)), 0.028, 0.034, tuple(np.asarray(pal[1]) * 0.7))
     # ---- 镂空：脸（空脸只留眼眉线）、袍面圆钱纹 + 菱纹、冠上一排圆孔
     cut = np.zeros((hh, w), np.float32)
-    fm = cv2.erode((face > 0.5).astype(np.uint8), np.ones((int(0.012 * hh), int(0.012 * hh)), np.uint8)).astype(np.float32)
-    cut = np.maximum(cut, fm)
     keep = np.zeros_like(cut)
-    cv2.line(keep, tuple(P(0.012, 0.118)), tuple(P(0.040, 0.116)), 1.0, max(2, int(0.006 * hh)), cv2.LINE_AA)    # 眉
-    cv2.ellipse(keep, tuple(P(0.028, 0.130)), (int(0.013 * hh), int(0.0045 * hh)), -4, 0, 360, 1.0, -1, cv2.LINE_AA)  # 眼
-    cv2.line(keep, tuple(P(0.020, 0.170)), tuple(P(0.036, 0.168)), 1.0, max(2, int(0.004 * hh)), cv2.LINE_AA)    # 唇
-    sp = 0.056
-    for gy in np.arange(0.25, 0.89, sp):
-        for gx in np.arange(-0.17, 0.17, sp):
+    lw = max(2, int(0.0042 * hh))
+    if ftype == 0:
+        fm = cv2.erode((face > 0.5).astype(np.uint8), np.ones((int(0.012 * hh), int(0.012 * hh)), np.uint8)).astype(np.float32)
+        cut = np.maximum(cut, fm)
+        cv2.line(keep, tuple(P(0.012, 0.118)), tuple(P(0.040, 0.116)), 1.0, max(2, int(0.006 * hh)), cv2.LINE_AA)    # 眉
+        cv2.ellipse(keep, tuple(P(0.028, 0.130)), (int(0.013 * hh), int(0.0045 * hh)), -4, 0, 360, 1.0, -1, cv2.LINE_AA)  # 眼
+        cv2.line(keep, tuple(P(0.020, 0.170)), tuple(P(0.036, 0.168)), 1.0, max(2, int(0.004 * hh)), cv2.LINE_AA)    # 唇
+    else:            # 实脸：刻出眼（细长杏眼）、挑眉、鼻翼线 → 光从刻缝透出来
+        cv2.ellipse(cut, tuple(P(0.026, 0.128)), (int(0.014 * hh), int(0.004 * hh)), -8, 0, 360, 1.0, -1, cv2.LINE_AA)
+        cv2.line(cut, tuple(P(0.004, 0.118)), tuple(P(0.044, 0.108)), 1.0, lw, cv2.LINE_AA)
+        cv2.line(cut, tuple(P(0.044, 0.140)), tuple(P(0.036, 0.152)), 1.0, lw, cv2.LINE_AA)
+        if ftype == 1:   # 净：额上一道刻花
+            cv2.ellipse(cut, tuple(P(0.0, 0.100)), (int(0.02 * hh), int(0.007 * hh)), 0, 180, 360, 1.0, lw, cv2.LINE_AA)
+    # 袍面镂空：细刻线花纹（卷云纹 / 菱格 / 回纹带），不是圆点 —— 幕光从刻缝里透出来
+    pat = int(seed % 2)
+    body = np.zeros((hh, w), np.float32)
+    body = np.maximum(body, (upper > 0.5) * 1.0); body = np.maximum(body, (lower > 0.5) * 1.0)
+    body = body * (1 - (hem > 0.5))
+    inner = cv2.erode(body.astype(np.uint8), np.ones((int(0.016 * hh),) * 2, np.uint8)).astype(np.float32)
+    pm = np.zeros((hh, w), np.float32)
+    def cloud(c, rad, sgn):                        # 卷云：1.6 圈的阿基米德螺线
+        q = np.linspace(0, 1, 40); ang = sgn * q * 10.0
+        pts = np.stack([c[0] + np.cos(ang) * rad * (0.2 + 0.8 * q), c[1] + np.sin(ang) * rad * (0.2 + 0.8 * q)], 1)
+        cv2.polylines(pm, [pts.astype(np.int32)], False, 1.0, lw, cv2.LINE_AA)
+    def lattice(sp_):                              # 菱格（斜十字刻线）
+        for k_ in range(-30, 60):
+            o = k_ * sp_ * hh
+            cv2.line(pm, (int(o), 0), (int(o + hh), hh), 1.0, lw, cv2.LINE_AA)
+            cv2.line(pm, (int(o), hh), (int(o + hh), 0), 1.0, lw, cv2.LINE_AA)
+    zone_lo = np.zeros_like(pm); zone_up = np.zeros_like(pm)
+    zone_lo[int(0.47 * hh):] = 1; zone_up[:int(0.41 * hh)] = 1
+    pm_c = np.zeros_like(pm); pm_l = np.zeros_like(pm)
+    pm[:] = 0; sp = 0.062
+    for gy in np.arange(0.22, 0.88, sp):
+        for gx in np.arange(-0.20, 0.20, sp):
             ox = (sp / 2) if int(round(gy / sp)) % 2 else 0
-            x, y = gx + ox, gy
-            c = tuple(P(x, y))
-            if not (0 <= c[0] < w and 0 <= c[1] < hh): continue
-            inside = (upper[c[1], c[0]] > 0.5 and y < 0.40) or (lower[c[1], c[0]] > 0.5 and y > 0.47)
-            if not inside: continue
-            if y < 0.80 or (int(gx / sp) % 2 == 0):                 # 圆钱纹：环形镂空 + 中心方孔留皮
-                cv2.circle(cut, c, int(0.017 * hh), 1.0, -1, cv2.LINE_AA)
-                cv2.circle(keep, c, int(0.0095 * hh), 1.0, -1, cv2.LINE_AA)
-                q = int(0.003 * hh); cv2.rectangle(cut, (c[0] - q, c[1] - q), (c[0] + q, c[1] + q), 1.0, -1)
-            else:                                                       # 菱纹
-                d = 0.014 * hh
-                pts = np.array([[c[0], c[1] - d], [c[0] + d * 0.7, c[1]], [c[0], c[1] + d], [c[0] - d * 0.7, c[1]]], np.int32)
-                cv2.fillPoly(cut, [pts], 1.0, cv2.LINE_AA)
-    for k in range(4):
-        cv2.circle(cut, tuple(P(-0.03 + k * 0.022, 0.06)), int(0.007 * hh), 1.0, -1, cv2.LINE_AA)
+            cloud(P(gx + ox, gy), 0.022 * hh, 1 if (int(round(gx / sp)) % 2) else -1)
+    pm_c[:] = pm; pm[:] = 0; lattice(0.034); pm_l[:] = pm
+    if pat == 0: pm = pm_c * zone_lo + pm_l * zone_up
+    else: pm = pm_l * zone_lo + pm_c * zone_up
+    cut = np.maximum(cut, pm * inner)
+    # 前襟 / 袍褶：几道长刻线顺衣褶走（一笔贯穿，增加皮料感）
+    for k_ in range(3):
+        x_ = -0.09 + 0.07 * k_
+        cv2.line(cut, tuple(P(x_ * 0.4, 0.50)), tuple(P(x_, 0.83)), 1.0, lw, cv2.LINE_AA)
+    # 下摆缘边：一排小菱孔
+    for gx in np.arange(-0.17, 0.17, 0.03):
+        c = P(gx, 0.875); d = 0.009 * hh
+        if 0 <= c[0] < w and 0 <= c[1] < hh and hem[c[1], c[0]] > 0.5:
+            pts = np.array([[c[0], c[1] - d], [c[0] + d * 0.7, c[1]], [c[0], c[1] + d], [c[0] - d * 0.7, c[1]]], np.int32)
+            cv2.fillPoly(cut, [pts], 1.0, cv2.LINE_AA)
+    cut = cut * (A > 0.5)
     cut = np.clip(cut - keep, 0, 1)
     A = A * (1 - cut)
     # 皮边：外轮廓与镂空边一圈深色不透光（刻刀边）
