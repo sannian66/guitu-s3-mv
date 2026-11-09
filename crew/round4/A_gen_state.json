@@ -179,9 +179,10 @@
   "slash_coil": [
    {
     "task_id": "d6b37bc0-cad6-462a-aa95-6730b79d19f7",
-    "status": "running",
+    "status": "completed",
     "pts": 3,
-    "file": null
+    "file": "/workspace/work/a_cands/d6b37bc0-cad6-462a-aa95-6730b79d19f7_0.png",
+    "accepted": true
    }
   ]
  }

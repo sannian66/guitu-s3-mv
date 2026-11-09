@@ -272,7 +272,7 @@ class A06(Shot):
         my = 330 + 70 * cr
         fr = A.moon(fr, 1480, my, 150, 0.95, col=(1.0, 0.42, 0.32), halo=0.6 + 0.3 * bp)          # 血月：被云腰斩
         fr = A.glow(fr, (1480, my), 520, 0.22 + 0.18 * bp, (0.6, 0.12, 0.08))
-        fr = A.clouds(fr, t, 21, speed=(-150, 0), y0=150, y1=620, amt=0.95, col=(0.10, 0.08, 0.09), light=(1480, my), light_r=380,
+        fr = A.clouds(fr, t - 7.0, 21, speed=(-150, 0), y0=150, y1=620, amt=0.95, col=(0.10, 0.08, 0.09), light=(1480, my), light_r=380,
                       light_col=(1.0, 0.45, 0.32), thr=0.45)
         lt = t - V(9.68)
         if 0 <= lt < 0.5:                                                                # 云内赤色闪电（一拍）
