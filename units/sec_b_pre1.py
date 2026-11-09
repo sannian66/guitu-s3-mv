@@ -611,7 +611,7 @@ class P09(Shot):
         if self.T_HIT <= t < self.T_HIT + 2 / 30 - 1e-3:                      # 撞击：色散错位（无整屏色闪）
             a_ = 14 if t < self.T_HIT + 1 / 30 else 6
             fr = np.stack([np.roll(fr[..., 0], a_, 1), fr[..., 1], np.roll(fr[..., 2], -a_, 1)], -1)
-        fr = PD.play(fr, 'L11', t)  # [r4-props]
+        # fr = PD.play(fr, 'L11', t)  # [r4-props]  # [skip:载面丢失 2026-11-09]
         return fr, (4 if k2 > 0.5 else 0)
 
 

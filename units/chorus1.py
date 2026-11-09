@@ -844,7 +844,7 @@ class S039(Shot):
         fr = cam(fr, 1.04, dx, dy, dr)
         pr = tprog(16, [3, 4, 5], t, 0.18)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
-        fr = PD.play(fr, 'L17', t)  # [r4-props]
+        # fr = PD.play(fr, 'L17', t)  # [r4-props]  # [skip:载面丢失 2026-11-09]
         return fr, 0
 
 

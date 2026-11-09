@@ -530,3 +530,10 @@
 - ✔ `wt_v20_char`（47s）→ `assets/gen/wt/wt_v20_char.png`
 - ✔ `wt_c22_pair`（47s）→ `assets/gen/wt/wt_c22_pair.png`
 - ✔ `wt_e22_scale`（54s）→ `assets/gen/wt/wt_e22_scale.png`
+
+## 2026-11-09 22:10 · OpenAI 协议渠道批量生图（wt_r23.json，4 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `wt_v06_slash`（49s）→ `assets/gen/wt/wt_v06_slash.png`
+- ✔ `wt_s035_jump`（52s）→ `assets/gen/wt/wt_s035_jump.png`
+- ✔ `wt_s046_blade`（49s）→ `assets/gen/wt/wt_s046_blade.png`
+- ✔ `wt_p12_blade`（47s）→ `assets/gen/wt/wt_p12_blade.png`

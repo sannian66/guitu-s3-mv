@@ -1444,7 +1444,7 @@ class V13(Shot):
         fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
                         rim_dir=(0.7, -0.6), grade=dict(expo=0.5 + 0.3 * (1 - fc), sat=0.4, gamma=1.3 - 0.2 * (1 - fc)), wind=3, rot=bow, defocus=0.3 + 5.5 * fc)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
-        fr = PD.play(fr, 'L05', t)  # [r4-props]
+        # fr = PD.play(fr, 'L05', t)  # [r4-props]  # [skip:载面丢失 2026-11-09]
         return fr, 0
 
 
@@ -1712,7 +1712,7 @@ class V17(Shot):
             return fr, 0
         fr = self.top(t, a)
         if a < 0.15: fr = fr * (1 + 0.5 * (1 - a / 0.15))
-        fr = PD.play(fr, 'L07', t)  # [r4-props]
+        # fr = PD.play(fr, 'L07', t)  # [r4-props]  # [skip:载面丢失 2026-11-09]
         return fr, 0
 
 

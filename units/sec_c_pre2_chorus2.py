@@ -820,7 +820,7 @@ class C09(Shot):
             fr = sparks(fr, t, int(tc * 10), b, n=50, life=0.6, speed=(200, 700), dirc=(0, 1), spread=1.4, grav=900, t0=tc, burst=True,
                         color=(1.0, 0.35, 0.2))
         fr = rain(fr, t, 90, inten=0.9, angle=-8)
-        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L31', t)   # [r4-props] #39/#42/#43 关
+        # if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L31', t)   # [r4-props] #39/#42/#43 关  # [skip:载面丢失 2026-11-09]
         return fr
 
 
@@ -1228,7 +1228,7 @@ class C17(Shot):
         fr = splash(fr, t, tl, (960, 975), 171, n=220, spread=900, up=1100)
         fr = rain(fr, t, 170, inten=1.0, angle=10)
         self.ca = 5 if 0 <= t - tl < 0.1 else 0
-        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L33', t)   # [r4-props] #39/#42/#43 关
+        # if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L33', t)   # [r4-props] #39/#42/#43 关  # [skip:载面丢失 2026-11-09]
         return fr
 
 
