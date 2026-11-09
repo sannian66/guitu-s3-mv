@@ -1628,8 +1628,8 @@ class V18(Shot):
         q = clamp01((t - self.t0) / max(th - self.t0, 0.02))
         sq = 1.0 + 0.10 * (1 - eout(q, 3)) - 0.03 * hk                    # 攥紧：入镜略大 → 一记收紧
         fr, _ = put_at(fr, self.sp, t, (0.48, 0.36), (self.FIST[0], self.FIST[1] + 60 * (1 - eout(q, 3))), 1750 * sq,
-                       rim=dict(col=(0.75, 0.82, 1.0), amt=2.0, dir=(0.5, -1.0)),
-                       grade=dict(expo=0.82, sat=0.55, tint=(0.97, 0.98, 1.03), lift=0.0, gamma=1.08),
+                       rim=dict(col=(0.75, 0.82, 1.0), amt=0.55, dir=(0.5, -1.0)),       # 第十一棒：2.0 → 0.55（critic_B_r4 拳上沿白描边）
+                       grade=dict(expo=0.68, sat=0.55, tint=(0.97, 0.98, 1.03), lift=0.0, gamma=1.12),   # 压暗一档贴合场景
                        wind_amp=0, breathe=0.0, shade=(1300, 1900, 0.3, 700, 0.3))
         # 握紧挤出的水：从指缝向上、两侧迸开
         fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 330), n=110, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.2, grav=1500, size=1.3,
@@ -2078,7 +2078,7 @@ CUTS = {
     'V15': ('ink_bleed', 0.06, 0.20, dict(seed=15)),
     'V16': ('rain_curtain', 0.08, 0.18, dict(seed=16)),             # 第四棒：灰雾 smoke → 雨帘落幕（b_kit）
     'V17': ('slash_wipe', 0.04, 0.12, dict(angle=7)),               # 第七棒：碑上那一刀顺势划开下一镜（刀线同向）
-    'V18': ('punch', 0, 0, {}),
+    'V18': ('none', 0, 0, {}),                                      # 第十一棒：punch → 同一只手 掌→拳 直接硬切（匹配，不加色散；冲击由 107.58 握拳本身给）
     'V19': ('shatter', 0.03, 0.10, dict(seed=19, center=(620, 520), n=50)),   # 第十棒：punch → 拳心一握，画面自拳心碎开                                     # 第七棒：hard → 推近色散冲击                                      # 第五棒 9/n：match_cut 中点双影糊 → 落拍硬切冲击（推近+提亮 2 帧），拳 → 张开的手掌
     'V20': ('split_slide', 0.06, 0.14, dict(angle=0.0, center=(960, 560))),   # 第四棒：whip 糊黑 → 水平分屏（水面线），上岸下影反向滑
     'V21': ('none', 0, 0, {}),
