@@ -422,3 +422,9 @@
 | 11-09 07:02 | B组/fist3 | RH_image2 | 4K 16:9 | 3 | a627b366-29e6-4c16-83dc-f50a8448fbac | submitted | - | try1 extreme close-up of ONLY his right hand and wrist, no face,  |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | completed | b_cands/fist3_try1_0.png | try1 |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | 采用 | assets/gen/B_r4/fist3_raw.png | try1 采用 |
+
+## 2026-11-09 18:00–18:10 · 分层立绘素材（主角 转身包，绿幕）
+- 渠道：`RH_image2`（全能图片G2，4K），报价 3 积分/张，参考图 `男主_鬼屠.webp`。
+- 4 张 1536×2048：正面 / 右 3-4 侧 / 正右侧 / 背面，A-pose，纯绿幕 #00FF00（用户 18:0x 指示改绿幕，灰板发丝抠不干净）。共 **12 积分**，全部 try1 采用。
+- 文件：`assets/gen/char/hero_{front,tq_r,side_r,back}_{raw,cut}.png`（cut = `tools/cutout_green.py` 纯色键，1.1s/张）。
+- task id：front 2af05541 / tq_r a14b38c6 / side_r 93a9ded3 / back 19cc229c。

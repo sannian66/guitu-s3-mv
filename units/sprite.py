@@ -3,16 +3,41 @@
   SpriteLayer(path)                 读入 + 预计算（发区权重、轮廓带）
   .draw(fr, t, cx, cy, h, ...)      2.5D 摆放（随相机推拉/平移）、风吹网格形变、呼吸缩放、调色匹配、冷色 rim、光包裹
 开关：环境变量 SPRITE_MODE=1 时 units/chorus1.py 的 S043 改用 S043Sprite；默认 0 = 原代码人物，其他镜头不受影响。
+
+2026-11-09 性能前置（渲染组）：draw() 改「包围盒 ROI 合成」+「精灵空间每帧缓存」，数学与旧版逐点相同。
+  - 画布空间的所有运算（warpAffine / 主光衰减 / 角向模糊 / 虚化 / 背景光渗 / 合成）只算精灵落点包围盒
+  - 精灵空间（风吹 + 调色 + rim + look）按参数缓存：同镜同帧的多个甲士只算一次（39 精灵 → 3~6 次）
+  - SPRITE_FAST=0 回到旧的全画布实现（对拍用）
 """
 import math, os
 import numpy as np, cv2
 from PIL import Image
 
 W, H = 1920, 1080
+FAST = os.environ.get('SPRITE_FAST', '1') != '0'
+
+_GRID = {}
+_SCACHE = {}
+
+
+def _grid(h, w):
+    k = (h, w)
+    g = _GRID.get(k)
+    if g is None:
+        g = _GRID[k] = np.mgrid[0:h, 0:w].astype(np.float32)
+    return g
 
 
 def _sstep(a, b, x):
     x = np.clip((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x)
+
+
+def _key(v):
+    if isinstance(v, dict):
+        return tuple(sorted((k, _key(x)) for k, x in v.items()))
+    if isinstance(v, (list, tuple)):
+        return tuple(_key(x) for x in v)
+    return v
 
 
 class SpriteLayer:
@@ -36,7 +61,7 @@ class SpriteLayer:
         self.wind_w = cv2.GaussianBlur((edge_w * np.clip(hair, 0, 1) * (1 - skin)).astype(np.float32), (0, 0), 6)
         ring = self.A - cv2.erode(self.A, np.ones((5, 5), np.uint8))
         self.ring = cv2.GaussianBlur(np.clip(ring, 0, 1), (0, 0), 1.5)
-        gy, gx = np.mgrid[0:self.h, 0:self.w].astype(np.float32)
+        gy, gx = _grid(self.h, self.w)
         self.gx, self.gy = gx, gy
         ys, xs = np.nonzero(self.A > 0.5)
         self.bbox = (xs.min() / self.w, ys.min() / self.h, xs.max() / self.w, ys.max() / self.h) if len(xs) else (0, 0, 1, 1)
@@ -66,12 +91,13 @@ class SpriteLayer:
         R = cv2.remap(self.ring, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
         return F, A, R
 
-    def draw(self, fr, t, anchor_src, anchor_dst, scale, rot=0.0, breathe=0.005, wind_amp=7.0,
-             grade=dict(expo=0.66, sat=0.55, tint=(0.90, 0.96, 1.06), lift=0.0, gamma=1.25),
-             rim=dict(col=(0.62, 0.74, 1.0), amt=1.6, dir=(-0.8, -0.6)), wrap=0.35, mblur=(0.0, 0.0), extra_A=None, shade=(700, 1600, 0.30, 650, 0.45), keep_red=1.0, alpha=1.0, defocus=0.0, rotblur=0.0, look=None):
-        """anchor_src：精灵内归一化锚点（如脸中心）；anchor_dst：画面像素位置；scale：精灵宽 → 画面像素 的倍率。"""
+    # ---- 精灵空间：风吹 + 调色 + rim + look（同参数可复用；同镜多精灵只算一次）
+    def _front(self, t, wind_amp, grade, rim, look, keep_red):
+        key = (id(self), round(t, 5), float(wind_amp), _key(grade), _key(rim), look, float(keep_red))
+        got = _SCACHE.get(key)
+        if got is not None:
+            return got
         F, A, R = self.wind(t, wind_amp)
-        # 调色匹配：压暗、去饱和一部分、偏冷
         lum = (F * np.array([0.3, 0.59, 0.11], np.float32)).sum(-1, keepdims=True)
         red = red_mask(F)[..., None] * keep_red                     # 保色遮罩：暗红内领、红穗、血保留饱和度
         sat = grade['sat'] * (1 - red) + 1.25 * red
@@ -85,14 +111,101 @@ class SpriteLayer:
         F = F + rimm * np.array(rim['col'], np.float32) * rim['amt'] * 0.25
         if look:                                                   # 2026-11-09 全片整合：复用镜头的变体（剪影/水墨/纸/负片/投影）
             F, A = _look(F, A, rimm, rim, red, look)
+        if len(_SCACHE) > 32:
+            _SCACHE.clear()
+        _SCACHE[key] = (F, A)
+        return F, A
+
+    def draw(self, fr, t, anchor_src, anchor_dst, scale, rot=0.0, breathe=0.005, wind_amp=7.0,
+             grade=dict(expo=0.66, sat=0.55, tint=(0.90, 0.96, 1.06), lift=0.0, gamma=1.25),
+             rim=dict(col=(0.62, 0.74, 1.0), amt=1.6, dir=(-0.8, -0.6)), wrap=0.35, mblur=(0.0, 0.0), extra_A=None, shade=(700, 1600, 0.30, 650, 0.45), keep_red=1.0, alpha=1.0, defocus=0.0, rotblur=0.0, look=None):
+        """anchor_src：精灵内归一化锚点（如脸中心）；anchor_dst：画面像素位置；scale：精灵宽 → 画面像素 的倍率。"""
+        F, A = self._front(t, wind_amp, grade, rim, look, keep_red)
         # 呼吸 + 2.5D 摆放（仿射：缩放/旋转/平移；源锚点 → 目标）
         s = scale * (1 + breathe * math.sin(2 * math.pi * t / 3.4))
         ax, ay = anchor_src[0] * self.w, anchor_src[1] * self.h
         M = cv2.getRotationMatrix2D((ax, ay), rot, s)
         M[0, 2] += anchor_dst[0] - ax; M[1, 2] += anchor_dst[1] - ay
+        if not FAST:
+            return self._draw_full(fr, M, F, A, wrap, mblur, extra_A, shade, alpha, defocus, rotblur, anchor_dst)
+        # ---- 落点包围盒（含各类模糊所需的边距）
+        x0n, y0n, x1n, y1n = self.bbox
+        src = np.array([[x0n * self.w, y0n * self.h], [x1n * self.w, y0n * self.h],
+                        [x0n * self.w, y1n * self.h], [x1n * self.w, y1n * self.h]], np.float32)
+        dst = src @ M[:, :2].T + M[:, 2]
+        mb = max(abs(mblur[0]), abs(mblur[1])) if (mblur[0] or mblur[1]) else 0.0
+        pad = 2.0 + mb + (3 * defocus if defocus > 0.3 else 0.0) + 30.0        # 30 = 光包裹内模糊 σ10 的 3σ
+        bx0, bx1 = dst[:, 0].min() - pad, dst[:, 0].max() + pad
+        by0, by1 = dst[:, 1].min() - pad, dst[:, 1].max() + pad
+        if rotblur:
+            rmax = 0.0
+            for cx in (bx0, bx1):
+                for cy in (by0, by1):
+                    rmax = max(rmax, math.hypot(cx - anchor_dst[0], cy - anchor_dst[1]))
+            ext = 2 * rmax * abs(math.sin(math.radians(rotblur) / 2)) + 2
+            bx0 -= ext; bx1 += ext; by0 -= ext; by1 += ext
+        X0, Y0 = int(math.floor(bx0)), int(math.floor(by0))
+        X1, Y1 = int(math.ceil(bx1)), int(math.ceil(by1))
+        if X1 <= 0 or Y1 <= 0 or X0 >= W or Y0 >= H:               # 完全出画
+            return fr, np.zeros((H, W), np.float32)
+        cx0, cy0, cx1, cy1 = max(0, X0), max(0, Y0), min(W, X1), min(H, Y1)
+        rw, rh = cx1 - cx0, cy1 - cy0
+        M2 = M.copy(); M2[0, 2] -= cx0; M2[1, 2] -= cy0
+        Fw = cv2.warpAffine(F, M2, (rw, rh), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        Aw = cv2.warpAffine(A, M2, (rw, rh), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        if mb:                                                     # 甩动时方向模糊（转头的动势）
+            L = int(mb)
+            if L >= 2:
+                k = np.zeros((2 * L + 1, 2 * L + 1), np.float32)
+                cv2.line(k, (L - int(mblur[0] / 2), L - int(mblur[1] / 2)), (L + int(mblur[0] / 2), L + int(mblur[1] / 2)), 1.0, 1)
+                k /= k.sum()
+                Fw = cv2.filter2D(Fw * Aw[..., None], -1, k); Aw = cv2.filter2D(Aw, -1, k)
+                Fw = Fw / np.clip(Aw[..., None], 1e-3, None)
+        if shade:                                                  # 屏幕空间主光衰减（坐标与原全画布版逐点相同）
+            xs = np.arange(cx0, cx1, dtype=np.float32)[None, :]
+            ys = np.arange(cy0, cy1, dtype=np.float32)[:, None]
+            r = np.clip((xs - shade[0]) / (shade[1] - shade[0]), 0, 1) * shade[2] + np.clip((ys - shade[3]) / (H - shade[3]), 0, 1) * shade[4]
+            Fw = Fw * (1 - r)[..., None]
+        if rotblur:                                                # 旋斩：绕锚点的角向模糊（几张旋转副本平均）
+            acc_F = Fw * Aw[..., None]; acc_A = Aw.copy(); n = 5
+            for i in range(1, n):
+                Mr = cv2.getRotationMatrix2D((float(anchor_dst[0]), float(anchor_dst[1])), rotblur * i / n, 1.0)
+                Mr[0, 2] -= cx0; Mr[1, 2] -= cy0
+                acc_F += cv2.warpAffine(Fw * Aw[..., None], Mr, (rw, rh)); acc_A += cv2.warpAffine(Aw, Mr, (rw, rh))
+            Aw = acc_A / n; Fw = (acc_F / n) / np.clip(Aw[..., None], 1e-3, None)
+        if defocus > 0.3:                                           # 景深虚化（前景刀在焦时人物在后）
+            Fw = cv2.GaussianBlur(Fw * Aw[..., None], (0, 0), defocus); Aw = cv2.GaussianBlur(Aw, (0, 0), defocus)
+            Fw = Fw / np.clip(Aw[..., None], 1e-3, None)
+        if extra_A is not None:
+            Aw = Aw * (extra_A[cy0:cy1, cx0:cx1] if extra_A.shape == (H, W) else extra_A)
+        Aw = Aw * alpha
+        # 光包裹：背景模糊光渗进人物边缘（只在包围盒 + 3σ 内算）
+        m = 56
+        y0m, y1m, x0m, x1m = cy0 - m, cy1 + m, cx0 - m, cx1 + m
+        oy0, ox0 = max(0, y0m), max(0, x0m)
+        oy1, ox1 = min(H, y1m), min(W, x1m)
+        if oy1 - oy0 < 8 or ox1 - ox0 < 8:                          # 贴角极端情况：退回全画布
+            return self._draw_full(fr, M, F, A, wrap, mblur, extra_A, shade, alpha, defocus, rotblur, anchor_dst)
+        crop = fr[oy0:oy1, ox0:ox1]
+        pt, pb, pl, pr = oy0 - y0m, y1m - oy1, ox0 - x0m, x1m - ox1
+        if pt or pb or pl or pr:
+            crop = cv2.copyMakeBorder(crop, pt, pb, pl, pr, cv2.BORDER_REFLECT_101)
+        bgb = cv2.GaussianBlur(crop, (0, 0), 18)[cy0 - y0m:cy1 - y0m, cx0 - x0m:cx1 - x0m]
+        inner = cv2.GaussianBlur(Aw, (0, 0), 10)
+        edge = Aw                                                  # 原式 Aw - blur(Aw,6)*0 == Aw
+        wrap_m = (edge * np.clip(1 - inner, 0, 1) * 2.0)[..., None] * wrap
+        Fw = Fw + bgb * wrap_m
+        a3 = Aw[..., None]
+        fr[cy0:cy1, cx0:cx1] = fr[cy0:cy1, cx0:cx1] * (1 - a3) + Fw * a3
+        AwF = np.zeros((H, W), np.float32)
+        AwF[cy0:cy1, cx0:cx1] = Aw
+        return fr, AwF
+
+    # ---- 旧实现（全画布），供 SPRITE_FAST=0 对拍
+    def _draw_full(self, fr, M, F, A, wrap, mblur, extra_A, shade, alpha, defocus, rotblur, anchor_dst):
         Fw = cv2.warpAffine(F, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
         Aw = cv2.warpAffine(A, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-        if mblur[0] or mblur[1]:                                   # 甩动时方向模糊（转头的动势）
+        if mblur[0] or mblur[1]:
             L = int(max(abs(mblur[0]), abs(mblur[1])))
             if L >= 2:
                 k = np.zeros((2 * L + 1, 2 * L + 1), np.float32)
@@ -100,22 +213,21 @@ class SpriteLayer:
                 k /= k.sum()
                 Fw = cv2.filter2D(Fw * Aw[..., None], -1, k); Aw = cv2.filter2D(Aw, -1, k)
                 Fw = Fw / np.clip(Aw[..., None], 1e-3, None)
-        if shade:                                                  # 屏幕空间主光衰减：背光侧亮、朝镜头侧/胸口暗（主光偏暗）
-            yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        if shade:
+            yy, xx = _grid(H, W)
             r = np.clip((xx - shade[0]) / (shade[1] - shade[0]), 0, 1) * shade[2] + np.clip((yy - shade[3]) / (H - shade[3]), 0, 1) * shade[4]
             Fw = Fw * (1 - r)[..., None]
-        if rotblur:                                                # 旋斩：绕锚点的角向模糊（几张旋转副本平均）
+        if rotblur:
             acc_F = Fw * Aw[..., None]; acc_A = Aw.copy(); n = 5
             for i in range(1, n):
                 Mr = cv2.getRotationMatrix2D(tuple(map(float, anchor_dst)), rotblur * i / n, 1.0)
                 acc_F += cv2.warpAffine(Fw * Aw[..., None], Mr, (W, H)); acc_A += cv2.warpAffine(Aw, Mr, (W, H))
             Aw = acc_A / n; Fw = (acc_F / n) / np.clip(Aw[..., None], 1e-3, None)
-        if defocus > 0.3:                                          # 景深虚化（前景刀在焦时人物在后）
+        if defocus > 0.3:
             Fw = cv2.GaussianBlur(Fw * Aw[..., None], (0, 0), defocus); Aw = cv2.GaussianBlur(Aw, (0, 0), defocus)
             Fw = Fw / np.clip(Aw[..., None], 1e-3, None)
         if extra_A is not None: Aw = Aw * extra_A
         Aw = Aw * alpha
-        # 光包裹：背景模糊光渗进人物边缘（去贴纸感）
         bgb = cv2.GaussianBlur(fr, (0, 0), 18)
         edge = np.clip(Aw - cv2.GaussianBlur(Aw, (0, 0), 6) * 0.0, 0, 1)
         inner = cv2.GaussianBlur(Aw, (0, 0), 10)
