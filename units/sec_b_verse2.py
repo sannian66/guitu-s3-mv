@@ -655,7 +655,7 @@ class V08(Shot):
             if t < tk: continue
             p = eout(clamp01((t - tk) / 0.16), 2)
             g, lines = BSF.crack_mask(G, (fpt[0], fpt[1]), p, seed=5410 + i)
-            fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.85, 0.55, 0.24), fill_k=0.55 * p,
+            fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.85, 0.55, 0.24), fill_k=0.42 * p,
                             hl_col=(0.70, 0.78, 0.92), hl=0.45, glow=0.0)
             fr = fr * (1 - lines[..., None] * 0.7) + np.roll(lines, -2, 0)[..., None] * COLDC * 0.12
             fr = fx2.ripples(fr, t, [fpt, (fpt[0] + 40, fpt[1] + 8)], [tk, tk + 0.06], amt=0.9, flat=0.3, speed=420, life=0.9)
@@ -1351,8 +1351,8 @@ class V18(Shot):
                        grade=dict(expo=0.82, sat=0.55, tint=(0.97, 0.98, 1.03), lift=0.0, gamma=1.08),
                        wind_amp=0, breathe=0.0, shade=(1300, 1900, 0.3, 700, 0.3))
         # 握紧挤出的水：从指缝向上、两侧迸开
-        fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 120), n=150, life=0.6, speed=(300, 1200), dirc=(0, -1), spread=2.6, grav=1500, size=1.5,
-                      area=(220, 60), color=(0.8, 0.85, 0.95), amt=1.0, t0=th, burst=True)
+        fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 330), n=110, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.2, grav=1500, size=1.3,
+                      area=(260, 30), color=(0.8, 0.85, 0.95), amt=1.0, t0=th, burst=True)
         pr = prs(25, [4, 5, 6, 7], t)
         fr = T.scatter_stack(fr, '握在自己', pr, places=[dict(ch='握', x=1360, y=360, size=270, rot=-3, font='kai', idx=0, emph=True),
                                                          dict(ch='在', x=1580, y=560, size=140, rot=0, font='kai', idx=1, emph=False),
