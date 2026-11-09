@@ -665,8 +665,8 @@ class E10(Shot):   # S119（第三棒重做）碎纸扑面：被斩碎的律令�
         bg = (0.015 + 0.04 * n)[..., None] * np.array([1.0, 0.85, 0.75], np.float32) + glow[..., None] * np.array([0.45, 0.12, 0.04], np.float32) * (0.6 + 0.5 * n[..., None])
         self.bg = cv2.resize(bg.astype(np.float32), (W, H))
         self.sh = R3.Shreds(119, n=70, gold=0.3, size=(60, 200), spread=(1500, 700), zr=(0.5, 3.4))
-        self.l = LyrO([('它', 520, 430, 240, 'serif_black', GOLD_T, CT(51, 4)), ('自', 1330, 380, 190, 'serif_black', GOLD_T, CT(51, 5)),
-                       ('己', 1520, 560, 190, 'serif_black', GOLD_T, CT(51, 6))], CT(51, 7) - 0.12, seed=70, glow=0.4, outline=4)
+        self.l = LyrO([('它', 520, 430, 240, 'serif_black', GOLD_T, CT(51, 4)), ('自', 1320, 470, 190, 'serif_black', GOLD_T, CT(51, 5)),
+                       ('己', 1520, 470, 190, 'serif_black', GOLD_T, CT(51, 6))], CT(51, 7) - 0.12, seed=70, glow=0.4, outline=4)   # 第八棒：「自」「己」同一水平线并排（不再上下错开）
 
     def render(self, t):
         fr = self.bg.copy()
@@ -794,12 +794,14 @@ class E12(Shot):   # S120b ELS 正俯拍（第三棒返工）：大地即印面�
         z, info = put(np.zeros((H, W, 3), np.float32), t, self.KEY, at, h=495, anc=(0.5, 0.5), rim=GOLDW, rim_amt=3.2, rim_dir=(0.7, -0.7),
                       grade=dict(expo=0.95, sat=0.6, tint=(1.1, 0.98, 0.84), lift=0.0, gamma=1.05), wind=4)
         A = info['A']
+        z = np.clip(z + 0.9 * (z - cv2.GaussianBlur(z, (0, 0), 1.6)), 0, 4)          # 第八棒：俯拍人物 USM 锐化（不再偏糊）
         Sh = np.zeros_like(A)                                              # 晨光自右上 → 长影拖向左下（印面上也压影）
         for k in range(1, 9):
             M = np.float32([[1, 0, -34 * k], [0, 1, 26 * k]]); Sh = np.maximum(Sh, cv2.warpAffine(A, M, (W, H)) * (1 - 0.07 * k))
         Sh = cv2.GaussianBlur(Sh, (0, 0), 6)
         con = cv2.GaussianBlur(cv2.dilate(A, np.ones((9, 9), np.uint8)), (0, 0), 14)        # 接触阴影
-        fr = fr * (1 - 0.6 * Sh[..., None]) * (1 - 0.5 * con[..., None])
+        con2 = cv2.GaussianBlur(cv2.dilate(A, np.ones((5, 5), np.uint8)), (0, 0), 4)         # 第八棒：贴身紧接触影（压实落地感）
+        fr = fr * (1 - 0.6 * Sh[..., None]) * (1 - 0.5 * con[..., None]) * (1 - 0.35 * con2[..., None])
         fr = fr * (1 - A[..., None]) + z * A[..., None]
         ring_ = np.clip(A - cv2.GaussianBlur(cv2.erode(A, np.ones((5, 5), np.uint8)), (0, 0), 4), 0, 1)       # 右上轮廓光
         gy, gx = np.gradient(cv2.GaussianBlur(A, (0, 0), 4)); dd = np.clip((-gx * 0.7 + gy * 0.7) / (np.hypot(gx, gy) + 1e-6), 0, 1)
