@@ -90,10 +90,29 @@ def whip(A, B, p, direction=1, dist=520):
     return a * (1 - m) + b * m
 
 
+def tip(A, B, p, center=(W / 2, H / 2), z=0.9, col=(0.9, 0.95, 1.0)):
+    """第七棒：穿过刀尖光点——A 朝刀尖那点冷光加速推入，光点长成十字星芒；B 从光点处以圆形开口（软边、带冷辉环）
+    放大铺开、径向拖影消退。中间帧两镜都在，光只占星芒/环，不出整白帧（zoom_through glint 中点是白卡）。"""
+    e = p * p * (3 - 2 * p)
+    a = _radial(_zoom(A, 1 + z * e, center), center, 0.18 * e)
+    b = _radial(_zoom(B, 1.35 - 0.35 * e, center), center, 0.16 * (1 - e))
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    d = np.sqrt((xx - center[0]) ** 2 + (yy - center[1]) ** 2)
+    R = 2400 * _s(0.30, 1.0, p) ** 1.7
+    m = np.clip((R - d) / 90.0 + 0.0, 0, 1) if R > 1 else np.zeros_like(d)
+    out = a * (1 - m[..., None]) + b * m[..., None]
+    ring = np.exp(-((d - R) / 26.0) ** 2) * (R > 1) * (1 - p) * 1.2
+    g = math.sin(math.pi * min(1.0, p / 0.7)) if p < 0.7 else 0.0           # 星芒先亮后收
+    dx, dy = np.abs(xx - center[0]), np.abs(yy - center[1])
+    star = (np.exp(-dy / 3.0) * np.exp(-dx / (900 * g + 1)) + np.exp(-dx / 3.0) * np.exp(-dy / (260 * g + 1))) * g
+    core = np.exp(-(d / (40 + 120 * g)) ** 2) * g
+    return out + (ring + star * 1.3 + core * 1.5)[..., None] * np.asarray(col, np.float32)
+
+
 def dark_breath(fr, q):
     """吸气：压暗到 15%，只留高光（进副歌前 2–4 帧）"""
     l = fr.mean(-1, keepdims=True)
     return fr * (1 - 0.85 * q) + np.clip(l - 0.7, 0, 1) * fr * 0.8 * q
 
 
-NAMES = dict(push=push, luma=luma, seam=seam, over=over, whip=whip)
+NAMES = dict(push=push, luma=luma, seam=seam, over=over, whip=whip, tip=tip)

@@ -1729,7 +1729,7 @@ class C35b(Shot):
             for sd, x0, y0 in ((-1, 700, 180), (1, 1220, 215)):
                 fr = sparks(fr, t, 353 + sd, (x0, y0 + sink), n=140, life=0.6, speed=(300, 1300), dirc=(sd, 0.15), spread=0.6, grav=1400,
                             t0=tk, burst=True, color=(1.0, 0.6, 0.25), amt=1.4)
-            fr = K.vol_light(fr, (960, 190 + sink), 520, (1.0, 0.45, 0.2), 0.9 * hit + 0.15)
+            fr = K.vol_light(fr, (960, 190 + sink), 520, (1.0, 0.45, 0.2), 0.5 * hit + 0.15)   # 第七棒：切点=接触帧，叠 slam 冲击后脸过曝 → 0.9→0.5
         fr = dust(fr, t, 354, n=160, amt=0.8 * min(1, k * 8) * (1 - sm(0.3, 0.8, k)), drift=(0, 260), region=(200, BAR, 1720, 600), size=(1, 4))
         fr = rain(fr, t, 355, inten=0.7, angle=4, layers=(1, 2, 3))
         self.ca = 7 if 0 <= k < 0.1 else 0
@@ -2048,7 +2048,7 @@ CUTS = {
     'C39': ('hard', 0, 0, {}),
     'C40': ('whip_pan_blur', 0.05, 0.10, dict(direction='right')),     # 第七棒：蓄力 → 甩出去的那一刀（甩镜 = 出刀）
     'C40b': ('slash_wipe', 0.04, 0.12, dict(angle=-3, center=(960, 330))),   # 第七棒：沿 C40 横断天平的刀线斩开 → 回头面部特写（「是我」）
-    'C41': ('zoom_through', 0.06, 0.12, dict(center=(1450, 875), variant='glint')),   # 第七棒：钻进刃口那道冷光 → 收刀定格（「的回答」）
+    'C41': ('tip', 0.06, 0.14, dict(center=(1560, 880))),   # 第七棒：穿过刀尖光点（c_trans.tip：星芒 + 圆形开口；zoom_through glint 中点是整白帧，弃用）→ 收刀定格（「的回答」）
 }
 # 第七棒（critic_C_r3 转场：硬切只靠同一种推近提亮，花样单一）：硬切冲击分 4 种，按镜头内容选——
 # flash 电白闪（雷/光）、slam 下砸（重物落下：竖向震 + 赤热色偏）、zoom 冲推（径向模糊）、ink 墨眨（落拍那帧压黑再弹亮）
@@ -2114,7 +2114,7 @@ SENTS = [
     # 第五棒：「是非对错」改为画内刀光残影字（C32–C34），不再走屏幕层
     S(37, [4, 5, 6, 7], 1500, 800, size=100, mode='fly', red='扛', exit='shatter', out=V(155.25), sizes=[96, 96, 96, 190], back=0.6),   # 我自己扛（C35 → C35b）
     S(38, [0, 1], 960, 262, size=130, mode='fly', exit='shatter', out=V(156.38), track=0.3, back=1.0),             # 天不（暗衬，压在闪电天上可读）
-    S(39, [0, 1], 420, 820, size=100, mode='fly', exit='shatter', out=V(159.64), back=0.5),                         # 这一
+    S(39, [0, 1], 1560, 720, size=100, mode='fly', exit='shatter', out=V(159.64), back=0.5),   # 第七棒 P2⑯：移出 C40 人物衣摆                         # 这一
     S(39, [2, 3, 4, 5], 1400, 290, size=110, mode='fly', red='刀', exit='shatter', out=V(160.30), track=0.2),        # 刀就是我
     S(39, [6, 7], 1760, 250, size=110, mode='fly', layout='v', exit='glitch', out=V(161.20), track=0.2, back=0.5),   # 第六棒：的回（「答」由 C41 刀痕引燃、烧穿画面，画内字）
 ]
