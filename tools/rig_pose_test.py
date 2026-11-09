@@ -49,21 +49,20 @@ if FONT is None:
 GRADE = dict(expo=0.95, sat=0.78, tint=(0.95, 0.98, 1.04), lift=0.006, gamma=1.05)
 RIM = dict(col=(0.62, 0.74, 1.0), amt=1.1, dir=(-0.8, -0.6))
 
-# (名字, pose, 额外 draw 参数, 取景：None=全身  'head'=头部放大)
-POSES = [
-    ('idle', dict(), {}, None),
-    ('head_turn −0.6（左）', dict(head_turn=-0.6), {}, 'head'),
-    ('head_turn 0（正）', dict(head_turn=0.0), {}, 'head'),
-    ('head_turn +0.6（右）', dict(head_turn=0.6), {}, 'head'),
-    ('arm_r 45°', dict(arm_r=45), {}, None),
-    ('arm_r 90°', dict(arm_r=90), {}, None),
-    ('lean 0.2（后仰）', dict(lean=0.2), {}, None),
-    ('slash 中段 key_w .5', dict(key='slash', key_w=0.5), dict(mblur=7), None),
-    ('slash 落刀 key_w 1', dict(key='slash', key_w=1.0), {}, None),
-    ('expr angry（脸部放大）', dict(expr='angry'), {}, 'head'),
-    ('expr smirk（脸部放大）', dict(expr='smirk'), {}, 'head'),
-    ('expr look（脸部放大，配 turn 0.5）', dict(expr='look', head_turn=0.5), {}, 'head'),
-    ('raise 举刀 key_w 1', dict(key='raise'), {}, None),
+# (名字, play() 的关键字, 取景：None=全身  'head'=头部放大)
+CASES = [
+    ("key='idle'  angle='front'", dict(key='idle', angle='front'), None),
+    ("key='idle'  angle='tq_r'", dict(key='idle', angle='tq_r'), None),
+    ("key='idle'  angle='side_r'", dict(key='idle', angle='side_r'), None),
+    ("角度溶解 tq_r←front mix.5", dict(key='idle', angle='tq_r', angle_from='front', mix=0.5), None),
+    ("key='raise' 举刀", dict(key='raise'), None),
+    ("key='slash' 落刀", dict(key='slash'), None),
+    ("key='draw' 半身拔刀", dict(key='draw'), None),
+    ("expr='angry'", dict(key='idle', expr='angry'), 'head'),
+    ("expr='smirk'", dict(key='idle', expr='smirk'), 'head'),
+    ("key='raise' + mblur9（过渡盖叠影）", dict(key='raise', mblur=9), None),
+    ("key='slash' + mblur9", dict(key='slash', mblur=9), None),
+    ("key='idle' 不加任何修饰", dict(key='idle'), None),
 ]
 
 
@@ -109,18 +108,18 @@ def main():
     # ---------- 1) 姿势样张 --------------------------------------------------
     TW, TH = args.tile, int(args.tile * 1.27)
 
-    def render(pose, kw, frame, zoom='full', jitter=0.0, timed=True):
+    def render(kw0, frame, zoom='full', jitter=0.0, timed=True):
         """画一格。计时永远用全身尺度（h=frame）；zoom='head' 再单独渲一次放大图做内嵌特写。"""
         fr = bg_plate(TW, TH)
         t = time.perf_counter()
-        fr, a = rig.draw(fr, jitter, pose, dst=(TW / 2, TH - 26), h=frame, grade=GRADE, rim=RIM, **kw)
+        fr, a = rig.play(fr, jitter, dst=(TW / 2, TH - 26), h=frame, grade=GRADE, rim=RIM, **kw0)
         dt = (time.perf_counter() - t) * 1000.0
         if zoom == 'head':
             hz = frame * 2.15
             Hf = int(TH * 2.15)
             big = bg_plate(TW, Hf)
-            big, _ = rig.draw(big, jitter, pose, dst=(TW / 2, Hf - 26), h=hz, grade=GRADE,
-                              rim=RIM, **kw)
+            big, _ = rig.play(big, jitter, dst=(TW / 2, Hf - 26), h=hz, grade=GRADE,
+                              rim=RIM, **kw0)
             hu = hz / rig.G['headtop_u']
             cw = int(0.40 * hu)                      # 取景宽（单位空间 0.40）
             cy = (Hf - 26) - hu * 1.02
@@ -130,23 +129,20 @@ def main():
         return fr, dt
 
     # 预热（首帧含贴图解码 / 距离变换 / inpaint 表，后面才是稳态）
-    for _, pose, kw, _z in POSES:
-        render(pose, kw, args.h, timed=False)
+    for _n, kw0, _z in CASES:
+        render(kw0, args.h, timed=False)
 
     timings = {}
     tiles = []
-    for name, pose, kw, zoom in POSES:
+    for name, kw0, zoom in CASES:
         ts, fr = [], None
         for i in range(args.reps):
-            fr, dt = render(pose, kw, args.h, zoom, 0.11 * i)
+            fr, dt = render(kw0, args.h, zoom, 0.11 * i)
             ts.append(dt)
         med = float(np.median(ts))
-        timings[name] = dict(min=round(min(ts), 1), med=round(med, 1), pose=pose,
-                             extra={k: v for k, v in kw.items()})
-        print(f'  {name:24s} {med:6.1f} ms  (min {min(ts):.1f})')
-        sub = ' '.join(f'{k}={v}' for k, v in pose.items()) or '{}'
-        if kw:
-            sub += '  ' + ' '.join(f'{k}={v}' for k, v in kw.items())
+        timings[name] = dict(min=round(min(ts), 1), med=round(med, 1), kw={k: str(v) for k, v in kw0.items()})
+        print(f'  {name:34s} {med:6.1f} ms  (min {min(ts):.1f})')
+        sub = ' '.join(f'{k}={v}' for k, v in kw0.items())
         tiles.append(tile(fr, f'{name}   {med:.0f} ms', sub, TW, TH))
 
     cols = 4
@@ -158,10 +154,10 @@ def main():
         sheet[64 + r * T[1]:64 + (r + 1) * T[1], c * T[0]:(c + 1) * T[0]] = t
     im = Image.fromarray(sheet)
     d = ImageDraw.Draw(im)
-    d.text((16, 16), f'PoseRig 姿势样张  ·  h={args.h:.0f}px  ·  单帧 {min(v["med"] for v in timings.values()):.0f}'
-                     f'–{max(v["med"] for v in timings.values()):.0f} ms（8 核机器、单进程、线程=1）',
+    d.text((16, 16), f'PoseRig 能力样张（收窄版：只有 键帧替换 / 表情贴脸 / 角度溶解）·  h={args.h:.0f}px  ·  '
+                     f'单帧 {min(v["med"] for v in timings.values()):.0f}–{max(v["med"] for v in timings.values()):.0f} ms',
            font=FONT, fill=(232, 232, 236))
-    d.text((16, 42), 'assets/gen/char 生图立绘（绿幕抠像）→ 权重场蒙皮 + 多角度头部替换 + 整姿势键帧',
+    d.text((16, 42), '生图立绘（绿幕抠像）→ 纯摆放合成，不做任何蒙皮/骨架变形（蒙皮路线已废弃）',
            font=FONT_S, fill=(140, 160, 190))
     p1 = os.path.join(OUT, 'rig_pose_sheet.jpg')
     im.save(p1, quality=92)
@@ -193,20 +189,20 @@ def main():
     cmp_tiles.append(tile(fr, f'现有：单张立绘 sprite   {spr_ms:.0f} ms',
                           'units/sprite.py + hero_front_cut.png（1 张图，姿态/朝向固定）', T[0], T[1]))
 
-    for name, pose, kw, note in [
-            ('rig: idle', dict(), {}, '同素材，权重场=0 → 恒等映射'),
-            ('rig: 转头 +0.6', dict(head_turn=0.6), {}, '换右侧头部贴片（tq_r）'),
-            ('rig: 举刀', dict(key='raise'), {}, 'pose_raise 整姿势键帧'),
-            ('rig: 左手抬 arm_r=90', dict(arm_r=90), {}, '纯骨架蒙皮（无键帧）')]:
+    for name, kw0, note in [
+            ('rig: idle', dict(key='idle'), '同一张图，纯摆放 = 逐像素一致'),
+            ('rig: 角度 side_r', dict(key='idle', angle='side_r'), '换一张正侧身图（不变形）'),
+            ('rig: 举刀', dict(key='raise'), 'pose_raise 整姿势键帧'),
+            ('rig: 落刀', dict(key='slash'), 'pose_slash 整姿势键帧')]:
         ts = []
         for i in range(args.reps):
             fr = bg_plate(TW, TH)
             t = time.perf_counter()
-            fr, a = rig.draw(fr, 0.0, pose, dst=(TW // 2, TH - 26), h=hh_c, grade=GRADE, rim=RIM, **kw)
+            fr, a = rig.play(fr, 0.0, dst=(TW // 2, TH - 26), h=hh_c, grade=GRADE, rim=RIM, **kw0)
             ts.append((time.perf_counter() - t) * 1000.0)
         med = float(np.median(ts))
         cmp_tiles.append(tile(fr, f'{name}   {med:.0f} ms', note, T[0], T[1]))
-        timings[name] = dict(min=round(min(ts), 1), med=round(med, 1), pose=pose)
+        timings[name] = dict(min=round(min(ts), 1), med=round(med, 1), kw={k: str(v) for k, v in kw0.items()})
 
     rows = math.ceil(len(cmp_tiles) / 3)
     sheet = np.full((rows * T[1] + 64, 3 * T[0], 3), 14, np.uint8)
