@@ -160,8 +160,13 @@ def piying_sprite(seed, h=300):
     # 皮边：外轮廓与镂空边一圈深色不透光（刻刀边）
     k = max(3, int(0.008 * hh)) | 1
     edge = np.clip(A - cv2.erode(A, np.ones((k, k), np.uint8)), 0, 1)
-    edge = np.maximum(edge, np.clip(cv2.dilate(cut, np.ones((k, k), np.uint8)) - cut, 0, 1) * A)
-    Tr = Tr * (1 - 0.82 * edge[..., None])
+    k2 = max(3, int(0.0045 * hh)) | 1
+    edge2 = np.clip(cv2.dilate(cut, np.ones((k2, k2), np.uint8)) - cut, 0, 1) * A      # 刻缝边：薄一圈深色（刀口压实的皮）
+    Tr = Tr * (1 - 0.82 * edge[..., None]) * (1 - 0.45 * edge2[..., None])
+    # 第十二棒：皮料中间薄、边缘厚 → 背光下中间更透更亮（不是均匀平涂）
+    dist = cv2.distanceTransform((A > 0.5).astype(np.uint8), cv2.DIST_L2, 5)
+    thin = np.clip(dist / (0.03 * hh), 0, 1)
+    Tr = Tr * (0.72 + 0.42 * thin[..., None])
     # 皮料纹理（牛皮纤维 + 不均匀厚度）
     fib = cv2.GaussianBlur(r.random((hh, w)).astype(np.float32), (0, 0), 1.2)
     thick = cv2.resize(r.random((hh // 24 + 2, w // 24 + 2)).astype(np.float32), (w, hh), interpolation=cv2.INTER_CUBIC)
@@ -181,7 +186,7 @@ def piying_sprite(seed, h=300):
     return _CACHE[key]
 
 
-def draw_piying(fr, sp, cx, top, ang, light=1.0, flip=False, base=None, glass=0.0):
+def draw_piying(fr, sp, cx, top, ang, light=1.0, flip=False, base=None, glass=0.0, ghost=0.0):
     """把皮影贴在幕上：fr 在人偶处被染色透射（背光），关节铆钉为不透光的小铜钉（带一点高光）。
     (cx, top) = 头顶挂线点；ang 绕头顶旋转（度）。返回 (fr, 手的画面坐标)。"""
     Tr, A, rv, hand = sp
@@ -203,6 +208,9 @@ def draw_piying(fr, sp, cx, top, ang, light=1.0, flip=False, base=None, glass=0.
         g_ = src * np.power(np.clip(tr, 0, 1), 1.7) * (1.65 * light)
         lit = lit * (1 - glass) + g_ * glass
         bl = cv2.GaussianBlur(lit * a[..., None], (0, 0), 7) * 0.22 * glass
+    if ghost > 0:                                         # 第十二棒：人偶离幕一指 → 幕上一层软影（偏下右、大模糊），皮影立在光里而不是贴纸
+        gm = cv2.GaussianBlur(np.roll(np.roll(a, 10, 0), 8, 1), (0, 0), 9)
+        sub = sub * (1 - ghost * gm[..., None])
     fr[y0:y1, x0:x1] = sub * (1 - a[..., None]) + lit * a[..., None] + (bl if glass > 0 else 0)
     def tp(p): return (M[0, 0] * p[0] + M[0, 1] * p[1] + M[0, 2], M[1, 0] * p[0] + M[1, 1] * p[1] + M[1, 2])
     rad = max(2, int(h * 0.011))

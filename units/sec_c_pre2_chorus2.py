@@ -472,7 +472,8 @@ class C03(Shot):
         m, tips = hand_shadow_mask(hx, hy, 0.95, t, tw)
         # 十字提线板（木偶戏的操纵杆）被手攥着：横杆 + 竖杆，横杆随手倾斜
         bar_y = hy + 250; tilt = 0.06 * math.sin(t * 1.3) + 0.08 * tw * math.sin(t * 9)
-        xs = [170 + i * 200 for i in range(9)]
+        NP = 7                                                            # 第十二棒（critic_C_r6 P1②）：9 → 7 个，互不重叠（间距 ≥ 半个人偶宽）
+        xs = [300 + i * 220 for i in range(NP)]
         ends = [(x, bar_y + (x - hx) * tilt) for x in xs]
         cv2.line(m, (int(ends[0][0] / 2 - 20), int(ends[0][1] / 2)), (int(ends[-1][0] / 2 + 20), int(ends[-1][1] / 2)), 1.0, 7, cv2.LINE_AA)
         cv2.line(m, (int(hx / 2), int((bar_y - 120) / 2)), (int(hx / 2), int((bar_y + 90) / 2)), 1.0, 8, cv2.LINE_AA)
@@ -480,18 +481,18 @@ class C03(Shot):
         sh = cv2.resize(core * 0.65 + pen * 0.35, (W, H))
         fr = fr * (1 - sh[..., None] * 0.86)
         r = np.random.default_rng(3)
-        FLIP = (False, True, False, False, True, False, True, True, False)    # 第十棒：朝向交错（有的相对、有的背对），不再左半/右半一刀切
-        for i in range(9):
+        FLIP = (False, True, False, True, False, True, True)    # 第十棒：朝向交错（有的相对、有的背对），不再左半/右半一刀切
+        for i in range(NP):
             # 第十棒（critic_C_r5 P1②）：每个人偶的身高、挂点偏移（提线斜拉）、摆动频率/相位/幅度、被拽起的延迟/幅度都错开
-            dxo = r.uniform(-70, 70); hgt = r.uniform(300, 385); y0_ = r.uniform(520, 600)
+            dxo = r.uniform(-25, 25); hgt = r.uniform(300, 385); y0_ = r.uniform(520, 600)
             fq = r.uniform(1.5, 3.4); ph = r.uniform(0, 6.3); am = r.uniform(4, 12)
-            dl = abs(i - 4) * 0.035 + r.uniform(0, 0.03); la = r.uniform(0.6, 1.35)
-            x = min(1660, max(260, xs[i] + dxo))     # 不压竹框
+            dl = abs(i - 3) * 0.04 + r.uniform(0, 0.03); la = r.uniform(0.6, 1.35)
+            x = min(1640, max(290, xs[i] + dxo))     # 不压竹框
             lift = la * (70 * pulse(t, tj + dl, 0.22) + 40 * pulse(t, tj2 + dl, 0.18))
             top = y0_ - lift + 9 * math.sin(t * fq * 1.2 + ph)
             ang = am * math.sin(t * fq + ph) + 12 * la * pulse(t, tj + dl, 0.3) * (1 if r.random() < 0.5 else -1)
             fr = red_line(fr, ends[i], (x, top + 4), w=2, amt=0.85)
-            fr, hp = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.15 - 0.25 * abs(i - 4) / 4, flip=FLIP[i], glass=0.85)
+            fr, hp = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.15 - 0.25 * abs(i - 3) / 3, flip=FLIP[i], glass=0.92, ghost=0.4)
             fr = red_line(fr, (ends[i][0] + (60 if not FLIP[i] else -60), ends[i][1] + 6), hp, w=1, amt=0.6)   # 手线（第二根提线）
         if t >= tj:
             fr = paper_cut_glyph(fr, '纲', 960, 330, 270, scale=1 + 0.12 * pulse(t, tj, 0.06))
