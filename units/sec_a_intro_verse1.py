@@ -1383,9 +1383,16 @@ class V12(Shot):
             fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
             fr = K.sparks(fr, t, 31, (1200, 620), n=60, life=0.6, speed=(200, 800), dirc=(1, -0.4), spread=1.0, grav=1200, area=(60, 60), amt=0.8, t0=ts, burst=True)
         L = T.Layer(); p = cprog(4, [1], t, 0.16)[0]
-        if p > 0: L.paste(BG('杀', 'kai', 360, p, seed=4), 330, 400, (0.88, 0.10, 0.07))
+        if R5.ON['sha_fang']:   # 第五轮 7：繁体书法「殺」（cal_sha 生图），与 V13「放」同位同大
+            if p > 0: L.paste(R5.ink_write(R5.cal_alpha(*SF_SHA), p, seed=4), *SF_AT, SF_RED)
+        elif p > 0: L.paste(BG('杀', 'kai', 360, p, seed=4), 330, 400, (0.88, 0.10, 0.07))
         fr = T.compose(fr, L, shadow=0.6, glow=0.45, glow_color=(0.9, 0.1, 0.06))
         return fr, (5 if 0 <= a < 0.1 else 0)
+
+
+# 第五轮 7：殺/放 同位同构图（V12 → V13 只换一笔：人物同位置同大小、右侧恶徒 → 跪地混账、字形 殺 → 放 原位变换）
+SF_SHA, SF_FANG = ('cal_sha_v1', 420), ('cal_fang_v1', 420)
+SF_AT, SF_RED, SF_COLD = (330, 400), (0.88, 0.10, 0.07), (0.72, 0.80, 0.94)
 
 
 def _rain_curtain(fr, t, u, ts):
@@ -1476,6 +1483,7 @@ class V13(Shot):
     def __init__(self):
         T.warm('放', 'kai', 360)
     def render(self, t):
+        if R5.ON['sha_fang']: return self.r5(t)
         u = self.u(t)
         fr = night((0.012, 0.016, 0.03), (0.05, 0.06, 0.08))
         fr = A.glow(fr, (1300, 380), 520, 0.3, (0.55, 0.62, 0.85))
@@ -1501,6 +1509,41 @@ class V13(Shot):
         fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
                         rim_dir=(0.7, -0.6), grade=dict(expo=0.5 + 0.3 * (1 - fc), sat=0.4, gamma=1.3 - 0.2 * (1 - fc)), wind=3, rot=bow, defocus=0.3 + 5.5 * fc)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
+        return fr, 0
+
+    def r5(self, t):
+        """第五轮 7：与 V12 同构图 —— 鬼屠同位同大（左，sheath_same 收刀，同一站姿）、右侧恶徒位置换成跪地混账（面朝鬼屠磕头）、
+        左上同一位置的「殺」原地变换成「放」：31.18 起一线冷刀光自左向右扫过字，扫过处朱红殺的笔画按距离场流成冷钢色放；
+        画面残留的 V12 血红随变换退成冷光。"""
+        u = self.u(t); tm = CT(4, 6)
+        km = clamp01((t - (tm - 0.40)) / 0.60); kc = eio(km)
+        fr = night((0.012, 0.016, 0.03), (0.05, 0.06, 0.08))
+        fr = A.glow(fr, (1400, 420), 520, 0.3, (0.55, 0.62, 0.85))                    # 与 V12 同一光位
+        fr = fog(fr, t, 0, 200, 900, 0.35, (0.18, 0.21, 0.28), speed=(-30, 0), light=(1400, 420))
+        fr = RAIN.draw(fr, t, 0.9, angle=4, light=(1400, 420), layers=(0, 1))
+        red = (1 - kc) * 0.7                                                              # V12 的血红余光 → 冷
+        fr = fr * (1 - red) + fr.mean(axis=2, keepdims=True) * np.array([2.3, 0.40, 0.34], np.float32) * red
+        yy = np.arange(H, dtype=np.float32)[:, None, None]
+        fr = fr * (1 - 0.6 * np.clip((yy - 1000) / 30, 0, 1))
+        fr = fog(fr, t, 2, 760, 960, 0.40, (0.22, 0.25, 0.32), speed=(-40, 0))
+        rim = tuple(np.array(COLD) * kc + np.array(REDR) * (1 - kc))
+        fr, info = A.place(fr, t, os.path.join(R5._R5A, 'sheath_same_v1_cut.png'), (720, 990), h=640, rim=rim, rim_amt=3.0, wind=7,
+                           grade=dict(expo=0.85, sat=0.55))
+        bow = 1.0 + 6.0 * eio(u) + 1.6 * math.sin(t * 6.0)
+        trem = 2.5 * math.sin(t * 41) + 1.5 * math.sin(t * 67)
+        fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (1340 + trem, 1000), h=500, anc=(0.5, 1.0), rim=rim, rim_amt=2.4,
+                        rim_dir=(-0.7, -0.6), grade=dict(expo=0.62, sat=0.3, gamma=1.2), wind=3, rot=-bow)
+        al, w = R5.cal_morph(SF_SHA[0], SF_FANG[0], SF_SHA[1], km, spread=0.75)
+        Lr = T.Layer(); Lc = T.Layer()
+        Lr.paste(al * (1 - w), *SF_AT, SF_RED); Lc.paste(al * w, *SF_AT, SF_COLD)
+        fr = T.compose(fr, Lr, shadow=0.6, glow=0.45, glow_color=(0.9, 0.1, 0.06))
+        fr = T.compose(fr, Lc, shadow=0.7, glow=0.25, glow_color=(0.5, 0.6, 0.9))
+        if 0 < km < 1:                                                                     # 变换前沿：冷白热线
+            Le = T.Layer(); Le.paste(np.clip(4 * w * (1 - w) * al * 1.4, 0, 1), *SF_AT, (0.92, 0.96, 1.0))
+            fr = T.compose(fr, Le, shadow=0.0, glow=0.6, glow_color=(0.7, 0.8, 1.0))
+        q = (t - (tm - 0.37)) / 0.27                                                    # 刀光头与变换前沿同步
+        fr = streak(fr, 400, 100, 560, q, w=3, amt=0.9, ang=-3, col=(0.75, 0.85, 1.0))
+        fr = RAIN.draw(fr, t, 0.6, angle=4, layers=(2,))
         return fr, 0
 
 

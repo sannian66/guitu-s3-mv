@@ -145,3 +145,75 @@ def blade_arc(fr, C, P0, P1, depth=0.16, width=0.22, amt=1.6, col=(0.80, 0.88, 1
     up = lambda X: cv2.resize(X, (W_, H_))[..., None]
     col = np.asarray(col, np.float32); hot = np.asarray(hot, np.float32)
     return fr + (up(E) * col + up(L) * (0.6 * col + 0.2 * hot)) * amt
+
+
+# ------------------------------------------------------------------ 7/12 书法字（cal_* 生图：白底黑墨 → alpha）
+_CAL = {}
+
+
+def cal_alpha(name, size):
+    """assets/gen/R5_A/<name>.png（白底墨字）→ alpha 图；按墨迹包围盒裁切后缩放到边长 size 的方框（居中、等比、留 4% 边）。"""
+    k = (name, size)
+    if k in _CAL: return _CAL[k]
+    import numpy as np, cv2
+    from PIL import Image
+    im = np.asarray(Image.open(os.path.join(_R5A, name + '.png')).convert('L'), np.float32) / 255
+    a = np.clip((0.92 - im) / 0.80, 0, 1)
+    ys, xs = np.nonzero(a > 0.25)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    a = a[y0:y1, x0:x1]
+    s = size * 0.92 / max(a.shape)
+    a = cv2.resize(a, (max(1, int(a.shape[1] * s)), max(1, int(a.shape[0] * s))), interpolation=cv2.INTER_AREA)
+    out = np.zeros((size, size), np.float32)
+    oy, ox = (size - a.shape[0]) // 2, (size - a.shape[1]) // 2
+    out[oy:oy + a.shape[0], ox:ox + a.shape[1]] = a
+    _CAL[k] = out
+    return out
+
+
+def _sdf(a):
+    import numpy as np, cv2
+    m = (a > 0.5).astype(np.uint8)
+    return (cv2.distanceTransform(m, cv2.DIST_L2, 5) - cv2.distanceTransform(1 - m, cv2.DIST_L2, 5)).astype(np.float32)
+
+
+_SDF = {}
+
+
+def cal_morph(na, nb, size, k, ang=-3.0, spread=0.55, seed=0):
+    """字形变换 na → nb（同一方框同一位置）：两字的有符号距离场插值，变换沿 ang 方向的刀光自左向右扫过（每像素时序错开）。
+    → (alpha, w)：alpha = 当前字形；w ∈[0,1] = 该像素已属于 nb 的程度（调色用）；边缘热线 = 4*w*(1-w)。"""
+    import numpy as np, cv2, math
+    key = (na, nb, size)
+    if key not in _SDF:
+        A0, B0 = cal_alpha(na, size), cal_alpha(nb, size)
+        rs = np.random.RandomState(seed)
+        nz = cv2.resize(rs.rand(size // 24 + 2, size // 24 + 2).astype(np.float32), (size, size), interpolation=cv2.INTER_CUBIC)
+        yy, xx = np.mgrid[0:size, 0:size].astype(np.float32) / size
+        th = math.radians(ang); proj = xx * math.cos(th) + yy * math.sin(th)
+        proj = (proj - proj.min()) / (proj.max() - proj.min())
+        _SDF[key] = (A0, B0, _sdf(A0), _sdf(B0), np.clip(proj * 0.85 + nz * 0.15, 0, 1))
+    A0, B0, sa, sb, order = _SDF[key]
+    if k <= 0: return A0, np.zeros_like(A0)
+    if k >= 1: return B0, np.ones_like(B0)
+    w = np.clip((k * (1 + spread) - order * spread) / (1 - spread + 1e-6), 0, 1)
+    w = w * w * (3 - 2 * w)
+    d = (1 - w) * sa + w * sb
+    sharp = np.clip(d / 1.6 + 0.5, 0, 1)
+    soft = (1 - w) * A0 + w * B0                       # 飞白/墨点：两端仍保留原图柔边
+    edge = (w <= 0.001) | (w >= 0.999)
+    alpha = np.where(edge, soft, np.maximum(sharp * 0.95, soft * 0.6))
+    return alpha.astype(np.float32), w.astype(np.float32)
+
+
+def ink_write(a, p, ang=35.0, seed=0, soft=0.18):
+    """书法字逐渐写出（不读错字：先 1/3 时间铺整字淡墨影，再沿 ang 方向笔势走完）。"""
+    import numpy as np, cv2, math
+    if p >= 1: return a
+    if p <= 0: return a * 0
+    n = a.shape[0]
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32) / n
+    th = math.radians(ang); pr = xx * math.cos(th) + yy * math.sin(th); pr = (pr - pr.min()) / (pr.max() - pr.min())
+    m = np.clip((p * (1 + soft) - pr) / soft, 0, 1)
+    ghost = min(1.0, p * 3.0) * 0.5
+    return np.maximum(a * m, a * ghost)
