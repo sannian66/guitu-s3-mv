@@ -1763,10 +1763,12 @@ def credits(fr, t):
         out = clamp01((t - b_) / 0.3)
         if names.isascii():                                   # 第四棒：拉丁名横排（不再旋转竖排）——职务竖排，人名横排在职务下方
             g = T.credit_block(fr, role, '', x, y, p, role_size=30, name_size=62, seal_text=None, seed=len(role))
-            L = T.Layer(); f = T._font('song', 54)
+            # 第八棒（critic_A_r5 P1-4，第三次提）：拉丁名不再横排混在竖排署名里 → 字母直立逐个竖排（与中文人名同一列、同字高节奏）
+            L = T.Layer(); f = T._font('song', 58)
             from PIL import Image as _I, ImageDraw as _D
-            w_ = int(f.getlength(names)) + 10; im = _I.new('L', (w_, 70), 0); _D.Draw(im).text((w_ / 2, 35), names, font=f, fill=255, anchor='mm')
-            L.paste(np.asarray(im).astype(np.float32) / 255, x + 30, y + 30 * 4 * 1.08 + 70, (0.95, 0.94, 0.92), eout(clamp01(p * 1.6 - 0.4)))
+            for j, ch in enumerate(names):
+                im = _I.new('L', (80, 80), 0); _D.Draw(im).text((40, 40), ch, font=f, fill=255, anchor='mm')
+                L.paste(np.asarray(im).astype(np.float32) / 255, x, y + 62 + j * 64, (0.95, 0.94, 0.92), eout(clamp01(p * 1.6 - 0.4 - 0.12 * j)))
             g = T.compose(g, L, shadow=0.7, glow=0.1)
         else:
             g = T.credit_block(fr, role, names, x, y, p, role_size=30, name_size=62, seal_text=seal, seed=len(role))
@@ -1785,7 +1787,7 @@ LY_TXT = {0: '长夜压在我刀锋之上', 1: '五百重甲拦不住一道寒�
 _Wt, _R, _G = (0.95, 0.93, 0.88), (0.86, 0.12, 0.08), (1.0, 0.78, 0.40)
 LY2 = [
     (0, [(0, 230, _Wt), (1, 230, _Wt)], 560, 470, 17.00, False),                                   # 「长夜」压在乌云下
-    (0, [(k, 84, _R if k == 5 else _Wt) for k in range(2, 9)], 1300, 330, 17.92, False),             # 压在我刀锋之上
+    (0, [(k, (150 if k in (5, 6) else 100), (_R if k == 5 else (_G if k == 6 else _Wt))) for k in range(2, 9)], 1290, 340, 17.92, False),   # 第八棒（P1-5）：压在我「刀锋」之上 84→100/150，进主词体系
     (1, [(4, 190, _Wt), (5, 190, _Wt), (6, 190, _R), (7, 90, _Wt), (8, 90, _Wt)], 1380, 330, 20.78, False),   # 第七棒：移到右上袍面暗区，不压拳头 # 拦不住·一道（第五棒：移到上方天幕，21.13 前退净，给 20.82「寒」让下方）
     (2, [(0, 190, _Wt), (1, 190, _Wt), (2, 190, _G), (3, 190, _G)], 960, 900, 23.44, False),        # 谁在高处（自殿檐压下）
     (2, [(4, 96, _Wt), (5, 96, _Wt), (6, 96, _Wt)], 1580, 820, 24.40, False),                       # 定对错（第七棒：后景脸已去，落在右下屏风暗部，不压人）
