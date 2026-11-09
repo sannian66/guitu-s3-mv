@@ -237,9 +237,36 @@ class Title:
                 L2.paste(ln, 960 + 360 + ln.shape[1] / 2, 650, (1.0, 0.78, 0.40), 0.9 * sr)
         return L, L2
 
+    @staticmethod
+    def cam(t):
+        """第十棒（critic_A_r6 P0-1「片名卡全程同一机位」）：片名层自己的机位。
+        A06：片名随 crane down 缓推 1.00→1.07 + 上浮 + 微旋；A07a：旗杆遮挡那一下换机位 —— 片名缩到 0.80、
+        下沉到城楼垛口前（变成「挂在城上」的世界层），随升镜一起下沉、轻推。返回 (scale, dx, dy, rot)。"""
+        def a06(t):
+            u = eio(clamp01((t - 7.83) / (10.57 - 7.83)))
+            return 1.0 + 0.07 * u, -28 * u, -26 * u, -0.7 * u
+        def a07(t):
+            u = clamp01((t - 10.57) / (13.30 - 10.57))
+            return 0.80 + 0.06 * u, 0.0, 140 + 45 * u, 0.0
+        if t < 10.45: return a06(t)
+        if t >= 10.71: return a07(t)
+        m = eio((t - 10.45) / 0.26)
+        a, b = a06(10.45), a07(10.71)
+        return tuple(x * (1 - m) + y * m for x, y in zip(a, b))
+
+    @staticmethod
+    def _warp(LL, Mx):
+        LL.A = cv2.warpAffine(LL.A, Mx, (W, H), flags=cv2.INTER_LINEAR)
+        LL.C = cv2.warpAffine(LL.C, Mx, (W, H), flags=cv2.INTER_LINEAR)
+        ys, xs = np.nonzero(LL.A > 1e-3)
+        LL.bb = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1] if len(xs) else [W, H, 0, 0]
+
     def draw(self, fr, t, out=0.0, sheen=None, glow=0.0):
         if t < TITLE_HIT: return fr
         L, L2 = self.layer(t, out)
+        sc, dx, dy, rot = self.cam(t)
+        Mx = cv2.getRotationMatrix2D((960.0, 520.0), rot, sc); Mx[0, 2] += dx; Mx[1, 2] += dy
+        for LL in (L, L2): self._warp(LL, Mx)
         if out > 0:
             for LL in (L, L2):
                 nz = cv2.resize(A.ink_noise(77, 256), (W, H))
@@ -252,7 +279,8 @@ class Title:
         fr = T.compose(fr, L2, shadow=0.6, glow=0.1)
         ks = t - V(8.31)
         if ks > 0:
-            fr = T.stamp_seal(fr, '鬼屠', 1665, 395, 78, min(1, ks / 0.5), style='yin', seed=3, alpha=0.95 * (1 - out))
+            px, py = Mx @ np.array([1665.0, 395.0, 1.0])
+            fr = T.stamp_seal(fr, '鬼屠', px, py, 78 * sc, min(1, ks / 0.5), style='yin', seed=3, alpha=0.95 * (1 - out))
         return fr
 
 
