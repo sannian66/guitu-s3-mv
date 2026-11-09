@@ -1614,18 +1614,23 @@ class C32(Shot):
         u = self.u(t)
         t0_, tx = V(152.05), V(152.40)
         fl = 0.6 * bolt_env(t, tx)
-        fr = storm(t, 32, horizon=1000, flash=0.35 + fl, fc=(1300, 160), refl=0.6)
-        fr = K.vol_light(fr, (1300, 200), 600, COLD, 0.25 + 0.5 * fl)
-        fr, _ = put(fr, t, 'C/slash_strings', 900 - 40 * u, 1120, 1020, flip=True, rim=COLD, rim_amt=2.6, rim_dir=(0.5, -0.9), flash=fl,
-                    expo=0.95, wind=8, rotblur=3.0 * pulse(t, tx, 0.12))
-        fr = blade_smear(fr, (1500, 260), (420, 640), (t - t0_) / 0.18, bend=0.18, width=60, seed=321, amt=0.9)
+        # 第八棒（critic_C_r4 P1② 与 C09 去同构）：C09 = LS 正面全身、侧前光、雨夜地面；
+        # C32 改为 MCU 虫视仰拍逆光剪影——只取腰以上、人在左 1/3（C09 在中偏右）、荷兰角 +10°、刀臂向画右上斜举（与 C09 镜像）；
+        # 闪电在他身后正上方（逆光），主体压暗成剪影只留冷白轮廓；不见地面，只有翻滚的雷云。
+        fr = storm(t, 32, horizon=1400, flash=0.45 + fl, fc=(620, 260), refl=0.0, ground=False, oy=30 * u)
+        fr = K.vol_light(fr, (640, 300), 760, COLD, 0.45 + 0.7 * fl)
+        fr = bolt(fr, t, tx - 0.02, 327, (420, BAR), (760, 700), inten=0.7)
+        fr, _ = put(fr, t, 'C/slash_strings', 560 - 30 * u, 1080, 2150, flip=True, anchor='src', src=(0.52, 0.46), rot=10 - 3 * u,
+                    rim=(0.85, 0.92, 1.0), rim_amt=3.6, rim_dir=(-0.1, -1.0), flash=0.5 * fl, expo=0.42, gamma=1.25, wind=10,
+                    rotblur=3.0 * pulse(t, tx, 0.12))
+        fr = blade_smear(fr, (1860, 300), (1000, 700), (t - t0_) / 0.18, bend=0.18, width=60, seed=321, amt=0.9)   # 第八棒：虚晃一刀移到右半，不过脸
         A1 = ((360, 220), (1560, 880)); A2_ = ((1560, 220), (360, 880))
         fr = blade_smear(fr, *A1, (t - tx) / 0.14, bend=0.12, width=90, seed=322, amt=1.3)
         fr = blade_smear(fr, *A2_, (t - tx - 0.03) / 0.14, bend=-0.12, width=90, seed=323, amt=1.3)
         e = eout(clamp((t - tx + 0.02) / 0.10))
-        fr = arc_glyph(fr, '是', (640, 470), 230 * lerp(1.3, 1, e), e, rot=-8)
+        fr = arc_glyph(fr, '是', (1180, 600), 230 * lerp(1.3, 1, e), e, rot=-8)   # 第八棒：人移左，字移到右半空区
         e2 = eout(clamp((t - tx - 0.01) / 0.10))
-        fr = arc_glyph(fr, '非', (1290, 470), 230 * lerp(1.3, 1, e2), e2, rot=8)
+        fr = arc_glyph(fr, '非', (1590, 420), 230 * lerp(1.3, 1, e2), e2, rot=8)
         fr = rain(fr, t, 320, inten=1.0, angle=12)
         self.ca = 5 if 0 <= t - tx < 0.1 else 0
         return fr

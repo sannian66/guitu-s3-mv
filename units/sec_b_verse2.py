@@ -1574,13 +1574,14 @@ class V24(Shot):
         self.sp = spr('drag_blade')
         sk = night_sky(6801, top=(0.03, 0.032, 0.04), bot=(0.20, 0.19, 0.20), horizon=0.6)
         wl, wm = city_wall_far(6802, 300, 420, tone=0.09)
-        wl = K.blur_ds(wl, 3); wm = K.blur_ds(wm, 3)
+        wl = K.blur_ds(wl, 3); wm = K.blur_ds(wm, 3) * 0.0             # 第七棒：去城墙（城墙背景 5→4 次），地平线只留雨雾
         x, y = K.grid()
         self.gm = sstep(410, 440, y)
         mud = (0.02 + 0.03 * cv2.resize(K.fbm(H // 2, W // 2, 6803, 14, 6), (W, H)))[..., None] * np.ones(3, np.float32)
         self.bg = (sk * (1 - wm[..., None]) + wl * wm[..., None]) * (1 - self.gm[..., None]) + mud * self.gm[..., None]
         self.fog = fx2.Fog(6804)
         self.rain = fx2.RainSheet(6805, density=0.8)
+        self.spl = fx2.Splashes(6807)
         T.warm('出方', 'xing', 200)
 
     def render(self, t):
@@ -1597,8 +1598,13 @@ class V24(Shot):
                            light_color=RED * 0.6)
         # 鬼屠站在刀痕起点（Z=10 m）：逆光剪影，透视尺寸与地面一致
         fy = HOR + FF * CH / 12.0
-        fr, _ = put(fr, self.sp, t, 300, (960 + FF * (X0 + AX * 12 - 0.9) / 12.0, fy), look='sil', rim=dict(col=(1.0, 0.4, 0.25), amt=3.0, dir=(0.3, 1.0)),
-                    wind_amp=6, shade=None, wrap=0.2)
+        # 第七棒：人物放大到画面 ~1/2 高、不再纯黑平贴——冷月轮廓光（上）+ 刀痕红光从脚下反打（下），边缘被雨溅打
+        fx0 = 960 + FF * (X0 + AX * 12 - 0.9) / 12.0
+        fr, Am = put(fr, self.sp, t, 540, (fx0, fy + 40), rim=dict(col=(0.78, 0.86, 1.0), amt=3.4, dir=(0.4, -1.0)),
+                     grade=dict(expo=0.42, sat=0.5, tint=(1.05, 0.92, 0.88), lift=0.0, gamma=1.15), wind_amp=8, shade=None, wrap=0.35)
+        x_, y_ = K.grid()
+        fr = fr + (Am * np.clip((y_ - (fy - 300)) / 340, 0, 1))[..., None] * RED * 0.22
+        fr = self.spl.draw(fr, t, y_far=fy - 30, y_near=fy + 60, rate=60, amt=0.6) if hasattr(self, 'spl') else fr
         # 「出方」立在刀痕两侧（远近两处，近大远小），随刀痕到达时燃起
         pr = prs(27, [8, 9], t)
         for i, (ch, pc, Zc, Xs) in enumerate(zip('出方', pr, (18.0, 40.0), (3.5, 9.0))):
@@ -1641,8 +1647,9 @@ class V25(Shot):
         fr = self.bg.copy()
         fr, core = trench(fr, t, 605.0, 0.6, 1.0, 600.0, width=0.75, f=1000.0, seed=6906, fog_z=700.0)
         fr = self.fog.draw(fr, t, density=0.5, y0=420, y1=760, color=(0.30, 0.30, 0.33), light=(960, 600), light_r=500, light_color=RED * 0.8)
-        fr, _ = put(fr, self.sp, t, 470, (760, 790), look='sil', rim=dict(col=(1.0, 0.38, 0.22), amt=3.2, dir=(0.0, 1.0)), wind_amp=8,
-                    shade=None, wrap=0.2)
+        fr, Am = put(fr, self.sp, t, 520, (760, 800), rim=dict(col=(0.78, 0.86, 1.0), amt=3.6, dir=(0.3, -1.0)), wind_amp=9,
+                     grade=dict(expo=0.38, sat=0.5, tint=(1.05, 0.92, 0.88), lift=0.0, gamma=1.15), shade=None, wrap=0.4)   # 第七棒：冷轮廓光 + 刀痕红光反打
+        fr = fr + (Am * np.clip((y - 520) / 300, 0, 1))[..., None] * RED * 0.25
         pr = prs(27, [10], t, 0.3)[0]
         if pr > 0:
             fr = T.burn_in(fr, '向', pr, places=[dict(ch='向', x=1460, y=450, size=300, rot=0, font='xing', idx=0, emph=False)],
@@ -1661,28 +1668,28 @@ SHOTS = [V01, V02, V03, V04, V05, V06, V07, V08, V09, V10, V11, V12, V13, V14, V
 CUTS = {
     'V02': ('ring_wipe', 0.06, 0.16, dict(center=(1300, 600))),    # 第六棒：钟声折射环开门（钟口圆 → 广场声波环）
     'V03': ('zoom_dark', 0.08, 0.14, dict(center=(960, 560))),     # 第六棒：顶拍压进跪拜的人群 → 平视纸人队列
-    'V04': ('gold', 0, 0, {}),
+    'V04': ('punch', 0, 0, {}),                                     # 第七棒：金闪 → 落拍推近色散（刻刀第一记）
     'V05': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=1, seed=5)),
     'V06': ('match_cut', 0.0, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # 第五棒：去金圈（≈副歌一 S045 光圈）
-    'V07': ('gold', 0, 0, {}),
+    'V07': ('punch', 0, 0, {}),                                     # 第七棒：金闪 → 推近色散（窗棂光一跳）
     'V08': ('split_slide', 0.05, 0.12, dict(angle=90.0)),
     'V09': ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160)),
-    'V10': ('hard', 0, 0, {}),
+    'V10': ('punch', 0, 0, {}),                                     # 第七棒：hard → 推近色散冲击
     'V11': ('slash_wipe', 0.05, 0.12, dict(angle=-70)),
     'V12': ('shatter', 0.04, 0.14, dict(seed=12, center=(960, 520), n=60)),
     'V13': ('punch', 0, 0, {}),                                     # 第六棒：none → 落拍 punch + 泥水冠状冲击（人物首帧在画内）
-    'V14': ('flash_red', 0.03, 0.12, {}),
+    'V14': ('punch', 0, 0, {}),                                     # 第七棒：红闪 → 落拍冲击（起身气浪）
     'V15': ('ink_bleed', 0.06, 0.20, dict(seed=15)),
     'V16': ('rain_curtain', 0.08, 0.18, dict(seed=16)),             # 第四棒：灰雾 smoke → 雨帘落幕（b_kit）
-    'V17': ('hard', 0, 0, {}),
+    'V17': ('slash_wipe', 0.04, 0.12, dict(angle=7)),               # 第七棒：碑上那一刀顺势划开下一镜（刀线同向）
     'V18': ('punch', 0, 0, {}),
-    'V19': ('hard', 0, 0, {}),                                      # 第五棒 9/n：match_cut 中点双影糊 → 落拍硬切冲击（推近+提亮 2 帧），拳 → 张开的手掌
+    'V19': ('punch', 0, 0, {}),                                     # 第七棒：hard → 推近色散冲击                                      # 第五棒 9/n：match_cut 中点双影糊 → 落拍硬切冲击（推近+提亮 2 帧），拳 → 张开的手掌
     'V20': ('split_slide', 0.06, 0.14, dict(angle=0.0, center=(960, 560))),   # 第四棒：whip 糊黑 → 水平分屏（水面线），上岸下影反向滑
     'V21': ('none', 0, 0, {}),
     'V22': ('punch', 0, 0, {}),                                     # 第四棒：灰 glitch → 落拍硬切冲击（推近+色散）
     'V23': ('slash_wipe', 0.05, 0.14, dict(angle=4)),
     'V24': ('zoom_dark', 0.08, 0.14, dict(center=(960, 640))),     # 第四棒：去中点白场
-    'V25': ('hard', 0, 0, {}),
+    'V25': ('zoom_dark', 0.06, 0.12, dict(center=(960, 620))),     # 第七棒：hard → 沿刀痕推进穿越
 }
 FG = {'V03': ('rain', 0.3), 'V07': ('ember', 0.3), 'V08': ('ember', 0.25), 'V09': ('rain', 0.3), 'V13': ('rain', 0.35),
       'V14': ('ember', 0.5), 'V15': ('rain', 0.45)}
