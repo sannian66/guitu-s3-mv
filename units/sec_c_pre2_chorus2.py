@@ -20,7 +20,7 @@ import c_props as CP
 import c_trans as CX
 from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark, fbm
 
-READY = False
+READY = True
 F0, F1 = 3534, 4839
 T0, T1 = F0 / FPS, F1 / FPS
 
