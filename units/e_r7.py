@@ -216,7 +216,8 @@ def warm_veil(A, B, p, axis='x', direction=-1, seed=7301, cap=0.68, warm=(1.0, 0
     up = lambda m: cv2.resize(m, (W, H), interpolation=cv2.INTER_LINEAR)
     D = _mb(up(dens), 40, axis == 'x'); F = _mb(up(fogc), 40, axis == 'x')
     sw = up(d)
-    base = np.where((sw > 0)[..., None], B, A)
+    m = sstep_(-150.0, 150.0, sw)                                      # 雾最浓处软交接（半分辨率 d → ±300px 宽）
+    base = A * (1 - m[..., None]) + B * m[..., None]
     out = base * (1 - D[..., None]) + F * D[..., None]
     return out
 

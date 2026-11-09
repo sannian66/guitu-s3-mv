@@ -838,8 +838,8 @@ def star_glyph(A, step=9, r=3.2, p=1.0, seed=0, order_y=False):
 
 class V11(Shot):
     T_LIANG = 99.0
-    SRC, DST, WPX = (0.66, 0.29), (980, 560), 6000
-    CH = [('分', 0.575), ('量', 0.655)]
+    PIV, WPX = (1640, 545), 9000
+    CH = [('分', 0.683), ('量', 0.746)]
     def __init__(self):
         self.sp = spr('B_r4/steelyard')
         x, y = K.grid()
@@ -864,9 +864,7 @@ class V11(Shot):
         x, y = K.grid()
         fr = self.bg.copy()
         rot = self.ang(t)
-        pivot = sp_pt(self.sp, self.SRC, self.DST, self.WPX, 0, (0.80, 0.29))      # 提绳处（秤纽）为支点
-        # 绕支点旋转：先算出支点不动的 dst
-        src_px = (self.SRC[0], self.SRC[1])
+        pivot = self.PIV                                                              # 提绳处（秤纽）为支点
         fr, Aw = put_at(fr, self.sp, t, (0.80, 0.29), pivot, self.WPX, rot=rot,
                         grade=dict(expo=0.95, sat=0.75, tint=(1.04, 0.97, 0.90), lift=0.0, gamma=1.05),
                         rim=dict(col=(0.85, 0.9, 1.0), amt=1.8, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=None, wrap=0.25)
@@ -883,7 +881,8 @@ class V11(Shot):
             if p <= 0: continue
             c = cxs[i]
             A = BV.mask([(ch, c[0], c[1], 150, -rot)], fname='serif_black')
-            st = star_glyph(A, step=9, r=3.3, p=p, seed=5610 + i) * Aw
+            fr = fr * (1 - K.blur_ds(A, 10)[..., None] * 0.55 * Aw[..., None] * min(1, p * 2))      # 字区压暗（原有秤星让位）
+            st = star_glyph(A, step=8, r=3.0, p=p, seed=5610 + i) * Aw
             hot = pulse(t, tk, 0.3) * (t >= tk)
             fr = fr * (1 - st[..., None] * 0.8) + st[..., None] * np.array([1.0, 0.80, 0.45], np.float32) * (0.9 + 0.8 * hot)
             fr = fr + K.blur_ds(st, 10)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * (0.35 + 0.9 * hot)

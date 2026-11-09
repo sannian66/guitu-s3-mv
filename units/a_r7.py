@@ -132,7 +132,7 @@ class Crater:
         # 坑沿：迎光唇口一线冷高光（雨水湿边），背光唇口暗
         rim = np.clip(cv2.dilate(m, np.ones((5, 5), np.uint8)) - m, 0, 1)
         lip_l = np.clip(rim * (cv2.warpAffine(m, np.float32([[1, 0, -lx * 6], [0, 1, -ly * 6]]), (W, H)) > 0.5), 0, 1)
-        fr = fr + cv2.GaussianBlur(lip_l, (0, 0), 1.0)[..., None] * np.array([0.30, 0.32, 0.36], np.float32)
+        fr = fr + cv2.GaussianBlur(lip_l, (0, 0), 1.2)[..., None] * np.array([0.18, 0.19, 0.21], np.float32)
         # 坑底「正」：凹刻，只靠侧光（槽内背光侧投影 + 迎光侧槽壁一线灰白），不着金红、无框
         if self.zm is not None:
             zs = np.clip(self.zm - cv2.warpAffine(self.zm, np.float32([[1, 0, -lx * 9], [0, 1, -ly * 9]]), (W, H)), 0, 1)
