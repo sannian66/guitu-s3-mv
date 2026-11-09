@@ -599,3 +599,14 @@
 
 ## 2026-11-10 04:09 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 239 个）
 - 成功 178，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+
+## 2026-11-10 04:17 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 1 个）
+- 成功 1，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+
+## 2026-11-10 04:17 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 1 个）
+- 成功 1，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+
+## 2026-11-10 · 第五轮 · stand_defy_pt 按定妆照重画（用户：「垫的图跟主角不一样，用定妆照重新出图」）
+- gpt-image-2 edits ×4，参考图 = `assets/characters/png/男主_鬼屠.png` + `B_r4/stand_defy_pt_raw.jpg`（只取姿势构图），纯绿幕
+- take0 仍带头带（弃）；take1 中分乱刘海、无头带、高马尾（**选用**，IoU 0.887）；take2 脸偏粗（弃）；take3 可用备选（IoU 0.83）
+- 产物 `assets/gen/B_r4/stand_defy_pt_gref.png`（绿幕原图）→ `stand_defy_pt_gcut.png`（整张新像素，对齐旧画布 + 调色），过程图 `out/round5/defy/`

@@ -130,6 +130,8 @@ def one(it, redo_fail=False):
     base = it['base']; name = str(base.relative_to(GEN))
     gcut = base.with_name(base.name + '_gcut.png')
     graw = base.with_name(base.name + '_graw.png')
+    gref = base.with_name(base.name + '_gref.png')        # 按定妆照重画的绿幕图：整张用新像素（换成标准脸），不做 fuse
+    if gref.exists(): graw = gref
     rec = {'name': name, 'cut': str(it['cut'].relative_to(GEN))}
     if gcut.exists() and not (REPOST and graw.exists()): return {**rec, 'status': 'exists'}
     fail = OUT / 'fail' / (name.replace('/', '__') + '.json')
@@ -138,7 +140,7 @@ def one(it, redo_fail=False):
     try:
         src, has_raw = make_input(it, OUT / 'tmp' / (name.replace('/', '__') + '_in.png'))
         rec['has_raw'] = has_raw
-        if has_raw and is_green(src):
+        if has_raw and is_green(src) and not gref.exists():
             return {**rec, 'status': 'already_green'}
         if not graw.exists():
             for k in range(3):
@@ -155,10 +157,12 @@ def one(it, redo_fail=False):
         new = np.asarray(Image.open(ctmp).convert('RGBA')).astype(np.float32) / 255
         reg, iou = register(new, old[..., 3])
         rec['iou'] = round(iou, 3)
-        if reg is None or iou < IOU_MIN:
+        if reg is None or iou < (0.75 if gref.exists() else IOU_MIN):
             fail.write_text(json.dumps(rec, ensure_ascii=False))
             return {**rec, 'status': 'fail_iou', 'sec': round(time.time() - t)}
-        reg = fuse(color_match(reg, old), old)
+        reg = color_match(reg, old)
+        if not gref.exists(): reg = fuse(reg, old)
+        rec['gref'] = gref.exists()
         Image.fromarray((reg * 255 + 0.5).astype(np.uint8), 'RGBA').save(gcut)
         return {**rec, 'status': 'ok', 'sec': round(time.time() - t)}
     except Exception as e:
