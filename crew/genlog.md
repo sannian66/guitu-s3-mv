@@ -610,3 +610,19 @@
 - gpt-image-2 edits ×4，参考图 = `assets/characters/png/男主_鬼屠.png` + `B_r4/stand_defy_pt_raw.jpg`（只取姿势构图），纯绿幕
 - take0 仍带头带（弃）；take1 中分乱刘海、无头带、高马尾（**选用**，IoU 0.887）；take2 脸偏粗（弃）；take3 可用备选（IoU 0.83）
 - 产物 `assets/gen/B_r4/stand_defy_pt_gref.png`（绿幕原图）→ `stand_defy_pt_gcut.png`（整张新像素，对齐旧画布 + 调色），过程图 `out/round5/defy/`
+
+## 2026-11-10 04:27 · OpenAI 协议渠道批量生图（s18_draw_xa.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_xa`（61s）→ `assets/gen/R5_D/s18_draw_xa_cut.png`
+
+## 2026-11-10 04:27 · OpenAI 协议渠道批量生图（s18_draw_yb.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_yb`（64s）→ `assets/gen/R5_D/s18_draw_yb_cut.png`
+
+## 2026-11-10 04:27 · OpenAI 协议渠道批量生图（s18_draw_ya.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_ya`（67s）→ `assets/gen/R5_D/s18_draw_ya_cut.png`
+
+## 2026-11-10 04:27 · OpenAI 协议渠道批量生图（s18_draw_xb.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_xb`（67s）→ `assets/gen/R5_D/s18_draw_xb_cut.png`
