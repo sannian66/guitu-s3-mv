@@ -1,0 +1,180 @@
+{
+ "spent": 57,
+ "jobs": {
+  "eyes": [
+   {
+    "task_id": "893325b0-967f-4fb1-ac67-3028eeeef5cb",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/eyes_893325b0_0.png",
+    "accepted": true
+   }
+  ],
+  "blade_face": [
+   {
+    "task_id": "a8251b2c-860c-41b6-87d7-400a49a0102b",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/blade_face_a8251b2c_0.png",
+    "accepted": true
+   }
+  ],
+  "slash_up": [
+   {
+    "task_id": "df6a6a83-b46a-40d3-a54e-82d8be4a3818",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/slash_up_df6a6a83_0.png",
+    "accepted": true
+   }
+  ],
+  "boots": [
+   {
+    "task_id": "3be472e2-97a4-4b74-a952-a1c8ba05cc82",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/boots_3be472e2_0.png",
+    "accepted": true
+   }
+  ],
+  "tsh_raise": [
+   {
+    "task_id": "0f48fbe3-f39e-469b-bec5-43d38718800d",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/tsh_raise_0f48fbe3_0.png",
+    "accepted": true
+   }
+  ],
+  "tsh_hand": [
+   {
+    "task_id": "74335986-b749-422b-9f8a-bc894042ca4e",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/tsh_hand_74335986_0.png",
+    "accepted": true
+   }
+  ],
+  "kneel_beg": [
+   {
+    "task_id": "dcacb003-4d50-4198-bf20-818431504e2c",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/kneel_beg_dcacb003_0.png",
+    "accepted": true
+   }
+  ],
+  "villain_fall": [
+   {
+    "task_id": "9f74a166-620f-42d7-ac29-417641e434ad",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/villain_fall_9f74a166_0.png",
+    "accepted": true
+   }
+  ],
+  "hand_draw_cu": [
+   {
+    "task_id": "49a0d5c7-2e13-4a72-ae61-b98252a88f68",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/hand_draw_cu_49a0d5c7_0.png",
+    "accepted": true
+   }
+  ],
+  "blade_rain": [
+   {
+    "task_id": "706c1683-edaf-4751-8fdf-963922216203",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/blade_rain_706c1683_0.png",
+    "accepted": true
+   }
+  ],
+  "back_walk": [
+   {
+    "task_id": "8582230b-fcfc-415f-9fb6-27836afb868f",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/back_walk_8582230b_0.png",
+    "accepted": true
+   }
+  ],
+  "stand_ha": [
+   {
+    "task_id": "122c34d2-790d-46fc-bd00-d4c93f22b81b",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/stand_ha_122c34d2_0.png",
+    "accepted": true
+   }
+  ],
+  "kneel_pan": [
+   {
+    "task_id": "28244dde-92a5-4092-bc07-873d9f709990",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/kneel_pan_28244dde_0.png",
+    "accepted": true
+   }
+  ],
+  "carve_mcu": [
+   {
+    "task_id": "777f70a0-056d-4d97-8d54-a6687008db14",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/carve_mcu_777f70a0_0.png",
+    "accepted": true
+   }
+  ],
+  "look_up_mcu": [
+   {
+    "task_id": "72af3abd-e5b7-4b4e-92c8-22403ddfae7e",
+    "status": "done",
+    "pts": 3,
+    "file": "/workspace/work/a_cands/look_up_mcu_72af3abd_0.png",
+    "accepted": true
+   }
+  ],
+  "tsh_seal_lift": [
+   {
+    "task_id": "01ff5849-3970-4061-9c2e-16837354ac35",
+    "status": "done",
+    "pts": 3,
+    "file": "gen_cands/A_r6/tsh_seal_lift_try1_0.png",
+    "accepted": true,
+    "asset": "assets/gen/A_r6/tsh_seal_lift_cut.png"
+   }
+  ],
+  "bronze_scale": [
+   {
+    "task_id": "b48a9237-d21f-42d3-80cd-e8f5eecb17ec",
+    "status": "done",
+    "pts": 3,
+    "file": "gen_cands/A_r6/bronze_scale_try1_0.png",
+    "accepted": true,
+    "asset": "assets/gen/A_r6/bronze_scale_cut.png"
+   }
+  ],
+  "giant_seal": [
+   {
+    "task_id": "eca9483c-53b8-4110-8955-e2a087037091",
+    "status": "done",
+    "pts": 3,
+    "file": "gen_cands/A_r6/giant_seal_try1_0.png",
+    "accepted": true,
+    "asset": "assets/gen/A_r6/giant_seal_cut.png"
+   }
+  ],
+  "carve_grip": [
+   {
+    "task_id": "a5fb7985-55d5-429f-bcab-b85d9aa7eac2",
+    "status": "done",
+    "pts": 3,
+    "file": "gen_cands/A_r6/carve_grip_try1_0.png",
+    "accepted": true,
+    "asset": "assets/gen/A_r6/carve_grip_cut.png"
+   }
+  ]
+ }
+}

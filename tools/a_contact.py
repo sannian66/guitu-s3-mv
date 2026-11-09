@@ -1,0 +1,82 @@
+"""A 组联系表 / 关键帧表：按本组自己的镜头表（units/sec_a_intro_verse1.SHOTS）取帧。
+  tools/cpu_slot.sh python3 tools/a_contact.py contact out/round4/A_contact_vN.jpg      每镜 55% 处一帧
+  tools/cpu_slot.sh python3 tools/a_contact.py keys out/round4/A_keys_vN.jpg            转场中间帧 + 歌词/冲击关键帧
+  python3 tools/a_contact.py times out.jpg 1.0 2.5 ...                                 指定秒"""
+import os, sys, time
+ROOT = '/workspace/work/mv'; sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
+os.chdir(ROOT)
+from PIL import Image, ImageDraw, ImageFont
+import sec_a_intro_verse1 as M
+
+FPS = 30
+font = ImageFont.truetype(ROOT + '/fonts/NotoSerifSC-Bold.otf', 22)
+
+
+def sheet(items, out, cols=4, tw=480, th=270):
+    rows = (len(items) + cols - 1) // cols
+    sh = Image.new('RGB', (cols * tw, rows * (th + 30)), (12, 12, 12)); d = ImageDraw.Draw(sh)
+    cache = {}
+    for i, (label, t) in enumerate(items):
+        a = time.time()
+        f = int(round(t * FPS))
+        im = Image.fromarray(M.frame(f, cache)).resize((tw, th), Image.LANCZOS)
+        x, y = (i % cols) * tw, (i // cols) * (th + 30)
+        sh.paste(im, (x, y + 30)); d.text((x + 6, y + 2), f'{label}  {t:.2f}s', fill=(240, 220, 120), font=font)
+        print(label, round(t, 2), round(time.time() - a, 2), 's', flush=True)
+    sh.save(out, quality=86); print('saved', out)
+
+
+def items_for(cmd):
+    if cmd == 'contact':
+        return [(S.__name__, S.t0 + 0.55 * (S.t1 - S.t0)) for S in M.SHOTS]
+    items = []
+    for S in M.SHOTS[1:]:
+        c = M.CUTS.get(S.__name__)
+        if c and c[0] != 'hard':
+            items.append((S.__name__ + ' ' + c[0][:12] + ' mid', S.t0 + (c[2] - c[1]) / 2))
+    items += [('credits', 1.6), ('credits2', 4.9), ('title', 8.6), ('title-sheen', 11.7), ('title-ash', 13.5), ('长夜', 16.4), ('五百', 19.1),
+              ('拦不住', 20.9), ('寒光', 21.6), ('谁在高处', 23.3), ('罪状', 24.9), ('沿梁', 26.9), ('称量', 28.7), ('杀', 30.3), ('放', 32.2),
+              ('刻刀', 34.2), ('主张', 36.0), ('若正义', 37.9), ('权势', 39.4), ('宁愿', 41.5), ('锋', 43.55), ('exit', 44.0)]
+    return items
+
+
+if __name__ == '__main__' and sys.argv[1] in ('part', 'assemble'):
+    # 分块渲染（每次 shell ≤120s）：part <contact|keys> <i0> <i1>  → /tmp/acon/<kind>_<i>.jpg；assemble <kind> <out> [块高 rows]
+    kind = sys.argv[2]; its = items_for(kind)
+    if sys.argv[1] == 'part':
+        os.makedirs('/tmp/acon', exist_ok=True); cache = {}
+        for i in range(int(sys.argv[3]), min(len(its), int(sys.argv[4]))):
+            lab, t = its[i]
+            Image.fromarray(M.frame(int(round(t * FPS)), cache)).resize((480, 270), Image.LANCZOS).save('/tmp/acon/%s_%03d.jpg' % (kind, i), quality=90)
+            print(i, lab, flush=True)
+    else:
+        out = sys.argv[3]; cols, tw, th = 4, 480, 270; per = int(sys.argv[4]) if len(sys.argv) > 4 else 4
+        rows = (len(its) + cols - 1) // cols
+        sh = Image.new('RGB', (cols * tw, rows * (th + 30)), (12, 12, 12)); d = ImageDraw.Draw(sh)
+        for i, (lab, t) in enumerate(its):
+            x, y = (i % cols) * tw, (i // cols) * (th + 30)
+            sh.paste(Image.open('/tmp/acon/%s_%03d.jpg' % (kind, i)), (x, y + 30)); d.text((x + 6, y + 2), f'{lab}  {t:.2f}s', fill=(240, 220, 120), font=font)
+        sh.save(out, quality=86)
+        for b in range(0, rows, per):                     # 切块 ≤1920×1400 供查看
+            sh.crop((0, b * (th + 30), cols * tw, min(rows, b + per) * (th + 30))).save(out.replace('.jpg', '_p%d.jpg' % (b // per)), quality=86)
+        print('saved', out, rows)
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    cmd, out = sys.argv[1], sys.argv[2]
+    if cmd == 'contact':
+        items = [(S.__name__, S.t0 + 0.55 * (S.t1 - S.t0)) for S in M.SHOTS]
+    elif cmd == 'keys':
+        items = []
+        for S in M.SHOTS[1:]:
+            c = M.CUTS.get(S.__name__)
+            if c and c[0] != 'hard':
+                mid = S.t0 + (c[2] - c[1]) / 2 if c[0] != 'whip' else S.t0 + 1 / FPS
+                items.append((S.__name__ + ' ' + c[0][:12] + ' mid', mid))
+        items += [('credits', 1.6), ('credits2', 4.6), ('title', 8.6), ('title-ash', 13.5), ('长夜', 17.6), ('五百', 19.1), ('寒光', 21.5),
+                  ('罪状', 24.9), ('沿梁', 26.9), ('称量', 28.7), ('杀', 30.3), ('放', 32.2), ('刻刀', 34.2), ('主张', 36.0),
+                  ('正印', 38.9), ('权势', 39.6), ('锋', 43.55), ('exit', 44.0)]
+    else:
+        items = [('t', float(x)) for x in sys.argv[3:]]
+    sheet(items, out)

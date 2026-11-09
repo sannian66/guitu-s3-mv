@@ -1,0 +1,18 @@
+*.mp3
+*.wav
+sep/
+_ai_unused/
+art/
+__pycache__/
+*.video.mp4
+*.tmp.mp4
+out/c1chunks/log_*.txt
+
+.env.local
+out/chorus1_sprite/chunks/
+out/chorus1_sprite/chorus1_sprite_master_crf18.mp4
+
+# 全片精灵版：分块与母版不入库（>100MB / 中间产物）
+out/full_sprite/chunks/
+out/full_sprite/*master*.mp4
+out/full_sprite/*web*.mp4

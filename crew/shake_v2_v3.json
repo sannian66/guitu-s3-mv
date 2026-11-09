@@ -1,0 +1,39 @@
+{
+ "window": "58.5-89.5s",
+ "v2": {
+  "events": {
+   "kick": 73,
+   "snare": 42,
+   "hat": 93,
+   "crash": 7,
+   "accent": 31,
+   "total": 246
+  },
+  "peak_zoom_pct": 10.59,
+  "mean_abs_zoom_pct": 0.653,
+  "peak_shift_px": 20.2,
+  "rms_shift_px": 2.01,
+  "peak_rot_deg": 1.14,
+  "rms_rot_deg": 0.13,
+  "frame_jitter_px_rms": 2.47,
+  "frames_shaking_pct": 53.9
+ },
+ "v3": {
+  "events": {
+   "accent": 14,
+   "crash": 7,
+   "kick": 19,
+   "snare": 9,
+   "total": 49
+  },
+  "candidates_before_refractory": 62,
+  "peak_zoom_pct": 3.92,
+  "mean_abs_zoom_pct": 0.104,
+  "peak_shift_px": 2.9,
+  "rms_shift_px": 0.23,
+  "peak_rot_deg": 0.2,
+  "rms_rot_deg": 0.021,
+  "frame_jitter_px_rms": 0.24,
+  "frames_shaking_pct": 9.8
+ }
+}

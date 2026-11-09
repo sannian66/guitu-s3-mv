@@ -1,0 +1,5 @@
+#!/bin/bash
+# 每次 commit 前：把对话记录导出进同一个 commit（对话与代码同步，不靠定时）
+cd "$(git rev-parse --show-toplevel)"
+python3 crew/export_chat.py >/dev/null 2>&1 && git add crew/CONVERSATION.md 2>/dev/null
+exit 0

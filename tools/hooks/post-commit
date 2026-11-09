@@ -1,0 +1,10 @@
+#!/bin/bash
+# 每次 commit 后立刻同步推到 GitHub（前台、带重试、失败大声报错）。不靠定时任务。
+[ -n "$AUTOSYNC" ] && exit 0  # autosync.sh 自己会 pull --rebase + push
+cd "$(git rev-parse --show-toplevel)"
+for i in 1 2 3; do
+  git push -q origin HEAD:main 2>/tmp/push_err && { echo "[post-commit] pushed $(git log --oneline -1 | cut -c1-60)"; exit 0; }
+  git pull --rebase --autostash -q origin main 2>>/tmp/push_err; sleep 2
+done
+echo "[post-commit] !!! PUSH FAILED: $(tail -2 /tmp/push_err)" >&2
+exit 0

@@ -1,0 +1,292 @@
+{
+ "spent": 78,
+ "jobs": {
+  "slash_strings": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "31ddd6d6-4db9-49e5-abef-cc12c4520692",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/slash_strings_try1_0.png"
+    }
+   ]
+  },
+  "leap_arc": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "b3f3d287-b618-4552-b74a-a0e2aa380f2b",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/leap_arc_try1_0.png"
+    }
+   ]
+  },
+  "slash_diag_down": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d46fb9bc-359e-417c-b71d-26d7186f5c61",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/slash_diag_down_try1_0.png"
+    }
+   ]
+  },
+  "slash_back": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "99070403-0cfb-4785-8782-9c4a4c810595",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/slash_back_try1_0.png"
+    }
+   ]
+  },
+  "look_up_back": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "6eab862a-e32e-4af0-b43b-cffb4bfd795b",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/look_up_back_try1_0.png"
+    }
+   ]
+  },
+  "tsh_brush": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "6c432a6d-71de-4dd1-95d4-85d3b70d3d24",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/tsh_brush_try1_0.png"
+    }
+   ]
+  },
+  "blade_hot": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d6d58fab-d846-461d-b353-e3d8f049c43a",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/blade_hot_try1_0.png"
+    }
+   ]
+  },
+  "blade_level": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "598c26c7-05dc-4a3d-a148-43ac3b681914",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/614ceffe-275f-4d89-90f0-6cbd68b8bafd/work/c_cands/blade_level_try1_0.png"
+    }
+   ]
+  },
+  "face_lit": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "aca831ec-d59a-460a-a30a-d92105c6176a",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/bb073534-bbd7-4972-8ee7-8269af99396f/work/c_cands/face_lit_try1_0.png"
+    }
+   ]
+  },
+  "brace_cu": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "396ef948-8613-4d3d-9fd5-1817da443207",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/bb073534-bbd7-4972-8ee7-8269af99396f/work/c_cands/brace_cu_try1_0.png"
+    }
+   ]
+  },
+  "point_cam": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "578e0e8e-3338-43ab-bd3d-a16d38bebdd3",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/bb073534-bbd7-4972-8ee7-8269af99396f/work/c_cands/point_cam_try1_0.png"
+    }
+   ]
+  },
+  "soldiers3": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "a6e34a40-a54d-4d82-bd8f-46fa267b8395",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/bb073534-bbd7-4972-8ee7-8269af99396f/work/c_cands/soldiers3_try1_0.png"
+    }
+   ]
+  },
+  "army_kneel": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "20df00ab-2a9f-4878-8939-7ba8552b1a68",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/bb073534-bbd7-4972-8ee7-8269af99396f/work/c_cands/army_kneel_try1_0.png"
+    }
+   ]
+  },
+  "c07_chin": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "897ea9cb-63f8-4027-afda-fdd019197966",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c07_chin_try1_0.png"
+    }
+   ]
+  },
+  "c08_eyes": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "1e9e2e9d-ae98-4dba-9ee4-474a4027807b",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c08_eyes_try1_0.png"
+    }
+   ]
+  },
+  "c14_ots": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "6f7c4ab5-92a9-4b06-b512-fe87380155c3",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c14_ots_try1_0.png"
+    }
+   ]
+  },
+  "c28_face": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "a1c28f02-166d-4536-b2db-dc4e47c93c9b",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c28_face_try1_0.png"
+    }
+   ]
+  },
+  "c38_grip": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "1731eb0e-b167-4c3d-b423-4ec3dfc6a8ec",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c38_grip_try1_0.png"
+    }
+   ]
+  },
+  "c22_wall": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "86c2c256-cfa1-4b08-bb3f-0732ec60fd38",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c22_wall_try1_0.png"
+    }
+   ]
+  },
+  "c37_plaque": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "c476f9d6-0d7e-453d-9b53-7bbb8ec40646",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c37_plaque_try1_0.png"
+    }
+   ]
+  },
+  "c10_tablets": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "cb8e95cc-3e22-42fb-8dca-2e308a2346af",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c10_tablets_try1_0.png"
+    }
+   ]
+  },
+  "c23_bronze": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "780476a2-192b-4210-8eb9-821a9412b440",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c23_bronze_try1_0.png"
+    }
+   ]
+  },
+  "c16_drip": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "de51d1de-32c0-4ba6-ab7c-443245348fdb",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands5/c16_drip_try1_0.png"
+    }
+   ]
+  },
+  "c06_lid": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d0cfd60a-a3e6-4da6-bdc7-af3ad1804aff",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands6/c06_lid_try1_0.png"
+    }
+   ]
+  },
+  "c41_sweep": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "bac2774e-97d3-4bb3-ae7f-d06c47e9a451",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands6/c41_sweep_try1_0.png"
+    }
+   ]
+  },
+  "c35b_bear": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "7be64e98-8892-4b57-a026-f88a8743ed4b",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/work/c_cands6/c35b_bear_try1_0.png"
+    }
+   ]
+  }
+ },
+ "ref_url": "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/09/e1fdcd07-0f5d-40a3-b987-537868276210.jpg"
+}
