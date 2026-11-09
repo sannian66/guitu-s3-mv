@@ -83,13 +83,14 @@ def defringe(sp, choke=0.12, band=7):
     return sp
 
 
-def spr(name, clean=True):
-    """B 组精灵（独立实例，不污染 SP.layer 共享缓存）；clean=True 时做 defringe 去灰边"""
-    key = (name, clean)
+def spr(name, clean=True, work_w=2048):
+    """B 组精灵（独立实例，不污染 SP.layer 共享缓存）；clean=True 时做 defringe 去灰边；
+    work_w：工作分辨率（第九棒：特写手部用 3072/3840，避免 2048 再放大成「泥团手」）"""
+    key = (name, clean, work_w)
     if key in _SPR: return _SPR[key]
     p = GEN + 'B_r4/' + name + '_cutd.png'
     if not os.path.exists(p): p = GEN + name + '_cut.png'
-    sp = SP.SpriteLayer(p)
+    sp = SP.SpriteLayer(p, work_w=work_w)
     if clean: defringe(sp)
     _SPR[key] = sp
     return sp

@@ -572,7 +572,7 @@ def sp_pt(sp, src, dst, width_px, rot, n):
 class V07(Shot):
     T_QUAN = 94.02
     def __init__(self):
-        self.sp = spr('S051/grip_scepter')
+        self.sp = spr('B_r4/grip_scepter_hi', work_w=3072)      # 第九棒：原图 3840 直接抠（原 2560 抠图 → 2048 工作宽 → 2700 放大，手指糊成团）
         self.bg = BK.dark_bg(5201, 0.02, 0.06, tint=(1.2, 1.0, 0.85))
         wall = cv2.resize(K.fbm(H // 4, W // 4, 5202, 8, 5), (W, H))[..., None]
         self.bg = self.bg * (0.7 + 0.6 * wall)
@@ -584,8 +584,8 @@ class V07(Shot):
         fr = self.bg.copy()
         k = eout(clamp01((t - self.t0) / 0.25), 3)                 # 攥紧：手从略松到紧（推进 + 微抖）
         fr, Aw = put_at(fr, self.sp, t, (0.24, 0.30), (820, 560), 2700 * (1.0 + 0.04 * k),
-                        grade=dict(expo=0.80, sat=0.6, tint=(1.04, 0.96, 0.86), lift=0.0, gamma=1.12),
-                        rim=dict(col=(1.0, 0.66, 0.32), amt=1.6, dir=(0.9, -0.3)), wind_amp=2, shade=None, wrap=0.3)
+                        grade=dict(expo=0.92, sat=0.75, tint=(1.04, 0.96, 0.86), lift=0.0, gamma=1.04),
+                        rim=dict(col=(1.0, 0.66, 0.32), amt=1.6, dir=(0.9, -0.3)), wind_amp=0, shade=None, wrap=0.3)
         # 镂空窗棂投影：字形光斜投（sx 拉伸 + 倾斜），窗格木条把字切成几块
         pq = clamp01((t - (V(self.T_QUAN) - 0.06)) / 0.12)
         fl = 0.85 + 0.15 * math.sin(t * 23) * math.sin(t * 7.1)
@@ -1328,39 +1328,46 @@ class V17(Shot):
 # =====================================================================================
 # V18 107.55–108.34 CU：107.58「握」猛然握拳（palm_fist），水花炸开；「握在自己」志莽行书从水花中迸出
 class V18(Shot):
+    """第九棒：critic_B_r3 不可交付（S056/palm_fist 泥团手）→ 重生 fist3（四指分开、指缝 / 指甲 / 指节清楚），
+    不再用 2300px 放大 + 运动模糊糊掉；「握在自己」改马善政楷（原志莽行书「握」读成「搖」），与 V17/V19 同一句同一字体"""
     T_WO = 107.58
+    FIST = (720, 500)
     def __init__(self):
-        self.sp = spr('S056/palm_fist')
+        self.sp = spr('B_r4/fist3')
         self.bg = BK.dark_bg(6301, 0.01, 0.03)
         self.rain = fx2.RainSheet(6302, density=0.8)
-        T.warm('握在自己', 'xing', 200)
+        T.warm('握在自己', 'kai', 200)
 
     def render(self, t):
         u = self.u(t)
         x, y = K.grid()
-        fr = self.bg + np.exp(-(((x - 900) / 600) ** 2 + ((y - 450) / 400) ** 2))[..., None] * COLDC * 0.10
+        fr = self.bg + np.exp(-(((x - 900) / 650) ** 2 + ((y - 420) / 420) ** 2))[..., None] * COLDC * 0.12
+        th = V(self.T_WO)
         hk = hitp(t, self.T_WO, 0.12)
-        fr, _ = put_at(fr, self.sp, t, (0.38, 0.28), (860, 470), 2300 * (1 + 0.05 * hk), rim=dict(col=(0.75, 0.82, 1.0), amt=2.0, dir=(0.4, -1.0)),
-                       grade=dict(expo=0.70, sat=0.45, tint=(0.96, 0.97, 1.03), lift=0.0, gamma=1.18),   # 第七棒：压成场景冷色温（评审 P1）       # 第五棒：去灰白石膏感 → 与 P14/V17 同一冷光下的苍白肤色
-                       wind_amp=2, mblur=(0, -30 * hk), shade=(1100, 1900, 0.3, 700, 0.3))
-        fr = K.sparks(fr, t, 6303, (820, 420), n=160, life=0.6, speed=(300, 1300), dirc=(0, -1), spread=3.0, grav=1500, size=1.6,
-                      area=(160, 60), color=(0.8, 0.85, 0.95), amt=1.1, t0=V(self.T_WO), burst=True)
+        q = clamp01((t - self.t0) / max(th - self.t0, 0.02))
+        sq = 1.0 + 0.10 * (1 - eout(q, 3)) - 0.03 * hk                    # 攥紧：入镜略大 → 一记收紧
+        fr, _ = put_at(fr, self.sp, t, (0.48, 0.36), (self.FIST[0], self.FIST[1] + 60 * (1 - eout(q, 3))), 1750 * sq,
+                       rim=dict(col=(0.75, 0.82, 1.0), amt=2.0, dir=(0.5, -1.0)),
+                       grade=dict(expo=0.82, sat=0.55, tint=(0.97, 0.98, 1.03), lift=0.0, gamma=1.08),
+                       wind_amp=0, breathe=0.0, shade=(1300, 1900, 0.3, 700, 0.3))
+        # 握紧挤出的水：从指缝向上、两侧迸开
+        fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 120), n=150, life=0.6, speed=(300, 1200), dirc=(0, -1), spread=2.6, grav=1500, size=1.5,
+                      area=(220, 60), color=(0.8, 0.85, 0.95), amt=1.0, t0=th, burst=True)
         pr = prs(25, [4, 5, 6, 7], t)
-        fr = T.scatter_stack(fr, '握在自己', pr, places=[dict(ch='握', x=1380, y=340, size=280, rot=-6, font='xing', idx=0, emph=True),
-                                                         dict(ch='在', x=1600, y=560, size=150, rot=5, font='xing', idx=1, emph=False),
-                                                         dict(ch='自', x=1460, y=730, size=150, rot=-4, font='xing', idx=2, emph=False),
-                                                         dict(ch='己', x=1660, y=800, size=170, rot=6, font='xing', idx=3, emph=False)],
-                             color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85, glow=0.15))
+        fr = T.scatter_stack(fr, '握在自己', pr, places=[dict(ch='握', x=1360, y=360, size=270, rot=-3, font='kai', idx=0, emph=True),
+                                                         dict(ch='在', x=1580, y=560, size=140, rot=0, font='kai', idx=1, emph=False),
+                                                         dict(ch='自', x=1460, y=720, size=140, rot=0, font='kai', idx=2, emph=False),
+                                                         dict(ch='己', x=1640, y=790, size=150, rot=0, font='kai', idx=3, emph=False)],
+                             color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85, glow=0.12))
         fr = self.rain.draw(fr, t, intensity=0.8, angle=8)
-        q = t - V(self.T_WO)                                          # 第四棒：去白闪 → 冷色水花冲击环（只亮环，不抬全屏）
-        if 0 <= q < 0.30:
-            d = np.sqrt((x - 860) ** 2 + ((y - 430) * 1.25) ** 2)
-            R = 90 + 1500 * eout(q / 0.30, 2)
-            ring = np.exp(-((d - R) / (14 + 70 * q)) ** 2) * (1 - q / 0.30)
-            core = np.exp(-(d / 260) ** 2) * (1 - q / 0.30) ** 2
-            fr = fr * (1 - 0.35 * core[..., None]) + (ring * 0.9 + core * 0.12)[..., None] * COLDC
-        dx, dy, dr = shake(t, 22 * hk, 14, 63)
-        fr = cam(fr, 1.04 + 0.06 * hk, dx, dy, dr)
+        qq = t - th                                                     # 冷色水花冲击环（只亮环，不抬全屏）
+        if 0 <= qq < 0.30:
+            d = np.sqrt((x - self.FIST[0]) ** 2 + ((y - self.FIST[1]) * 1.25) ** 2)
+            R = 260 + 1400 * eout(qq / 0.30, 2)
+            ring = np.exp(-((d - R) / (14 + 70 * qq)) ** 2) * (1 - qq / 0.30)
+            fr = fr + (ring * 0.6)[..., None] * COLDC
+        dx, dy, dr = shake(t, 16 * hk, 14, 63)
+        fr = cam(fr, 1.02 + 0.04 * hk, dx, dy, dr)
         return fr, (4 if hk > 0.5 else 0)
 
 
@@ -1373,7 +1380,7 @@ class V19(Shot):
         self.bg = sk
         self.rain = fx2.RainSheet(6402, density=1.0)
         self.fog = fx2.Fog(6403)
-        T.warm('手掌', 'xing', 230)
+        T.warm('手掌', 'kai', 230)
 
     def render(self, t):
         u = self.u(t)
@@ -1386,8 +1393,8 @@ class V19(Shot):
         fr = K.sparks(fr, t, 6404, (640, 300), n=36, life=0.45, speed=(300, 900), dirc=(-1, -0.2), spread=1.1, grav=900, size=1.0,
                       area=(220, 160), color=(0.8, 0.85, 0.95), amt=0.7, t0=self.t0 + 0.05, burst=True)   # 甩水珠：散开、不成方块
         pr = prs(25, [8, 9], t)
-        fr = T.scatter_stack(fr, '手掌', pr, places=[dict(ch='手', x=1500, y=640, size=220, rot=-5, font='xing', idx=0, emph=False),
-                                                       dict(ch='掌', x=1700, y=800, size=260, rot=6, font='xing', idx=1, emph=True)],
+        fr = T.scatter_stack(fr, '手掌', pr, places=[dict(ch='手', x=1500, y=640, size=220, rot=0, font='kai', idx=0, emph=False),
+                                                       dict(ch='掌', x=1700, y=800, size=260, rot=0, font='kai', idx=1, emph=True)],
                              color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85, glow=0.15))
         fr = self.rain.draw(fr, t, intensity=1.0, angle=10, cam=(-300 * whip, 0))
         fr = cam(fr, 1.02, 0, 0, -2 * whip)
