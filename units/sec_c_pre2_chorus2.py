@@ -1969,17 +1969,17 @@ class C37(Shot):
         sw = 2.2 * math.sin((t - self.t0) * 3.2)
         # 匾（独立层：先在黑底上合成，再按裂缝分两半）
         P, A = put(self.Z.copy(), t, 'C5/c37_plaque', 960, 560, 560, anchor='src', src=(0.5, 0.5), rot=sw, rim=COLD, rim_amt=1.4,
-                   rim_dir=(-0.5, -0.9), flash=0.5 * fl, expo=0.95 + 0.4 * fl, sat=0.85, tint=(1.0, 0.98, 0.94), wind=0, breathe=0.0)
+                   rim_dir=(-0.5, -0.9), flash=0.5 * fl, expo=1.12 + 0.4 * fl, sat=0.9, tint=(1.0, 0.98, 0.94), wind=0, breathe=0.0)   # 第十二棒：匾面提亮一档
         # 第九棒 P2⑩：匾心先有暗刻的「判」（阴刻、暗铜色），不再是半拍空匾；电光再把它逐笔描成泥金
         Ld = T.Layer(); T.place(Ld, '判', 960, 560, 300, (0.30, 0.21, 0.10), 'serif_black', rot=sw, texture=False)
         Ld.A *= 0.85 * sm(self.t0, self.t0 + 0.12, t)
         P = T.compose(P, Ld, shadow=0.7, shadow_sigma=3)
         if t >= tp - 0.30:                      # 泥金「判」：电光逐笔描亮（自上而下）
             prog = sm(tp - 0.30, tp + 0.04, t)
-            L = T.Layer(); T.place(L, '判', 960, 560, 300, (1.0, 0.78, 0.36), 'serif_black', rot=sw, texture=False)
+            L = T.Layer(); T.place(L, '判', 960, 560, 300, (1.0, 0.84, 0.46), 'serif_black', rot=sw, texture=False)
             yy = np.arange(H, dtype=np.float32)[:, None]
             L.A *= np.clip((lerp(380, 760, prog) - yy) / 30, 0, 1)
-            P = T.compose(P, L, shadow=0.5, shadow_sigma=8, glow=0.7 + 0.8 * pulse(t, tp, 0.2), glow_sigma=16, glow_color=(1.0, 0.6, 0.2))
+            P = T.compose(P, L, shadow=0.5, shadow_sigma=8, glow=1.0 + 0.8 * pulse(t, tp, 0.2), glow_sigma=16, glow_color=(1.0, 0.6, 0.2))
         for x in (700, 1220):                    # 铁链
             fr = red_line(fr, (x + 30, BAR - 10), (x + sw * 8, 330), w=3, amt=0.25)
         if t < ts:
@@ -2001,6 +2001,19 @@ class C37(Shot):
                         color=(1.0, 0.75, 0.35), area=(30, 300))
         fr = bolt(fr, t, ts, 372, (1000, 40), (960, 560), inten=1.2, width=4)
         fr = rain(fr, t, 370, inten=0.8, angle=10)
+        # 第十二棒（critic_C_r6 P2⑨）：前景层——左上角近景飞檐（焦外大虚、冷边光）+ 镜头前粗雨帘（焦外），匾退到中景
+        E = np.zeros((H // 2, W // 2), np.float32)
+        cv2.fillPoly(E, [np.array([[0, 0], [600, 0], [560, 95], [300, 140], [120, 230], [0, 300]], np.int32)], 1.0, cv2.LINE_AA)
+        cv2.fillPoly(E, [np.array([[540, 80], [640, 40], [600, 110]], np.int32)], 1.0, cv2.LINE_AA)   # 檐角起翘
+        E = cv2.resize(cv2.GaussianBlur(E, (0, 0), 9), (W, H))
+        Er = np.clip(E - cv2.GaussianBlur(E, (0, 0), 14), 0, 1) * 2.2
+        fr = fr * (1 - 0.95 * E[..., None]) + E[..., None] * 0.006 + Er[..., None] * COLD * (0.35 + 0.8 * fl)
+        Rf = np.zeros((H // 2, W // 2), np.float32); rr_ = np.random.default_rng(373)
+        for i in range(16):
+            x = rr_.uniform(0, W // 2); y = ((t * rr_.uniform(900, 1300) + rr_.uniform(0, 600)) % 800) - 200
+            cv2.line(Rf, (int(x), int(y)), (int(x + 30), int(y + 170)), 1.0, int(rr_.uniform(4, 9)), cv2.LINE_AA)
+        Rf = cv2.resize(cv2.GaussianBlur(Rf, (0, 0), 5), (W, H))
+        fr = fr + Rf[..., None] * COLD * (0.10 + 0.25 * fl)
         self.ca = 6 if (0 <= t - tp < 0.1 or 0 <= t - ts < 0.1) else 0
         return fr
 
