@@ -43,7 +43,7 @@ def _gcut_install():
         print('GCUT: 缓存/抠像重定向未生效', e, file=sys.stderr)
 
 
-if os.environ.get('GCUT', '0') == '1':
+if os.environ.get('GCUT', '1') == '1':
     _gcut_install()
 import scenes as S
 from fx import finish, to8, W, H

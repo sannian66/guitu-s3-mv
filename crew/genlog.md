@@ -426,3 +426,176 @@
 ## 2026-11-10 03:17 · OpenAI 协议渠道批量生图（jobs.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `stand_defy_green`（56s）→ `out/r6tmp/pilot/stand_defy_green.png`
+
+## 2026-11-10 03:27 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 2 个）
+- 成功 2，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+
+## 2026-11-10 03:30 · OpenAI 协议渠道批量生图（s18_draw_v1b.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_v1b`（47s）→ `assets/gen/R5_D/s18_draw_v1b_cut.png`
+
+## 2026-11-10 03:29 · OpenAI 协议渠道批量生图（s18_draw_v1a.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_v1a`（59s）→ `assets/gen/R5_D/s18_draw_v1a_cut.png`
+
+## 2026-11-10 03:30 · OpenAI 协议渠道批量生图（s18_draw_v2a.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_v2a`（60s）→ `assets/gen/R5_D/s18_draw_v2a_cut.png`
+
+## 2026-11-10 03:30 · OpenAI 协议渠道批量生图（s18_draw_v2b.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_v2b`（60s）→ `assets/gen/R5_D/s18_draw_v2b_cut.png`
+
+## 2026-11-10 03:33 · OpenAI 协议渠道批量生图（s18_draw_wc.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_wc`（53s）→ `assets/gen/R5_D/s18_draw_wc_cut.png`
+
+## 2026-11-10 03:33 · OpenAI 协议渠道批量生图（s18_draw_wb.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_wb`（64s）→ `assets/gen/R5_D/s18_draw_wb_cut.png`
+
+## 2026-11-10 03:33 · OpenAI 协议渠道批量生图（s18_draw_wa.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_draw_wa`（86s）→ `assets/gen/R5_D/s18_draw_wa_cut.png`
+
+## 2026-11-10 03:35 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 2 个）
+- 成功 2，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+
+## 2026-11-10 03:30 · OpenAI 协议渠道批量生图（j_js2.json，5 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `js3_apex_b`（119s）→ `assets/gen/R5_F/js3_apex_b_cut.png`
+- ✔ `js4_strike_a`（58s）→ `assets/gen/R5_F/js4_strike_a_cut.png`
+- ✔ `js4_strike_b`（59s）→ `assets/gen/R5_F/js4_strike_b_cut.png`
+- ✔ `js5_land_a`（51s）→ `assets/gen/R5_F/js5_land_a_cut.png`
+- ✔ `js5_land_b`（67s）→ `assets/gen/R5_F/js5_land_b_cut.png`
+
+## 2026-11-10 03:33 · OpenAI 协议渠道批量生图（s18_draw_wd.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✗ `s18_draw_wd` 失败：Remote end closed connection without response
+
+## 2026-11-10 03:30 · OpenAI 协议渠道批量生图（j_emp_face.json，6 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `emp_a`（53s）→ `assets/gen/R5_F/emp_a_cut.png`
+- ✔ `emp_b`（52s）→ `assets/gen/R5_F/emp_b_cut.png`
+- ✔ `emp_c`（43s）→ `assets/gen/R5_F/emp_c_cut.png`
+- ✔ `bladeface_a`（59s）→ `assets/gen/R5_F/bladeface_a_cut.png`
+- ✔ `bladeface_b`（93s）→ `assets/gen/R5_F/bladeface_b_cut.png`
+- ✔ `bladeface_c`（77s）→ `assets/gen/R5_F/bladeface_c_cut.png`
+
+## 2026-11-10 03:37 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 2 个）
+- 成功 2，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+
+## 2026-11-10 03:30 · OpenAI 协议渠道批量生图（j_js1.json，7 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `js1_crouch_a`（54s）→ `assets/gen/R5_F/js1_crouch_a_cut.png`
+- ✔ `js1_crouch_b`（54s）→ `assets/gen/R5_F/js1_crouch_b_cut.png`
+- ✔ `js2_rise_a`（65s）→ `assets/gen/R5_F/js2_rise_a_cut.png`
+- ✔ `js2_rise_b`（64s）→ `assets/gen/R5_F/js2_rise_b_cut.png`
+- ✔ `js3_apex_a`（61s）→ `assets/gen/R5_F/js3_apex_a_cut.png`
+- ✔ `s45_follow_a`（57s）→ `assets/gen/R5_F/s45_follow_a_cut.png`
+- ✔ `s45_follow_b`（54s）→ `assets/gen/R5_F/s45_follow_b_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（carve.json，2 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `carve_full_v1`（60s）→ `assets/gen/R5_A/carve_full_v1_cut.png`
+- ✔ `carve_full_v2`（57s）→ `assets/gen/R5_A/carve_full_v2_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（sheath.json，2 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `sheath_same_v1`（60s）→ `assets/gen/R5_A/sheath_same_v1_cut.png`
+- ✔ `sheath_same_v2`（60s）→ `assets/gen/R5_A/sheath_same_v2_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（paper.json，2 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `paper_heap_v1`（71s）→ `assets/gen/R5_A/paper_heap_v1_cut.png`
+- ✔ `paper_heap_v2`（57s）→ `assets/gen/R5_A/paper_heap_v2_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（seal.json，3 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `jade_seal_v1`（48s）→ `assets/gen/R5_A/jade_seal_v1_cut.png`
+- ✔ `jade_seal_v2`（51s）→ `assets/gen/R5_A/jade_seal_v2_cut.png`
+- ✔ `jade_seal_v3`（52s）→ `assets/gen/R5_A/jade_seal_v3_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（draw.json，3 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `draw_cu_v1`（65s）→ `assets/gen/R5_A/draw_cu_v1_cut.png`
+- ✔ `draw_cu_v2`（65s）→ `assets/gen/R5_A/draw_cu_v2_cut.png`
+- ✔ `draw_cu_v3`（63s）→ `assets/gen/R5_A/draw_cu_v3_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（slash.json，6 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `slash_k1_windup_v1`（61s）→ `assets/gen/R5_A/slash_k1_windup_v1_cut.png`
+- ✔ `slash_k1_windup_v2`（55s）→ `assets/gen/R5_A/slash_k1_windup_v2_cut.png`
+- ✔ `slash_k2_mid_v1`（59s）→ `assets/gen/R5_A/slash_k2_mid_v1_cut.png`
+- ✔ `slash_k2_mid_v2`（55s）→ `assets/gen/R5_A/slash_k2_mid_v2_cut.png`
+- ✔ `slash_k3_follow_v1`（51s）→ `assets/gen/R5_A/slash_k3_follow_v1_cut.png`
+- ✔ `slash_k3_follow_v2`（57s）→ `assets/gen/R5_A/slash_k3_follow_v2_cut.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（cal.json，8 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `cal_sha_v1`（44s）→ `assets/gen/R5_A/cal_sha_v1.png`
+- ✔ `cal_sha_v2`（45s）→ `assets/gen/R5_A/cal_sha_v2.png`
+- ✔ `cal_fang_v1`（44s）→ `assets/gen/R5_A/cal_fang_v1.png`
+- ✔ `cal_fang_v2`（45s）→ `assets/gen/R5_A/cal_fang_v2.png`
+- ✔ `cal_feng_v1`（43s）→ `assets/gen/R5_A/cal_feng_v1.png`
+- ✔ `cal_feng_v2`（48s）→ `assets/gen/R5_A/cal_feng_v2.png`
+- ✔ `cal_mang_v1`（39s）→ `assets/gen/R5_A/cal_mang_v1.png`
+- ✔ `cal_mang_v2`（31s）→ `assets/gen/R5_A/cal_mang_v2.png`
+
+## 2026-11-10 03:48 · OpenAI 协议渠道批量生图（up.json，5 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `slash_rise_v1`（61s）→ `assets/gen/R5_A/slash_rise_v1_cut.png`
+- ✔ `slash_rise_v2`（109s）→ `assets/gen/R5_A/slash_rise_v2_cut.png`
+- ✔ `slash_rise_v3`（52s）→ `assets/gen/R5_A/slash_rise_v3_cut.png`
+- ✔ `slash_rise_coil_v1`（61s）→ `assets/gen/R5_A/slash_rise_coil_v1_cut.png`
+- ✔ `slash_rise_coil_v2`（59s）→ `assets/gen/R5_A/slash_rise_coil_v2_cut.png`
+
+## 2026-11-10 03:57 · OpenAI 协议渠道批量生图（e48_coil.json，3 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `coil_a`（57s）→ `assets/gen/R5_E/coil_a.png`
+- ✔ `coil_b`（54s）→ `assets/gen/R5_E/coil_b.png`
+- ✔ `coil_c`（53s）→ `assets/gen/R5_E/coil_c.png`
+
+## 2026-11-10 03:57 · OpenAI 协议渠道批量生图（e47_scale.json，3 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `scale_a`（55s）→ `assets/gen/R5_E/scale_a.png`
+- ✔ `scale_b`（55s）→ `assets/gen/R5_E/scale_b.png`
+- ✔ `scale_c`（57s）→ `assets/gen/R5_E/scale_c.png`
+
+## 2026-11-10 03:58 · OpenAI 协议渠道批量生图（e50_back.json，2 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `back_rim_a`（68s）→ `assets/gen/R5_E/back_rim_a_cut.png`
+- ✔ `back_rim_b`（58s）→ `assets/gen/R5_E/back_rim_b_cut.png`
+
+## 2026-11-10 04:01 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 184 个）
+- 成功 174，失败 8（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
+- ✗ `A/hand_draw_cu` fail_iou iou=0.671 HTTP Error 400: Bad Request
+- ✗ `A/villain_fall` fail_iou iou=0.838 
+- ✗ `B_r4/fg_kneeler` fail_iou iou=0.653 
+- ✗ `D_bridge/run_top` fail_iou iou=0.738 
+- ✗ `D_bridge/slash_sky_back` fail_iou iou=0.812 
+- ✗ `E_r5/emperor_face` fail_iou iou=0.826 
+- ✗ `S003/thumb_push` fail_iou iou=0.6 
+- ✗ `S044/thumb` fail_iou iou=0.74 
+
+## 2026-11-10 03:58 · OpenAI 协议渠道批量生图（e19_sil.json，3 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `sil_front_a`（56s）→ `assets/gen/R5_E/sil_front_a_cut.png`
+- ✔ `sil_front_b`（54s）→ `assets/gen/R5_E/sil_front_b_cut.png`
+- ✔ `sil_front_c`（54s）→ `assets/gen/R5_E/sil_front_c_cut.png`
+
+## 2026-11-10 03:59 · OpenAI 协议渠道批量生图（r5b_gen1.json，4 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `tsh_brush_top_a`（56s）→ `assets/gen/R5_B/tsh_brush_top_a_cut.png`
+- ✔ `tsh_brush_top_b`（52s）→ `assets/gen/R5_B/tsh_brush_top_b_cut.png`
+- ✔ `blade_face3_a`（47s）→ `assets/gen/R5_B/blade_face3_a_cut.png`
+- ✔ `blade_face3_b`（53s）→ `assets/gen/R5_B/blade_face3_b_cut.png`
+
+## 2026-11-10 04:01 · OpenAI 协议渠道批量生图（c10.json，3 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `c10_tablets_gl_v1`（38s）→ `assets/gen/R5_C/c10_tablets_gl_v1.png`
+- ✔ `c10_tablets_gl_v2`（59s）→ `assets/gen/R5_C/c10_tablets_gl_v2.png`
+- ✔ `c10_tablets_gl_v3`（52s）→ `assets/gen/R5_C/c10_tablets_gl_v3.png`
+
+## 2026-11-10 04:09 · 第五轮全局绿幕重抠（tools/gcut_batch.py，gpt-image-2 edits，本批 239 个）
+- 成功 178，失败 0（IoU<0.85 或生图失败 → 继续用旧图）；产物 `<名>_graw.png`（绿幕原图）、`<名>_gcut.png`（对齐旧画布的新抠图）
