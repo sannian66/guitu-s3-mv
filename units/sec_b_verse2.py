@@ -1370,7 +1370,7 @@ class V20(Shot):
         pr = prs(26, [0, 1, 2], t)
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('若这世', pr)):
-            if pc > 0: T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
+            if pc > 0: T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2) * (1 - sstep(0.5, 0.75, u)), scale=1.2 - 0.2 * eout(pc))   # 第八棒：roll 前退场，不被甩出画
         fr = T.compose(fr, L, shadow=0.85, glow=0.12)
         ang = 90 * ein(clamp01((u - 0.45) / 0.55), 2)
         fr = roll_cover(fr, ang, 1.0 + 0.06 * eio(u))
@@ -1385,27 +1385,34 @@ def roll_cover(fr, ang, extra=1.0):
 
 
 class V21(Shot):
+    """第八棒：歌词不再随整个世界绕画面中心转（90° 时被放大 1.8× 甩到画外，f3328–3330「道」顶边出画）——
+    字列改在屏幕空间、绕自己的列中心 (730,540) 同步转 90°→180°：90° 时横躺在画面中部，180° 时倒立竖排（颠倒），全程在安全区内。"""
+    CX, CY = 730, 540
     def __init__(self):
         self.v20 = V20()
 
     def render(self, t):
         u = self.u(t)
         fr = self.v20.scene(t)
+        # 90°→180°，同时反相（黑白颠倒）；「黑」「白」随反相互换
+        e = eio(u)
+        ang = 90 + 90 * eout(u, 2)
+        fr = roll_cover(fr, ang, 1.04 + 0.04 * (1 - e))
         pr = prs(26, [3, 4, 5, 6, 7], t)
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('道黑白颠倒', pr)):
             if pc <= 0: continue
             col = (0.04, 0.04, 0.045) if ch == '黑' else ('white' if ch != '白' else (0.98, 0.97, 0.94))
-            T.place(L, ch, 1190 + (24 if i % 2 else -24), 250 + i * 145, 150 if ch in '黑白' else 122, color=col, fname='serif_black',
+            T.place(L, ch, self.CX + (20 if i % 2 else -20), self.CY + (i - 2) * 132, 140 if ch in '黑白' else 116, color=col, fname='serif_black',
                     alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
-        fr = fr * (1 - 0.45 * K.blur_ds(((np.abs(K.grid()[0] - 1190) < 120) & (K.grid()[1] > 150) & (K.grid()[1] < 930)).astype(np.float32), 40)[..., None])
+        x, y = K.grid()
+        band = K.blur_ds(((np.abs(x - self.CX) < 115) & (np.abs(y - self.CY) < 380)).astype(np.float32), 40)
+        M = cv2.getRotationMatrix2D((float(self.CX), float(self.CY)), ang, 1.0)
+        band = cv2.warpAffine(band, M, (W, H))
+        L.A = cv2.warpAffine(L.A, M, (W, H)); L.C = cv2.warpAffine(L.C, M, (W, H)); L.bb = [0, 0, W, H]
+        fr = fr * (1 - 0.45 * band[..., None])
         fr = T.compose(fr, L, shadow=0.6, glow=0.15, outline=3, outline_color=(0.5, 0.5, 0.5))
-        # 90°→180°，同时反相（黑白颠倒）；「黑」「白」随反相互换
-        e = eio(u)
-        ang = 90 + 90 * eout(u, 2)
-        fr = roll_cover(fr, ang, 1.04 + 0.04 * (1 - e))
         k = sstep(0.2, 0.55, u)
-        vg = np.exp(-(((K.grid()[0] - 960) / 1100) ** 2 + ((K.grid()[1] - 540) / 650) ** 2))[..., None]
         fr = fr * (1 - k) + neg_grade(fr) * k                         # 负片：S 曲线高反差 + 重暗角（第四棒：去灰）
         return fr, 0
 
