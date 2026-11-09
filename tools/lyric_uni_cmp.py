@@ -343,6 +343,64 @@ def table():
     return out
 
 
+# ---------------------------------------------------------------- ⑥ 留空重排（compaction）三句三联图
+def compact(frames=None):
+    """三句「留空 ≥50%」重排后的三联图：左=纯字幕（黑底）/ 中=改造前 / 右=改造后。"""
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    L = LU.lines()
+    frames = frames or [5863, 5975, 2389]          # 第49句 血未冷刀不放 / 第50句 …天理昭彰 / 第18句 是非对错我自己扛
+    jobs = []
+    for f in frames:
+        jobs.append((0, f, os.path.join(TMP, f'cmpct_{f}_before.png')))
+        jobs.append((1, f, os.path.join(TMP, f'cmpct_{f}_after.png')))
+    render(jobs)
+    os.environ['LYRIC_UNI'] = '1'
+    LU._maybe_out()
+    pur = {}
+    for f in frames:
+        canvas = np.zeros((1080, 1920, 3), np.uint8)
+        pur[f] = LU.draw(canvas, f)
+    os.environ.pop('LYRIC_UNI', None)
+    f_ttl = ImageFont.truetype(FONT, 26)
+    f_cap = ImageFont.truetype(FONT, 19)
+    f_sml = ImageFont.truetype(FONT_L, 16)
+    TW, TH = 560, 315
+    W = 20 + 3 * (TW + 16)
+    H = 110 + len(frames) * (TH + 74)
+    sheet = Image.new('RGB', (W, H), (14, 14, 15))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), '留空 ≥50% 的三句：改成「抽掉 + 上顺排」（列变短，不留空格）', fill=(236, 232, 224), font=f_ttl)
+    d.text((20, 46), '左=纯字幕（黑底）｜中=改造前（各组原字幕）｜右=改造后（统一层）。逐字时间不动：被抽掉的字跳过，后面的字不提前',
+           fill=(150, 165, 150), font=f_sml)
+    d.text((20, 70), '画面里被让位的词仍在（朱印 / 鎏金巨字 / 印阵）—— 只把字幕里重复的那几个字抽掉', fill=(150, 165, 150), font=f_sml)
+    for i, f in enumerate(frames):
+        y = 110 + i * (TH + 74)
+        tiles = [(Image.fromarray(pur[f]), '纯字幕（黑底，已重排）'),
+                 (Image.open(os.path.join(TMP, f'cmpct_{f}_before.png')).convert('RGB'), '改造前'),
+                 (Image.open(os.path.join(TMP, f'cmpct_{f}_after.png')).convert('RGB'), '改造后')]
+        for j, (im, lab) in enumerate(tiles):
+            x = 20 + j * (TW + 16)
+            sheet.paste(_tile(im, TW, TH), (x, y))
+            d.text((x, y + TH + 3), lab, fill=(228, 224, 216), font=f_cap)
+        act = [r for r in L if r['t_on'] <= f / 30.0 < r['t_off']]
+        if act:
+            r = act[0]
+            lay = LU.vis_layout(r, LU.IN_SCENE_HIDE)
+            full = ''.join(c['ch'] for c in r['chars'])
+            left = ''.join(p['ch'] for p in lay['pos'])
+            ncol = max(1, (lay['n'] + 9) // 10)
+            d.text((20, y + TH + 26), '第 %d 句 f%d：原句 %s（%d 字）→ 重排后 %d 字「%s」，%d 列 %dpx' % (
+                r['line'] + 1, f, full, r['n'], lay['n'], left, ncol, r['size']),
+                fill=(160, 156, 148), font=f_sml)
+    out = os.path.join(OUTDIR, 'compact_three.jpg')
+    sheet.save(out, quality=91)
+    print('sheet', out, flush=True)
+    return out
+
+
 # ---------------------------------------------------------------- ⑤ 重复出字：审计 + 像素检测
 def _picks21():
     """7 段 × 3 帧（每段取最长句 / 最短句 / 重音句中那帧）。"""
@@ -408,14 +466,25 @@ def _textmask(img, box):
     return m
 
 
-def dupcheck():
-    """像素检测：21 帧字幕区（x>1500, 200<y<900）里除了「我的字形框」之外还有没有成句的字。"""
+def dupcheck(extra=None):
+    """像素检测：字幕带（x>1500, 200<y<900）里除了「我的字形框」之外还有没有成句的字。
+
+    用法（一行命令，#3 要求）：
+        python3 tools/lyric_uni_cmp.py dupcheck                # 22 帧标准集（7 段×3 句 + 3050）
+        python3 tools/lyric_uni_cmp.py dupcheck 3050 5011      # 额外加帧复检
+    以后任何镜头新增「不走 typo 的私有字幕路径」都必须跑这条 —— audit 看不到私有路径，只有它能兜。
+    """
     import numpy as np
     import cv2
     from PIL import Image
     sys.path.insert(0, os.path.join(ROOT, 'units'))
     import lyric_uni as LU
     picks = _picks21()
+    for f in (extra or []):
+        L = LU.lines()
+        t = f / 30.0
+        act = [r for r in L if r['t_on'] <= t < r['t_off']]
+        picks.append(('EXTRA_f%d' % f, act[0]['line'] if act else 0, int(f)))
     jobs = [(1, f, os.path.join(TMP, f'dup_{f}.png')) for _, _, f in picks]
     render(jobs)
     rows, bad = [], []
@@ -428,8 +497,9 @@ def dupcheck():
         m = _textmask(img, box)
         # 挖掉我自己画的字形框（含 1px 描边与朱晕）
         os.environ['LYRIC_UNI'] = '1'
+        LU._maybe_out()
         for r in LU.active(f / 30.0):
-            for key in r['pos']:
+            for key in LU.vis_layout(r, LU.OUT_CHARS | LU.IN_SCENE_HIDE)['pos']:
                 cx, cy = key['x'] - box[0], key['y'] - box[1]
                 h = int(r['size'] * 0.78)
                 cv2.rectangle(m, (int(cx - h), int(cy - h)), (int(cx + h), int(cy + h)), 0, -1)
@@ -741,8 +811,10 @@ if __name__ == '__main__':
         strips([int(x) for x in sys.argv[2:]] or None)
     elif c == 'audit':
         audit()
+    elif c == 'compact':
+        compact([int(x) for x in sys.argv[2:] if not x.startswith('--')] or None)
     elif c == 'dupcheck':
-        dupcheck()
+        dupcheck([int(x) for x in sys.argv[2:] if not x.startswith('--')])
     elif c == 'dsheet':
         dsheet([int(x) for x in sys.argv[2:]] or None)
     elif c == 'table':
