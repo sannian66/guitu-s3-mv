@@ -519,3 +519,14 @@
 - 第 2 批 6 张落地后调用返回 `402 insufficient_points`：套餐积分 0、永久积分 1、单张需 3。
 - **所有生图类条目暂停**，等用户充值/换 key。代码类改动（删字、构图、转场、特效、卡点）不受影响，继续。
 - 待出图清单（恢复后第一批）：3m 眼特写重出（s_d17_eye2，含无文字约束）、3m38 握柄重出（s_e218_hilt2）、C 段 =22s 拍点图、B 段 #33 黑白镜像若需底图、A 段 #10/#11/#13 若单体图不够用。
+
+## 2026-11-09 22:03 · OpenAI 协议渠道批量生图（wt_r1.json，8 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `wt_d17_eye`（62s）→ `assets/gen/wt/wt_d17_eye.png`
+- ✔ `wt_e218_hilt`（49s）→ `assets/gen/wt/wt_e218_hilt.png`
+- ✔ `wt_v16_seal`（48s）→ `assets/gen/wt/wt_v16_seal.png`
+- ✔ `wt_v21_hand`（37s）→ `assets/gen/wt/wt_v21_hand.png`
+- ✔ `wt_v14_char`（60s）→ `assets/gen/wt/wt_v14_char.png`
+- ✔ `wt_v20_char`（47s）→ `assets/gen/wt/wt_v20_char.png`
+- ✔ `wt_c22_pair`（47s）→ `assets/gen/wt/wt_c22_pair.png`
+- ✔ `wt_e22_scale`（54s）→ `assets/gen/wt/wt_e22_scale.png`
