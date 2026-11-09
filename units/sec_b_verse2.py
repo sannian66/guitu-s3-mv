@@ -1615,6 +1615,14 @@ class V18(Shot):
     FIST = (720, 500)
     def __init__(self):
         self.sp = spr('B_r4/fist3')
+        if not getattr(self.sp, '_b11', False):                       # 第十一棒：拳上沿抠图亮边 → alpha 再收 2px + 边带压暗
+            sp = self.sp; A0 = sp.A
+            A2 = cv2.GaussianBlur(cv2.erode(A0, np.ones((5, 5), np.uint8)), (0, 0), 1.3)
+            band = np.clip(A0 - cv2.erode(A0, np.ones((13, 13), np.uint8)), 0, 1)
+            sp.F = (sp.F * (1 - 0.45 * cv2.GaussianBlur(band, (0, 0), 2.0)[..., None])).astype(np.float32)
+            sp.A = A2.astype(np.float32)
+            sp.ring = cv2.GaussianBlur(np.clip(sp.A - cv2.erode(sp.A, np.ones((5, 5), np.uint8)), 0, 1), (0, 0), 1.5)
+            sp._b11 = True
         self.bg = BK.dark_bg(6301, 0.01, 0.03)
         self.rain = fx2.RainSheet(6302, density=0.8)
         T.warm('握在自己', 'kai', 200)
