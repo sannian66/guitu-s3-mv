@@ -710,7 +710,7 @@ class V03(Shot):
         for i, (c, k) in enumerate((('重', 2), ('甲', 3))):
             p = cprog(1, [k], t, 0.2)[0]
             if p > 0: L.paste(BG(c, 'kai', 120, p, seed=i), 960, 330 + i * 130, (0.86, 0.12, 0.08) if c == '甲' else (0.92, 0.9, 0.86))
-        out_ = clamp01((t - (self.t1 - 0.32)) / 0.18)                 # 第六棒：「五百」在 V04 遮挡物过画前退净（critic_A_r3 P1-14）
+        out_ = clamp01((t - V(19.30)) / 0.14)                         # 第十一棒：19.44 前退净，「拦」19.36 才起笔 —— 不再「五百重 / 拦 / 甲」两句同屏被读乱                 # 第六棒：「五百」在 V04 遮挡物过画前退净（critic_A_r3 P1-14）
         fr = T.compose(fr, L, shadow=0.5, glow=0.15, opacity=0.82 * (1 - out_))
         return fr, 0
 
@@ -1954,7 +1954,8 @@ def lyrics(fr, t):
     for (li, chars, cx, by, t_out, sweep) in LY2:
         t_on = CT(li, chars[0][0]) - 0.3
         if li == 2 and chars[0][0] == 0: t_on = max(t_on, V(22.52))          # 第五棒：「谁在高处」等 V06「寒光」切走后再落（不叠团）
-        if li == 6 and chars[0][0] == 3: t_on = max(t_on, V(38.30))          # 第六棒：「由权势执掌」等 V16「若正义」切走后再落
+        if li == 6 and chars[0][0] == 3: t_on = max(t_on, V(38.30))
+        if li == 1 and chars[0][0] == 4: t_on = max(t_on, V(19.37))          # 第十一棒：等 V03「五百重甲」退净再起「拦」（原 19.23 起笔与「甲」右上并存）          # 第六棒：「由权势执掌」等 V16「若正义」切走后再落
         if not (t_on <= t < t_out + 0.4): continue
         out = clamp01((t - t_out) / (0.15 if li in (0, 7) else 0.25))
         adv = [s * 1.04 for (_, s, _) in chars]

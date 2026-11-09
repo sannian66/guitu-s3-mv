@@ -57,7 +57,7 @@ def items_for(cmd):
         return items
     if cmd == 'lyr':                                      # 第十一棒：critic_A_r7 点名错读时刻的逐帧核对（每帧一格）
         out = []
-        for (nm, a, b) in (('V01止/V02起', 16.70, 17.20), ('V02止/V03起', 17.60, 18.20), ('V03止', 19.45, 19.80), ('V20止/V21起', 42.30, 42.85)):
+        for (nm, a, b) in (('V01止/V02起', 16.70, 17.20), ('V02止/V03起', 17.60, 18.20), ('V03止', 19.20, 19.80), ('V20止/V21起', 42.30, 42.85)):
             f = round(a * FPS)
             while f <= round(b * FPS):
                 out.append((nm + ' f%d' % f, f / FPS)); f += 1
