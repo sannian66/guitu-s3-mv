@@ -1155,7 +1155,7 @@ class V16(Shot):
         if t >= ts:
             q = t - ts
             fall = eout(clamp01(q / 0.22), 2)
-            Fz, Aw2, line = BV.split_layer(Fz, Aw, p0, p1, (-34 * fall, 46 * fall + 120 * q * q), (0, 4 * fall))
+            Fz, Aw2, line = BV.split_layer(Fz, Aw, p0, p1, (-60 * fall, 70 * fall + 160 * q * q), (6 * fall, 6 * fall))
             Aw = Aw2
             crack = line * Aw * math.exp(-q / 0.25)
             Fz = Fz + crack[..., None] * np.array([1.0, 0.55, 0.25], np.float32) * 1.5
