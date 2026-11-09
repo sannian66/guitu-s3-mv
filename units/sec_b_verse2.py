@@ -1506,10 +1506,12 @@ class V14(Shot):
             p = clamp01((t - (tk - 0.04)) / 0.22)
             if p <= 0: continue
             e = eout(p, 3)
-            L = T.Layer(); T.place(L, ch, cx, cy + 320 * (1 - e), 270, color=(0.92, 0.14, 0.07), fname='kai', alpha=min(1, p * 2.5),
+            fo = (1 - sstep(102.80, 102.98, t)) if R5 else 1.0              # r5 #32：1:43 起画内无字 → 「反抗」在 102.98 前退净（不拖进 V15 叠化）
+            if fo <= 0: continue
+            L = T.Layer(); T.place(L, ch, cx, cy + 320 * (1 - e), 270, color=(0.92, 0.14, 0.07), fname='kai', alpha=min(1, p * 2.5) * fo,
                                     sy=0.75 + 0.25 * e, blur=6 * (1 - e))
-            fr = fr * (1 - 0.5 * K.blur_ds(L.A, 24)[..., None])
-            fr = T.compose(fr, L, shadow=0.9, outline=2, outline_color=(0.10, 0.01, 0.01), glow=0.5 + 0.6 * pulse(t, tk, 0.3), glow_color=(1.0, 0.3, 0.08))
+            fr = fr * (1 - 0.5 * fo * K.blur_ds(L.A, 24)[..., None])
+            fr = T.compose(fr, L, shadow=0.9, outline=2, outline_color=(0.10, 0.01, 0.01), glow=(0.5 + 0.6 * pulse(t, tk, 0.3)) * fo, glow_color=(1.0, 0.3, 0.08))
             fr = K.sparks(fr, t, 5910 + i, (cx, cy + 150), n=80, life=0.5, speed=(200, 800), dirc=(0, -1), spread=1.2, grav=1200,
                           size=1.4, area=(160, 10), color=(1.0, 0.55, 0.2), amt=1.0, t0=tk, burst=True)
         for (fx_, fy, hh, idx, fl) in self.front:                             # 前景虚焦跪伏纸人
@@ -1562,7 +1564,8 @@ class V15(Shot):
         # 第三棒：人物放大提亮（820→1000px，常亮冷轮廓 + 前左方冷补光），闪电时再炸亮
         x_, y_ = K.grid()
         fr = fr + np.exp(-(((x_ - walk) / 380) ** 2 + ((y_ - 560) / 420) ** 2))[..., None] * np.array([0.10, 0.12, 0.16], np.float32)
-        fr, _ = put(fr, self.sp, t, 880, (walk, 1100 - bob),   # 第八棒：1000→880，头顶不再顶黑边
+        fh, fy = (770, 1085) if R5 else (880, 1100)                   # r5 #32：1:43 头顶贴黑边被裁 → 缩小下移，推镜后马尾顶仍留 ≥120px
+        fr, _ = put(fr, self.sp, t, fh, (walk, fy - bob),   # 第八棒：1000→880，头顶不再顶黑边
                      rim=dict(col=(0.80, 0.88, 1.0), amt=3.6 + 4 * env, dir=(0.7, -0.7)),
                     grade=dict(expo=1.18 + 0.4 * env, sat=0.55, tint=(0.92, 0.97, 1.06), lift=0.02, gamma=1.05), wind_amp=8,
                     shade=(500, 1500, 0.12, 600, 0.2))
@@ -1572,6 +1575,7 @@ class V15(Shot):
         fr = self.spl.draw(fr, t, y_far=830, y_near=1000, rate=160, amt=0.8)
         fr = self.rain.draw(fr, t, intensity=1.2, angle=14, light=(1500, 150) if env > 0.1 else None, light_r=900, cam=(80 * e, 0))
         pr = prs(24, [0, 1, 2, 3], t)
+        if R5: pr = [0.0] * 4                                             # r5 #32：1:43–1:50 画内字全去（底部字幕保留）
         P = [dict(ch='不', x=520, y=300, size=120, rot=0, font='kai', idx=0, emph=False), dict(ch='听', x=520, y=430, size=120, rot=0, font='kai', idx=1, emph=False),
              dict(ch='天', x=380, y=300, size=120, rot=0, font='kai', idx=2, emph=False), dict(ch='命', x=380, y=430, size=120, rot=0, font='kai', idx=3, emph=False)]   # 第十棒：同句统一楷、白
         L = T.Layer()
@@ -1580,7 +1584,7 @@ class V15(Shot):
                                fname=pp['font'], alpha=min(1, pc * 2), scale=1.2 - 0.2 * eout(pc))
         fr = T.compose(fr, L, shadow=0.85, glow=0.15)
         ps = clamp01((t - (V(CT(24, 3)) + 0.12)) / 0.16)
-        if ps > 0: fr = T.strike(fr, P, [2, 3], ps, color='red', width=0.16, seed=60)
+        if ps > 0 and not R5: fr = T.strike(fr, P, [2, 3], ps, color='red', width=0.16, seed=60)
         fr = cam(fr, 1.0 + 0.05 * e, 30 * e, 0, (0.8 * math.sin(t * 1.7)))
         return fr, (3 if abs(t - tl) < 0.04 else 0)
 
@@ -1622,12 +1626,15 @@ class V16(Shot):
         fr = fr * (1 + 1.6 * env)
         if t >= tb - 0.04: fr = self.bolt.draw(fr, t, tb, intensity=0.9)
         z = np.zeros_like(fr)
-        Fz, Aw = put_at(z, self.sp, t, self.SRC, self.DST, self.WPX,
+        DST, WPX = ((1080, 655), 1600) if R5 else (self.DST, self.WPX)       # r5 #32：碑首原 y≈118 顶出黑边 → 缩小下移，推镜到底碑首仍在 y≥200
+        def rm(p): return (DST[0] + (p[0] - self.DST[0]) * WPX / self.WPX, DST[1] + (p[1] - self.DST[1]) * WPX / self.WPX)
+        Fz, Aw = put_at(z, self.sp, t, self.SRC, DST, WPX,
                         grade=dict(expo=0.95, sat=0.35, tint=(0.94, 0.97, 1.04), lift=0.0, gamma=1.05),
                         rim=dict(col=GOLD * 1.1, amt=2.2, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=(400, 1900, 0.0, 300, 0.55), wrap=0.0)
-        Fz = Fz * (0.55 + 0.6 * np.exp(-(((x - 1080) / 500) ** 2 + ((y - 380) / 420) ** 2)))[..., None] * (1 + 0.8 * env)
+        ly = rm((1080, 380))[1]
+        Fz = Fz * (0.55 + 0.6 * np.exp(-(((x - 1080) / 500) ** 2 + ((y - ly) / 420) ** 2)))[..., None] * (1 + 0.8 * env)
         chips = []
-        for i, (ch, nrm, sz) in enumerate(self.CH):
+        for i, (ch, nrm, sz) in enumerate([] if R5 else self.CH):        # r5 #32：碑上不再凿「上苍」
             tk = V(CT(24, 6 + i))
             p = clamp01((t - (tk - 0.04)) / 0.14)
             if p <= 0: continue
@@ -1640,6 +1647,7 @@ class V16(Shot):
             if front is not None and p < 1: chips.append((front, tk))
         ts = V(self.T_SLASH)
         p0, p1 = (600, 300), (1560, 412)                                        # 刀线：斜穿碑首下、「上」字下沿之上，「苍」不被切
+        if R5: p0, p1 = rm(p0), rm(p1)
         if t >= ts:
             q = t - ts
             fall = eout(clamp01(q / 0.22), 2)
@@ -1658,10 +1666,11 @@ class V16(Shot):
             along = ((x - p0[0]) * dx_ + (y - p0[1]) * dy_) / nn
             band = np.exp(-(dist / (2 + 14 * (1 - ql))) ** 2) * (along < -500 + 2400 * ql) * math.exp(-max(0.0, t - ts) / 0.18)
             fr = fr + band[..., None] * np.array([1.0, 0.92, 0.85], np.float32) * 1.6 + K.blur_ds(band, 16)[..., None] * RED * 0.9
-            fr = K.sparks(fr, t, 6120, (1080, 350), n=70, life=0.7, speed=(200, 800), dirc=(0.3, -1), spread=2.0, grav=1600,
+            fr = K.sparks(fr, t, 6120, rm((1080, 350)), n=70, life=0.7, speed=(200, 800), dirc=(0.3, -1), spread=2.0, grav=1600,
                           size=1.6, area=(220, 20), color=(0.42, 0.40, 0.38), amt=0.9, t0=ts, burst=True)
         fr = self.rain.draw(fr, t, intensity=1.0, angle=8, light=(1080, 120), light_r=700)
         pb = prs(24, [4, 5], t)
+        if R5: pb = [0.0, 0.0]
         fr = T.scatter_stack(fr, '不问', pb, places=[dict(ch='不', x=360, y=360, size=180, rot=-6, font='xing', idx=0, emph=False),
                                                        dict(ch='问', x=440, y=560, size=180, rot=5, font='xing', idx=1, emph=False)],
                              color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85))
@@ -1720,6 +1729,7 @@ class V17(Shot):
         kc = cv2.GaussianBlur(self.crease, (0, 0), 1.6) * 1.6 * np.clip(self.Gd * 1.6 + 0.25, 0, 1) * np.clip(s0 * 1.4 - self.nz * 0.5 + 0.1, 0, 1)
         thr = s1 * 1.35 - 0.35 * self.nz2
         kg = self.G * np.clip((thr - (1 - self.Gd) * 0.5) * 4, 0, 1)
+        if R5: kg = kg * 0.0                                             # r5 #32：掌心只渗血、不成「命」字
         wob = (np.sin((x - self.PC[0]) * 0.05 + t * 11) * 2.0 + np.sin((y - self.PC[1]) * 0.07 + t * 7) * 1.5).astype(np.float32)
         kg = cv2.remap(kg, x + wob, y + wob * 0.5, cv2.INTER_LINEAR)
         k = np.clip(kc * 0.9 + kg * 0.92, 0, 1)[..., None]
@@ -1730,6 +1740,7 @@ class V17(Shot):
                          [106.1, 106.7, 107.1], amt=0.45, flat=0.4, speed=90, life=0.8)
         fr = self.rain.draw(fr, t, intensity=0.6, angle=6)
         pr = prs(25, [0, 1, 3], t)
+        if R5: pr = [0.0] * 3
         Pl = [dict(ch='谁', x=1610, y=280, size=130, rot=0, font='kai', idx=0, emph=False), dict(ch='的', x=1610, y=420, size=110, rot=0, font='kai', idx=1, emph=False),
               dict(ch='都', x=1730, y=580, size=100, rot=0, font='kai', idx=2, emph=False)]
         fr = T.ink_bleed_in(fr, '谁的都', pr, places=Pl, color='white', style_kw=dict(shadow=0.85, glow=0.10))
@@ -1774,6 +1785,7 @@ class V18(Shot):
         fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 330), n=110, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.2, grav=1500, size=1.3,
                       area=(260, 30), color=(0.8, 0.85, 0.95), amt=1.0, t0=th, burst=True)
         pr = prs(25, [4, 5, 6, 7], t)
+        if R5: pr = [0.0] * 4
         fr = T.scatter_stack(fr, '握在自己', pr, places=[dict(ch='握', x=1360, y=360, size=270, rot=-3, font='kai', idx=0, emph=True),
                                                          dict(ch='在', x=1580, y=560, size=140, rot=0, font='kai', idx=1, emph=False),
                                                          dict(ch='自', x=1460, y=720, size=140, rot=0, font='kai', idx=2, emph=False),
@@ -1807,12 +1819,14 @@ class V19(Shot):
         e = eout(clamp01(u * 3.0), 3)          # 第五棒 9/n：甩入转身 0.4s 内落定（原 0.75s 全程糊）
         fr = self.fog.draw(self.bg.copy(), t, density=0.45, y0=400, y1=960, color=(0.30, 0.32, 0.35), speed=(-200 * (1 - e), 0))
         whip = (1 - e)
-        fr, _ = put_at(fr, self.sp, t, (0.42, 0.85), (980 - 260 * whip, 950), 1900,   # 第五棒 9/n：下移 70px，头顶不贴黑边
+        gy, gw = (1005, 1720) if R5 else (950, 1900)                      # r5 #32：甩起的马尾发梢原贴 y≈128 黑边 → 缩小下移
+        fr, _ = put_at(fr, self.sp, t, (0.42, 0.85), (980 - 260 * whip, gy), gw,   # 第五棒 9/n：下移 70px，头顶不贴黑边
                        rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.7, -0.7)),
                        wind_amp=14, mblur=(-55 * whip, 0), shade=(600, 1700, 0.25, 600, 0.3))
         fr = K.sparks(fr, t, 6404, (640, 300), n=36, life=0.45, speed=(300, 900), dirc=(-1, -0.2), spread=1.1, grav=900, size=1.0,
                       area=(220, 160), color=(0.8, 0.85, 0.95), amt=0.7, t0=self.t0 + 0.05, burst=True)   # 甩水珠：散开、不成方块
         pr = prs(25, [8, 9], t)
+        if R5: pr = [0.0, 0.0]
         fr = T.scatter_stack(fr, '手掌', pr, places=[dict(ch='手', x=1500, y=640, size=220, rot=0, font='kai', idx=0, emph=False),
                                                        dict(ch='掌', x=1700, y=800, size=260, rot=0, font='kai', idx=1, emph=True)],
                              color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85, glow=0.15))
