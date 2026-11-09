@@ -1087,8 +1087,13 @@ class V10(Shot):
         if y_c - hgt > 0:
             refl = cv2.flip(Pk[y_c - hgt:y_c], 0); ra = cv2.flip(Ak[y_c - hgt:y_c], 0)[..., None]
             yend = min(H, y_c + hgt)
-            g_ = np.linspace(0.30, 0.0, yend - y_c, dtype=np.float32)[:, None, None] * inner[y_c:yend, :, None]
-            fr[y_c:yend] = fr[y_c:yend] * (1 - ra[:yend - y_c] * g_ * 0.8) + cv2.GaussianBlur(refl[:yend - y_c], (0, 0), 4) * g_ * np.array([1.0, 0.85, 0.6], np.float32)
+            g_ = np.linspace(0.62, 0.0, yend - y_c, dtype=np.float32)[:, None, None] ** 1.3 * inner[y_c:yend, :, None]   # 第十棒 P2-6：倒影 0.30→0.62 + 暖铜镜面
+            fr[y_c:yend] = fr[y_c:yend] * (1 - ra[:yend - y_c] * g_ * 0.85) + (cv2.GaussianBlur(refl[:yend - y_c], (0, 0), 2.5) * 1.6 + 0.10 * ra[:yend - y_c]) * g_ * np.array([1.0, 0.82, 0.55], np.float32)
+            # 膝/靴压在铜面上的一线接触高光（顶光在盘面掠射）
+            hl = np.zeros((H // 2, W // 2), np.float32)
+            cv2.ellipse(hl, (int((935 + sway) / 2), int((self.CY + 64 + bob) / 2)), (95, 5), 0, 180, 360, 1.0, 2, cv2.LINE_AA)
+            hl = cv2.resize(cv2.GaussianBlur(hl, (0, 0), 1.5), (W, H)) * inner * (1 - Ak)
+            fr = fr + hl[..., None] * np.array([0.9, 0.62, 0.28], np.float32) * 0.9
         fr, info = A.place(fr, t, R8.kneel_pan_fix(), (930 + sway, 1030 + bob), h=820 * (1 + 0.02 * u), rim=COLD,
                            rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
         fr = A.glow(fr, (930 + sway, 300), 260, 0.10, (1.0, 0.72, 0.4))
@@ -1830,9 +1835,15 @@ def credits(fr, t):
             # 第八棒（critic_A_r5 P1-4，第三次提）：拉丁名不再横排混在竖排署名里 → 字母直立逐个竖排（与中文人名同一列、同字高节奏）
             L = T.Layer(); f = T._font('song', 58)
             from PIL import Image as _I, ImageDraw as _D
+            # 第十棒（critic_A_r6 P2-7）：字距按字母墨迹高度收紧（小写 a/i/t 不再按 64px 等距 → 间隙 14px，与中文列同节奏）
+            yc = y + 62 - 24
             for j, ch in enumerate(names):
                 im = _I.new('L', (80, 80), 0); _D.Draw(im).text((40, 40), ch, font=f, fill=255, anchor='mm')
-                L.paste(np.asarray(im).astype(np.float32) / 255, x, y + 62 + j * 64, (0.95, 0.94, 0.92), eout(clamp01(p * 1.6 - 0.4 - 0.12 * j)))
+                a_ = np.asarray(im).astype(np.float32) / 255
+                rows = np.nonzero(a_.max(1) > 0.05)[0]; r0, r1 = (int(rows[0]), int(rows[-1]) + 1) if len(rows) else (30, 50)
+                a_ = a_[r0:r1]
+                L.paste(a_, x, yc + (r1 - r0) / 2, (0.95, 0.94, 0.92), eout(clamp01(p * 1.6 - 0.4 - 0.12 * j)))
+                yc += (r1 - r0) + 14
             g = T.compose(g, L, shadow=0.7, glow=0.1)
         else:
             g = T.credit_block(fr, role, names, x, y, p, role_size=30, name_size=62, seal_text=seal, seed=len(role))
@@ -2045,6 +2056,7 @@ INNER = {
     'V10': dict(z=(1.0, 1.12), c=(930, 880), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
     'V13': dict(z=(1.0, 1.07), c=(1250, 560), d=(-50, 0)),
     'V19': dict(z=(1.0, 1.07), c=(1420, 380), d=(0, 25)),
+    'V14': dict(z=(1.09, 1.13), c=(960, 500), rot=(-9.0, -2.0)),                      # 第十棒：荷兰角回正（-9°→-2°，拔刀时机位随刀「扶正」），与 V11/V19 的正机位脸拉开
     'V20': dict(z=(1.10, 1.0), c=(900, 600), ease='out'),
 }
 
