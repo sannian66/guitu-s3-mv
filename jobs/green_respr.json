@@ -1,0 +1,11 @@
+[
+ {
+  "name": "green_hero_front",
+  "refs": [
+   "/tmp/hero_front_flat_s.jpg"
+  ],
+  "out": "assets/gen/green",
+  "nocut": false,
+  "prompt": "把参考图里的人物原样重绘到纯绿幕上：同一人物、同一姿势、同一服装与道具；背景纯 #00FF00 平涂（无渐变/无阴影/无地面）；发丝一根根分离、边缘清晰、不要糊、不要绿溢；不要重新设计造型，不要文字。"
+ }
+]
