@@ -426,3 +426,7 @@
 ## 风格小样（黑白红墨线，2026-11-10 07:15 CST）
 - 渠道：Hark generate_image（0 积分）；参考 = 当前成片帧 + 用户风格图（out/style_test/style_ref.jpg）
 - 镜头 20.0 / 33.5 / 74.5 / 235.6s → out/style_test/style_<秒>.png，对比 out/style_test/style_test_compare.jpg，均 try1 采用
+
+## 国风长安版小样（2026-11-10 07:25 CST）
+- Hark generate_image，只用当前帧作参考（不再喂风格图），工笔+水墨、朱砂红点缀、长安城墙/角楼/大雁塔
+- out/style_test/gf_<秒>.png，三栏对比 gf_compare.jpg
