@@ -148,6 +148,8 @@ def install(G):
             fl = white(t, self.T_HIT) + 0.6 * white(t, self.T_LEAP, 0.03)
             fr = cam(fr + fl * 0.8, 1.03, 0, 0)
             p = clamp01((t - 69.60) / 0.9)
+            # [r1] LYRIC_UNI=1 时这句由统一字幕层出，画内不再重复画一遍（否则底部两份叠在一起）
+            if os.environ.get('LYRIC_UNI') == '1': return fr, (3 if fl > 0.3 else 0)
             fr = T.slash_cut(fr, '那就劈开它', p, places=LY.places('那就劈开它', 'bottom', red=('劈',)), color=LY.WHITE, angle=12,
                              cut_at=(self.T_HIT - 69.60) / 0.9, emph=('劈',), emph_color=LY.RED_T, slide=0.5, seed=35,
                              style_kw=dict(LY.STYLE))
