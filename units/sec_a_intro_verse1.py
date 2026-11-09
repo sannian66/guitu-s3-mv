@@ -690,8 +690,10 @@ class V04(Shot):
             fr = fr + (np.exp(-((xx - x2) / 5) ** 2) * np.exp(-np.clip(yy - 600, 0, None) / 160) * (yy > 600))[..., None] * np.array([0.5, 0.25, 0.1], np.float32) * 0.10 * fl
         fr = fog(fr, t, 2, 450, 700, 0.55, (0.20, 0.20, 0.24), speed=(-50, 0))
         fr = A.glow(fr, (700, 420), 360, 0.15, (0.55, 0.62, 0.8))
-        fr, info = A.place(fr, t, S('S010/walk'), (1180 + 160 * u, 985), h=700, rim=(1.0, 0.6, 0.3), rim_amt=2.4, rim_dir=(0, -1), wind=8,
-                           grade=dict(expo=0.85, sat=0.55))
+        # 第九棒（critic_A_r6 P0-1「人物要动」）：鬼屠迎着镜头走近 —— 由右后方斜走到画面中偏右，身形 640→830px，带步伐起伏与左右摆
+        e = eio(u); stp = abs(math.sin(math.pi * (t - self.t0) / 0.31))
+        fr, info = A.place(fr, t, S('S010/walk'), (1330 - 200 * e + 6 * math.sin(math.pi * (t - self.t0) / 0.31), 1000 + 190 * e - 14 * stp), h=640 + 170 * e,
+                           rim=(1.0, 0.6, 0.3), rim_amt=2.4, rim_dir=(0, -1), wind=8, grade=dict(expo=0.85, sat=0.55), rot=1.2 * math.sin(math.pi * (t - self.t0) / 0.31))
         fr = RAIN.draw(fr, t, 0.7, angle=10, light=(960, 520), layers=(1, 2))
         Lp = np.zeros((H // 2, W // 2), np.float32)                                         # 前景虚焦枪杆 ×2
         for k, (x0, sl) in enumerate(((180 + 900 * u, 0.25), (1700 - 1200 * u, -0.18))):
@@ -1733,7 +1735,7 @@ MOVES3 = {
     'V01': M3('sine_io', 'beat', z=(1.0, 1.08), pitch=(2, -1), note='推 + 下摇'),
     'V02': M3('expo_out', None, z=(1.06, 1.0), x=(-40, 30), note='低机位跟步'),
     'V03': M3('sine_io', 'beat', x=(-60, 60), pitch=(6, 0), note='高机位横移 + 俯仰'),
-    'V04': M3('sine_io', 'beat', x=(-50, 60), note='横移跟走'),
+    'V04': M3('sine_io', 'beat', x=(-90, 70), yaw=(7, -6), z=(1.0, 1.07), note='第九棒：侧移环绕 + 推（人迎镜走近，前景枪林反向扫过）'),
     'V05': M3('expo_in', None, z=(1.0, 1.12), note='急推'),
     'V06': M3('expo_out', None, z=(1.12, 1.03), yaw=(-9, 8), x=(70, -50), note='第九棒：冲击后环绕 orbit（沿刀身方向绕过人物，军阵反向视差）'),
     'V07': M3('sine_io', 'beat', y=(60, -40), pitch=(-6, 0), note='摇臂升 crane up'),
