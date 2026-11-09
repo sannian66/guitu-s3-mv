@@ -339,9 +339,10 @@ class P05(Shot):
         sweep = np.exp(-((x - (-200 + 2400 * clamp01((t - self.t0) / 1.3))) / 260) ** 2)
         gl += (self.studs * sweep)[..., None] * GOLD * 0.55
         fr = fr * (1 - self.m[..., None]) + gl * self.m[..., None]
-        off = int(150 - oy * 0.5)
+        # 第八棒（P2-13：下摇时匾「规矩」上半截被顶边裁掉半拍以上）：开头 0.25s 匾完整在画（顶边离黑边 ≥35px），再加速下摇、匾快速出画
+        off = int(195 * ein(clamp01((t - self.t0 - 0.25) / (self.t1 - self.t0 - 0.25)), 2) ** 0.8)
         fr = np.ascontiguousarray(fr[off:off + H]); seam = self.seam[off:off + H]; studs = self.studs[off:off + H]
-        fr, _ = self.plq.draw(fr, t, 960, 240 - off, 640, sheen=clamp01((t - self.t0) / 1.2) * 1.4 - 0.2)
+        fr, _ = self.plq.draw(fr, t, 960, 270 - off, 600, sheen=clamp01((t - self.t0) / 1.2) * 1.4 - 0.2)
         # 金箔浮字：左扇「谁的」右扇「规矩」，被中缝与板缝切断（缝里漏出暗红）
         pr = tp(9, [0, 1, 2, 3], t, 0.2)
         L = T.Layer()
