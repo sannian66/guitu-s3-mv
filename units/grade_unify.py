@@ -327,7 +327,7 @@ def _look(fr, L, p, pm, cache):
 
     if d is not None:                                 # 两次亮度量合成一次加（省一次整幅加法）
         d -= lk['scurve_dc'] * float(d.mean())
-        g = 1.0 - lk['hi_guard'] * np.clip((1.0 - L) / max(1e-3, 1.0 - lk['hi_guard_lo']), 0, 1)
+        g = 1.0 - lk['hi_guard'] * np.clip((L - lk['hi_guard_lo']) / max(1e-3, 1.0 - lk['hi_guard_lo']), 0, 1)
         d *= g                                            # 高光肩部收手，不推爆高光
         fr += d[..., None]
 
