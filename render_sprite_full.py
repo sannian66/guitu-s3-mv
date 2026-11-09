@@ -14,6 +14,9 @@ import numpy as np, cv2
 cv2.setNumThreads(1)
 import scenes as S
 from fx import finish, to8, W, H
+import lyric_uni as LU                      # [lyric-uni] 全片唯一字幕层（LYRIC_UNI=1 生效）
+if os.environ.get('LYRIC_UNI') == '1':
+    os.environ['C1_LYR'] = '0'              # [lyric-uni] 副歌一已有 C1_LYR=0 关自己的字幕层
 FPS = 30
 C1_F0, C1_F1 = 1784, 2586
 _C1 = [None]
@@ -29,14 +32,15 @@ def frame(f, cache):
     t = f / FPS
     import sections as SEC                      # 第四轮：各组 units/sec_*.py 接管自己的帧区间（READY=True 时）
     m = SEC.lookup(f)
+    # [lyric-uni] 统一叠加点：各组 finish() → GU.apply()（段内）之后、交给编码器之前
     if m is not None:
-        return m.frame(f, cache.setdefault('_v4_' + m.__name__, {}))
+        return LU.draw(m.frame(f, cache.setdefault('_v4_' + m.__name__, {})), f)
     if C1_F0 <= f < C1_F1:
         C, X = chorus1()
         fr, _ = X.frame(t, 1 / FPS)
-        return C.to8(fr)
+        return LU.draw(C.to8(fr), f)
     fr, ca = S.frame_at(t, 1 / FPS, cache)
-    return to8(finish(fr, grain_amt=0.045, vig=0.5, ca=ca))
+    return LU.draw(to8(finish(fr, grain_amt=0.045, vig=0.5, ca=ca)), f)
 
 
 def seg(f0, f1, outp):
