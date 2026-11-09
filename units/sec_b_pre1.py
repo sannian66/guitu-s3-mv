@@ -13,6 +13,8 @@ import typo as T
 import trans as TR
 import b_paper as BP
 
+# 第五轮用户意见（B_R5=0 整体回滚到第四轮版本）
+R5 = os.environ.get('B_R5', '1') != '0'
 READY = True   # 第五轮：用户看的是含 B 组新版的整片，接入
 F0, F1 = 1321, 1784
 C1_FROM = 1779                    # 59.30 起交给副歌一（它的 S028 =「血」字头硬切）
@@ -25,7 +27,16 @@ CUT_F = [F0] + [int(round(t * FPS)) - 1 for t in CUT_T[1:-1]] + [C1_FROM]
 # =====================================================================================
 # P01 ECU 俯拍生死簿：太上皇执朱笔（tsh_brush_hand），「谁配」流江毛草朱笔逐笔写在纸上
 DOCT = '纲常礼法忠孝节义尊卑贵贱王法天道规矩名分本分顺从伦理三纲五常君臣父子上下有序安分守己'   # 第五棒：铅字盘填充改「教条」字（去名单母题）
+MOJI = None   # 第五轮 #13：0:44 生死簿人名改「乱码」——把人名 UTF-8 字节按 GBK 误解码（锟斤拷式的经典乱码）
 NAMES = '张王李赵刘陈杨黄周吴徐孙胡朱高林何郭马罗梁宋郑谢韩唐冯于董萧程曹袁邓许傅沈曾彭吕苏卢蒋蔡贾丁魏薛叶阎余潘杜戴夏钟汪田任姜范方石姚谭廖邹熊金陆郝孔白崔康毛邱秦江史顾侯邵孟龙万段雷钱汤尹黎易常武乔贺赖龚文'
+
+
+def _moji():
+    global MOJI
+    if MOJI is None:
+        s = NAMES.encode('utf-8').decode('gbk', errors='ignore')
+        MOJI = ''.join(c for c in s if '\u4e00' <= c <= '\u9fff')
+    return MOJI
 
 
 def ledger(seed, cols=13, size=46, x0=150, x1=1770, y0=150, y1=930, rule=(0.55, 0.12, 0.08), ink=(0.12, 0.10, 0.09), tone=(0.80, 0.74, 0.62), chars=None):
@@ -54,11 +65,15 @@ def ledger(seed, cols=13, size=46, x0=150, x1=1770, y0=150, y1=930, rule=(0.55, 
 
 class P01(Shot):
     def __init__(self):
-        self.bg = ledger(201)
-        self.hand = BK.spr_feather('tsh_brush_hand', left=0.10, right=0.18, bottom=0.32, keep_col=(0.60, 0.68))
+        self.bg = ledger(201, chars=_moji() if R5 else None)
+        if R5:   # 第五轮 #13：重新出图——俯拍视角的太上皇执笔手（看见手背/指节、笔杆透视缩短斜向左下），与平铺纸面同一俯视角
+            self.hand = spr('R5_B/tsh_brush_top_a', work_w=2560)
+        else:
+            self.hand = BK.spr_feather('tsh_brush_hand', left=0.10, right=0.18, bottom=0.32, keep_col=(0.60, 0.68))
         T.prepare_brush('谁配', 'kai', 250)   # 第五棒：草书→楷（评审：「谁」读成淮/渠）
-        self.P = [dict(ch='谁', x=640, y=420, size=260, rot=-4, font='kai', idx=0, emph=False),
-                  dict(ch='配', x=760, y=700, size=260, rot=3, font='kai', idx=1, emph=False)]
+        dy = 60 if R5 else 0                  # 第五轮：字整体下移 60，给俯拍的手留出上方空间
+        self.P = [dict(ch='谁', x=640, y=420 + dy, size=260, rot=-4, font='kai', idx=0, emph=False),
+                  dict(ch='配', x=760, y=700 + dy, size=260, rot=3, font='kai', idx=1, emph=False)]
 
     def render(self, t):
         u = self.u(t)
@@ -75,13 +90,26 @@ class P01(Shot):
         ang = pc * 9.0
         tip = (pp['x'] + 40 + 90 * pc + 30 * math.sin(ang), pp['y'] - 70 + 150 * pc + 25 * math.cos(ang * 1.3))
         if pc >= 1 and k == 1: tip = (pp['x'] + 130, pp['y'] + 90 - 60 * (t - 45.0))
-        sh = np.zeros((H // 4, W // 4), np.float32)
-        cv2.line(sh, (int((tip[0] + 40) / 4), int((tip[1] + 30) / 4)), (int((tip[0] + 420) / 4), int((tip[1] - 900) / 4)), 1.0, 9, cv2.LINE_AA)
-        sh = cv2.resize(cv2.GaussianBlur(sh, (0, 0), 6), (W, H))
-        fr = fr * (1 - 0.45 * sh[..., None])
-        # 手：笔尖在精灵内约 (0.638, 0.88)；镜像（手从右上入画，不挡字）
-        fr, _ = put_at(fr, self.hand, t, (0.638, 0.88), tip, 1500, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0,
-                       shade=None, wrap=0.2)
+        if R5:
+            # 俯拍：手的投影 = 手精灵 alpha 向左下偏移（烛光在右上），离纸越远（手腕/袖）偏得越多、越虚；笔尖处投影与笔尖重合
+            HS = (0.322, 0.911); HW = 1800; HR = -42.0             # 绕笔尖顺时针转 42°：手腕/袖子从画面右侧入画（俯拍下手在纸面上的朝向），袖口出右边框
+            _, Ah = put_at(np.zeros_like(fr), self.hand, t, HS, tip, HW, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0, shade=None, wrap=0.0, rot=HR)
+            sm = cv2.resize(Ah, (W // 4, H // 4))
+            acc = np.zeros_like(sm)
+            for k in range(1, 6):                                   # 逐层偏移叠加：距笔尖越远偏移越大
+                M = np.float32([[1, 0, -6 * k], [0, 1, 7 * k]]); acc = np.maximum(acc, cv2.warpAffine(sm, M, sm.shape[::-1]) * (1 - 0.12 * k))
+            sh = cv2.resize(cv2.GaussianBlur(acc, (0, 0), 3.5), (W, H))
+            fr = fr * (1 - 0.55 * sh[..., None])
+            fr, _ = put_at(fr, self.hand, t, HS, tip, HW, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0,
+                           shade=None, wrap=0.2, rot=HR)
+        else:
+            sh = np.zeros((H // 4, W // 4), np.float32)
+            cv2.line(sh, (int((tip[0] + 40) / 4), int((tip[1] + 30) / 4)), (int((tip[0] + 420) / 4), int((tip[1] - 900) / 4)), 1.0, 9, cv2.LINE_AA)
+            sh = cv2.resize(cv2.GaussianBlur(sh, (0, 0), 6), (W, H))
+            fr = fr * (1 - 0.45 * sh[..., None])
+            # 手：笔尖在精灵内约 (0.638, 0.88)；镜像（手从右上入画，不挡字）
+            fr, _ = put_at(fr, self.hand, t, (0.638, 0.88), tip, 1500, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0,
+                           shade=None, wrap=0.2)
         fr = T.brush_write(fr, '谁配', [p0, p1], places=self.P, fname='kai', color=(0.62, 0.06, 0.04), splatter=True,
                            style_kw=dict(shadow=0.15))
         z = 1.0 + 0.08 * eio(u)
@@ -437,6 +465,15 @@ class P06(Shot):
 class P07(Shot):
     def __init__(self):
         self.sp = spr('B_r4/look_up_low_pt')
+        # 第五轮 #15：0:51 只有嘴唇是红的——保色遮罩（暗红内领/发带保饱和）把唇也当成「暗红」留下了。
+        # 脸部（精灵内椭圆，唇在 (0.516, 0.111)）不保色，唇跟肤色一起去饱和；发带 (y<0.045) 与左侧飘带 (x≈0.47) 不受影响
+        if R5:
+            hh, ww = self.sp.A.shape
+            yy, xx = np.mgrid[0:hh, 0:ww].astype(np.float32)
+            d = ((xx / ww - 0.514) / 0.022) ** 2 + ((yy / hh - 0.098) / 0.048) ** 2
+            self.kr = sstep(0.8, 1.3, d)[..., None].astype(np.float32)
+        else:
+            self.kr = 1.0
         self.tex = K.tile(1024, 907, 4, 6)
         T.warm('我不信', 'cao', 200); T.warm('不', 'xing', 150)
         import fx2; self.fx2 = fx2
@@ -459,7 +496,7 @@ class P07(Shot):
         fr = fl if isinstance(fl, np.ndarray) else fl[0]
         crane = -60 + 90 * eio(u)
         fr, _ = put(fr, self.sp, t, 1700, (820, 1080 + 1050 + crane), rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(0.4, -1.0)),
-                    grade=GR_COLD, wind_amp=6, shade=(400, 1500, 0.2, 700, 0.3))
+                    grade=GR_COLD, wind_amp=6, shade=(400, 1500, 0.2, 700, 0.3), keep_red=self.kr)
         fr = BK.rain(fr, t, 971, amt=0.42, n=650, angle=-8, speed=2500)
         pr = tp(10, [0, 1, 2], t, 0.18)
         fr = T.scatter_stack(fr, '我不信', pr, places=[dict(ch='我', x=1400, y=330, size=190, rot=-5, font='cao', idx=0, emph=False),
@@ -540,12 +577,12 @@ class P09(Shot):
         fr += np.exp(-(((x - 700) / 700) ** 2 + ((y - 450) / 420) ** 2))[..., None] * RED * 0.22
         # 人物（右）
         if t < self.T_HIT:
-            fr, _ = put_at(fr, self.a, t, (0.5, 0.42), (1320, 696), 1800,   # 第八棒：束发结入画
+            fr, _ = put_at(fr, self.a, t, (0.5, 0.42), (1330, 500) if R5 else (1320, 696), 1400 if R5 else 1800,   # 第五轮 #16：上移 + 缩小（1800→1400），束发结整个留在画内
                             grade=GR_COLD, rim=dict(col=(1.0, 0.45, 0.35), amt=1.8, dir=(-1.0, -0.4)),
                            wind_amp=4, shade=(700, 1800, 0.25, 700, 0.35))
         else:
             k = clamp01((t - self.T_HIT) / 0.08)
-            fr, _ = put_at(fr, self.b, t, (0.5, 0.45), (1340, 752), 1850 * (1.05 - 0.05 * k), grade=GR_COLD,
+            fr, _ = put_at(fr, self.b, t, (0.5, 0.45), (1350, 545) if R5 else (1340, 752), (1450 if R5 else 1850) * (1.05 - 0.05 * k), grade=GR_COLD,
                            rim=dict(col=(1.0, 0.45, 0.35), amt=2.0, dir=(-1.0, -0.4)), wind_amp=6, mblur=(-50 * (1 - k), 0), shade=(700, 1800, 0.2, 700, 0.3))
         # 「命」印：字头砸入（2.2→1.0 缩放 + 落地抖）→ 撞碎
         if t < self.T_HIT:
@@ -679,8 +716,8 @@ class P10(Shot):
         fr += cv2.GaussianBlur(Aw, (0, 0), 20)[..., None] * np.array([0.6, 0.7, 0.9], np.float32) * 0.15 * (1 + 2 * flick)
         if flick > 0.3:
             fr = K.sparks(fr, t, 1010, tuple(tip.astype(int)), n=40, life=0.35, speed=(300, 900), dirc=(-1, -0.6), spread=0.9, grav=900, area=(20, 20), amt=1.0)
-        pr = tp(10, [9, 10], t, 0.18)
-        fr = T.scatter_stack(fr, '谁的', pr, places=[dict(ch='谁', x=250, y=260, size=130, rot=-6, font='kai', idx=0, emph=False),
+        pr = tp(10, [9, 10], t, 0.18) if not R5 else [0.0, 0.0]   # 第五轮 #17：去掉「谁的」
+        if not R5: fr = T.scatter_stack(fr, '谁的', pr, places=[dict(ch='谁', x=250, y=260, size=130, rot=-6, font='kai', idx=0, emph=False),
                                                        dict(ch='的', x=380, y=400, size=110, rot=4, font='kai', idx=1, emph=False)],
                              color='white', t_local=u, style_kw=dict(shadow=0.8))
         fr = cam(fr, 1.04, 60 - 160 * eio(u), 0, -1.5)
@@ -769,7 +806,8 @@ class P11(Shot):
 # P12 MCU：鬼屠竖刀当面，刀身一分为二的脸（blade_face）；「只信这柄」马善政竖排，逐字光洇
 class P12(Shot):
     def __init__(self):
-        self.sp = spr('B_r4/blade_face2_pt')                       # 第七棒：束发版（全片造型统一）
+        # 第五轮 #18：0:56 刀尖出画被裁——重新出图（blade_face3_a：同姿势拉远，整把刀含刀尖、束发结都在画内）
+        self.sp = spr('R5_B/blade_face3_a') if R5 else spr('B_r4/blade_face2_pt')
         self.bg = BK.dark_bg(912, 0.015, 0.05)
         T.warm('只信这柄', 'kai', 96)
 
@@ -778,12 +816,12 @@ class P12(Shot):
         fr = self.bg.copy()
         x, y = K.grid()
         fr += np.exp(-(((x - 960) / 500) ** 2 + ((y - 380) / 300) ** 2))[..., None] * np.array([0.10, 0.11, 0.14], np.float32)
-        fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 614), 1900,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
+        fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 452) if R5 else (960, 614), 1400 if R5 else 1900,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
                        grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
                        rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4))
         # 刀刃上一线寒光自上而下
         q = clamp01((t - self.t0 - 0.1) / 0.6)
-        yy = 120 + 600 * eio(q)
+        yy = (185 + 470 * eio(q)) if R5 else (120 + 600 * eio(q))
         g = np.exp(-(((x - 960) / 26) ** 2 + ((y - yy) / 60) ** 2))
         fr += g[..., None] * np.array([0.9, 0.95, 1.0], np.float32) * 0.8 * (1 - q * 0.5)
         fr = K.sparks(fr, t, 1212, (960, 980), n=30, life=1.2, speed=(60, 200), dirc=(0, -1), spread=0.8, grav=-60, area=(900, 40), amt=0.6)
@@ -888,13 +926,13 @@ class P13(Shot):
                  + cv2.GaussianBlur(m, (0, 0), 18)[..., None] * (RED * 1.2 + 0.1)
         # 「刀」被刀弧斩出（右下，朱红）
         pd = clamp01((t - (self.T_DAO - 0.08)) / 0.2)
-        if pd > 0:
+        if pd > 0 and not R5:   # 第五轮 #19：去掉「刀」「还」
             P = [dict(ch='刀', x=1480, y=600, size=360, rot=-8, font='kai', idx=0, emph=True)]   # 第七棒：行书「刀」读成「刃」→ 楷
             fr = T.slash_cut(fr, '刀', clamp01(0.2 + pd * 0.04 + max(0.0, t - self.T_DAO - 0.2) * 0.6), places=P,   # 第七棒：完整停 6 帧再斩开
                              color='white', emph=('刀',),
                              emph_color=(0.88, 0.12, 0.08), cut_at=0.25, slide=0.12, angle=35, appear=0.15)
         ph = tp(11, [5], t, 0.18)[0]
-        if ph > 0:
+        if ph > 0 and not R5:
             fr = T.ink_bleed_in(fr, '还', [ph], places=[dict(ch='还', x=1700, y=790, size=110, rot=0, font='kai', idx=0, emph=False)], color='white',
                                 style_kw=dict(shadow=0.8))
         fr = K.sparks(fr, t, 1313, tuple(self.tip.astype(int)), n=50, life=0.7, speed=(150, 600), dirc=(0.5, -1), spread=1.0, grav=300, area=(60, 60), amt=0.8 * glow + 0.2)
@@ -932,7 +970,7 @@ class P14(Shot):
         # 手背被刀的热光照亮（暖红轮廓）
         fr += (Aw * np.exp(-(((x - g[0]) / 380) ** 2 + ((y - g[1]) / 300) ** 2)))[..., None] * RED * 0.25 * heat
         pb = clamp01((t - (V(CT(11, 6)) - 0.25)) / 0.7)
-        if pb > 0:
+        if pb > 0 and not R5:   # 第五轮 #19：去掉「滚烫」
             P = [dict(ch=ch, x=470 + i * 230, y=300 + i * 40, size=220, rot=-8, font='xing', idx=i, emph=False) for i, ch in enumerate('滚烫')]
             fr = T.burn_in(fr, '滚烫', pb, places=P, color='gold', embers=120, seed=14, style_kw=dict(shadow=0.5, glow=0.5))
         mid = ((g + tip) / 2).astype(int)
