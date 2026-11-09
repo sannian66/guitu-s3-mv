@@ -4,11 +4,13 @@
 组内自测：V4_FORCE=c_pre2_chorus2 python3 render_sprite_full.py frame 140.0 /tmp/x.png
 视觉语言（与副歌一「月夜·砖墙·单色」区分）：预副歌二 = 烛光暗房里的「剧本 / 提线 / 暗箱」（暖金、宋体铅字打字机）→
 「我不低头」起切进雨夜；副歌二 = 雷暴（电白 + 朱红血雨），字墙 = 宋体律令砌成，巨印、巨掌、天平，不出现月亮与金裂砖墙。"""
+# [r4-props] 副歌二 5 处：C09/C12/C17/C24/C38 末尾各加一层 PD.play（只加不删）。
 import os, sys, math
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+import props_dev as PD
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import c_kit as K
 import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
@@ -756,6 +758,7 @@ class C09(Shot):
             fr = sparks(fr, t, int(tc * 10), b, n=50, life=0.6, speed=(200, 700), dirc=(0, 1), spread=1.4, grav=900, t0=tc, burst=True,
                         color=(1.0, 0.35, 0.2))
         fr = rain(fr, t, 90, inten=0.9, angle=-8)
+        fr = PD.play(fr, 'L31', t)  # [r4-props]
         return fr
 
 
@@ -858,6 +861,7 @@ class C12(Shot):
         fr = fx2.heat_haze(fr, t, amt=5.0)
         fr = fog(fr, t, 13, density=0.85, y0=200, y1=700, color=(0.8, 0.8, 0.82), speed=(-120, -160), scale=0.5)
         fr = sparks(fr, t, 121, (900, 640), n=140, life=0.8, speed=(80, 420), dirc=(0.3, -1), spread=0.7, grav=-100, amt=1.2, area=(800, 20))
+        fr = PD.play(fr, 'L32', t)  # [r4-props]
         return fr
 
 
@@ -1128,6 +1132,7 @@ class C17(Shot):
         fr = splash(fr, t, tl, (960, 975), 171, n=220, spread=900, up=1100)
         fr = rain(fr, t, 170, inten=1.0, angle=10)
         self.ca = 5 if 0 <= t - tl < 0.1 else 0
+        fr = PD.play(fr, 'L33', t)  # [r4-props]
         return fr
 
 
@@ -1433,6 +1438,7 @@ class C24(Shot):
         fr = K.vol_light(fr, (tip[0] - 160, tip[1] + 30), 260, (1.0, 0.55, 0.22), 0.35)      # 火星照亮衣摆
         fr = K.vol_light(fr, tip, 160, (1.0, 0.5, 0.2), 0.6)
         fr = rain(fr, t, 240, inten=0.9, angle=-6, cam=(ox, 0))
+        fr = PD.play(fr, 'L35', t)  # [r4-props]
         return fr
 
 
@@ -2042,6 +2048,7 @@ class C38(Shot):
             fr = paste_glyph(fr, c, 1440 + j * 150, 330, 130, (0.95, 0.96, 1.0), glow=0.6, glow_c=(0.6, 0.7, 1.0), alpha=e,
                              scale=lerp(1.6, 1, e), font='serif_black')
         fr = rain(fr, t, 380, inten=0.8, angle=4, layers=(0, 1, 2, 3))
+        fr = PD.play(fr, 'L39', t)  # [r4-props]
         return fr
 
 

@@ -133,32 +133,67 @@ def prop_layout(text, box, layout='v', cols=1, size=None, font='serif_b',
 # 字幕是主，道具只抬重音。关键词必须来自「逐字时长最长 / 已被标朱红」的那个字，不许手挑。
 _RED = set('血刀邪墙扛判量骨烫锋幌伪装罪状混账权势寒光长夜锋芒正邪铁壁自己我来长夜')
 
+# §0 规则5 增补（lead 2026-11-09 批准）：语义重音词表 —— 只加一项权重，不改评分结构。
+# 取词优先级 = 语义表命中 > 朱红加权 > 逐字时长。
+_SEM = ('寒光', '混账', '大局', '逆犯', '铁壁', '铜墙', '发烫', '谎言', '罪状', '权势',
+        '正邪', '剧本', '暗箱', '牺牲', '陪葬', '伪装', '骨未凉', '刀不放', '理所应当')
+
 
 def pick_keyword(li, prefer_red=True, maxlen=2, ban=''):
-    """按 §0 规则 5 选关键词：优先取 align.json 里**逐字时长最长**的字（朱红字加权），
-    允许向两侧扩展到 1–3 字。返回 (keyword, 依据字符串)。"""
+    """按 §0 规则 5 选关键词。**优先级：语义重音表命中 > 朱红加权 > 逐字时长**。
+
+    先只在「命中语义重音词表的字」里挑最长的；一个都没有，才退到「朱红字里最长」，
+    再没有就退到「全句最长」。这样「寒光 / 混账 / 大局 / 发烫 / 谎言」这类真正的重音词
+    不会被一个拖长的虚字（五 / 也 / 为）抢走。
+    """
     L = T.load_lines()[li]
     text, times = L['text'], L['times']
-    ch = [c for c in text]
-    best, bi = -1.0, 0
-    for i, (c, t0) in enumerate(zip(ch, times)):
-        if c == ' ' or t0 is None or c in ban:
-            continue
+    ch = list(text)
+
+    def dur(i):
         nb = times[i + 1] if i + 1 < len(times) and times[i + 1] is not None else L['end']
-        d = max(0.05, nb - t0)
-        if prefer_red and c in _RED:
-            d *= 1.35
-        if d > best:
-            best, bi = d, i
+        return max(0.05, nb - (times[i] if times[i] is not None else L['start']))
+
+    sem = set()
+    for w in _SEM:
+        j = text.find(w)
+        if j >= 0:
+            sem.update(range(j, j + len(w)))
+
+    def best_of(idx):
+        bd, bi = -1.0, None
+        for i in idx:
+            if i in sem and ch[i].strip():
+                pass
+            if not ch[i].strip() or times[i] is None or ch[i] in ban:
+                continue
+            d = dur(i) * (1.6 if i in sem else (1.35 if (prefer_red and ch[i] in _RED) else 1.0))
+            if d > bd:
+                bd, bi = d, i
+        return bi, bd
+
+    bi, bd = best_of([i for i in range(len(ch)) if i in sem])            # ① 语义表
+    tag = '语义重音'
+    if bi is not None:                       # 命中语义词 → 取整词（而不是向右瞎扩）
+        for w in _SEM:
+            j = text.find(w)
+            if j >= 0 and j <= bi < j + len(w):
+                return w[:max(1, maxlen)], '语义重音：整词「%s」' % w
+    if bi is None:
+        bi, bd = best_of([i for i in range(len(ch)) if ch[i] in _RED])   # ② 朱红
+        tag = '朱红加权'
+    if bi is None:
+        bi, bd = best_of(range(len(ch)))                                 # ③ 时长
+        tag = '逐字时长'
+    if bi is None:
+        return '', 'no key'
     k = ch[bi]
-    why = 'align 逐字 %.2fs（%s%s）' % (best, '朱红加权后' if prefer_red and k in _RED else '', k)
-    if maxlen >= 2 and bi + 1 < len(ch) and ch[bi + 1] != ' ' and len(k) < maxlen:
-        k = k + ch[bi + 1]; why += '+右邻'
+    why = '%s：%s %.2fs' % (tag, k, dur(bi))
     return k, why
 
 
-SKIP_GLYPH = set()          # 运行期要抽走的字（只在字幕区生效）
-SKIP_REGION = (1600, 780)   # (x 阈值, y 阈值)：x>阈值 视为右竖排字幕，y>阈值 视为底部横排字幕
+SKIP_GLYPH = set()
+SKIP_REGION = (1600, 780)
 
 
 def _is_caption_pos(cx, cy):
@@ -166,12 +201,7 @@ def _is_caption_pos(cx, cy):
 
 
 class hide_glyphs:
-    """上下文管理器：在**字幕区**里跳过指定字的绘制（字宽/字序一点不变，纯空白）。
-
-    只 patch `typo.place` / `typo.brush_glyph`，用完立刻还原；因为作用域限定在字幕区，
-    画面里的巨字、精灵、道具字都不受影响。这就是 lead 要的「纯空白占位」的 demo 实现，
-    正式版由 `lyric_uni.py` 统一层负责，本模块只提供 `hidden_slots()` 的坐标数据。
-    """
+    """上下文管理器：字幕区里跳过指定字的绘制（字宽字序不变、纯空白）。仅用于出图/验收。"""
 
     def __init__(self, keyword):
         self.kw = set(keyword)
@@ -196,28 +226,23 @@ class hide_glyphs:
 
 
 def hidden_slots(items=None):
-    """输出「哪一句的第几个字被抽走」——交给 lyric_uni.py 统一层做真正的空白占位。
-
-    返回 [{line: 1-based 句号, idx: 句内可见字序号(0-based), ch, text}]
-    """
+    """「哪一句的第几个字被抽走」→ 交给 lyric_uni 统一层（LYRIC_UNI_OUT=1 档读取）。"""
     out = []
     for it in (items or _ITEMS):
         if it.get('skip'):
             continue
-        iid = it['id']; li = int(iid[1:]) - 1
+        li = int(it['id'][1:]) - 1
         kw = it.get('key') or ''
+        if not kw:
+            continue
         full = T.load_lines()[li]['text']
         i = full.find(kw)
-        if i < 0 or not kw:
+        if i < 0:
             continue
-        vis = 0
-        for j, c in enumerate(full[:i]):
-            if c != ' ':
-                vis += 1
+        vis = sum(1 for c in full[:i] if c != ' ')
         for off, c in enumerate(kw):
-            if c == ' ':
-                continue
-            out.append(dict(line=li + 1, idx=vis + off, ch=c, text=full))
+            if c != ' ':
+                out.append(dict(line=li + 1, idx=vis + off, ch=c, text=full))
     return out
 
 
@@ -1041,7 +1066,8 @@ def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols
     if top is None:
         top = min(p['y'] - p['size'] * 0.5 for p in places) - length_pad
 
-    thr = np.zeros((H, W), np.float32)                     # 丝线 alpha
+    thr = np.zeros((H, W), np.float32)                     # 丝线（字后，整条）
+    thrF = np.zeros((H, W), np.float32)                    # 丝线（字前，只露穿过字的那一小段）
     knots = np.zeros((H, W), np.float32)
     rail_y = int(round(top))                               # 挂杆：横贯所有字的顶线（微垂）
     L = T.Layer()
@@ -1057,8 +1083,12 @@ def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols
         T.place(L, pl['ch'], x, y, pl['size'], (1.0, 1.0, 1.0), pl['font'],
                 alpha=alpha, texture=False, rot=rt)
         xt = pl['x'] + Ln * math.sin(math.radians(ang)) * 0.5
-        cv2.line(thr, (int(round(pl['x'] + Ln * math.sin(math.radians(ang)) * 0.1)), int(round(top))),
-                 (int(round(x)), int(round(y - pl['size'] * hang))), float(p), int(round(thread_w)), cv2.LINE_AA)
+        xa = int(round(pl['x'] + Ln * math.sin(math.radians(ang)) * 0.1)); ya = int(round(top))
+        xb = int(round(x)); yb = int(round(y - pl['size'] * hang))
+        cv2.line(thr, (xa, ya), (xb, yb), float(p), int(round(thread_w)), cv2.LINE_AA)
+        # 字前层：只画「穿过字本身」的那一小段（视觉上线是从字上面压过去的）
+        cv2.line(thrF, (int(round(xa + (xb - xa) * 0.62)), int(round(ya + (yb - ya) * 0.62))),
+                 (xb, yb), float(p), int(round(thread_w * 0.9)), cv2.LINE_AA)
         if beads > 0:                                       # 系点红结
             cv2.circle(knots, (int(round(x)), int(round(y - pl['size'] * hang))),
                        max(2, int(round(pl['size'] * 0.05 * beads))), float(p), -1, cv2.LINE_AA)
@@ -1079,6 +1109,8 @@ def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols
     TH = cv2.GaussianBlur(thr, (0, 0), 0.5)
     glowT = cv2.GaussianBlur(thr, (0, 0), 3.2)
     out = out + TH[..., None] * colv * 2.4 + glowT[..., None] * colv * 1.1
+    TF = cv2.GaussianBlur(thrF, (0, 0), 0.45)
+    out = out + TF[..., None] * colv * 3.1                      # 字前那一段更亮一点，才看得出"压在字上"
     if knots.max() > 0:
         KN = cv2.GaussianBlur(knots, (0, 0), 0.45)
         out = out + KN[..., None] * colv * 3.0 + cv2.GaussianBlur(knots, (0, 0), 2.4)[..., None] * colv * 1.2
@@ -1377,35 +1409,52 @@ def s034_cells(t, picks=((13, 3), (14, 3), (13, 2), (14, 2))):
 
 
 _ITEMS = [
-    # id, 句号, 段, 帧, 文本, box, 函数, 参数
-    dict(id='L15', sec='chorus1', f=2071, text='若规则是铁壁铜墙', key='铁壁铜墙', box=(140, 150, 560, 940), fn='刻',
-         hot='墙', cells=s034_cells,
+    # id, 段, 帧, 整句, 关键词, 载面框, 手法, 参数
+    dict(id='L01', sec='a', f=523, text='长夜压在我刀锋之上', key='夜', box=(700, 220, 1300, 720), fn='穿线',
+         kw=dict(sway=10.0, freq=0.85, thread=(0.62, 0.05, 0.05), beads=0.8, track_v=0.52, length_pad=52)),
+    dict(id='L02', sec='a', f=620, text='五百重甲拦不住一道寒光', key='寒光', box=(900, 200, 1700, 560), fn='擦',
+         kw=dict(wipe=0.75, keep=0.22, front=0.45, wipe_dir=(1, -0.15), seed=13)),
+    dict(id='L03', sec='a', f=735, text='谁在高处定对错罪状', key='罪状', box=(1050, 600, 1560, 940), fn='印',
+         kw=dict(press=1.0, wear=0.22, bleed=1.5, frame_box=False, seed=21)),
+    dict(id='L05', sec='a', f=954, text='我杀过恶徒也放过混账', key='混账', box=(220, 600, 760, 940), fn='印',
+         kw=dict(press=1.0, wear=0.24, bleed=1.6, frame_box=False, seed=25)),
+    dict(id='L07', sec='a', f=1176, text='若正义由权势执掌', key='权势', box=(560, 320, 1240, 860), fn='擦',
+         kw=dict(wipe=0.72, keep=0.24, front=0.5, wipe_dir=(0, 1), seed=17)),
+    dict(id='L08', sec='a', f=1196, text='那我宁愿做乱世的锋芒', key='芒', box=(1020, 380, 1300, 660), fn='烧',
+         kw=dict(ink=(0.20, 0.05, 0.03), seed=48)),
+    dict(id='L11', sec='b_pre1', f=1632, text='我不信天不信命不信谁的理所应当', key='理所', box=(200, 220, 700, 880), fn='擦',
+         kw=dict(wipe=0.78, keep=0.22, front=0.4, wipe_dir=(1, -0.4), seed=19)),
+    dict(id='L13', sec='chorus1', f=1841, text='血未冷 刀不放', key='刀不', box=(600, 200, 1400, 640), fn='穿线',
+         kw=dict(sway=11.0, freq=0.9, thread=(0.62, 0.05, 0.05), beads=0.8, track_v=0.5, length_pad=50)),
+    dict(id='L14', sec='chorus1', f=1945, text='谁人来定正邪一方', key='定', box=(137, 857, 223, 943), fn='印',
+         kw=dict(press=0.75, wear=0.26, bleed=1.2, frame_box=False, seed=27)),
+    dict(id='L15', sec='chorus1', f=2071, text='若规则是铁壁铜墙', key='铁壁', box=(300, 600, 540, 840), fn='刻',
+         hot='', celfn='s034',
          kw=dict(depth=5.0, dark=0.90, cell_fit=0.86, hl=(0.76, 0.84, 1.0), hl_amt=0.70,
                  groove=(0.008, 0.010, 0.016), lip=0.85, bite=0.85, chisel=0.50, seed=34)),
-    dict(id='L18', sec='chorus1', f=2385, text='是非对错我自己扛', key='自己扛', box=(1400, 210, 1860, 880), fn='刻'),
-    dict(id='L35', sec='c', f=4306, text='若规则是铁壁铜墙', key='铁壁', box=(1080, 180, 1820, 700), fn='刻',
-         kw=dict(depth=4.0, dark=0.82, hl=(0.62, 0.70, 0.88), hl_amt=1.05, bite=1.5, lip=1.15,
-                 groove=(0.004, 0.005, 0.008), virt_light=0.62)),
-    dict(id='L54', sec='e', f=6392, text='对就是对错就是错何须伪装', key='何须伪装', box=(1180, 200, 1830, 880), fn='刻',
-         skip='E125(S125) 时间窗内只有人脸特写 + 小散景碎片，没有可刻的匾面 → 按 lead 指令退回字幕，不接'),
-    dict(id='L08', sec='a', f=1281, text='那我宁愿做乱世的锋芒', key='乱世', box=(980, 190, 1780, 640), fn='烧'),
-    dict(id='L17', sec='chorus1', f=2278, text='血未冷 骨未凉', key='骨未凉', box=(620, 280, 1320, 800), fn='烧'),
-    dict(id='L32', sec='c', f=3931, text='信这柄刀还在发烫', key='发烫', box=(300, 220, 1500, 780), fn='烧'),
-    dict(id='L51', sec='e', f=6065, text='若规则是谎言伪装', key='谎言', box=(620, 380, 1300, 820), fn='烧'),
-    dict(id='L01', sec='a', f=523, text='长夜压在我刀锋之上', key='长夜', box=(620, 240, 1420, 700), fn='穿线'),
-    dict(id='L13', sec='chorus1', f=1841, text='血未冷 刀不放', key='刀不放', box=(600, 200, 1400, 640), fn='穿线'),
-    dict(id='L19', sec='chorus1', f=2495, text='天不判 我来量', key='我来量', box=(480, 260, 1300, 720), fn='穿线'),
-    dict(id='L33', sec='c', f=4093, text='血未冷 刀不放', key='血未冷', box=(300, 200, 1500, 660), fn='穿线'),
-    dict(id='L02', sec='a', f=620, text='五百重甲拦不住一道寒光', key='寒光', box=(760, 190, 1780, 600), fn='擦'),
-    dict(id='L07', sec='a', f=1176, text='若正义由权势执掌', key='权势', box=(560, 320, 1240, 860), fn='擦'),
-    dict(id='L11', sec='b_pre1', f=1632, text='我不信天不信命不信谁的理所应当', key='理所应当', box=(160, 190, 720, 900), fn='擦'),
-    dict(id='L31', sec='c', f=3833, text='我不低头不认命不信什么大局为上', key='大局', box=(200, 200, 1500, 780), fn='擦'),
-    dict(id='L03', sec='a', f=735, text='谁在高处定对错罪状', key='罪状', box=(1000, 560, 1720, 950), fn='印'),
-    dict(id='L05', sec='a', f=954, text='我杀过恶徒也放过混账', key='混账', box=(200, 560, 1000, 950), fn='印'),
-    dict(id='L14', sec='chorus1', f=1945, text='谁人来定正邪一方', key='定', box=(830, 430, 1120, 800), fn='印',
-         kw=dict(press=1.0, wear=0.26, bleed=1.8, frame_box=False, seed=27)),
-    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='量', box=(1390, 338, 1730, 662), fn='印',
-         kw=dict(press=0.9, wear=0.24, bleed=1.3, frame_box=False, seed=29)),
+    dict(id='L17', sec='chorus1', f=2278, text='血未冷 骨未凉', key='骨未', box=(1120, 300, 1520, 760), fn='烧',
+         kw=dict(ink=(0.42, 0.035, 0.02), seed=57)),
+    dict(id='L18', sec='chorus1', f=2385, text='是非对错我自己扛', key='扛', box=(1560, 300, 1800, 600), fn='刻',
+         kw=dict(depth=5.0, dark=0.88, hl=(0.78, 0.86, 1.0), hl_amt=0.72, lip=0.86, bite=0.95,
+                 chisel=0.55, font='serif_black', seed=38)),
+    dict(id='L19', sec='chorus1', f=2495, text='天不判 我来量', key='判', box=(480, 260, 1300, 720), fn='穿线',
+         kw=dict(sway=9.0, freq=0.8, thread=(0.62, 0.05, 0.05), beads=0.8, track_v=0.52, length_pad=54)),
+    dict(id='L31', sec='c', f=3833, text='我不低头不认命不信什么大局为上', key='大局', box=(1000, 200, 1600, 700), fn='擦',
+         kw=dict(wipe=0.70, keep=0.28, front=0.45, wipe_dir=(1, -0.2), seed=23)),
+    dict(id='L32', sec='c', f=3931, text='信这柄刀还在发烫', key='发烫', box=(380, 180, 1500, 700), fn='烧',
+         kw=dict(ink=(0.42, 0.035, 0.02), seed=72)),
+    dict(id='L33', sec='c', f=4093, text='血未冷 刀不放', key='刀不', box=(300, 200, 1500, 660), fn='穿线',
+         kw=dict(sway=13.0, freq=0.95, thread=(0.62, 0.05, 0.05), beads=0.8, track_v=0.5, length_pad=56)),
+    dict(id='L35', sec='c', f=4306, text='若规则是铁壁铜墙', key='铁壁', box=(1380, 300, 1700, 620), fn='刻',
+         kw=dict(depth=4.0, dark=0.82, hl=(0.62, 0.70, 0.88), hl_amt=1.05, lip=1.15, bite=1.5,
+                 groove=(0.004, 0.005, 0.008), virt_light=0.62, font='serif_black', seed=35),
+         lift=0.05),
+    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='判', box=(1390, 398, 1700, 680), fn='印',
+         kw=dict(press=0.95, wear=0.24, bleed=1.3, frame_box=False, seed=29)),
+    dict(id='L51', sec='e', f=6045, text='若规则是谎言伪装', key='谎言', box=(180, 300, 620, 760), fn='烧',
+         kw=dict(mode='hole', seed=51, hole_scale=0.9)),
+    dict(id='L54', sec='e', f=6392, text='对就是对错就是错何须伪装', key='伪装', box=(1000, 640, 1400, 880), fn='剪影',
+         skip='需要 E19 把 put() 的 info[\'A\'] 与入参帧(bg)交出来才能画剪影+真孔；属"改原有调用"，按下 lead 的"只加不删"规则先跳过，待批准后一行接上'),
 ]
 
 _CLS_DEFAULT = {
@@ -1454,12 +1503,11 @@ def _draw(item, base, t, still=False):
 
 
 def play(fr, iid, t):
-    """接线用的一行入口：`fr = PD.play(fr, 'L15', t)`。
+    """接线用的一行入口：`fr = PD.play(fr, 'L15', t)`（只**新增**这一层，不替换任何字幕调用）。
 
-    从 `_ITEMS` 取该项的关键词/载面框/手法/参数，逐字时间按**当前演唱进度**给（不是静止证明帧），
-    所以镜头里就是「唱到哪凿到哪 / 烧到哪」。PROPS_OFF=1 时原样返回。
+    从 `_ITEMS` 取关键词/载面/手法/参数，逐字时间按当前演唱进度给；
+    PROPS_OFF=1 时原样返回（做接入前/后同帧 A/B 用）。
     """
-    import os
     if _off():
         return fr
     it = next((x for x in _ITEMS if x['id'] == iid), None)
@@ -1468,28 +1516,33 @@ def play(fr, iid, t):
     text = it.get('key') or it['text']
     full = T.load_lines()[int(iid[1:]) - 1]
     times = key_times(full['text'], full['times'], text) or full['times']
-    kw = dict(_CLS_DEFAULT[it['fn']]); kw.update(it.get('kw') or {})
-    if 'cols' not in (it.get('kw') or {}):
-        nch = len([c for c in text if c != ' '])
-        kw['cols'] = 2 if nch >= 7 else 1
-        if nch >= 11:
-            kw['cols'] = 3
-    if it.get('hot'):
-        kw.setdefault('hot', it['hot'])
-    fn = it['fn']
+    kw = dict(it.get('kw') or {})
     box = it['box']
+    fn = it['fn']
     if fn == '刻':
-        cells = it.get('cells')
-        if callable(cells):
-            cells = cells(t)
-        return etched_lyric(fr, text, box, times=times, t=t, cells=cells, **kw)
-    if fn == '烧':
-        return burning_lyric(fr, text, box, times=times, t=t, **kw)
-    if fn == '穿线':
-        return threaded_lyric(fr, text, box, times=times, t=t, **kw)
-    if fn == '擦':
-        return wiped_lyric(fr, text, box, times=times, t=t, **kw)
-    return stamped_lyric(fr, text, box, times=times, t=t, **kw)
+        if it.get('celfn') == 's034':
+            cells = s034_cells(t)
+            if cells:
+                kw['cells'] = cells
+        out = etched_lyric(fr, text, box, times=times, t=t, font=kw.pop('font', 'serif_black'), **kw)
+    elif fn == '烧':
+        mode = kw.pop('mode', 'glyph')
+        if mode == 'hole':
+            void = np.float32(0.012) + np.array((0.055, 0.026, 0.016), np.float32)
+            out = burning_lyric(fr, text, box, times=times, t=t, mode='hole', void=void, **kw)
+        else:
+            out = burning_lyric(fr, text, box, times=times, t=t, mode='glyph', **kw)
+    elif fn == '穿线':
+        out = threaded_lyric(fr, text, box, times=times, t=t, font=kw.pop('font', 'serif_black'), **kw)
+    elif fn == '擦':
+        out = wiped_lyric(fr, text, box, times=times, t=t, font=kw.pop('font', 'serif_black'), **kw)
+    elif fn == '印':
+        out = stamped_lyric(fr, text, box, times=times, t=t, font=kw.pop('font', 'serif_black'), **kw)
+    else:
+        return fr
+    if it.get('lift'):
+        out = soft_lift(out, box, gain=float(it['lift']), radius=160.0)
+    return out
 
 
 def run_detail(only=('擦',), out_dir=None, box_px=560):
