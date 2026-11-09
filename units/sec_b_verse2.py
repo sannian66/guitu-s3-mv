@@ -929,11 +929,9 @@ class V08(Shot):
         self.bg, self.fl, _ = BSF.floor_plate(5401, hor=380)
         self.rain = fx2.RainSheet(5402, density=0.9)
         self.spl = fx2.Splashes(5403)
+        # [r4-#30] 裂字「嚣」「张」与杖身刻字「柄在」全部去掉（用户 1m34：只留「权」，其他文字全删）。
+        # 本镜不再生成任何字形遮罩 —— 只剩「杖杵地的动作 + 石屑 + 水冠 + 雨」，字位彻底清零。
         self.G = []
-        for ch, (fx, fy), r in (('嚣', self.F1, -4), ('张', self.F2, 3)):
-            A = BV.mask([(ch, fx, fy + 75, 380, r)], fname='serif_black')
-            M = np.float32([[1.0, 0.0, 0.0], [0.0, 0.55, (fy + 75) * 0.45]])        # 透视压扁贴到地面（字心在杖镦前方，杖不挡字）
-            self.G.append(cv2.warpAffine(A, M, (W, H)))
         T.warm('柄在', 'serif_black', 110)
 
     def foot(self, t):
@@ -957,14 +955,9 @@ class V08(Shot):
         T1, T2 = V(self.T1), V(self.T2)
         fr = self.bg.copy()
         fr = self.spl.draw(fr, t, y_far=390, y_near=960, rate=110, size=1.0, amt=0.6)
-        # 裂字（嚣 / 张）：自杖镦径向裂开，槽内积水映宫灯暖光（不自发光）
-        for i, (tk, G, fpt) in enumerate(((T1, self.G[0], self.F1), (T2, self.G[1], self.F2))):
+        # [r4-#30] 原来这里刻「嚣」「张」两个裂字 —— 已删。杵地只留冲击：石屑环 + 水冠 + 涟漪（在下面统一出）
+        for tk, fpt in ((T1, self.F1), (T2, self.F2)):
             if t < tk: continue
-            p = eout(clamp01((t - tk) / 0.16), 2)
-            g, lines = BSF.crack_mask(G, (fpt[0], fpt[1]), p, seed=5410 + i)
-            fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.42, 0.48, 0.58), fill_k=0.75 * p,
-                            hl_col=(0.70, 0.78, 0.92), hl=0.45, glow=0.0)
-            fr = fr * (1 - lines[..., None] * 0.7) + np.roll(lines, -2, 0)[..., None] * COLDC * 0.12
             fr = fx2.ripples(fr, t, [fpt, (fpt[0] + 40, fpt[1] + 8)], [tk, tk + 0.06], amt=0.9, flat=0.3, speed=420, life=0.9)
         # 权杖 + 积水倒影
         ft, ang, mb = self.foot(t)
@@ -981,19 +974,7 @@ class V08(Shot):
         # 烛光/宫灯暖轮廓（杖右缘）+ 冷顶光
         rim = np.clip(Aw - np.roll(Aw, 6, 1), 0, 1)
         fr = fr + rim[..., None] * np.array([0.9, 0.55, 0.25], np.float32) * 0.5
-        # 「柄在」阴刻在杖身（随杖走）
-        pr = prs(21, [9, 10], t)
-        if max(pr) > 0:
-            a = math.radians(ang); up = (math.sin(a), -math.cos(a))
-            pl = []
-            for k, ch in enumerate('柄在'):
-                if pr[k] <= 0: continue
-                dd = 520 - k * 125
-                pl.append((ch, ft[0] + up[0] * dd, ft[1] + up[1] * dd, 92, -ang))
-            if pl:
-                Am = BV.mask(pl, fname='serif_black') * min(1.0, max(pr) * 2)
-                fr = BV.engrave(fr, Am, light=(-0.9, -0.3), depth=3, groove=0.6, fill=(0.03, 0.03, 0.035), fill_k=0.85,
-                                hl=0.5, surface=np.clip(Aw * 1.3, 0, 1), glow=0.0)
+        # [r4-#30] 「柄在」阴刻已删（用户只留「权」）
         # 杵地：水冠 + 石屑 + 声浪
         for i, tk in enumerate((T1, T2)):
             if t < tk: continue
@@ -1012,7 +993,8 @@ class V08(Shot):
 
 # =====================================================================================
 # V09 96.10–97.52 MS 低机位斜看：雨夜案上一架乌木算盘（第三棒：天平 → 算盘，A/C/D 三组都用了天平）。
-#   每唱一个字，一档算珠被「啪」地拨上梁（金光 + 溅水），字一个个烫金刻在梁上：「牺牲多少才」——人命被拨来拨去。匹配：权杖竖线 → 竹档竖线
+#   每唱一个字，一档算珠被「啪」地拨上梁（金光 + 溅水），字一个个烫金刻在梁上：「牺牲多少」——人命被拨来拨去。匹配：权杖竖线 → 竹档竖线
+#   [r4-#31] 断句改成「牺牲多少 / 才算 / 够分量」：本镜只刻前四字（原来刻到「才」）。
 from PIL import Image as _PImg, ImageDraw as _PDraw, ImageFont as _PFont
 import b_abacus as BA
 import b_paper as BP
@@ -1054,8 +1036,8 @@ class V09(Shot):
         r = np.random.default_rng(5405)
         self.c0 = list(r.choice([0, 0, 1, 2, 3], BA.NR).astype(float))
         self.up0 = list(r.choice([0, 0, 1], BA.NR).astype(float))
-        self.cols = [2, 4, 6, 7, 9]                                                    # 每字拨哪一档（字刻在这档右侧梁上）
-        self.txt = beam_text('牺牲多少才', [3.0, 4.7, 6.4, 8.1, 9.8], 150, beam_h=170)
+        self.cols = [2, 4, 7, 9]                                                        # 每字拨哪一档（字刻在这档右侧梁上）——[r4-#31] 4 字
+        self.txt = beam_text('牺牲多少', [3.0, 5.0, 7.5, 9.5], 150, beam_h=170)           # [r4-#31] 牺牲多少
         sk = night_sky(5402, top=(0.02, 0.022, 0.028), bot=(0.08, 0.08, 0.09), horizon=0.6)
         x, y = K.grid()
         table = wood_plane(5406)
@@ -1142,7 +1124,7 @@ class V10(Shot):
     QUAD = np.float32([[-2400, -1080], [5200, -1780], [3600, 2820], [-3300, 4020]])  # 只取算盘中段（4–8 档）放大到满屏、斜透视
     def __init__(self):
         self.ab = BA.Abacus(5501, beam_h=120)
-        self.txt = beam_text('算够', [5, 7], 112, beam_h=120)
+        self.txt = beam_text('才算', [5, 7], 112, beam_h=120)                            # [r4-#31] 才算（第 5、6 字）
         self.Mq = cv2.getPerspectiveTransform(np.float32([[0, 0], [BA.AW, 0], [BA.AW, BA.AH], [0, BA.AH]]), self.QUAD)
         self.bg = BK.dark_bg(5503, 0.01, 0.03)
         self.rain = fx2.RainSheet(5504, density=0.5)
@@ -1156,7 +1138,7 @@ class V10(Shot):
         g[6] = pulse(t, V(self.T_HIT), 0.3) * (t >= V(self.T_HIT)) * 1.0
         rgb, al = self.ab.flat(c, [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1], glow=g)
         for k, m in enumerate(self.txt):
-            tk = V(CT(22, 5 + k))
+            tk = V(CT(22, 4 + k))                                                        # [r4-#31] 字序 4=才 5=算
             pk = clamp01((t - (tk - 0.04)) / 0.16)
             if pk > 0:
                 rgb = gild(rgb, m * pk, glow=0.6 * pulse(t, tk, 0.3) * (t >= tk) + 0.05)     # 第十棒：常亮辉光 0.3→0.05，只在拨珠瞬间热一下
@@ -1203,7 +1185,7 @@ def star_glyph(A, step=9, r=3.2, p=1.0, seed=0, order_y=False):
 class V11(Shot):
     T_LIANG = 99.0
     PIV, WPX = (1640, 545), 9000
-    CH = [('分', 0.683), ('量', 0.746)]
+    CH = [('够', 0.660), ('分', 0.716), ('量', 0.772)]      # [r4-#31] 够分量（三字，字序 6/7/8）；整体右移，最左的「够」不出画
     def __init__(self):
         self.sp = spr('B_r4/steelyard')
         x, y = K.grid()
@@ -1234,13 +1216,13 @@ class V11(Shot):
                         rim=dict(col=(0.85, 0.9, 1.0), amt=1.8, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=None, wrap=0.25)
         # 浅景深：焦平面在两字之间
         cxs = [sp_pt(self.sp, (0.80, 0.29), pivot, self.WPX, rot, (cx, 0.29)) for _, cx in self.CH]
-        fx_ = 0.5 * (cxs[0][0] + cxs[1][0])
+        fx_ = 0.5 * (cxs[0][0] + cxs[-1][0])                                        # [r4-#31] 焦平面取三字两端
         foc = np.exp(-((x - fx_) / 760) ** 2)[..., None]
         fr = fr * foc + K.blur_ds(fr, 9) * (1 - foc)
         fr = fr + np.exp(-((y - (cxs[0][1] - 50)) / 40) ** 2)[..., None] * np.array([0.05, 0.055, 0.065], np.float32) * Aw[..., None]   # 杆面顶光
         th = V(self.T_LIANG)
         for i, (ch, cx) in enumerate(self.CH):
-            tk = V(CT(22, 7 + i))
+            tk = V(CT(22, 6 + i))                                                        # [r4-#31] 字序 6=够 7=分 8=量
             p = clamp01((t - (tk - 0.12)) / 0.2)
             if p <= 0: continue
             c = cxs[i]
@@ -1395,7 +1377,9 @@ class V13(Shot):
         # 入镜 = 落拍 punch + 泥水冲击：他单膝砸进泥水的瞬间，泥浆与水花呈冠状向两侧炸开、冷光冲击环扩散
         tl = self.t0
         k = eout(clamp01((t - tl) / 1.25), 2)          # 起身：从半跪抬升
-        fr, _ = put(fr, self.sp, t, 640 + 80 * k, (840, 900 + 80 * (1 - k)), rim=dict(col=(0.70, 0.80, 1.0), amt=2.4, dir=(0.5, -1.0)),
+        # [r4-#32] 头顶被上黑边切：原焦距 640+80k / 推近 1.18 / 上摇 -60 → 结尾头顶算下来在 y≈55（黑边 120 之内）。
+        # 改：人物缩到 600+60k（头顶 240）、推近收到 1.14、上摇降到 -35 → 结尾头顶 y≈163、脚 y≈950，全程不出 2.39 有效区。
+        fr, _ = put(fr, self.sp, t, 600 + 60 * k, (840, 900 + 80 * (1 - k)), rim=dict(col=(0.70, 0.80, 1.0), amt=2.4, dir=(0.5, -1.0)),
                     wind_amp=6, shade=(500, 1500, 0.25, 600, 0.3))
         if t < tl + 0.45:
             fr = K.sparks(fr, t, 5806, (840, 900), n=140, life=0.55, speed=(300, 900), dirc=(0, -1), spread=1.5, grav=1500,
@@ -1412,7 +1396,7 @@ class V13(Shot):
         if not (LYRIC_UNI and _is_lyric('可曾有机会')):
             fr = T.ink_bleed_in(fr, '可曾有机会', pr, places=P, color='white', style_kw=dict(shadow=0.85, glow=0.12))
         e = eio(u)
-        fr = cam(fr, 1.0 + 0.18 * e, 0, -60 * e)
+        fr = cam(fr, 1.0 + 0.14 * e, 0, -35 * e)                     # [r4-#32] 推近 0.18→0.14、上摇 -60→-35（头顶不再被切）
         return fr, (3 if abs(t - tl) < 0.04 else 0)
 
 
@@ -1556,7 +1540,7 @@ class V15(Shot):
 class V16(Shot):
     T_SLASH = 105.62
     SRC, DST, WPX = (0.50, 0.50), (1080, 640), 1900
-    CH = [('上', (0.500, 0.365), 225), ('苍', (0.500, 0.625), 225)]
+    CH = []                       # [r4-#32] 原 [('上',...),('苍',...)]：1m45–1m50 文字全去掉
     def __init__(self):
         x, y = K.grid()
         self.c = (1080, 120)
@@ -1591,6 +1575,8 @@ class V16(Shot):
                         rim=dict(col=GOLD * 1.1, amt=2.2, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=(400, 1900, 0.0, 300, 0.55), wrap=0.0)
         Fz = Fz * (0.55 + 0.6 * np.exp(-(((x - 1080) / 500) ** 2 + ((y - 380) / 420) ** 2)))[..., None] * (1 + 0.8 * env)
         chips = []
+        # [r4-#32] 1m45–1m50 文字全去掉：碑面「上」「苍」嵌金字已删（CH 置空 → 这个循环不跑），
+        # 只留雷凿、刀光斜劈、碑体分裂这些非文字部分
         for i, (ch, nrm, sz) in enumerate(self.CH):
             tk = V(CT(24, 6 + i))
             p = clamp01((t - (tk - 0.04)) / 0.14)
@@ -1625,10 +1611,7 @@ class V16(Shot):
             fr = K.sparks(fr, t, 6120, (1080, 350), n=70, life=0.7, speed=(200, 800), dirc=(0.3, -1), spread=2.0, grav=1600,
                           size=1.6, area=(220, 20), color=(0.42, 0.40, 0.38), amt=0.9, t0=ts, burst=True)
         fr = self.rain.draw(fr, t, intensity=1.0, angle=8, light=(1080, 120), light_r=700)
-        pb = prs(24, [4, 5], t)
-        fr = T.scatter_stack(fr, '不问', pb, places=[dict(ch='不', x=360, y=360, size=180, rot=-6, font='xing', idx=0, emph=False),
-                                                       dict(ch='问', x=440, y=560, size=180, rot=5, font='xing', idx=1, emph=False)],
-                             color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85))
+        # [r4-#32] 「不问」散字去掉（1m45–1m50 文字全去掉）
         hk = hitp(t, self.T_SLASH, 0.14)
         dx, dy, dr = shake(t, 3 + 22 * hk, 12, 616)
         fr = cam(fr, 1.0 + 0.06 * eio(u) + 0.04 * hk, dx, dy + 20 * eio(u), dr)
@@ -1666,8 +1649,9 @@ class V17(Shot):
         self.spec = np.clip((l - 0.62) * 3.0, 0, 1)[..., None]                            # 积水高光
         self.nz = cv2.resize(K.fbm(H // 6, W // 6, 6211, 4, 4), (W, H)).astype(np.float32)
         self.nz2 = cv2.resize(K.fbm(H // 3, W // 3, 6212, 4, 4), (W, H)).astype(np.float32)
-        L = T.Layer(); T.place(L, '命', self.PC[0] + 10, self.PC[1] - 5, 340, color='red', fname='kai', rot=-8)
-        self.G = L.A.astype(np.float32)
+        # [r4-#32] 掌心血「命」去掉（1m45–1m50 文字全去掉）→ 字形改成空遮罩，下面那套渗血逻辑自然不出字，
+        # 只保留掌纹/积水/雨点/涟漪这些非文字层
+        self.G = np.zeros((H, W), np.float32)
         self.Gd = cv2.GaussianBlur(self.G, (0, 0), 45); self.Gd = self.Gd / max(1e-3, self.Gd.max())
         self.rain = fx2.RainSheet(6202, density=0.7)
         T.warm('谁的', 'kai', 130); T.warm('都', 'kai', 100)
@@ -1693,10 +1677,7 @@ class V17(Shot):
         fr = fx2.ripples(fr, t, [(self.PC[0] - 60, self.PC[1] + 10), (self.PC[0] + 70, self.PC[1] - 30), (self.PC[0], self.PC[1] + 40)],
                          [106.1, 106.7, 107.1], amt=0.45, flat=0.4, speed=90, life=0.8)
         fr = self.rain.draw(fr, t, intensity=0.6, angle=6)
-        pr = prs(25, [0, 1, 3], t)
-        Pl = [dict(ch='谁', x=1610, y=280, size=130, rot=0, font='kai', idx=0, emph=False), dict(ch='的', x=1610, y=420, size=110, rot=0, font='kai', idx=1, emph=False),
-              dict(ch='都', x=1730, y=580, size=100, rot=0, font='kai', idx=2, emph=False)]
-        fr = T.ink_bleed_in(fr, '谁的都', pr, places=Pl, color='white', style_kw=dict(shadow=0.85, glow=0.10))
+        # [r4-#32] 「谁的」「都」去掉（1m45–1m50 文字全去掉）
         fr = cam(fr, 1.0 + 0.09 * e, 0, 0, center=self.PC)
         return fr, 0
 
@@ -1737,12 +1718,7 @@ class V18(Shot):
         # 握紧挤出的水：从指缝向上、两侧迸开
         fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 330), n=110, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.2, grav=1500, size=1.3,
                       area=(260, 30), color=(0.8, 0.85, 0.95), amt=1.0, t0=th, burst=True)
-        pr = prs(25, [4, 5, 6, 7], t)
-        fr = T.scatter_stack(fr, '握在自己', pr, places=[dict(ch='握', x=1360, y=360, size=270, rot=-3, font='kai', idx=0, emph=True),
-                                                         dict(ch='在', x=1580, y=560, size=140, rot=0, font='kai', idx=1, emph=False),
-                                                         dict(ch='自', x=1460, y=720, size=140, rot=0, font='kai', idx=2, emph=False),
-                                                         dict(ch='己', x=1640, y=790, size=150, rot=0, font='kai', idx=3, emph=False)],
-                             color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85, glow=0.12))
+        # [r4-#32] 「握在自己」去掉（1m45–1m50 文字全去掉）；握拳的水花冲击环/挤水全部保留
         fr = self.rain.draw(fr, t, intensity=0.8, angle=8)
         qq = t - th                                                     # 冷色水花冲击环（只亮环，不抬全屏）
         if 0 <= qq < 0.30:
@@ -1776,10 +1752,7 @@ class V19(Shot):
                        wind_amp=14, mblur=(-55 * whip, 0), shade=(600, 1700, 0.25, 600, 0.3))
         fr = K.sparks(fr, t, 6404, (640, 300), n=36, life=0.45, speed=(300, 900), dirc=(-1, -0.2), spread=1.1, grav=900, size=1.0,
                       area=(220, 160), color=(0.8, 0.85, 0.95), amt=0.7, t0=self.t0 + 0.05, burst=True)   # 甩水珠：散开、不成方块
-        pr = prs(25, [8, 9], t)
-        fr = T.scatter_stack(fr, '手掌', pr, places=[dict(ch='手', x=1500, y=640, size=220, rot=0, font='kai', idx=0, emph=False),
-                                                       dict(ch='掌', x=1700, y=800, size=260, rot=0, font='kai', idx=1, emph=True)],
-                             color='white', emph_color=(0.86, 0.10, 0.06), t_local=u, style_kw=dict(shadow=0.85, glow=0.15))
+        # [r4-#32] 「手掌」去掉（1m45–1m50 文字全去掉）
         fr = self.rain.draw(fr, t, intensity=1.0, angle=10, cam=(-300 * whip, 0))
         fr = cam(fr, 1.02, 0, 0, -2 * whip)
         return fr, 0

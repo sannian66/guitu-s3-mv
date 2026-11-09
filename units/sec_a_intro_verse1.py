@@ -1526,30 +1526,45 @@ class V15(Shot):
         stone = stone + (wet * 0.07)[..., None] * np.array([0.6, 0.7, 0.9], np.float32) - self.chip[..., None] * 0.05
         fr = fr * (1 - st) + stone * st
         fr = fx2.god_rays(fr, (200, 40), strength=0.35, length=1.0, color=(0.65, 0.72, 0.9), t=t, src_r=180)   # 体积光束穿雨
-        G = np.zeros((H, W), np.float32); cur = None
+        # [r1-#9] 「我的主张」原来是把字形画成"亮字浮在石面上"（ink_bleed 白字 + 投影），不像刻出来的。
+        #   按 lead 指示改用 props_dev 的阴刻 etched_lyric（不自己造刻法）：
+        #   字槽压暗 + 迎光内壁高光 + 背光内壁投影 + 凿口崩边 + 凿痕石屑，逐字跟着唱词拍点凿进石面。
+        cur = None
         for (c, k, gx, gy, sz) in self.GL:
-            p = clamp01((t - (CT(5, k) - 0.10)) / 0.40)
-            if p <= 0: continue
-            if p < 1: cur = (gx, gy)
-            g = T.ink_bleed_glyph(c, 'kai', sz, p, seed=20 + k, bleed=0.3)
-            h_, w_ = g.shape; ys, xs = int(gy - h_ / 2), int(gx - w_ / 2)
-            G[ys:ys + h_, xs:xs + w_] = np.maximum(G[ys:ys + h_, xs:xs + w_], g)
-        if G.max() > 0:
-            Gs = cv2.GaussianBlur(G, (0, 0), 1.2) * self.st
-            sh = np.clip(Gs - cv2.warpAffine(Gs, np.float32([[1, 0, 5], [0, 1, 6]]), (W, H)), 0, 1)
-            hl = np.clip(Gs - cv2.warpAffine(Gs, np.float32([[1, 0, -4], [0, 1, -5]]), (W, H)), 0, 1)
-            fr = fr * (1 - 0.85 * Gs[..., None]) + Gs[..., None] * np.array([0.012, 0.012, 0.016], np.float32)
-            fr = fr * (1 - 0.6 * sh[..., None]) + hl[..., None] * np.array([0.6, 0.68, 0.9], np.float32) * 1.0
-            for (c, k, gx, gy, sz) in self.GL:
-                a = t - CT(5, k)
-                if -0.1 <= a < 0.6:
-                    fr = K.sparks(fr, t, 150 + k, (gx + sz * 0.2, gy), n=40, life=0.5, speed=(150, 500), dirc=(0.8, -0.4), spread=1.4, grav=900,
-                                  area=(sz * 0.4, sz * 0.4), amt=0.6, t0=CT(5, k) - 0.1, burst=True, color=(0.85, 0.85, 0.92))
+            p_ = clamp01((t - (CT(5, k) - 0.10)) / 0.40)
+            if 0.0 < p_ < 1.0: cur = (gx, gy)
+        L5 = [CT(5, k) for (_, k, _, _, _) in self.GL]
+        # 暗碑调参：V15 的碑面是深灰 (0.13)，默认「槽底压暗 + 亮内壁」在暗石上会变成描边崩碎。
+        #   两步：① 给字带一块**受光面**（碑面本来就有雨光，只是原来平涂；压出一块柔和亮带）——
+        #   阴刻必须有侧光/受光面才读得出来；② 刻字参数按暗石收（槽底 0.60、内壁高光 0.75、崩口/石屑减半）。
+        lp = np.exp(-(((xx - 780) / 640) ** 2 + ((yy - 650) / 165) ** 2))
+        fr = fr + lp[..., None] * np.array([0.085, 0.088, 0.10], np.float32)
+        fr = PD.etched_lyric(fr, '我的主张', box=(320, 500, 1240, 800), times=L5, t=t, layout='h',
+                             font='serif_black', light=(-1.0, -0.7), dark=0.62, depth=6.0, hl_amt=0.75,
+                             hl=(0.70, 0.76, 0.90), lip=0.55, bite=0.5, chisel=0.4, dust=0.5, seed=151)
+        for (c, k, gx, gy, sz) in self.GL:                     # 凿字火星（节奏不变）
+            a = t - CT(5, k)
+            if -0.1 <= a < 0.6:
+                fr = K.sparks(fr, t, 150 + k, (gx + sz * 0.2, gy), n=40, life=0.5, speed=(150, 500), dirc=(0.8, -0.4), spread=1.4, grav=900,
+                              area=(sz * 0.4, sz * 0.4), amt=0.6, t0=CT(5, k) - 0.1, burst=True, color=(0.85, 0.85, 0.92))
         # 人：右侧侧身 MCU，刀尖抵住当前在刻的字（随字移动）
         tx, ty = self.tip(t)
         jit = 3 * math.sin(t * 40) if cur is not None else 0
         fr, info = A.place(fr, t, self.spr, (tx + jit, ty), w=1300, anc=self.anc, rim=COLD, rim_amt=3.0,           # 刀尖 = 原图左缘 (0, 0.592)
                            rim_dir=(-0.7, -0.6), wind=8, grade=dict(expo=0.85, sat=0.5, gamma=1.1), breathe=0.0)
+        # [r1-#9] 用户：35s 剑被截断。查证 = **不是摆位问题**，是生图里刀尖就被画框切掉了
+        #   （精灵 alpha 在最左一列仍是实心、45px 高，没有收尖）→ 不能重出就先代码补一个刀尖：
+        #   从切面往左收一个长 118px 的尖（半宽 30 = 屏幕上刀身半厚），带刃口高光；切面被尖盖住，读作完整刀尖。
+        tv = np.zeros((H // 2, W // 2), np.float32)
+        te = np.zeros((H // 2, W // 2), np.float32)
+        bx, L_, hw = (tx - 6) / 2, 118.0 / 2, 30.0 / 2
+        cv2.fillPoly(tv, [np.array([[bx, (ty - hw * 2) / 2 ], [bx, (ty + hw * 2) / 2],
+                                   [bx - L_, (ty + 6) / 2], [bx - L_ * 0.62, (ty - hw * 1.3) / 2]], np.int32)], 1.0, cv2.LINE_AA)
+        cv2.line(te, (int(bx), int((ty - hw * 2 + 3) / 2)), (int(bx - L_ * 0.9), int((ty + 2) / 2)), 1.0, 2, cv2.LINE_AA)
+        tv = cv2.resize(cv2.GaussianBlur(tv, (0, 0), 1.0), (W, H))[..., None]
+        te = cv2.resize(cv2.GaussianBlur(te, (0, 0), 0.8), (W, H))[..., None]
+        fr = fr * (1 - tv * 0.94) + tv * np.array([0.56, 0.60, 0.68], np.float32)
+        fr = fr + te * np.array([0.85, 0.90, 1.0], np.float32) * 0.9
         fr = K.sparks(fr, t, 159, (tx, ty), n=14, life=0.25, speed=(120, 420), dirc=(0.6, -0.8), spread=1.6, grav=900, area=(6, 6),
                       amt=0.7 if cur is not None else 0.0, t0=self.t0, burst=False, color=(1.0, 0.85, 0.6))                    # 刀尖抵碑：持续火星
         fr = A.glow(fr, (tx, ty), 50, 0.6 if cur is not None else 0.15, (0.8, 0.88, 1.0))

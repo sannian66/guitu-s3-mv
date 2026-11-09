@@ -125,3 +125,28 @@ cd out/devsnap && OMP_NUM_THREADS=1 FR=30,90,320,700,905,924,750,830,1310 LYRIC_
 
 A/B（撤掉某一条改动，渲「改前」）：`/usr/bin/python3 /tmp/a_r1/ab.py base <frames> <tag> --rev 4`
 （已登记 #1/#2/#4 的撤除锚点；#5/#6/#7/#12 的锚点我下一轮补齐，本轮的「改前」图是从旧渲染里取的）。
+
+---
+
+## 第 2 轮（lead 拍板后）
+
+### 工具：`tools/devsync.py`（已提成正式工具）
+`python3 tools/devsync.py out/devsnap [--check|--clean|--only <文件>|--list]`
+① 只同步改过的文件（sha256）② 重写 `ROOT`（`/workspace/work/mv` → 快照 `code/`）③ `crew` 复制、assets/audio/fonts 软链
+④ 语法自检后才写盘。**别再手写临时 sync** —— 直接 `cp` 会让模块去找 `/workspace/work/mv` 然后崩。
+
+### #9 35s（已完成两半）
+1. **剑被截断 → 诊断清楚**：不是摆位问题。`A_r6/carve_grip` 的 alpha 在最左一列仍是实心（45px 高、maxA=1.0）
+   → **生图里刀尖就被画框切掉了**。不能重出 → 代码补一个收尖刀尖（从切面往左收 118px、半宽=屏幕上刀身半厚 30px，
+   带刃口高光），切面被盖住，读作完整刀尖。对比 `out/a_r1/r1_09_sword_tip.jpg`。
+2. **「我的主张」→ props_dev.etched_lyric**（按 lead 指示，不自己造刻法）：
+   逐字跟唱词拍点（`times=[CT(5,7..10)]`）凿进碑面。**坑**：V15 的碑面是深灰 (0.13)，
+   阴刻的「槽底压暗 + 亮内壁」在暗石上会变成**描边崩碎**；解决 = ①给字带压一块**受光面**
+   （`lp = exp(-((x-780)/640)²-((y-650)/165)²)`，+0.085）②刻字参数按暗石收（dark 0.62 / hl_amt 0.75 / 崩口·石屑 ×0.5）。
+   对比 `out/a_r1/r1_09_etched.jpg`。仍偏含蓄，若你要更「刻」，我再给碑面加一盏掠射侧光（不须生图）。
+
+### 下一步（未做，已排好）
+- **#10 玉玺**：`assets/gen/r1/g_v16_seal_cut.png` 替换 V16 现在那方假玉玺精灵（单体、绿幕抠好，最安全的一条）。
+- **#13 手与笔**：`assets/gen/r1/g_v21_hand_cut.png` 替换 V21 里的手+笔（读包围盒 → 对齐刀柄位置 → 调透视）。
+- #8/#11：按 lead 指示**等 `wt_v14_char` / `wt_v20_char`**（新渠道），老的 `v14_char.png`/`v20_char.png` 不接。
+- #3 挥刀：**等 `assets/gen/wt/` 的 V06 中段图**，我不动。
