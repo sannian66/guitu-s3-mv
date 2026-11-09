@@ -1475,7 +1475,7 @@ class V22(Shot):
         m = m * (1 - 0.97 * am)                       # 第四棒：颠倒的是世界，他本人不反相（正片人站在负片世界里）
         fr = fr * (1 - m[..., None]) + neg_grade(fr) * m[..., None]
         fr = self.rain.draw(fr, t, intensity=0.8, angle=10)          # 雨在反相之后画：不变成黑粗条
-        P = [dict(ch=c, x=(1225, 1390, 1555, 1740)[i], y=700, size=(140, 140, 140, 190)[i], rot=0, font='kai', idx=i, emph=(c == '刀'))
+        P = [dict(ch=c, x=(1215, 1365, 1515, 1680)[i], y=700, size=(135, 135, 135, 180)[i], rot=0, font='kai', idx=i, emph=(c == '刀'))
              for i, c in enumerate('那就用刀')]                     # 第四棒：移到右侧亮墙，不压人物
         pr = prs(27, [0, 1, 2, 3], t)
         if q <= 0:
