@@ -13,7 +13,7 @@ import typo as T
 import trans as TR
 import b_paper as BP
 
-READY = False
+READY = True   # 第五轮：用户看的是含 B 组新版的整片，接入
 F0, F1 = 1321, 1784
 C1_FROM = 1779                    # 59.30 起交给副歌一（它的 S028 =「血」字头硬切）
 

@@ -26,6 +26,11 @@ def chorus1():
 
 
 def frame(f, cache):
+    import subtitle as SUB                      # 第五轮 #52：全片统一底部居中歌词字幕
+    return SUB.apply(_frame(f, cache), f / FPS)
+
+
+def _frame(f, cache):
     t = f / FPS
     import sections as SEC                      # 第四轮：各组 units/sec_*.py 接管自己的帧区间（READY=True 时）
     m = SEC.lookup(f)

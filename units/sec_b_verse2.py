@@ -18,7 +18,7 @@ import fx2
 import paper as PA
 import b_crowd as BC
 
-READY = False
+READY = True   # 第五轮：用户看的是含 B 组新版的整片，接入
 F0, F1 = 2586, 3534
 T_IN = 86.192                       # 副歌一 S047 的起点（墨退时间基准）
 
