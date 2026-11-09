@@ -1204,7 +1204,8 @@ class C19(Shot):
             a = -math.pi * 0.98 + (i + r.uniform(-0.3, 0.3)) / (self.N - 1) * math.pi * 0.96 * 1.0
             a = a if i % 2 == 0 else a * 0.98 + math.pi * 0.02
             near = i % 4 == 0
-            self.sp.append(dict(a=a, rad=r.uniform(400, 480), dep=1.25 if near else r.uniform(0.75, 1.0), near=near, seed=190 + i,
+            _d = r.uniform(0.75, 1.0)          # 第十一棒（critic_C_r5 P2⑥ 枪头等大）：拉开透视——远枪 0.45–0.9、近枪 1.6（虚焦）
+            self.sp.append(dict(a=a, rad=r.uniform(400, 480), dep=1.6 if near else 0.45 + (_d - 0.75) / 0.25 * 0.45, near=near, seed=190 + i,
                                 spin=r.uniform(-9, 9), fly=r.uniform(500, 900)))
     def render(self, t):
         u = self.u(t)
@@ -1221,7 +1222,7 @@ class C19(Shot):
             for j, sp in enumerate(self.sp):
                 if sp['near'] == far: continue
                 a = sp['a']; dirv = np.array([math.cos(a), math.sin(a)])
-                P = c + dirv * sp['rad'] * close * sp['dep']
+                P = c + dirv * sp['rad'] * close * max(0.85, sp['dep'])     # 第十一棒：位置圈不随远近缩（不压到人身上），只缩大小
                 B = c + dirv * 2600
                 cut = t >= ts + 0.012 * j
                 kk = max(0.0, t - ts - 0.012 * j)
@@ -1234,7 +1235,9 @@ class C19(Shot):
                     draw_spear(C, M, Pc - dirv * 40 + off, Pc + off, w=16 * sp['dep'], tip=1.15 * sp['dep'], t=t, seed=sp['seed'],
                                head_off=(0, 0), head_rot=sp['spin'] * kk, flash=fl)
             if not far:
-                C = cv2.GaussianBlur(C, (0, 0), 5); M = cv2.GaussianBlur(M, (0, 0), 5)
+                C = cv2.GaussianBlur(C, (0, 0), 9); M = cv2.GaussianBlur(M, (0, 0), 9)      # 近枪：焦外大虚
+            else:                                                                      # 远枪：大气雾化 + 轻虚（纵深）
+                C = cv2.GaussianBlur(C, (0, 0), 0.8) * 0.78 + np.array([0.30, 0.33, 0.40], np.float32) * 0.22
             layers[far] = (C, M)
         C, M = layers[True]
         fr = fr * (1 - M[..., None]) + C * M[..., None] * (1 - 0 * M[..., None])
@@ -1243,7 +1246,7 @@ class C19(Shot):
         fr = arc_streak(fr, (960, 600), 470, 150, 160, -200, (t - ts) / 0.4, width=7, amt=1.0)
         if t >= ts:
             for j, sp in enumerate(self.sp):      # 火星只在每个枪头切口迸出（不在他身上堆成白团）
-                a = sp['a']; P = c + np.array([math.cos(a), math.sin(a)]) * sp['rad'] * close * sp['dep']
+                a = sp['a']; P = c + np.array([math.cos(a), math.sin(a)]) * sp['rad'] * close * max(0.85, sp['dep'])
                 fr = sparks(fr, t, 193 + j, tuple(P), n=24, life=0.45, speed=(200, 700), dirc=(math.cos(a), math.sin(a)), spread=0.9,
                             grav=900, t0=ts + 0.012 * j, burst=True, color=(1.0, 0.7, 0.35), amt=1.0)
         C, M = layers[False]
