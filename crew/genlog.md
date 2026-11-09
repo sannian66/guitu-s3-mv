@@ -468,3 +468,10 @@
 - ✔ `s039_walk_b` 3 点（task 1606f19b）→ `assets/gen/rig/s039_walk_b_raw.png` + `_cut.png`
 - ✔ `s039_walk_c` 3 点（task 9f2cc2a0）→ `assets/gen/rig/s039_walk_c_raw.png` + `_cut.png`
 - ✔ `s039_walk_d` 3 点（task f04908b1）→ `assets/gen/rig/s039_walk_d_raw.png` + `_cut.png`
+
+## 2026-11-09 20:18 · 批量生图（s039_walk.json，4 张 / 12 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `s039w2_a` 3 点（task f85962e7）→ `assets/gen/rig/s039w2_a_raw.png` + `_cut.png`
+- ✔ `s039w2_b` 3 点（task 2c44fa75）→ `assets/gen/rig/s039w2_b_raw.png` + `_cut.png`
+- ✔ `s039w2_c` 3 点（task f195870a）→ `assets/gen/rig/s039w2_c_raw.png` + `_cut.png`
+- ✔ `s039w2_d` 3 点（task 6429a40d）→ `assets/gen/rig/s039w2_d_raw.png` + `_cut.png`
