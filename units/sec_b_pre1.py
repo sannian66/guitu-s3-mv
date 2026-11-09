@@ -2,7 +2,7 @@
 分镜：crew/round4/B_storyboard.md 第 1 节。14 镜 + 副歌一 S028 开头 5 帧（直接调用 chorus1，接缝逐像素一致）。
 接口：READY / frame(f, cache) -> uint8 (1080,1920,3)"""
 # [r4-props] 预副歌一 1 处：P09 末尾加 PD.play L11（擦）。
-import sys, math, os
+import sys, math, os, copy
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
@@ -441,10 +441,34 @@ class P06(Shot):
 
 
 # =====================================================================================
+# [r4-#15] 局部去红：只对 box 内的「红相」像素去色，其余（朱印/血/红穗/暗红内领）一律不动。
+# 为什么不是在收尾里关 red_keep：实测这张精灵的唇本身就是纯红 (RGB≈0.36,0.03,0.03，ratio≈0.90)，
+# 它进 finish() 时 sat 已经=1.0，关掉 red_keep 也救不回来（单测见 crew/round4/B_notes_r1.md #15）。
+# 在**精灵像素**上改，而不是在屏幕上改：精灵会随运镜/风吹上下漂，屏幕上的椭圆遮罩会跑偏。
+def unchroma(sp, nbox, ratio_lo=0.34, ratio_hi=0.52):
+    """返回新实例：nbox=(x0,y0,x1,y1) 归一化精灵坐标内，红相越强饱和度压得越彻底（唇心 1、皮肤 0）。
+    用归一化坐标是因为 SpriteLayer 内部按 work_w=2048 重采样，写死像素坐标会错位。"""
+    sp2 = copy.copy(sp)
+    F = sp.F.copy()
+    H_, W_ = F.shape[:2]
+    x0, x1 = int(round(nbox[0] * W_)), int(round(nbox[2] * W_))
+    y0, y1 = int(round(nbox[1] * H_)), int(round(nbox[3] * H_))
+    sub = F[y0:y1, x0:x1]
+    r, g, b = sub[..., 0], sub[..., 1], sub[..., 2]
+    ratio = (r - np.maximum(g, b)) / (r + 1e-3)
+    w = sstep(ratio_lo, ratio_hi, ratio)[..., None]
+    lum = (0.30 * r + 0.59 * g + 0.11 * b)[..., None]
+    F[y0:y1, x0:x1] = sub * (1 - w) + lum * w
+    sp2.F = F                      # 只重绑本实例（_RAW 共享缓存 / 别人用的同一精灵不受影响）
+    return sp2
+
+
+# =====================================================================================
 # P07 MS 低机位仰拍：鬼屠仰头，雷云旋转、云缝预亮；「我」「不信」毛草错落
 class P07(Shot):
     def __init__(self):
-        self.sp = spr('B_r4/look_up_low_pt')
+        # [r4-#15] 去唇红（用户：51s 只有唇是红的，抢眼怪异）——只去嘴这一小块的红相
+        self.sp = unchroma(spr('B_r4/look_up_low_pt'), (0.4984, 0.0833, 0.5297, 0.1319))
         self.tex = K.tile(1024, 907, 4, 6)
         T.warm('我不信', 'cao', 200); T.warm('不', 'xing', 150)
         import fx2; self.fx2 = fx2
@@ -547,13 +571,16 @@ class P09(Shot):
         x, y = K.grid()
         fr += np.exp(-(((x - 700) / 700) ** 2 + ((y - 450) / 420) ** 2))[..., None] * RED * 0.22
         # 人物（右）
+        # [r4-#16] 52s 人物「大头贴式裁切」→ 缩小 + 上移：焦距从 1800 收到 1300（整幅精灵 731px 高，
+        # 上下都在画内，不再顶天立地只剩一张脸），锚点抬到 y=545 让头顶停在 238（命印上沿同高、上方留气）。
+        # 「天」(P08 云隙) 与「命」(本镜朱印) 两个字一个字都没动。
         if t < self.T_HIT:
-            fr, _ = put_at(fr, self.a, t, (0.5, 0.42), (1320, 696), 1800,   # 第八棒：束发结入画
+            fr, _ = put_at(fr, self.a, t, (0.5, 0.42), (1330, 545), 1300,
                             grade=GR_COLD, rim=dict(col=(1.0, 0.45, 0.35), amt=1.8, dir=(-1.0, -0.4)),
                            wind_amp=4, shade=(700, 1800, 0.25, 700, 0.35))
         else:
             k = clamp01((t - self.T_HIT) / 0.08)
-            fr, _ = put_at(fr, self.b, t, (0.5, 0.45), (1340, 752), 1850 * (1.05 - 0.05 * k), grade=GR_COLD,
+            fr, _ = put_at(fr, self.b, t, (0.5, 0.45), (1350, 600), 1340 * (1.05 - 0.05 * k), grade=GR_COLD,
                            rim=dict(col=(1.0, 0.45, 0.35), amt=2.0, dir=(-1.0, -0.4)), wind_amp=6, mblur=(-50 * (1 - k), 0), shade=(700, 1800, 0.2, 700, 0.3))
         # 「命」印：字头砸入（2.2→1.0 缩放 + 落地抖）→ 撞碎
         if t < self.T_HIT:
@@ -688,10 +715,7 @@ class P10(Shot):
         fr += cv2.GaussianBlur(Aw, (0, 0), 20)[..., None] * np.array([0.6, 0.7, 0.9], np.float32) * 0.15 * (1 + 2 * flick)
         if flick > 0.3:
             fr = K.sparks(fr, t, 1010, tuple(tip.astype(int)), n=40, life=0.35, speed=(300, 900), dirc=(-1, -0.6), spread=0.9, grav=900, area=(20, 20), amt=1.0)
-        pr = tp(10, [9, 10], t, 0.18)
-        fr = T.scatter_stack(fr, '谁的', pr, places=[dict(ch='谁', x=250, y=260, size=130, rot=-6, font='kai', idx=0, emph=False),
-                                                       dict(ch='的', x=380, y=400, size=110, rot=4, font='kai', idx=1, emph=False)],
-                             color='white', t_local=u, style_kw=dict(shadow=0.8))
+        # [r4-#17] 53.63–54.57 「谁的」两字去掉（用户 54s）：原本这里有一对白色散字贴在左上，与右侧歌词重复
         fr = cam(fr, 1.04, 60 - 160 * eio(u), 0, -1.5)
         return fr, (3 if flick > 0.6 else 0)
 
@@ -895,17 +919,8 @@ class P13(Shot):
             m = cv2.resize(m, (W, H)) * (1 - 0.8 * clamp01((t - self.T_DAO) / 0.45))
             fr = fr + cv2.GaussianBlur(m, (0, 0), 2)[..., None] * np.array([1.0, 0.92, 0.85], np.float32) * 1.2 \
                  + cv2.GaussianBlur(m, (0, 0), 18)[..., None] * (RED * 1.2 + 0.1)
-        # 「刀」被刀弧斩出（右下，朱红）
-        pd = clamp01((t - (self.T_DAO - 0.08)) / 0.2)
-        if pd > 0:
-            P = [dict(ch='刀', x=1480, y=600, size=360, rot=-8, font='kai', idx=0, emph=True)]   # 第七棒：行书「刀」读成「刃」→ 楷
-            fr = T.slash_cut(fr, '刀', clamp01(0.2 + pd * 0.04 + max(0.0, t - self.T_DAO - 0.2) * 0.6), places=P,   # 第七棒：完整停 6 帧再斩开
-                             color='white', emph=('刀',),
-                             emph_color=(0.88, 0.12, 0.08), cut_at=0.25, slide=0.12, angle=35, appear=0.15)
-        ph = tp(11, [5], t, 0.18)[0]
-        if ph > 0:
-            fr = T.ink_bleed_in(fr, '还', [ph], places=[dict(ch='还', x=1700, y=790, size=110, rot=0, font='kai', idx=0, emph=False)], color='white',
-                                style_kw=dict(shadow=0.8))
+        # [r4-#19] 56.37 起「刀 还 滚烫」三个画内字去掉（用户 57s）：巨字「刀」与「还」都删，
+        # 只留刀弧/火星/雷雨这套动作特效（刀弧的时序仍按原「刀」字头 T_DAO 走，画面节奏不变）
         fr = K.sparks(fr, t, 1313, tuple(self.tip.astype(int)), n=50, life=0.7, speed=(150, 600), dirc=(0.5, -1), spread=1.0, grav=300, area=(60, 60), amt=0.8 * glow + 0.2)
         fr = BK.rain(fr, t, 1302, amt=0.25, n=350, angle=-6)
         k = pulse(t, self.T_DAO, 0.1) * (t >= self.T_DAO)
@@ -940,10 +955,9 @@ class P14(Shot):
         fr, band = blade_heat(fr, Aw, g, tip, 0.045 * wpx, heat, front, t, seed=14)
         # 手背被刀的热光照亮（暖红轮廓）
         fr += (Aw * np.exp(-(((x - g[0]) / 380) ** 2 + ((y - g[1]) / 300) ** 2)))[..., None] * RED * 0.25 * heat
-        pb = clamp01((t - (V(CT(11, 6)) - 0.25)) / 0.7)
-        if pb > 0:
-            P = [dict(ch=ch, x=470 + i * 230, y=300 + i * 40, size=220, rot=-8, font='xing', idx=i, emph=False) for i, ch in enumerate('滚烫')]
-            fr = T.burn_in(fr, '滚烫', pb, places=P, color='gold', embers=120, seed=14, style_kw=dict(shadow=0.5, glow=0.5))
+        # [r4-#19] 「滚烫」刀身烧字去掉（用户 57s「刀 还 滚烫」三字全删）：
+        # 这段只留「烧红的刀身 + 火星 + 热浪」，画面里不再有字。注意 IN_SCENE 里 (11,'滚烫') 仍贴着这条，
+        # 字幕层会继续把这两字留空 → 结果就是「滚烫」整片消失（与用户要求一致，见 B_notes_r1.md #19）
         mid = ((g + tip) / 2).astype(int)
         fr = K.sparks(fr, t, 1414, tuple(mid), n=90, life=0.9, speed=(120, 420), dirc=(-0.4, -1), spread=0.8, grav=-80, area=(160, 260), amt=0.5 + 0.6 * front)
         fr = heat_haze(fr, t, self.tex, 4 + 8 * heat * front)

@@ -4,11 +4,13 @@
 组内自测：V4_FORCE=c_pre2_chorus2 python3 render_sprite_full.py frame 140.0 /tmp/x.png
 视觉语言（与副歌一「月夜·砖墙·单色」区分）：预副歌二 = 烛光暗房里的「剧本 / 提线 / 暗箱」（暖金、宋体铅字打字机）→
 「我不低头」起切进雨夜；副歌二 = 雷暴（电白 + 朱红血雨），字墙 = 宋体律令砌成，巨印、巨掌、天平，不出现月亮与金裂砖墙。"""
+# [r4-props] 副歌二 5 处：C09/C12/C17/C24/C38 末尾各加一层 PD.play（只加不删）。
 import os, sys, math
 ROOT = '/Users/sannian/Downloads/鬼屠OP_new/out/devsnap/code'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+import props_dev as PD
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import c_kit as K
 import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
@@ -23,6 +25,10 @@ import c_piying as PY
 from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark, fbm
 
 READY = True
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
+# [r4-c-r1 #39/#42/#43] 用户要求 C 段 125–148s / 158–162s 画面里不要文字 → props 组挂在这几镜末尾的道具字层
+# （props_dev.play，只加不删的那 5 处）在这几镜里全部跳过。只关本文件的调用点，不动 props_dev.py（props 组的文件）。
+PROPS_TEXT_OFF = True
 
 # 第九棒：c_kit.tex 的缓存键只认名字不认 seed —— 'c1'/'c2'/'gw' 三张云/水纹底图由「本进程第一个调用的镜头」决定，
 # 导致分块渲染 / 联系表分批时同一帧长得不一样（例：C15 批渲成一团白曝、整段顺渲则是清楚的落地闪电）。
@@ -332,21 +338,68 @@ class C01(Shot):
         light = np.exp(-(((xx - 1500) ** 2 + (yy - 150) ** 2) / 1100 ** 2)) * (1.0 + 0.06 * math.sin(t * 21)) + 0.12
         light = cv2.resize(light.astype(np.float32), (W, H))[..., None]
         fr = fr * (1 - A[..., None]) + pw_ * A[..., None] * light * np.array([1.0, 0.93, 0.80], np.float32)
-        # 朱笔手：笔尖对准 tip（纸面坐标 → 画面）
-        tp = cv2.perspectiveTransform(np.float32([[tip]]).reshape(1, 1, 2), Mh)[0, 0]
-        # 手的投影
-        sh = np.zeros((H // 4, W // 4), np.float32)
-        cv2.ellipse(sh, (int((tp[0] + 160) / 4), int((tp[1] + 150) / 4)), (110, 60), -30, 0, 360, 1.0, -1)
-        fr = fr * (1 - cv2.resize(cv2.GaussianBlur(sh, (0, 0), 12), (W, H))[..., None] * 0.55)
-        fr, _ = put(fr, t, 'C/tsh_brush', tp[0], tp[1], 900, anchor='src', src=(0.635, 0.83), rot=-8, rim=WARM, rim_amt=1.4,
-                    rim_dir=(0.8, -0.6), expo=0.95, sat=0.55, tint=(1.05, 0.96, 0.86), gamma=1.05, wind=0, breathe=0.0)
+        # [r4-c-r1 #34] 去掉画顶那层移动的大袖手（精灵 C/tsh_brush + 它的投影椭圆）：用户 1m58 反馈
+        # 「谁定好规矩」这套铅字+朱圈效果很好，但上方有个移动图层把剧本内容盖住了 → 只留纸面本身的那一笔朱圈。
         fr = sparks(fr, t, 11, (1500, 200), n=30, life=2.5, speed=(10, 40), dirc=(0, -1), spread=1.2, grav=-10, amt=0.25, area=(500, 200))
         return fr
 
 
+def steel_type_glyph(ch, cx, cy, size, rot=0.0, glint=0.0, alpha=1.0):
+    """[r4-c-r1 #35] 钢字：冷调金属字块（左上来光的倒角高光 + 右下暗面 + 一点冷闪 + 轻微的钢面不匀）。
+    和 C10 的铅活字同一套材料语言，但这里是单字挂在红线上（C02 第 7 根线）。返回 typo.Layer（用 T.compose 合成）。"""
+    a = T.glyph(ch, 'serif_black', size, False).astype(np.float32)
+    gx = cv2.Sobel(a, cv2.CV_32F, 1, 0, ksize=3); gy = cv2.Sobel(a, cv2.CV_32F, 0, 1, ksize=3)
+    ln = np.sqrt(gx * gx + gy * gy) + 1e-6
+    lam = np.clip((-gx / ln) * 0.62 + (-gy / ln) * 0.78, -1, 1)                     # 光从左上来
+    body = 0.62 + 0.42 * (lam * 0.5 + 0.5)                                          # 钢面：整体提亮，暗底上才读得清
+    rgb = np.stack([body * 0.92, body * 0.98, body * 1.06], -1).astype(np.float32)  # 冷钢
+    spec = np.clip(lam - 0.30, 0, 1)[..., None] ** 1.2 * np.array([1.10, 1.12, 1.18], np.float32) * (1.0 + 1.4 * glint)
+    rgb = np.clip(rgb + spec, 0, 2.4)
+    nz = cv2.GaussianBlur(np.random.default_rng(7).random(a.shape).astype(np.float32), (0, 0), 3.0)
+    rgb = rgb * (0.86 + 0.28 * nz)[..., None]
+    # 冷白刻边（钢字被烛光/雷光打亮的那道棱）
+    edge = np.clip(cv2.dilate(a, np.ones((3, 3), np.uint8)) - cv2.erode(a, np.ones((3, 3), np.uint8)), 0, 1)
+    rgb = rgb + edge[..., None] * np.array([0.55, 0.62, 0.75], np.float32) * (0.5 + 0.7 * glint)
+    if rot:
+        g = a.shape[0]; d = int(g * 1.2)
+        M = cv2.getRotationMatrix2D((g / 2, g / 2), rot, 1.0); M[0, 2] += (d - g) / 2; M[1, 2] += (d - g) / 2
+        a = cv2.warpAffine(a, M, (d, d)); rgb = cv2.warpAffine(rgb, M, (d, d))
+    h, w = a.shape
+    L = T.Layer()
+    L.paste_rgba(rgb, a * alpha, int(cx - w / 2), int(cy - h / 2))
+    return L
+
+
+def scene_glyph(fr, ch, cx, cy, size, tint=(1.0, 0.8, 0.44), amt=0.85, glow=0.5, rot=0.0, soft=10.0):
+    """[r4-c-r1 #40] 「配色融入画面」的染色字：不是糊一块纯色贴纸，而是**保留底下雨丝/云/砖纹**再染一层色
+    （字区 = 底色 × 0.45 + 染色 × 0.55），所以字是长在画面里的，不是浮在上面的发光图层。
+    和 paste_glyph 的区别：paste_glyph 是不透明色块 + 外发光（适合在白/暗底上讲可读性），这里是给分屏构图当气氛用。"""
+    a = T.glyph(ch, 'serif_black', size, False).astype(np.float32)
+    if rot:
+        g = a.shape[0]; d = int(g * 1.2)
+        M = cv2.getRotationMatrix2D((g / 2, g / 2), rot, 1.0); M[0, 2] += (d - g) / 2; M[1, 2] += (d - g) / 2
+        a = cv2.warpAffine(a, M, (d, d))
+    h, w = a.shape
+    x0, y0 = int(cx - w / 2), int(cy - h / 2)
+    xs, ys = max(0, x0), max(0, y0); xe, ye = min(W, x0 + w), min(H, y0 + h)
+    if xe <= xs or ye <= ys:
+        return fr
+    A_ = np.clip(a[ys - y0:ye - y0, xs - x0:xe - x0], 0, 1)[..., None] * amt
+    sub = fr[ys:ye, xs:xe]
+    col = np.asarray(tint, np.float32)
+    lum = np.clip(sub.mean(-1, keepdims=True) * 1.4, 0, 1)
+    ink = sub * 0.45 + col * (0.42 + 0.50 * lum)                 # 底纹参与 → 字吃光、吃水汽
+    fr[ys:ye, xs:xe] = sub * (1 - A_) + ink * A_
+    if glow > 0:
+        gl = cv2.GaussianBlur(a[ys - y0:ye - y0, xs - x0:xe - x0], (0, 0), soft)[..., None]
+        fr[ys:ye, xs:xe] += np.clip(gl - A_, 0, 1) * col * glow * 0.45
+    return fr
+
+
 class C02(Shot):
-    """MS 提线：太上皇的手在画顶，朱红丝线垂下；歌词「谁写好剧本提」一字一线挂在丝线上随线摆（字即提线木偶）。"""
-    XS = [520, 760, 980, 1190, 1400, 1610]
+    """MS 提线：太上皇的手在画顶，朱红丝线垂下；歌词「谁写好剧本提纲」一字一线挂在丝线上随线摆（字即提线木偶）。
+    [r4-c-r1 #35] 用户要求再加一根红线和它吊着的钢字「纲」→ 6 根变 7 根，整排按版心 960 重排（原来定格偏右 105px）。"""
+    XS = [390, 580, 770, 960, 1150, 1340, 1530]
     def render(self, t):
         u = self.u(t)
         oy = lerp(70, -40, eio(u))
@@ -354,7 +407,8 @@ class C02(Shot):
         fr = fog(fr, t, 3, density=0.35, y0=200, y1=900, color=(0.30, 0.22, 0.15), speed=(12, -4))
         tug = sum(pulse(t, V(b), 0.18) for b in (119.10, 119.57, 120.03))          # 第五棒：逐拍提线（手往上一拽，字被拽起）
         hand_y = 70 - oy * 0.6 - 26 * tug
-        tips = [(830, hand_y + 300), (900, hand_y + 330), (980, hand_y + 340), (1060, hand_y + 320), (1120, hand_y + 280), (790, hand_y + 250)]  # 第四棒：字 72→104px、挂低、画在手前
+        tips = [(830, hand_y + 300), (900, hand_y + 330), (980, hand_y + 340), (1060, hand_y + 320), (1120, hand_y + 280),
+                (790, hand_y + 250), (700, hand_y + 268)]  # 第四棒：字 72→104px、挂低、画在手前；第 7 根 = 拇指外侧（#35）
         bg0 = fr.copy()
         fr, A0 = put(fr, t, 'S062/puppeteer', 960, hand_y, 640, anchor='src', src=(0.5, 0.06), rim=WARM, rim_amt=2.2, rim_dir=(0, -1),
                     expo=0.8, sat=0.4, tint=(1.0, 0.92, 0.82), wind=2)
@@ -364,7 +418,7 @@ class C02(Shot):
             yb = rows[-1]; yy = np.arange(H, dtype=np.float32)[:, None, None]
             g = np.clip((yy - (yb - 160)) / 150, 0, 1)
             fr = fr * (1 - g) + bg0 * g
-        s = Sent(28, [5, 6, 7, 8, 9, 10], 0, 0, size=70, mode='type', red='', glitch='剧本')
+        s = Sent(28, [5, 6, 7, 8, 9, 10, 11], 0, 0, size=70, mode='type', red='', glitch='剧本')   # [r4-c-r1 #35] +11 = 「纲」
         for i, x in enumerate(self.XS):
             ti = s.tin[i]
             sw = 14 * math.sin(t * 3.0 + i * 1.3) + 22 * pulse(t, ti, 0.25) * (1 if i % 2 else -1)
@@ -372,6 +426,14 @@ class C02(Shot):
             jerk = -40 * pulse(t, ti, 0.12) - 34 * tug
             end = (x + sw, ly + jerk - 50)
             fr = red_line(fr, tips[i], end, w=2, amt=0.9)
+            if i == 6:
+                # [#35] 第 7 根线上吊的是「纲」这枚钢字：它是铅字本身（不用打字机节拍），一开场就挂在那里，
+                # 120.36（「提」落定）那一拽之后吃光、晃出一点冷闪 —— 句子在这里凑成完整的「提纲」。
+                gl = 0.52 + 0.48 * sm(119.70, 120.30, t)
+                fr = T.compose(fr, steel_type_glyph('纲', end[0], end[1] + 74, 104, rot=-sw * 0.6,
+                                                    glint=pulse(t, V(120.36), 0.35)), shadow=0.7, shadow_sigma=16,
+                               glow=0.35, glow_sigma=12, glow_color=(0.55, 0.70, 1.0), opacity=gl)
+                continue
             if t >= ti:
                 c = s.text[i]
                 L = glyph_layer(c, end[0], end[1] + 74, 104, CREAM if c not in '剧本' else (1.0, 0.86, 0.6), font='serif_sb',
@@ -495,8 +557,8 @@ class C03(Shot):
             fr = red_line(fr, ends[i], (x, top + 4), w=2, amt=0.85)
             fr, hp = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.15 - 0.25 * abs(i - 3) / 3, flip=FLIP[i], glass=0.92, ghost=0.4)
             fr = red_line(fr, (ends[i][0] + (60 if not FLIP[i] else -60), ends[i][1] + 6), hp, w=1, amt=0.6)   # 手线（第二根提线）
-        if t >= tj:
-            fr = paper_cut_glyph(fr, '纲', 960, 330, 270, scale=1 + 0.12 * pulse(t, tj, 0.06))
+        # [r4-c-r1 #36] 去掉 120.96 起贴到皮影幕上的巨字「纲」（paper_cut_glyph）：用户 2m1s 明确不要这个刚加的钢字。
+        # 「纲」改由上一镜 C02 挂在红线上的那枚钢字承担（见 C02 的第 7 根线），本镜只留人偶 + 手影 + 提线板。
         fr = fog(fr, t, 4, density=0.4, y0=750, y1=980, color=(0.25, 0.17, 0.10), speed=(30, 0))
         fr = sparks(fr, t, 31, (960, 600), n=40, life=3.0, speed=(8, 30), dirc=(0, -1), spread=1.4, grav=-6, amt=0.25, area=(800, 300))
         return fr
@@ -755,6 +817,7 @@ class C09(Shot):
             fr = sparks(fr, t, int(tc * 10), b, n=50, life=0.6, speed=(200, 700), dirc=(0, 1), spread=1.4, grav=900, t0=tc, burst=True,
                         color=(1.0, 0.35, 0.2))
         fr = rain(fr, t, 90, inten=0.9, angle=-8)
+        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L31', t)   # [r4-props] #39/#42/#43 关
         return fr
 
 
@@ -857,6 +920,7 @@ class C12(Shot):
         fr = fx2.heat_haze(fr, t, amt=5.0)
         fr = fog(fr, t, 13, density=0.85, y0=200, y1=700, color=(0.8, 0.8, 0.82), speed=(-120, -160), scale=0.5)
         fr = sparks(fr, t, 121, (900, 640), n=140, life=0.8, speed=(80, 420), dirc=(0.3, -1), spread=0.7, grav=-100, amt=1.2, area=(800, 20))
+        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L32', t)   # [r4-props] #39/#42/#43 关
         return fr
 
 
@@ -1127,6 +1191,7 @@ class C17(Shot):
         fr = splash(fr, t, tl, (960, 975), 171, n=220, spread=900, up=1100)
         fr = rain(fr, t, 170, inten=1.0, angle=10)
         self.ca = 5 if 0 <= t - tl < 0.1 else 0
+        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L33', t)   # [r4-props] #39/#42/#43 关
         return fr
 
 
@@ -1313,27 +1378,34 @@ class C20(Shot):
         tb = V(138.42); td = V(138.56); tz = V(138.88)
         fl = bolt_env(t, tb) + 0.8 * bolt_env(t, tz)
         fr = storm(t, 20, horizon=1300, flash=0.3 + fl, fc=(600, 300), ground=False)
-        a = sm(td - 0.06, td + 0.1, t) * (0.35 + 0.65 * min(1, fl + 0.3))
-        fr = paste_glyph(fr, '定', 480, 430, 430, GOLD_T, alpha=a, glow=0.9, glow_c=(1.0, 0.6, 0.2), shadow=0, scale=1 + 0.06 * u)
+        # [r4-c-r1 #39] 2m05–2m20 除水里那个「血」以外的字全部去掉 → 雷云里的金色巨字「定」连同它的余辉一起撤掉，
+        # 只留电光照出的侧头动作（用户只点名保留 C16 水里晕开的「血」）。
         fr = bolt(fr, t, tb, 201, (300, 80), (500, 900), inten=0.9)
         fr, _ = put(fr, t, 'S074/head_turn', 1330, 1100, 1100, anchor='foot', rim=(0.9, 0.92, 1.0), rim_amt=3.0, rim_dir=(-0.9, -0.4),
                     flash=fl, expo=0.75, look=None, wind=6, sat=0.5)
-        fr = K.vol_light(fr, (480, 430), 260, GOLD, 0.5 * pulse(t, tz, 0.15))
         fr = rain(fr, t, 200, inten=0.8, angle=8)
         return fr
 
 
 class C21(Shot):
-    """对角分屏：左鬼屠（朱红边光）右太上皇（金边光），斜刀线隔开、两半反向滑；「正」在金侧、「邪」在红侧。"""
+    """对角分屏：左鬼屠（朱红边光）右太上皇（金边光），斜刀线隔开、两半反向滑；「正」在金侧、「邪」在红侧。
+    [r4-c-r1 #40] 用户 2m20：①两张角色图位置不对 → 两人各自在半个画幅里重新落位：共用一条地平线（脚底 y≈1010，
+    头都完整留在 2.39 画幅内），原来鬼屠身高 1500 脚底压在 y=1500（头被黑边切）、太上皇 1100 宽得越过分屏线；
+    ②「正」「邪」不要卡点闪出 → 镜头一进来就已经在画面里（不再跟 139.48 的拍子做 1.8×→1× 弹入）；
+    ③配色融入画面 → 换 scene_glyph：保留雨丝/云纹再染色，不再是不透明金/红贴纸；
+    ④文字放到人物**后面** → 先铺字再 put 人（图层顺序反了）。"""
+    GY = 1075.0                                     # [#40] 两人共用的地平线（脚底屏幕 y；脚踩在遮幅下沿外，人被画幅切在脚踝，读作"站在地上"）
     def render(self, t):
         u = self.u(t)
         tx = V(139.48)
         A = storm(t, 211, horizon=1300, flash=0.3, ground=False) * np.array([1.1, 0.75, 0.72], np.float32)
-        A, _ = put(A, t, 'S072/rise_draw', 640 - 60 * u, 1500, 1500, rim=RED * 1.3, rim_amt=3.2, rim_dir=(0.9, -0.4), expo=0.85, wind=7,
+        A = scene_glyph(A, '邪', 268, 306, 238, tint=(0.95, 0.15, 0.09), amt=0.88, glow=0.55, rot=-3)   # [#40] 先字
+        A, _ = put(A, t, 'S072/rise_draw', 566 - 34 * u, self.GY, 920, rim=RED * 1.3, rim_amt=3.2, rim_dir=(0.9, -0.4), expo=0.85, wind=7,
                    flash=0.6 * pulse(t, tx, 0.2))
         A = rain(A, t, 211, inten=0.7, angle=10, color=np.array([1.0, 0.5, 0.45], np.float32))
         B = storm(t, 212, horizon=1300, flash=0.3, ground=False) * np.array([1.08, 0.98, 0.82], np.float32)
-        B, _ = put(B, t, 'S074/head_turn', 1560 + 50 * u, 1260, 1100, flip=True, rim=GOLD, rim_amt=3.0, rim_dir=(-0.9, -0.4), expo=0.7, wind=5)
+        B = scene_glyph(B, '正', 1246, 266, 238, tint=(1.0, 0.78, 0.40), amt=0.85, glow=0.50, rot=2)     # [#40] 先字
+        B, _ = put(B, t, 'S074/head_turn', 1544 + 34 * u, self.GY, 862, flip=True, rim=GOLD, rim_amt=3.0, rim_dir=(-0.9, -0.4), expo=0.7, wind=5)
         B = rain(B, t, 212, inten=0.7, angle=10, color=np.array([1.0, 0.85, 0.6], np.float32))
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         d = (xx - 960) * 0.88 + (yy - 540) * 0.47              # 斜线（约 62°）
@@ -1341,11 +1413,7 @@ class C21(Shot):
         fr = A * (1 - m) + B * m
         line = np.exp(-(d / 3) ** 2) + 0.4 * np.exp(-(d / 30) ** 2)
         fr = fr + line[..., None] * np.array([1.0, 0.95, 0.9], np.float32) * (0.9 + 0.8 * pulse(t, tx, 0.2))
-        # 第五棒（评审 P0）：「正」移到反派上方空区（不压脸），「邪」对称放左上，不压主角刀身
-        fr = paste_glyph(fr, '正', 1330, 300, 230, GOLD_T, glow=0.7, glow_c=(1, 0.6, 0.2), alpha=sm(V(138.88) - 0.2, V(138.88), t) if t < self.t0 + 0.05 else 1.0)
-        if t >= tx - 0.12:
-            e = eout((t - (tx - 0.12)) / 0.12)
-            fr = paste_glyph(fr, '邪', 330, 330, 230, RED_T, glow=0.9, glow_c=(0.9, 0.08, 0.04), scale=lerp(1.8, 1, e), alpha=min(1, e * 2))
+        # [#40] 「正」「邪」已经在各自那半的画里（合成在人物之前），这里不再重复贴字、也不再卡点弹入。
         self.ca = 4 if 0 <= t - tx < 0.1 else 0
         return fr
 
@@ -1353,21 +1421,23 @@ class C21(Shot):
 class C22(Shot):
     """第五棒重做（评审 P1：扁平梯形字墙 = 代码味）：生图底板 C5/c22_wall——乌铁色城墙从积水直插雷云，极低机位仰拍、缓慢上摇；
     墙脚积水里一个小小的人（look_up_back 第 1 次，中景仰望）。「若规则是」逐字在墙心被闪电照出（冷白刻痕，「规」朱红）。"""
+    def __init__(self):
+        # [r4-c-r1 #41] 人物必须钉在墙脚地面上：他的脚点用**底板归一化坐标**存下来，每帧按当前 cy/zoom 换算成屏幕 y，
+        # 这样上摇时他和墙脚一起往下走（原来固定在屏幕 y=905，镜头一上摇人就「飘」到墙上去）。
+        self.ph = plate('C5/c22_wall').shape[0]
+        self.gy = 0.56 + (830 - H / 2) / self.ph          # u=0 时脚底落在 y≈830（墙脚碎石线），留出上摇余量
     def render(self, t):
         u = self.u(t)
         tb = V(141.32)
         fl = bolt_env(t, tb) + 0.7 * bolt_env(t, V(141.94))
-        cy = lerp(0.56, 0.47, eio(u))
-        fr = plate_view('C5/c22_wall', 0.5, cy, 1.0 + 0.04 * u) * (0.85 + 0.75 * fl)
+        cy = lerp(0.56, 0.49, eio(u))                     # [#41] 上摇幅度略收（0.47→0.49），保证脚底始终在 2.39 画幅内
+        s = 1.0 + 0.04 * u
+        fr = plate_view('C5/c22_wall', 0.5, cy, s) * (0.85 + 0.75 * fl)
         oy = (cy - 0.5) * plate('C5/c22_wall').shape[0]
         fr = bolt(fr, t, tb, 221, (1400, 40), (1250, 420), inten=0.9)
-        for i in range(4):
-            ti = V(CT(34, i))
-            if t < ti - 0.1: continue
-            e = eout((t - ti + 0.1) / 0.18)
-            fr = paste_glyph(fr, '若规则是'[i], 960, 250 + i * 128 - oy * 0.0, 104, (0.95, 0.97, 1.0) if i != 1 else RED_T,
-                             glow=0.8, glow_c=(0.7, 0.8, 1.0) if i != 1 else (0.9, 0.1, 0.05), scale=lerp(1.5, 1, e), alpha=e, font='serif_b')
-        fr, _ = put(fr, t, 'C/look_up_back', 960 + 10 * u, 905, 190, rim=COLD, rim_amt=2.8, rim_dir=(0.2, -1), flash=fl, expo=0.7, wind=6)
+        # [r4-c-r1 #42] 142–148s 文字全去掉：墙心的「若规则是」四字撤掉（雷光照亮墙面本身就够了）
+        py_ = s * (self.gy - cy) * self.ph + H / 2       # [#41] 脚点跟着墙脚走
+        fr, _ = put(fr, t, 'C/look_up_back', 960 + 10 * u, py_, 190 * s, rim=COLD, rim_amt=2.8, rim_dir=(0.2, -1), flash=fl, expo=0.7, wind=6)
         fr = fog(fr, t, 22, density=0.5, y0=780, y1=950, color=(0.4, 0.43, 0.5), speed=(40, 0))
         fr = rain(fr, t, 220, inten=1.0, angle=8)
         return fr
@@ -1395,9 +1465,7 @@ class C23(Shot):
             dx, dy = (x - 960) * 0.08 * e, (y - 540) * 0.08 * e
             fr, _ = put(fr, t, 'C5/c23_bronze', x + dx, y + dy, sz, anchor='src', src=(0.5, 0.5), rim=COLD, rim_amt=1.4, rim_dir=(-0.6, -0.8),
                         flash=fl, expo=1.0, sat=0.8, tint=(1.0, 0.98, 0.95), wind=0, breathe=0.0)
-            gs = sz * 0.55
-            fr = paste_glyph(fr, '铁壁铜'[i], x + dx + 2, y + dy + 3, gs, (0.85, 0.75, 0.55), glow=0.0, shadow=0.0, alpha=0.55)
-            fr = paste_glyph(fr, '铁壁铜'[i], x + dx, y + dy, gs, (0.07, 0.06, 0.05), glow=0.25, glow_c=(0.6, 0.45, 0.2), shadow=0.3)
+            # [r4-c-r1 #42] 142–148s 文字全去掉：三块铜牌上不再阴刻「铁壁铜」，改成铸面的空槽（牌本身照样逐拍推出）
             fr = dust(fr, t, 230 + i, n=70, amt=0.8 * e * (1 - sm(0.2, 0.8, t - ti)), drift=(0, 220),
                       region=(int(x - 150), int(y - 40), int(x + 150), int(y + 280)), size=(1, 5))
         fr = rain(fr, t, 230, inten=0.7, angle=4)
@@ -1432,6 +1500,7 @@ class C24(Shot):
         fr = K.vol_light(fr, (tip[0] - 160, tip[1] + 30), 260, (1.0, 0.55, 0.22), 0.35)      # 火星照亮衣摆
         fr = K.vol_light(fr, tip, 160, (1.0, 0.5, 0.2), 0.6)
         fr = rain(fr, t, 240, inten=0.9, angle=-6, cam=(ox, 0))
+        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L35', t)   # [r4-props] #39/#42/#43 关
         return fr
 
 
@@ -1453,8 +1522,14 @@ class C25(Shot):
     沿画面中轴留下一道赤热的劈缝，「劈」连同整面墙被这条缝一分为二、向两侧错开，缝里灌出惨白电光、碎石落下。
     景别 ECU（S035 是全身 LS）、方向竖直向上（S035 斜向跃起）、主体是刀与墙（S035 是人）。下一镜 C26 从同一条缝炸开。"""
     def __init__(self):
-        L = T.Layer(); T.place(L, '劈', 960, 540, 600, (1, 1, 1), 'serif_black', texture=False)
-        self.g = L.A.copy()
+        # [r4-c-r1 #42] 142–148s 文字全去掉：墙心那块巨大的石「劈」撤掉 —— 换成一条凿进砖体的竖向劈缝，
+        # 刀自下而上劈开时赤热照样沿缝烧上来（热能沿槽走，只是不再是字形）。
+        r = np.random.default_rng(25)
+        m = np.zeros((H, W), np.float32)
+        xs = 960 + np.cumsum(r.normal(0, 3.0, 60)); xs -= xs.mean() - 960
+        ys = np.linspace(150, 950, 60)
+        cv2.polylines(m, [np.stack([xs, ys], 1).astype(np.int32)], False, 1.0, 22, cv2.LINE_AA)
+        self.g = np.clip(cv2.GaussianBlur(m, (0, 0), 2.0), 0, 1)
     def render(self, t):
         u = self.u(t)
         ts = V(145.14)
@@ -1648,14 +1723,23 @@ class C28(Shot):
     化成一束束体积光扫过画面；他背对镜头站在光里（look_up_back 第 2 次，C14 过肩大特写 → 这里中景逆光剪影），
     147.74 光最满；随后乌云从字形边缘涌回、光束暗下去——只是闪电的伪天亮。"""
     def __init__(self):
-        a = T.glyph('亮', 'serif_black', 540, False).astype(np.float32)
-        g = a.shape[0]
+        # [r4-c-r1 #42] 142–148s 文字全去掉：原来是「亮」字形的裂口，现在改成一道真实的锯齿劈缝（口子忽宽忽窄、带分叉），
+        # 惨白天光仍旧从缝里灌进来、只是不再是字形（字即光 → 缝即光）。
         r = np.random.default_rng(28)
-        nz = cv2.resize(r.random((g // 10, g // 10)).astype(np.float32), (g, g))
-        a = np.clip(cv2.dilate(a, np.ones((9, 9), np.uint8)) * (0.75 + 0.5 * nz) - 0.25, 0, 1) * 1.5
-        self.hole = np.zeros((H, W), np.float32)
-        y0, x0 = 440 - g // 2, HX - g // 2
-        self.hole[y0:y0 + g, x0:x0 + g] = np.clip(a, 0, 1)
+        m = np.zeros((H, W), np.float32)
+        n = 90
+        ys = np.linspace(BAR - 70, H - BAR + 70, n)
+        xs = HX + np.cumsum(r.normal(0, 4.5, n)); xs -= xs.mean() - HX
+        wd = 52 + 40 * np.abs(np.sin(np.linspace(0.4, 5.2, n)))
+        for i in range(n - 1):
+            cv2.line(m, (int(xs[i]), int(ys[i])), (int(xs[i + 1]), int(ys[i + 1])), 1.0, int(wd[i]), cv2.LINE_AA)
+        for (by, bl, bd) in ((300, 300, -1), (620, 340, 1), (760, 220, -1)):        # 分叉缝
+            bx = xs[np.argmin(np.abs(ys - by))]; acc = np.array([bx, by], np.float32)
+            for _ in range(12):
+                acc = acc + np.array([bd * r.uniform(26, 46), r.uniform(-14, 26)], np.float32)
+                cv2.line(m, (int(acc[0]), int(acc[1])), (int(acc[0] + bd * 22), int(acc[1])), 1.0, int(r.uniform(10, 26)), cv2.LINE_AA)
+        a = np.clip(cv2.GaussianBlur(m, (0, 0), 1.6) * (0.85 + 0.3 * cv2.resize(r.random((H // 12, W // 12)).astype(np.float32), (W, H))), 0, 1)
+        self.hole = np.clip(a * 1.35, 0, 1)
         wall = 0.035 + 0.03 * cv2.resize(K.tex('c28w', seed=28, base=14, octaves=4), (W, H))
         bw = np.zeros((H, W), np.float32)
         for j, yb in enumerate(range(BAR, H - BAR, 64)):
@@ -2035,12 +2119,9 @@ class C38(Shot):
         # 指节滴水（握紧时甩落）
         fr = sparks(fr, t, 381, (930, 760), n=26, life=0.9, speed=(40, 160), dirc=(0, 1), spread=0.3, grav=1400, amt=0.7,
                     color=(0.85, 0.9, 1.0), area=(140, 20))
-        for j, (c, ti) in enumerate((('我', V(158.18)), ('来', V(158.36)))):
-            if t < ti - 0.08: continue
-            e = eout((t - ti + 0.08) / 0.14)
-            fr = paste_glyph(fr, c, 1440 + j * 150, 330, 130, (0.95, 0.96, 1.0), glow=0.6, glow_c=(0.6, 0.7, 1.0), alpha=e,
-                             scale=lerp(1.6, 1, e), font='serif_black')
+        # [r4-c-r1 #43] 2m38–2m42 除「判」以外的字全部去掉：刀身上方「我来」两个字撤掉，只留握刀手与刃面。
         fr = rain(fr, t, 380, inten=0.8, angle=4, layers=(0, 1, 2, 3))
+        if not PROPS_TEXT_OFF: fr = PD.play(fr, 'L39', t)   # [r4-props] #39/#42/#43 关
         return fr
 
 
@@ -2058,11 +2139,7 @@ class C39(Shot):
         if 0 < gq < 1:
             gx, gy = lerp(1400, 990, eio(gq)), lerp(520, 255, eio(gq))
             fr = K.vol_light(fr, (gx, gy), 38, (0.92, 0.96, 1.0), 0.75 * math.sin(math.pi * gq))
-        q = (t - (tq - 0.03)) / 0.16
-        fr = carve_glyph(fr, '量', 520, 540, 330, q, ang=-35, seed=39, t=t)
-        if 0 < q < 2.5:
-            fr = sparks(fr, t, 391, (lerp(380, 660, min(1, q)), lerp(400, 690, min(1, q))), n=70, life=0.5, speed=(200, 800), dirc=(0.6, 0.8),
-                        spread=1.2, grav=1200, t0=tq, burst=True, color=(1.0, 0.45, 0.15), amt=1.2)
+        # [r4-c-r1 #43] 2m38 起的「量」朱红刻字撤掉（含它带出的凿火火星）：这一镜只留拉刀蓄力的动作。
         fr = rain(fr, self.t0 + (t - self.t0) * 0.5, 390, inten=0.9, angle=8)
         return fr
 
@@ -2224,7 +2301,7 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 # [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
 #   P0 转场去重 4 处：C17 hard→ink_crack、C22 hard→luma、C30 flash_red→bolt_split、C36 flash_red(one_frame)→match_line
 #   P1 过渡长度 2 处：C02 match_line pre 0→0.08、C07 seam pre 0→0.08
-#   P0 二期 1 处：C30 bolt_split→freeze_glitch（原与 C37 隔 8 刀重名）
+#   P0 二期：C30 bolt_split→iris_moon（原与 C37 隔 8 刀重名；曾试 freeze_glitch，全幅撕裂 5 帧，已弃）
 CUTS = {
     'C02': ('match_line', 0.08, 0.12, {}),                                # [r4-P1] pre 0→0.08（原注释：朱笔竖笔 ↔ 红丝线（图形匹配））
     'C03': ('whip', 0.10, 0.12, dict(direction=1)),                      # 全段唯一甩镜：沿丝线甩到皮影幕
@@ -2254,7 +2331,7 @@ CUTS = {
     'C27': ('smoke_through', 0.08, 0.14, dict(direction=1, density=1.0, color=(0.62, 0.64, 0.68))),   # 第九棒 P2⑪：luma 中间帧碎片+天光糊团、露出 C27 方边 → 崩墙石尘冲过镜头
     'C28': ('ink_crack', 0.05, 0.12, dict(center=(960, 470), seed=28)),   # 第十二棒（critic_C_r6 P2⑦ 白闪同质化）：电光过曝 → 墨裂：崩墙的墨皮裂开、缝里透出伪天亮   # 第九棒 P2⑪：push 中间帧「亮」与人脸叠鬼影 → 伪天亮那道电光过曝切入
     'C29': ('hard', 0, 0, {}),                                           # 第四棒：luma 会在 C28 亮眼处开洞（像面具）→ 落拍硬切冲击
-    'C30': ('freeze_glitch', 0.06, 0.14, dict(seed=330)),   # [r4-P0] 原 flash_red → 定格故障（P0 二期：bolt_split 与 C37 隔 8 刀重名，改此招）
+    'C30': ('iris_moon', 0.10, 0.20, dict(center=(960, 480), radius=210, mode='open')),   # [r4-P0] 原 flash_red → 月形光圈绽开（圆外始终是上一镜＝无黑无白；曾试 freeze_glitch 全幅撕裂 5 帧、bolt_split 与 C37 重名，均弃）
     'C31': ('hard', 0, 0, {}),
     'C32': ('split_slide', 0.06, 0.12, dict(angle=90.0)),                # 掌风压下：画面上下错开
     'C33': ('whip_pan_blur', 0.04, 0.08, dict(direction='left')),       # 第七棒：十字斩的余势甩进刀身横扫（甩镜方向 = 挥刀方向）
@@ -2465,6 +2542,8 @@ class Sec:
         fr = fr + 0.014 * (1 - np.clip(fr, 0, 1))
         dx, dy, z = cm
         for s in SENTS:
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI: break
             if max(s.tin[0] - s.lead - 0.05, s.t_start) <= t < s.out + 0.32:
                 fr = draw_sent(fr, s, t, cam=(dx * 0.35, dy * 0.35, 1 + (z - 1) * 0.35))
         # 段尾：最后 4 帧切黑（接 Bridge 白纸虚空，由 D 组白闪入）

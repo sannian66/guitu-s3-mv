@@ -1,0 +1,3381 @@
+{
+ "window": [
+  0.0,
+  44.1
+ ],
+ "method": "HPSS percussive (full mix) → band flux; whisper word times",
+ "downbeat_phase": 2,
+ "bpm": 129.2,
+ "hits": [
+  {
+   "t": 0.348,
+   "type": "kick+hat",
+   "strength": 0.833,
+   "on_beat": true,
+   "frame": 10,
+   "beat": 0,
+   "beat_pos": 3
+  },
+  {
+   "t": 0.412,
+   "type": "kick+snare",
+   "strength": 0.808,
+   "on_beat": true,
+   "frame": 12,
+   "beat": 0,
+   "beat_pos": 3
+  },
+  {
+   "t": 0.551,
+   "type": "snare",
+   "strength": 0.258,
+   "on_beat": false,
+   "frame": 17,
+   "beat": 0,
+   "beat_pos": 3
+  },
+  {
+   "t": 0.644,
+   "type": "kick",
+   "strength": 0.425,
+   "on_beat": false,
+   "frame": 19,
+   "beat": 1,
+   "beat_pos": 4
+  },
+  {
+   "t": 0.789,
+   "type": "kick+snare",
+   "strength": 0.751,
+   "on_beat": true,
+   "frame": 24,
+   "beat": 1,
+   "beat_pos": 4
+  },
+  {
+   "t": 0.917,
+   "type": "kick+hat",
+   "strength": 1.0,
+   "on_beat": false,
+   "frame": 28,
+   "beat": 1,
+   "beat_pos": 4
+  },
+  {
+   "t": 1.016,
+   "type": "kick+snare",
+   "strength": 0.59,
+   "on_beat": false,
+   "frame": 30,
+   "beat": 1,
+   "beat_pos": 4
+  },
+  {
+   "t": 1.236,
+   "type": "kick+snare",
+   "strength": 0.501,
+   "on_beat": false,
+   "frame": 37,
+   "beat": 2,
+   "beat_pos": 1
+  },
+  {
+   "t": 1.724,
+   "type": "kick",
+   "strength": 0.599,
+   "on_beat": true,
+   "frame": 52,
+   "beat": 3,
+   "beat_pos": 2
+  },
+  {
+   "t": 1.95,
+   "type": "kick",
+   "strength": 0.297,
+   "on_beat": false,
+   "frame": 58,
+   "beat": 3,
+   "beat_pos": 2
+  },
+  {
+   "t": 2.183,
+   "type": "kick",
+   "strength": 0.41,
+   "on_beat": true,
+   "frame": 65,
+   "beat": 4,
+   "beat_pos": 3
+  },
+  {
+   "t": 2.305,
+   "type": "kick+snare",
+   "strength": 0.793,
+   "on_beat": false,
+   "frame": 69,
+   "beat": 4,
+   "beat_pos": 3
+  },
+  {
+   "t": 2.415,
+   "type": "kick",
+   "strength": 0.341,
+   "on_beat": false,
+   "frame": 72,
+   "beat": 4,
+   "beat_pos": 3
+  },
+  {
+   "t": 2.653,
+   "type": "kick+snare",
+   "strength": 0.999,
+   "on_beat": true,
+   "frame": 80,
+   "beat": 5,
+   "beat_pos": 4
+  },
+  {
+   "t": 2.752,
+   "type": "kick",
+   "strength": 0.453,
+   "on_beat": false,
+   "frame": 83,
+   "beat": 5,
+   "beat_pos": 4
+  },
+  {
+   "t": 2.891,
+   "type": "kick",
+   "strength": 0.394,
+   "on_beat": false,
+   "frame": 87,
+   "beat": 5,
+   "beat_pos": 4
+  },
+  {
+   "t": 2.961,
+   "type": "snare",
+   "strength": 0.586,
+   "on_beat": false,
+   "frame": 89,
+   "beat": 6,
+   "beat_pos": 1
+  },
+  {
+   "t": 3.106,
+   "type": "kick",
+   "strength": 0.431,
+   "on_beat": true,
+   "frame": 93,
+   "beat": 6,
+   "beat_pos": 1
+  },
+  {
+   "t": 3.222,
+   "type": "kick",
+   "strength": 0.538,
+   "on_beat": false,
+   "frame": 97,
+   "beat": 6,
+   "beat_pos": 1
+  },
+  {
+   "t": 3.564,
+   "type": "kick",
+   "strength": 0.532,
+   "on_beat": true,
+   "frame": 107,
+   "beat": 7,
+   "beat_pos": 2
+  },
+  {
+   "t": 3.686,
+   "type": "kick+snare",
+   "strength": 0.365,
+   "on_beat": false,
+   "frame": 111,
+   "beat": 7,
+   "beat_pos": 2
+  },
+  {
+   "t": 3.924,
+   "type": "hat",
+   "strength": 0.386,
+   "on_beat": false,
+   "frame": 118,
+   "beat": 8,
+   "beat_pos": 3
+  },
+  {
+   "t": 4.04,
+   "type": "kick",
+   "strength": 0.444,
+   "on_beat": true,
+   "frame": 121,
+   "beat": 8,
+   "beat_pos": 3
+  },
+  {
+   "t": 4.272,
+   "type": "kick",
+   "strength": 0.719,
+   "on_beat": false,
+   "frame": 128,
+   "beat": 8,
+   "beat_pos": 3
+  },
+  {
+   "t": 4.377,
+   "type": "kick",
+   "strength": 0.337,
+   "on_beat": false,
+   "frame": 131,
+   "beat": 9,
+   "beat_pos": 4
+  },
+  {
+   "t": 4.499,
+   "type": "kick",
+   "strength": 0.706,
+   "on_beat": true,
+   "frame": 135,
+   "beat": 9,
+   "beat_pos": 4
+  },
+  {
+   "t": 4.841,
+   "type": "kick",
+   "strength": 0.381,
+   "on_beat": false,
+   "frame": 145,
+   "beat": 10,
+   "beat_pos": 1
+  },
+  {
+   "t": 5.184,
+   "type": "kick",
+   "strength": 0.402,
+   "on_beat": false,
+   "frame": 156,
+   "beat": 10,
+   "beat_pos": 1
+  },
+  {
+   "t": 5.416,
+   "type": "kick",
+   "strength": 0.573,
+   "on_beat": true,
+   "frame": 162,
+   "beat": 11,
+   "beat_pos": 2
+  },
+  {
+   "t": 5.753,
+   "type": "kick+snare",
+   "strength": 0.464,
+   "on_beat": false,
+   "frame": 173,
+   "beat": 12,
+   "beat_pos": 3
+  },
+  {
+   "t": 5.985,
+   "type": "kick",
+   "strength": 0.57,
+   "on_beat": true,
+   "frame": 180,
+   "beat": 12,
+   "beat_pos": 3
+  },
+  {
+   "t": 6.101,
+   "type": "kick+snare",
+   "strength": 0.586,
+   "on_beat": false,
+   "frame": 183,
+   "beat": 12,
+   "beat_pos": 3
+  },
+  {
+   "t": 6.223,
+   "type": "kick",
+   "strength": 0.875,
+   "on_beat": false,
+   "frame": 187,
+   "beat": 13,
+   "beat_pos": 4
+  },
+  {
+   "t": 6.444,
+   "type": "kick+hat",
+   "strength": 0.792,
+   "on_beat": true,
+   "frame": 193,
+   "beat": 13,
+   "beat_pos": 4
+  },
+  {
+   "t": 6.571,
+   "type": "kick",
+   "strength": 0.33,
+   "on_beat": false,
+   "frame": 197,
+   "beat": 13,
+   "beat_pos": 4
+  },
+  {
+   "t": 6.682,
+   "type": "kick",
+   "strength": 0.296,
+   "on_beat": false,
+   "frame": 200,
+   "beat": 13,
+   "beat_pos": 4
+  },
+  {
+   "t": 6.798,
+   "type": "kick",
+   "strength": 0.83,
+   "on_beat": false,
+   "frame": 204,
+   "beat": 14,
+   "beat_pos": 1
+  },
+  {
+   "t": 6.856,
+   "type": "kick",
+   "strength": 0.359,
+   "on_beat": false,
+   "frame": 206,
+   "beat": 14,
+   "beat_pos": 1
+  },
+  {
+   "t": 7.256,
+   "type": "kick",
+   "strength": 0.657,
+   "on_beat": false,
+   "frame": 218,
+   "beat": 15,
+   "beat_pos": 2
+  },
+  {
+   "t": 7.372,
+   "type": "kick",
+   "strength": 0.306,
+   "on_beat": true,
+   "frame": 221,
+   "beat": 15,
+   "beat_pos": 2
+  },
+  {
+   "t": 7.483,
+   "type": "kick",
+   "strength": 0.754,
+   "on_beat": false,
+   "frame": 224,
+   "beat": 15,
+   "beat_pos": 2
+  },
+  {
+   "t": 7.593,
+   "type": "kick",
+   "strength": 0.297,
+   "on_beat": false,
+   "frame": 228,
+   "beat": 15,
+   "beat_pos": 2
+  },
+  {
+   "t": 7.686,
+   "type": "kick+hat",
+   "strength": 0.419,
+   "on_beat": false,
+   "frame": 231,
+   "beat": 16,
+   "beat_pos": 3
+  },
+  {
+   "t": 8.742,
+   "type": "kick",
+   "strength": 0.667,
+   "on_beat": true,
+   "frame": 262,
+   "beat": 18,
+   "beat_pos": 1
+  },
+  {
+   "t": 8.824,
+   "type": "kick",
+   "strength": 0.591,
+   "on_beat": false,
+   "frame": 265,
+   "beat": 18,
+   "beat_pos": 1
+  },
+  {
+   "t": 9.851,
+   "type": "kick",
+   "strength": 0.346,
+   "on_beat": false,
+   "frame": 296,
+   "beat": 20,
+   "beat_pos": 3
+  },
+  {
+   "t": 10.118,
+   "type": "kick",
+   "strength": 0.581,
+   "on_beat": true,
+   "frame": 304,
+   "beat": 21,
+   "beat_pos": 4
+  },
+  {
+   "t": 10.582,
+   "type": "kick",
+   "strength": 0.701,
+   "on_beat": true,
+   "frame": 317,
+   "beat": 22,
+   "beat_pos": 1
+  },
+  {
+   "t": 10.722,
+   "type": "kick",
+   "strength": 0.399,
+   "on_beat": false,
+   "frame": 322,
+   "beat": 22,
+   "beat_pos": 1
+  },
+  {
+   "t": 10.809,
+   "type": "hat",
+   "strength": 0.222,
+   "on_beat": false,
+   "frame": 324,
+   "beat": 22,
+   "beat_pos": 1
+  },
+  {
+   "t": 10.925,
+   "type": "kick",
+   "strength": 0.384,
+   "on_beat": false,
+   "frame": 328,
+   "beat": 23,
+   "beat_pos": 2
+  },
+  {
+   "t": 11.035,
+   "type": "kick",
+   "strength": 0.309,
+   "on_beat": true,
+   "frame": 331,
+   "beat": 23,
+   "beat_pos": 2
+  },
+  {
+   "t": 11.111,
+   "type": "kick",
+   "strength": 0.333,
+   "on_beat": true,
+   "frame": 333,
+   "beat": 23,
+   "beat_pos": 2
+  },
+  {
+   "t": 11.494,
+   "type": "kick+hat",
+   "strength": 0.564,
+   "on_beat": true,
+   "frame": 345,
+   "beat": 24,
+   "beat_pos": 3
+  },
+  {
+   "t": 11.569,
+   "type": "kick+snare",
+   "strength": 0.949,
+   "on_beat": true,
+   "frame": 347,
+   "beat": 24,
+   "beat_pos": 3
+  },
+  {
+   "t": 12.301,
+   "type": "kick",
+   "strength": 0.333,
+   "on_beat": false,
+   "frame": 369,
+   "beat": 26,
+   "beat_pos": 1
+  },
+  {
+   "t": 12.527,
+   "type": "kick",
+   "strength": 0.348,
+   "on_beat": false,
+   "frame": 376,
+   "beat": 26,
+   "beat_pos": 1
+  },
+  {
+   "t": 12.87,
+   "type": "kick",
+   "strength": 0.368,
+   "on_beat": true,
+   "frame": 386,
+   "beat": 27,
+   "beat_pos": 2
+  },
+  {
+   "t": 13.206,
+   "type": "kick",
+   "strength": 0.404,
+   "on_beat": false,
+   "frame": 396,
+   "beat": 28,
+   "beat_pos": 3
+  },
+  {
+   "t": 13.444,
+   "type": "kick",
+   "strength": 0.3,
+   "on_beat": false,
+   "frame": 403,
+   "beat": 28,
+   "beat_pos": 3
+  },
+  {
+   "t": 13.56,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 407,
+   "beat": 28,
+   "beat_pos": 3
+  },
+  {
+   "t": 13.787,
+   "type": "kick",
+   "strength": 0.46,
+   "on_beat": true,
+   "frame": 414,
+   "beat": 29,
+   "beat_pos": 4
+  },
+  {
+   "t": 13.909,
+   "type": "kick",
+   "strength": 0.605,
+   "on_beat": false,
+   "frame": 417,
+   "beat": 29,
+   "beat_pos": 4
+  },
+  {
+   "t": 13.99,
+   "type": "kick+hat",
+   "strength": 0.298,
+   "on_beat": false,
+   "frame": 420,
+   "beat": 29,
+   "beat_pos": 4
+  },
+  {
+   "t": 14.135,
+   "type": "kick",
+   "strength": 0.387,
+   "on_beat": false,
+   "frame": 424,
+   "beat": 30,
+   "beat_pos": 1
+  },
+  {
+   "t": 14.245,
+   "type": "kick",
+   "strength": 0.289,
+   "on_beat": true,
+   "frame": 427,
+   "beat": 30,
+   "beat_pos": 1
+  },
+  {
+   "t": 14.588,
+   "type": "kick",
+   "strength": 0.385,
+   "on_beat": false,
+   "frame": 438,
+   "beat": 31,
+   "beat_pos": 2
+  },
+  {
+   "t": 14.814,
+   "type": "hat",
+   "strength": 0.197,
+   "on_beat": false,
+   "frame": 444,
+   "beat": 31,
+   "beat_pos": 2
+  },
+  {
+   "t": 14.89,
+   "type": "kick",
+   "strength": 0.318,
+   "on_beat": false,
+   "frame": 447,
+   "beat": 31,
+   "beat_pos": 2
+  },
+  {
+   "t": 15.168,
+   "type": "kick",
+   "strength": 0.389,
+   "on_beat": true,
+   "frame": 455,
+   "beat": 32,
+   "beat_pos": 3
+  },
+  {
+   "t": 15.285,
+   "type": "kick",
+   "strength": 0.812,
+   "on_beat": false,
+   "frame": 459,
+   "beat": 32,
+   "beat_pos": 3
+  },
+  {
+   "t": 15.395,
+   "type": "kick+hat",
+   "strength": 0.369,
+   "on_beat": false,
+   "frame": 462,
+   "beat": 32,
+   "beat_pos": 3
+  },
+  {
+   "t": 15.482,
+   "type": "kick+snare+crash",
+   "strength": 0.903,
+   "on_beat": false,
+   "frame": 464,
+   "beat": 33,
+   "beat_pos": 4
+  },
+  {
+   "t": 15.586,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 468,
+   "beat": 33,
+   "beat_pos": 4
+  },
+  {
+   "t": 15.749,
+   "type": "hat",
+   "strength": 0.302,
+   "on_beat": false,
+   "frame": 472,
+   "beat": 33,
+   "beat_pos": 4
+  },
+  {
+   "t": 16.033,
+   "type": "hat",
+   "strength": 0.191,
+   "on_beat": true,
+   "frame": 481,
+   "beat": 34,
+   "beat_pos": 1
+  },
+  {
+   "t": 16.179,
+   "type": "kick",
+   "strength": 0.356,
+   "on_beat": false,
+   "frame": 485,
+   "beat": 34,
+   "beat_pos": 1
+  },
+  {
+   "t": 16.498,
+   "type": "kick+snare",
+   "strength": 0.825,
+   "on_beat": true,
+   "frame": 495,
+   "beat": 35,
+   "beat_pos": 2
+  },
+  {
+   "t": 16.974,
+   "type": "kick+snare",
+   "strength": 0.301,
+   "on_beat": true,
+   "frame": 509,
+   "beat": 36,
+   "beat_pos": 3
+  },
+  {
+   "t": 17.189,
+   "type": "hat",
+   "strength": 0.279,
+   "on_beat": false,
+   "frame": 516,
+   "beat": 36,
+   "beat_pos": 3
+  },
+  {
+   "t": 17.427,
+   "type": "kick+snare",
+   "strength": 0.539,
+   "on_beat": true,
+   "frame": 523,
+   "beat": 37,
+   "beat_pos": 4
+  },
+  {
+   "t": 17.914,
+   "type": "hat",
+   "strength": 0.213,
+   "on_beat": true,
+   "frame": 537,
+   "beat": 38,
+   "beat_pos": 1
+  },
+  {
+   "t": 18.373,
+   "type": "kick+snare",
+   "strength": 0.368,
+   "on_beat": true,
+   "frame": 551,
+   "beat": 39,
+   "beat_pos": 2
+  },
+  {
+   "t": 18.599,
+   "type": "hat",
+   "strength": 0.205,
+   "on_beat": false,
+   "frame": 558,
+   "beat": 39,
+   "beat_pos": 2
+  },
+  {
+   "t": 18.826,
+   "type": "kick+snare",
+   "strength": 0.456,
+   "on_beat": true,
+   "frame": 565,
+   "beat": 40,
+   "beat_pos": 3
+  },
+  {
+   "t": 19.029,
+   "type": "hat",
+   "strength": 0.203,
+   "on_beat": false,
+   "frame": 571,
+   "beat": 40,
+   "beat_pos": 3
+  },
+  {
+   "t": 19.244,
+   "type": "hat",
+   "strength": 0.233,
+   "on_beat": false,
+   "frame": 577,
+   "beat": 41,
+   "beat_pos": 4
+  },
+  {
+   "t": 19.528,
+   "type": "kick",
+   "strength": 0.717,
+   "on_beat": false,
+   "frame": 586,
+   "beat": 41,
+   "beat_pos": 4
+  },
+  {
+   "t": 19.609,
+   "type": "kick",
+   "strength": 1.0,
+   "on_beat": false,
+   "frame": 588,
+   "beat": 42,
+   "beat_pos": 1
+  },
+  {
+   "t": 19.667,
+   "type": "kick",
+   "strength": 0.41,
+   "on_beat": false,
+   "frame": 590,
+   "beat": 42,
+   "beat_pos": 1
+  },
+  {
+   "t": 19.754,
+   "type": "kick",
+   "strength": 0.565,
+   "on_beat": true,
+   "frame": 593,
+   "beat": 42,
+   "beat_pos": 1
+  },
+  {
+   "t": 19.981,
+   "type": "hat",
+   "strength": 0.19,
+   "on_beat": false,
+   "frame": 599,
+   "beat": 42,
+   "beat_pos": 1
+  },
+  {
+   "t": 20.132,
+   "type": "hat",
+   "strength": 0.415,
+   "on_beat": false,
+   "frame": 604,
+   "beat": 43,
+   "beat_pos": 2
+  },
+  {
+   "t": 20.666,
+   "type": "kick+hat",
+   "strength": 0.529,
+   "on_beat": true,
+   "frame": 620,
+   "beat": 44,
+   "beat_pos": 3
+  },
+  {
+   "t": 20.962,
+   "type": "kick",
+   "strength": 0.349,
+   "on_beat": false,
+   "frame": 629,
+   "beat": 45,
+   "beat_pos": 4
+  },
+  {
+   "t": 21.124,
+   "type": "hat",
+   "strength": 0.156,
+   "on_beat": true,
+   "frame": 634,
+   "beat": 45,
+   "beat_pos": 4
+  },
+  {
+   "t": 21.345,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 640,
+   "beat": 45,
+   "beat_pos": 4
+  },
+  {
+   "t": 21.815,
+   "type": "kick+hat",
+   "strength": 0.471,
+   "on_beat": false,
+   "frame": 654,
+   "beat": 46,
+   "beat_pos": 1
+  },
+  {
+   "t": 22.036,
+   "type": "kick+snare",
+   "strength": 0.51,
+   "on_beat": true,
+   "frame": 661,
+   "beat": 47,
+   "beat_pos": 2
+  },
+  {
+   "t": 22.274,
+   "type": "kick",
+   "strength": 0.363,
+   "on_beat": false,
+   "frame": 668,
+   "beat": 47,
+   "beat_pos": 2
+  },
+  {
+   "t": 22.593,
+   "type": "hat",
+   "strength": 0.221,
+   "on_beat": false,
+   "frame": 678,
+   "beat": 48,
+   "beat_pos": 3
+  },
+  {
+   "t": 22.825,
+   "type": "kick",
+   "strength": 0.36,
+   "on_beat": false,
+   "frame": 685,
+   "beat": 49,
+   "beat_pos": 4
+  },
+  {
+   "t": 22.901,
+   "type": "kick+hat",
+   "strength": 0.377,
+   "on_beat": false,
+   "frame": 687,
+   "beat": 49,
+   "beat_pos": 4
+  },
+  {
+   "t": 23.028,
+   "type": "kick",
+   "strength": 0.348,
+   "on_beat": true,
+   "frame": 691,
+   "beat": 49,
+   "beat_pos": 4
+  },
+  {
+   "t": 23.168,
+   "type": "kick+hat",
+   "strength": 0.447,
+   "on_beat": false,
+   "frame": 695,
+   "beat": 49,
+   "beat_pos": 4
+  },
+  {
+   "t": 23.301,
+   "type": "kick",
+   "strength": 0.397,
+   "on_beat": false,
+   "frame": 699,
+   "beat": 50,
+   "beat_pos": 1
+  },
+  {
+   "t": 23.574,
+   "type": "hat",
+   "strength": 0.152,
+   "on_beat": false,
+   "frame": 707,
+   "beat": 50,
+   "beat_pos": 1
+  },
+  {
+   "t": 23.87,
+   "type": "kick+hat",
+   "strength": 0.465,
+   "on_beat": true,
+   "frame": 716,
+   "beat": 51,
+   "beat_pos": 2
+  },
+  {
+   "t": 24.097,
+   "type": "hat",
+   "strength": 0.184,
+   "on_beat": false,
+   "frame": 723,
+   "beat": 51,
+   "beat_pos": 2
+  },
+  {
+   "t": 24.218,
+   "type": "kick+hat",
+   "strength": 0.368,
+   "on_beat": false,
+   "frame": 727,
+   "beat": 52,
+   "beat_pos": 3
+  },
+  {
+   "t": 24.329,
+   "type": "kick",
+   "strength": 0.675,
+   "on_beat": true,
+   "frame": 730,
+   "beat": 52,
+   "beat_pos": 3
+  },
+  {
+   "t": 24.555,
+   "type": "snare",
+   "strength": 0.295,
+   "on_beat": false,
+   "frame": 737,
+   "beat": 52,
+   "beat_pos": 3
+  },
+  {
+   "t": 24.787,
+   "type": "snare",
+   "strength": 0.246,
+   "on_beat": true,
+   "frame": 744,
+   "beat": 53,
+   "beat_pos": 4
+  },
+  {
+   "t": 24.996,
+   "type": "hat",
+   "strength": 0.197,
+   "on_beat": false,
+   "frame": 750,
+   "beat": 53,
+   "beat_pos": 4
+  },
+  {
+   "t": 25.252,
+   "type": "kick",
+   "strength": 0.351,
+   "on_beat": true,
+   "frame": 758,
+   "beat": 54,
+   "beat_pos": 1
+  },
+  {
+   "t": 25.321,
+   "type": "kick+hat",
+   "strength": 0.44,
+   "on_beat": true,
+   "frame": 760,
+   "beat": 54,
+   "beat_pos": 1
+  },
+  {
+   "t": 25.472,
+   "type": "kick",
+   "strength": 0.326,
+   "on_beat": false,
+   "frame": 764,
+   "beat": 54,
+   "beat_pos": 1
+  },
+  {
+   "t": 25.67,
+   "type": "snare",
+   "strength": 0.967,
+   "on_beat": true,
+   "frame": 770,
+   "beat": 55,
+   "beat_pos": 2
+  },
+  {
+   "t": 26.163,
+   "type": "kick+hat",
+   "strength": 0.567,
+   "on_beat": true,
+   "frame": 785,
+   "beat": 56,
+   "beat_pos": 3
+  },
+  {
+   "t": 26.36,
+   "type": "snare",
+   "strength": 0.318,
+   "on_beat": false,
+   "frame": 791,
+   "beat": 56,
+   "beat_pos": 3
+  },
+  {
+   "t": 26.593,
+   "type": "kick+snare",
+   "strength": 0.772,
+   "on_beat": true,
+   "frame": 798,
+   "beat": 57,
+   "beat_pos": 4
+  },
+  {
+   "t": 26.819,
+   "type": "kick+snare",
+   "strength": 0.674,
+   "on_beat": false,
+   "frame": 805,
+   "beat": 57,
+   "beat_pos": 4
+  },
+  {
+   "t": 27.04,
+   "type": "kick",
+   "strength": 0.678,
+   "on_beat": true,
+   "frame": 811,
+   "beat": 58,
+   "beat_pos": 1
+  },
+  {
+   "t": 27.312,
+   "type": "kick",
+   "strength": 0.359,
+   "on_beat": false,
+   "frame": 819,
+   "beat": 58,
+   "beat_pos": 1
+  },
+  {
+   "t": 27.504,
+   "type": "kick+snare",
+   "strength": 0.565,
+   "on_beat": true,
+   "frame": 825,
+   "beat": 59,
+   "beat_pos": 2
+  },
+  {
+   "t": 27.771,
+   "type": "kick",
+   "strength": 0.314,
+   "on_beat": false,
+   "frame": 833,
+   "beat": 59,
+   "beat_pos": 2
+  },
+  {
+   "t": 27.997,
+   "type": "kick+hat",
+   "strength": 0.345,
+   "on_beat": true,
+   "frame": 840,
+   "beat": 60,
+   "beat_pos": 3
+  },
+  {
+   "t": 28.206,
+   "type": "kick+snare",
+   "strength": 0.531,
+   "on_beat": false,
+   "frame": 846,
+   "beat": 60,
+   "beat_pos": 3
+  },
+  {
+   "t": 28.45,
+   "type": "hat",
+   "strength": 0.189,
+   "on_beat": true,
+   "frame": 854,
+   "beat": 61,
+   "beat_pos": 4
+  },
+  {
+   "t": 29.025,
+   "type": "kick",
+   "strength": 0.316,
+   "on_beat": false,
+   "frame": 871,
+   "beat": 62,
+   "beat_pos": 1
+  },
+  {
+   "t": 29.124,
+   "type": "kick+hat",
+   "strength": 0.47,
+   "on_beat": false,
+   "frame": 874,
+   "beat": 62,
+   "beat_pos": 1
+  },
+  {
+   "t": 29.269,
+   "type": "kick",
+   "strength": 0.484,
+   "on_beat": false,
+   "frame": 878,
+   "beat": 63,
+   "beat_pos": 2
+  },
+  {
+   "t": 29.367,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 881,
+   "beat": 63,
+   "beat_pos": 2
+  },
+  {
+   "t": 29.466,
+   "type": "kick",
+   "strength": 0.456,
+   "on_beat": false,
+   "frame": 884,
+   "beat": 63,
+   "beat_pos": 2
+  },
+  {
+   "t": 29.693,
+   "type": "kick+hat",
+   "strength": 0.467,
+   "on_beat": false,
+   "frame": 891,
+   "beat": 64,
+   "beat_pos": 3
+  },
+  {
+   "t": 29.774,
+   "type": "kick",
+   "strength": 0.498,
+   "on_beat": false,
+   "frame": 893,
+   "beat": 64,
+   "beat_pos": 3
+  },
+  {
+   "t": 29.913,
+   "type": "kick",
+   "strength": 1.0,
+   "on_beat": true,
+   "frame": 897,
+   "beat": 64,
+   "beat_pos": 3
+  },
+  {
+   "t": 30.058,
+   "type": "kick",
+   "strength": 1.0,
+   "on_beat": false,
+   "frame": 902,
+   "beat": 64,
+   "beat_pos": 3
+  },
+  {
+   "t": 30.157,
+   "type": "kick",
+   "strength": 0.644,
+   "on_beat": false,
+   "frame": 905,
+   "beat": 65,
+   "beat_pos": 4
+  },
+  {
+   "t": 30.848,
+   "type": "kick",
+   "strength": 0.388,
+   "on_beat": false,
+   "frame": 925,
+   "beat": 66,
+   "beat_pos": 1
+  },
+  {
+   "t": 30.917,
+   "type": "kick",
+   "strength": 0.308,
+   "on_beat": false,
+   "frame": 928,
+   "beat": 66,
+   "beat_pos": 1
+  },
+  {
+   "t": 30.975,
+   "type": "kick",
+   "strength": 0.43,
+   "on_beat": false,
+   "frame": 929,
+   "beat": 66,
+   "beat_pos": 1
+  },
+  {
+   "t": 31.202,
+   "type": "kick",
+   "strength": 0.429,
+   "on_beat": true,
+   "frame": 936,
+   "beat": 67,
+   "beat_pos": 2
+  },
+  {
+   "t": 31.271,
+   "type": "kick",
+   "strength": 0.667,
+   "on_beat": true,
+   "frame": 938,
+   "beat": 67,
+   "beat_pos": 2
+  },
+  {
+   "t": 31.527,
+   "type": "kick",
+   "strength": 0.305,
+   "on_beat": false,
+   "frame": 946,
+   "beat": 68,
+   "beat_pos": 3
+  },
+  {
+   "t": 31.649,
+   "type": "kick+snare",
+   "strength": 0.869,
+   "on_beat": true,
+   "frame": 949,
+   "beat": 68,
+   "beat_pos": 3
+  },
+  {
+   "t": 31.887,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 957,
+   "beat": 68,
+   "beat_pos": 3
+  },
+  {
+   "t": 32.113,
+   "type": "kick",
+   "strength": 0.443,
+   "on_beat": true,
+   "frame": 963,
+   "beat": 69,
+   "beat_pos": 4
+  },
+  {
+   "t": 32.305,
+   "type": "hat",
+   "strength": 0.151,
+   "on_beat": false,
+   "frame": 969,
+   "beat": 69,
+   "beat_pos": 4
+  },
+  {
+   "t": 32.572,
+   "type": "kick+hat",
+   "strength": 0.403,
+   "on_beat": true,
+   "frame": 977,
+   "beat": 70,
+   "beat_pos": 1
+  },
+  {
+   "t": 32.659,
+   "type": "kick",
+   "strength": 0.311,
+   "on_beat": true,
+   "frame": 980,
+   "beat": 70,
+   "beat_pos": 1
+  },
+  {
+   "t": 32.787,
+   "type": "kick+hat",
+   "strength": 0.357,
+   "on_beat": false,
+   "frame": 984,
+   "beat": 70,
+   "beat_pos": 1
+  },
+  {
+   "t": 32.99,
+   "type": "hat",
+   "strength": 0.173,
+   "on_beat": true,
+   "frame": 990,
+   "beat": 71,
+   "beat_pos": 2
+  },
+  {
+   "t": 33.234,
+   "type": "snare",
+   "strength": 0.368,
+   "on_beat": false,
+   "frame": 997,
+   "beat": 71,
+   "beat_pos": 2
+  },
+  {
+   "t": 33.489,
+   "type": "kick+hat",
+   "strength": 0.666,
+   "on_beat": true,
+   "frame": 1005,
+   "beat": 72,
+   "beat_pos": 3
+  },
+  {
+   "t": 33.564,
+   "type": "kick",
+   "strength": 0.557,
+   "on_beat": true,
+   "frame": 1007,
+   "beat": 72,
+   "beat_pos": 3
+  },
+  {
+   "t": 33.93,
+   "type": "snare",
+   "strength": 0.412,
+   "on_beat": true,
+   "frame": 1018,
+   "beat": 73,
+   "beat_pos": 4
+  },
+  {
+   "t": 34.145,
+   "type": "snare",
+   "strength": 0.363,
+   "on_beat": false,
+   "frame": 1024,
+   "beat": 73,
+   "beat_pos": 4
+  },
+  {
+   "t": 34.366,
+   "type": "snare",
+   "strength": 0.564,
+   "on_beat": false,
+   "frame": 1031,
+   "beat": 74,
+   "beat_pos": 1
+  },
+  {
+   "t": 34.598,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 1038,
+   "beat": 74,
+   "beat_pos": 1
+  },
+  {
+   "t": 35.097,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 1053,
+   "beat": 75,
+   "beat_pos": 2
+  },
+  {
+   "t": 35.677,
+   "type": "kick",
+   "strength": 0.293,
+   "on_beat": false,
+   "frame": 1070,
+   "beat": 77,
+   "beat_pos": 4
+  },
+  {
+   "t": 35.782,
+   "type": "kick",
+   "strength": 0.305,
+   "on_beat": true,
+   "frame": 1073,
+   "beat": 77,
+   "beat_pos": 4
+  },
+  {
+   "t": 35.921,
+   "type": "kick+hat",
+   "strength": 0.404,
+   "on_beat": false,
+   "frame": 1078,
+   "beat": 77,
+   "beat_pos": 4
+  },
+  {
+   "t": 36.124,
+   "type": "kick",
+   "strength": 0.533,
+   "on_beat": false,
+   "frame": 1084,
+   "beat": 78,
+   "beat_pos": 1
+  },
+  {
+   "t": 36.241,
+   "type": "kick",
+   "strength": 0.308,
+   "on_beat": true,
+   "frame": 1087,
+   "beat": 78,
+   "beat_pos": 1
+  },
+  {
+   "t": 36.316,
+   "type": "kick",
+   "strength": 0.347,
+   "on_beat": true,
+   "frame": 1089,
+   "beat": 78,
+   "beat_pos": 1
+  },
+  {
+   "t": 36.467,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 1094,
+   "beat": 78,
+   "beat_pos": 1
+  },
+  {
+   "t": 36.926,
+   "type": "hat",
+   "strength": 0.204,
+   "on_beat": false,
+   "frame": 1108,
+   "beat": 79,
+   "beat_pos": 2
+  },
+  {
+   "t": 37.129,
+   "type": "snare",
+   "strength": 0.616,
+   "on_beat": true,
+   "frame": 1114,
+   "beat": 80,
+   "beat_pos": 3
+  },
+  {
+   "t": 37.343,
+   "type": "kick",
+   "strength": 0.304,
+   "on_beat": false,
+   "frame": 1120,
+   "beat": 80,
+   "beat_pos": 3
+  },
+  {
+   "t": 37.843,
+   "type": "kick",
+   "strength": 0.415,
+   "on_beat": false,
+   "frame": 1135,
+   "beat": 81,
+   "beat_pos": 4
+  },
+  {
+   "t": 38.075,
+   "type": "kick",
+   "strength": 0.596,
+   "on_beat": true,
+   "frame": 1142,
+   "beat": 82,
+   "beat_pos": 1
+  },
+  {
+   "t": 38.301,
+   "type": "hat",
+   "strength": 0.179,
+   "on_beat": false,
+   "frame": 1149,
+   "beat": 82,
+   "beat_pos": 1
+  },
+  {
+   "t": 38.423,
+   "type": "snare",
+   "strength": 0.337,
+   "on_beat": false,
+   "frame": 1153,
+   "beat": 83,
+   "beat_pos": 2
+  },
+  {
+   "t": 38.76,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 1163,
+   "beat": 83,
+   "beat_pos": 2
+  },
+  {
+   "t": 38.876,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": false,
+   "frame": 1166,
+   "beat": 84,
+   "beat_pos": 3
+  },
+  {
+   "t": 38.992,
+   "type": "kick",
+   "strength": 0.502,
+   "on_beat": true,
+   "frame": 1170,
+   "beat": 84,
+   "beat_pos": 3
+  },
+  {
+   "t": 39.068,
+   "type": "kick",
+   "strength": 0.362,
+   "on_beat": true,
+   "frame": 1172,
+   "beat": 84,
+   "beat_pos": 3
+  },
+  {
+   "t": 39.219,
+   "type": "hat",
+   "strength": 0.218,
+   "on_beat": false,
+   "frame": 1177,
+   "beat": 84,
+   "beat_pos": 3
+  },
+  {
+   "t": 39.445,
+   "type": "hat",
+   "strength": 0.15,
+   "on_beat": true,
+   "frame": 1183,
+   "beat": 85,
+   "beat_pos": 4
+  },
+  {
+   "t": 39.607,
+   "type": "hat",
+   "strength": 0.164,
+   "on_beat": false,
+   "frame": 1188,
+   "beat": 85,
+   "beat_pos": 4
+  },
+  {
+   "t": 39.695,
+   "type": "kick",
+   "strength": 0.331,
+   "on_beat": false,
+   "frame": 1191,
+   "beat": 85,
+   "beat_pos": 4
+  },
+  {
+   "t": 39.903,
+   "type": "kick+hat",
+   "strength": 0.539,
+   "on_beat": true,
+   "frame": 1197,
+   "beat": 86,
+   "beat_pos": 1
+  },
+  {
+   "t": 40.362,
+   "type": "kick",
+   "strength": 0.387,
+   "on_beat": true,
+   "frame": 1211,
+   "beat": 87,
+   "beat_pos": 2
+  },
+  {
+   "t": 40.815,
+   "type": "kick+snare",
+   "strength": 0.419,
+   "on_beat": true,
+   "frame": 1224,
+   "beat": 88,
+   "beat_pos": 3
+  },
+  {
+   "t": 41.273,
+   "type": "kick",
+   "strength": 0.338,
+   "on_beat": true,
+   "frame": 1238,
+   "beat": 89,
+   "beat_pos": 4
+  },
+  {
+   "t": 41.506,
+   "type": "kick",
+   "strength": 0.735,
+   "on_beat": false,
+   "frame": 1245,
+   "beat": 89,
+   "beat_pos": 4
+  },
+  {
+   "t": 41.657,
+   "type": "kick",
+   "strength": 0.576,
+   "on_beat": false,
+   "frame": 1250,
+   "beat": 90,
+   "beat_pos": 1
+  },
+  {
+   "t": 41.738,
+   "type": "kick",
+   "strength": 0.433,
+   "on_beat": true,
+   "frame": 1252,
+   "beat": 90,
+   "beat_pos": 1
+  },
+  {
+   "t": 41.958,
+   "type": "kick+hat",
+   "strength": 0.574,
+   "on_beat": false,
+   "frame": 1259,
+   "beat": 90,
+   "beat_pos": 1
+  },
+  {
+   "t": 42.423,
+   "type": "kick",
+   "strength": 0.565,
+   "on_beat": false,
+   "frame": 1273,
+   "beat": 91,
+   "beat_pos": 2
+  },
+  {
+   "t": 42.614,
+   "type": "snare",
+   "strength": 0.716,
+   "on_beat": false,
+   "frame": 1278,
+   "beat": 92,
+   "beat_pos": 3
+  },
+  {
+   "t": 42.887,
+   "type": "kick",
+   "strength": 0.462,
+   "on_beat": false,
+   "frame": 1287,
+   "beat": 92,
+   "beat_pos": 3
+  },
+  {
+   "t": 43.073,
+   "type": "snare",
+   "strength": 0.725,
+   "on_beat": false,
+   "frame": 1292,
+   "beat": 93,
+   "beat_pos": 4
+  },
+  {
+   "t": 43.334,
+   "type": "hat",
+   "strength": 0.171,
+   "on_beat": false,
+   "frame": 1300,
+   "beat": 93,
+   "beat_pos": 4
+  },
+  {
+   "t": 43.566,
+   "type": "kick",
+   "strength": 0.641,
+   "on_beat": true,
+   "frame": 1307,
+   "beat": 94,
+   "beat_pos": 1
+  },
+  {
+   "t": 43.799,
+   "type": "kick",
+   "strength": 0.325,
+   "on_beat": false,
+   "frame": 1314,
+   "beat": 94,
+   "beat_pos": 1
+  },
+  {
+   "t": 43.921,
+   "type": "kick",
+   "strength": 0.382,
+   "on_beat": false,
+   "frame": 1318,
+   "beat": 95,
+   "beat_pos": 2
+  },
+  {
+   "t": 43.99,
+   "type": "kick+snare",
+   "strength": 0.875,
+   "on_beat": true,
+   "frame": 1320,
+   "beat": 95,
+   "beat_pos": 2
+  }
+ ],
+ "beats": [
+  {
+   "i": 0,
+   "t": 0.372,
+   "frame": 11,
+   "pos": 3
+  },
+  {
+   "i": 1,
+   "t": 0.836,
+   "frame": 25,
+   "pos": 4
+  },
+  {
+   "i": 2,
+   "t": 1.3,
+   "frame": 39,
+   "pos": 1
+  },
+  {
+   "i": 3,
+   "t": 1.765,
+   "frame": 53,
+   "pos": 2
+  },
+  {
+   "i": 4,
+   "t": 2.206,
+   "frame": 66,
+   "pos": 3
+  },
+  {
+   "i": 5,
+   "t": 2.67,
+   "frame": 80,
+   "pos": 4
+  },
+  {
+   "i": 6,
+   "t": 3.135,
+   "frame": 94,
+   "pos": 1
+  },
+  {
+   "i": 7,
+   "t": 3.599,
+   "frame": 108,
+   "pos": 2
+  },
+  {
+   "i": 8,
+   "t": 4.063,
+   "frame": 122,
+   "pos": 3
+  },
+  {
+   "i": 9,
+   "t": 4.528,
+   "frame": 136,
+   "pos": 4
+  },
+  {
+   "i": 10,
+   "t": 4.992,
+   "frame": 150,
+   "pos": 1
+  },
+  {
+   "i": 11,
+   "t": 5.457,
+   "frame": 164,
+   "pos": 2
+  },
+  {
+   "i": 12,
+   "t": 5.968,
+   "frame": 179,
+   "pos": 3
+  },
+  {
+   "i": 13,
+   "t": 6.478,
+   "frame": 194,
+   "pos": 4
+  },
+  {
+   "i": 14,
+   "t": 6.943,
+   "frame": 208,
+   "pos": 1
+  },
+  {
+   "i": 15,
+   "t": 7.384,
+   "frame": 222,
+   "pos": 2
+  },
+  {
+   "i": 16,
+   "t": 7.848,
+   "frame": 235,
+   "pos": 3
+  },
+  {
+   "i": 17,
+   "t": 8.313,
+   "frame": 249,
+   "pos": 4
+  },
+  {
+   "i": 18,
+   "t": 8.754,
+   "frame": 263,
+   "pos": 1
+  },
+  {
+   "i": 19,
+   "t": 9.218,
+   "frame": 277,
+   "pos": 2
+  },
+  {
+   "i": 20,
+   "t": 9.683,
+   "frame": 290,
+   "pos": 3
+  },
+  {
+   "i": 21,
+   "t": 10.147,
+   "frame": 304,
+   "pos": 4
+  },
+  {
+   "i": 22,
+   "t": 10.612,
+   "frame": 318,
+   "pos": 1
+  },
+  {
+   "i": 23,
+   "t": 11.053,
+   "frame": 332,
+   "pos": 2
+  },
+  {
+   "i": 24,
+   "t": 11.517,
+   "frame": 346,
+   "pos": 3
+  },
+  {
+   "i": 25,
+   "t": 11.981,
+   "frame": 359,
+   "pos": 4
+  },
+  {
+   "i": 26,
+   "t": 12.446,
+   "frame": 373,
+   "pos": 1
+  },
+  {
+   "i": 27,
+   "t": 12.887,
+   "frame": 387,
+   "pos": 2
+  },
+  {
+   "i": 28,
+   "t": 13.351,
+   "frame": 401,
+   "pos": 3
+  },
+  {
+   "i": 29,
+   "t": 13.816,
+   "frame": 414,
+   "pos": 4
+  },
+  {
+   "i": 30,
+   "t": 14.28,
+   "frame": 428,
+   "pos": 1
+  },
+  {
+   "i": 31,
+   "t": 14.745,
+   "frame": 442,
+   "pos": 2
+  },
+  {
+   "i": 32,
+   "t": 15.209,
+   "frame": 456,
+   "pos": 3
+  },
+  {
+   "i": 33,
+   "t": 15.65,
+   "frame": 470,
+   "pos": 4
+  },
+  {
+   "i": 34,
+   "t": 16.091,
+   "frame": 483,
+   "pos": 1
+  },
+  {
+   "i": 35,
+   "t": 16.556,
+   "frame": 497,
+   "pos": 2
+  },
+  {
+   "i": 36,
+   "t": 16.997,
+   "frame": 510,
+   "pos": 3
+  },
+  {
+   "i": 37,
+   "t": 17.461,
+   "frame": 524,
+   "pos": 4
+  },
+  {
+   "i": 38,
+   "t": 17.949,
+   "frame": 538,
+   "pos": 1
+  },
+  {
+   "i": 39,
+   "t": 18.39,
+   "frame": 552,
+   "pos": 2
+  },
+  {
+   "i": 40,
+   "t": 18.855,
+   "frame": 566,
+   "pos": 3
+  },
+  {
+   "i": 41,
+   "t": 19.319,
+   "frame": 580,
+   "pos": 4
+  },
+  {
+   "i": 42,
+   "t": 19.783,
+   "frame": 594,
+   "pos": 1
+  },
+  {
+   "i": 43,
+   "t": 20.225,
+   "frame": 607,
+   "pos": 2
+  },
+  {
+   "i": 44,
+   "t": 20.689,
+   "frame": 621,
+   "pos": 3
+  },
+  {
+   "i": 45,
+   "t": 21.153,
+   "frame": 635,
+   "pos": 4
+  },
+  {
+   "i": 46,
+   "t": 21.618,
+   "frame": 649,
+   "pos": 1
+  },
+  {
+   "i": 47,
+   "t": 22.059,
+   "frame": 662,
+   "pos": 2
+  },
+  {
+   "i": 48,
+   "t": 22.523,
+   "frame": 676,
+   "pos": 3
+  },
+  {
+   "i": 49,
+   "t": 22.988,
+   "frame": 690,
+   "pos": 4
+  },
+  {
+   "i": 50,
+   "t": 23.452,
+   "frame": 704,
+   "pos": 1
+  },
+  {
+   "i": 51,
+   "t": 23.893,
+   "frame": 717,
+   "pos": 2
+  },
+  {
+   "i": 52,
+   "t": 24.358,
+   "frame": 731,
+   "pos": 3
+  },
+  {
+   "i": 53,
+   "t": 24.822,
+   "frame": 745,
+   "pos": 4
+  },
+  {
+   "i": 54,
+   "t": 25.287,
+   "frame": 759,
+   "pos": 1
+  },
+  {
+   "i": 55,
+   "t": 25.728,
+   "frame": 772,
+   "pos": 2
+  },
+  {
+   "i": 56,
+   "t": 26.192,
+   "frame": 786,
+   "pos": 3
+  },
+  {
+   "i": 57,
+   "t": 26.633,
+   "frame": 799,
+   "pos": 4
+  },
+  {
+   "i": 58,
+   "t": 27.098,
+   "frame": 813,
+   "pos": 1
+  },
+  {
+   "i": 59,
+   "t": 27.539,
+   "frame": 826,
+   "pos": 2
+  },
+  {
+   "i": 60,
+   "t": 28.026,
+   "frame": 841,
+   "pos": 3
+  },
+  {
+   "i": 61,
+   "t": 28.468,
+   "frame": 854,
+   "pos": 4
+  },
+  {
+   "i": 62,
+   "t": 28.932,
+   "frame": 868,
+   "pos": 1
+  },
+  {
+   "i": 63,
+   "t": 29.396,
+   "frame": 882,
+   "pos": 2
+  },
+  {
+   "i": 64,
+   "t": 29.861,
+   "frame": 896,
+   "pos": 3
+  },
+  {
+   "i": 65,
+   "t": 30.302,
+   "frame": 909,
+   "pos": 4
+  },
+  {
+   "i": 66,
+   "t": 30.766,
+   "frame": 923,
+   "pos": 1
+  },
+  {
+   "i": 67,
+   "t": 31.231,
+   "frame": 937,
+   "pos": 2
+  },
+  {
+   "i": 68,
+   "t": 31.672,
+   "frame": 950,
+   "pos": 3
+  },
+  {
+   "i": 69,
+   "t": 32.136,
+   "frame": 964,
+   "pos": 4
+  },
+  {
+   "i": 70,
+   "t": 32.601,
+   "frame": 978,
+   "pos": 1
+  },
+  {
+   "i": 71,
+   "t": 33.042,
+   "frame": 991,
+   "pos": 2
+  },
+  {
+   "i": 72,
+   "t": 33.506,
+   "frame": 1005,
+   "pos": 3
+  },
+  {
+   "i": 73,
+   "t": 33.948,
+   "frame": 1018,
+   "pos": 4
+  },
+  {
+   "i": 74,
+   "t": 34.435,
+   "frame": 1033,
+   "pos": 1
+  },
+  {
+   "i": 75,
+   "t": 34.9,
+   "frame": 1047,
+   "pos": 2
+  },
+  {
+   "i": 76,
+   "t": 35.341,
+   "frame": 1060,
+   "pos": 3
+  },
+  {
+   "i": 77,
+   "t": 35.805,
+   "frame": 1074,
+   "pos": 4
+  },
+  {
+   "i": 78,
+   "t": 36.27,
+   "frame": 1088,
+   "pos": 1
+  },
+  {
+   "i": 79,
+   "t": 36.711,
+   "frame": 1101,
+   "pos": 2
+  },
+  {
+   "i": 80,
+   "t": 37.175,
+   "frame": 1115,
+   "pos": 3
+  },
+  {
+   "i": 81,
+   "t": 37.64,
+   "frame": 1129,
+   "pos": 4
+  },
+  {
+   "i": 82,
+   "t": 38.104,
+   "frame": 1143,
+   "pos": 1
+  },
+  {
+   "i": 83,
+   "t": 38.545,
+   "frame": 1156,
+   "pos": 2
+  },
+  {
+   "i": 84,
+   "t": 39.01,
+   "frame": 1170,
+   "pos": 3
+  },
+  {
+   "i": 85,
+   "t": 39.474,
+   "frame": 1184,
+   "pos": 4
+  },
+  {
+   "i": 86,
+   "t": 39.938,
+   "frame": 1198,
+   "pos": 1
+  },
+  {
+   "i": 87,
+   "t": 40.38,
+   "frame": 1211,
+   "pos": 2
+  },
+  {
+   "i": 88,
+   "t": 40.844,
+   "frame": 1225,
+   "pos": 3
+  },
+  {
+   "i": 89,
+   "t": 41.308,
+   "frame": 1239,
+   "pos": 4
+  },
+  {
+   "i": 90,
+   "t": 41.773,
+   "frame": 1253,
+   "pos": 1
+  },
+  {
+   "i": 91,
+   "t": 42.214,
+   "frame": 1266,
+   "pos": 2
+  },
+  {
+   "i": 92,
+   "t": 42.678,
+   "frame": 1280,
+   "pos": 3
+  },
+  {
+   "i": 93,
+   "t": 43.143,
+   "frame": 1294,
+   "pos": 4
+  },
+  {
+   "i": 94,
+   "t": 43.584,
+   "frame": 1308,
+   "pos": 1
+  },
+  {
+   "i": 95,
+   "t": 44.048,
+   "frame": 1321,
+   "pos": 2
+  },
+  {
+   "i": 96,
+   "t": 44.513,
+   "frame": 1335,
+   "pos": 3
+  }
+ ],
+ "words": [
+  {
+   "line": 0,
+   "k": 0,
+   "ch": "长",
+   "t": 15.94,
+   "frame": 478,
+   "accent": false
+  },
+  {
+   "line": 0,
+   "k": 1,
+   "ch": "夜",
+   "t": 15.94,
+   "frame": 478,
+   "accent": false
+  },
+  {
+   "line": 0,
+   "k": 2,
+   "ch": "压",
+   "t": 16.24,
+   "frame": 487,
+   "accent": false
+  },
+  {
+   "line": 0,
+   "k": 3,
+   "ch": "在",
+   "t": 16.44,
+   "frame": 493,
+   "accent": false
+  },
+  {
+   "line": 0,
+   "k": 4,
+   "ch": "我",
+   "t": 16.64,
+   "frame": 499,
+   "accent": false
+  },
+  {
+   "line": 0,
+   "k": 5,
+   "ch": "刀",
+   "t": 16.86,
+   "frame": 506,
+   "accent": true
+  },
+  {
+   "line": 0,
+   "k": 6,
+   "ch": "锋",
+   "t": 17.12,
+   "frame": 514,
+   "accent": true
+  },
+  {
+   "line": 0,
+   "k": 7,
+   "ch": "之",
+   "t": 17.36,
+   "frame": 521,
+   "accent": false
+  },
+  {
+   "line": 0,
+   "k": 8,
+   "ch": "上",
+   "t": 17.54,
+   "frame": 526,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 0,
+   "ch": "五",
+   "t": 18.14,
+   "frame": 544,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 1,
+   "ch": "百",
+   "t": 18.78,
+   "frame": 563,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 2,
+   "ch": "重",
+   "t": 18.96,
+   "frame": 569,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 3,
+   "ch": "甲",
+   "t": 19.16,
+   "frame": 575,
+   "accent": true
+  },
+  {
+   "line": 1,
+   "k": 4,
+   "ch": "拦",
+   "t": 19.42,
+   "frame": 583,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 5,
+   "ch": "不",
+   "t": 19.72,
+   "frame": 592,
+   "accent": true
+  },
+  {
+   "line": 1,
+   "k": 6,
+   "ch": "住",
+   "t": 20.06,
+   "frame": 602,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 7,
+   "ch": "一",
+   "t": 20.34,
+   "frame": 610,
+   "accent": false
+  },
+  {
+   "line": 1,
+   "k": 8,
+   "ch": "道",
+   "t": 20.62,
+   "frame": 619,
+   "accent": true
+  },
+  {
+   "line": 1,
+   "k": 9,
+   "ch": "寒",
+   "t": 20.82,
+   "frame": 625,
+   "accent": true
+  },
+  {
+   "line": 1,
+   "k": 10,
+   "ch": "光",
+   "t": 21.24,
+   "frame": 637,
+   "accent": true
+  },
+  {
+   "line": 2,
+   "k": 0,
+   "ch": "谁",
+   "t": 22.56,
+   "frame": 677,
+   "accent": true
+  },
+  {
+   "line": 2,
+   "k": 1,
+   "ch": "在",
+   "t": 22.84,
+   "frame": 685,
+   "accent": false
+  },
+  {
+   "line": 2,
+   "k": 2,
+   "ch": "高",
+   "t": 23.02,
+   "frame": 691,
+   "accent": true
+  },
+  {
+   "line": 2,
+   "k": 3,
+   "ch": "处",
+   "t": 23.42,
+   "frame": 703,
+   "accent": true
+  },
+  {
+   "line": 2,
+   "k": 4,
+   "ch": "定",
+   "t": 23.74,
+   "frame": 712,
+   "accent": false
+  },
+  {
+   "line": 2,
+   "k": 5,
+   "ch": "对",
+   "t": 23.98,
+   "frame": 719,
+   "accent": false
+  },
+  {
+   "line": 2,
+   "k": 6,
+   "ch": "错",
+   "t": 24.18,
+   "frame": 725,
+   "accent": false
+  },
+  {
+   "line": 2,
+   "k": 7,
+   "ch": "罪",
+   "t": 24.48,
+   "frame": 734,
+   "accent": true
+  },
+  {
+   "line": 2,
+   "k": 8,
+   "ch": "状",
+   "t": 24.78,
+   "frame": 743,
+   "accent": true
+  },
+  {
+   "line": 3,
+   "k": 0,
+   "ch": "谁",
+   "t": 25.4,
+   "frame": 762,
+   "accent": false
+  },
+  {
+   "line": 3,
+   "k": 1,
+   "ch": "把",
+   "t": 25.6,
+   "frame": 768,
+   "accent": false
+  },
+  {
+   "line": 3,
+   "k": 2,
+   "ch": "人",
+   "t": 25.84,
+   "frame": 775,
+   "accent": false
+  },
+  {
+   "line": 3,
+   "k": 3,
+   "ch": "命",
+   "t": 26.0,
+   "frame": 780,
+   "accent": true
+  },
+  {
+   "line": 3,
+   "k": 4,
+   "ch": "装",
+   "t": 26.26,
+   "frame": 788,
+   "accent": true
+  },
+  {
+   "line": 3,
+   "k": 5,
+   "ch": "进",
+   "t": 26.5,
+   "frame": 795,
+   "accent": false
+  },
+  {
+   "line": 3,
+   "k": 6,
+   "ch": "天",
+   "t": 26.7,
+   "frame": 801,
+   "accent": true
+  },
+  {
+   "line": 3,
+   "k": 7,
+   "ch": "平",
+   "t": 27.08,
+   "frame": 812,
+   "accent": true
+  },
+  {
+   "line": 3,
+   "k": 8,
+   "ch": "里",
+   "t": 27.66,
+   "frame": 830,
+   "accent": false
+  },
+  {
+   "line": 3,
+   "k": 9,
+   "ch": "称",
+   "t": 28.14,
+   "frame": 844,
+   "accent": false
+  },
+  {
+   "line": 3,
+   "k": 10,
+   "ch": "量",
+   "t": 28.48,
+   "frame": 854,
+   "accent": true
+  },
+  {
+   "line": 4,
+   "k": 0,
+   "ch": "我",
+   "t": 29.9,
+   "frame": 897,
+   "accent": true
+  },
+  {
+   "line": 4,
+   "k": 1,
+   "ch": "杀",
+   "t": 30.1,
+   "frame": 903,
+   "accent": true
+  },
+  {
+   "line": 4,
+   "k": 2,
+   "ch": "过",
+   "t": 30.4,
+   "frame": 912,
+   "accent": false
+  },
+  {
+   "line": 4,
+   "k": 3,
+   "ch": "恶",
+   "t": 30.62,
+   "frame": 919,
+   "accent": false
+  },
+  {
+   "line": 4,
+   "k": 4,
+   "ch": "徒",
+   "t": 30.9,
+   "frame": 927,
+   "accent": false
+  },
+  {
+   "line": 4,
+   "k": 5,
+   "ch": "也",
+   "t": 31.1,
+   "frame": 933,
+   "accent": false
+  },
+  {
+   "line": 4,
+   "k": 6,
+   "ch": "放",
+   "t": 31.48,
+   "frame": 944,
+   "accent": true
+  },
+  {
+   "line": 4,
+   "k": 7,
+   "ch": "过",
+   "t": 31.78,
+   "frame": 953,
+   "accent": false
+  },
+  {
+   "line": 4,
+   "k": 8,
+   "ch": "混",
+   "t": 31.96,
+   "frame": 959,
+   "accent": false
+  },
+  {
+   "line": 4,
+   "k": 9,
+   "ch": "账",
+   "t": 32.24,
+   "frame": 967,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 0,
+   "ch": "每",
+   "t": 33.22,
+   "frame": 997,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 1,
+   "ch": "一",
+   "t": 33.44,
+   "frame": 1003,
+   "accent": true
+  },
+  {
+   "line": 5,
+   "k": 2,
+   "ch": "次",
+   "t": 33.61,
+   "frame": 1008,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 3,
+   "ch": "拔",
+   "t": 33.78,
+   "frame": 1013,
+   "accent": true
+  },
+  {
+   "line": 5,
+   "k": 4,
+   "ch": "刀",
+   "t": 34.1,
+   "frame": 1023,
+   "accent": true
+  },
+  {
+   "line": 5,
+   "k": 5,
+   "ch": "都",
+   "t": 34.3,
+   "frame": 1029,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 6,
+   "ch": "是",
+   "t": 34.49,
+   "frame": 1035,
+   "accent": true
+  },
+  {
+   "line": 5,
+   "k": 7,
+   "ch": "我",
+   "t": 34.68,
+   "frame": 1040,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 8,
+   "ch": "的",
+   "t": 35.07,
+   "frame": 1052,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 9,
+   "ch": "主",
+   "t": 35.46,
+   "frame": 1064,
+   "accent": false
+  },
+  {
+   "line": 5,
+   "k": 10,
+   "ch": "张",
+   "t": 35.82,
+   "frame": 1075,
+   "accent": true
+  },
+  {
+   "line": 6,
+   "k": 0,
+   "ch": "若",
+   "t": 37.3,
+   "frame": 1119,
+   "accent": false
+  },
+  {
+   "line": 6,
+   "k": 1,
+   "ch": "正",
+   "t": 37.5,
+   "frame": 1125,
+   "accent": true
+  },
+  {
+   "line": 6,
+   "k": 2,
+   "ch": "义",
+   "t": 37.78,
+   "frame": 1133,
+   "accent": true
+  },
+  {
+   "line": 6,
+   "k": 3,
+   "ch": "由",
+   "t": 38.02,
+   "frame": 1141,
+   "accent": false
+  },
+  {
+   "line": 6,
+   "k": 4,
+   "ch": "权",
+   "t": 38.32,
+   "frame": 1150,
+   "accent": true
+  },
+  {
+   "line": 6,
+   "k": 5,
+   "ch": "势",
+   "t": 38.72,
+   "frame": 1162,
+   "accent": false
+  },
+  {
+   "line": 6,
+   "k": 6,
+   "ch": "执",
+   "t": 39.12,
+   "frame": 1174,
+   "accent": false
+  },
+  {
+   "line": 6,
+   "k": 7,
+   "ch": "掌",
+   "t": 39.5,
+   "frame": 1185,
+   "accent": true
+  },
+  {
+   "line": 7,
+   "k": 0,
+   "ch": "那",
+   "t": 40.18,
+   "frame": 1205,
+   "accent": false
+  },
+  {
+   "line": 7,
+   "k": 1,
+   "ch": "我",
+   "t": 40.36,
+   "frame": 1211,
+   "accent": true
+  },
+  {
+   "line": 7,
+   "k": 2,
+   "ch": "宁",
+   "t": 40.74,
+   "frame": 1222,
+   "accent": false
+  },
+  {
+   "line": 7,
+   "k": 3,
+   "ch": "愿",
+   "t": 40.96,
+   "frame": 1229,
+   "accent": false
+  },
+  {
+   "line": 7,
+   "k": 4,
+   "ch": "做",
+   "t": 41.16,
+   "frame": 1235,
+   "accent": false
+  },
+  {
+   "line": 7,
+   "k": 5,
+   "ch": "乱",
+   "t": 41.4,
+   "frame": 1242,
+   "accent": false
+  },
+  {
+   "line": 7,
+   "k": 6,
+   "ch": "世",
+   "t": 41.8,
+   "frame": 1254,
+   "accent": true
+  },
+  {
+   "line": 7,
+   "k": 7,
+   "ch": "的",
+   "t": 42.36,
+   "frame": 1271,
+   "accent": false
+  },
+  {
+   "line": 7,
+   "k": 8,
+   "ch": "锋",
+   "t": 42.84,
+   "frame": 1285,
+   "accent": true
+  },
+  {
+   "line": 7,
+   "k": 9,
+   "ch": "芒",
+   "t": 43.08,
+   "frame": 1292,
+   "accent": true
+  },
+  {
+   "line": 8,
+   "k": 0,
+   "ch": "谁",
+   "t": 44.0,
+   "frame": 1320,
+   "accent": true
+  },
+  {
+   "line": 8,
+   "k": 1,
+   "ch": "配",
+   "t": 44.78,
+   "frame": 1343,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 2,
+   "ch": "写",
+   "t": 45.04,
+   "frame": 1351,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 3,
+   "ch": "生",
+   "t": 45.24,
+   "frame": 1357,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 4,
+   "ch": "死",
+   "t": 45.52,
+   "frame": 1366,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 5,
+   "ch": "簿",
+   "t": 45.7,
+   "frame": 1371,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 6,
+   "ch": "谁",
+   "t": 45.96,
+   "frame": 1379,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 7,
+   "ch": "配",
+   "t": 46.44,
+   "frame": 1393,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 8,
+   "ch": "画",
+   "t": 46.64,
+   "frame": 1399,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 9,
+   "ch": "善",
+   "t": 46.86,
+   "frame": 1406,
+   "accent": false
+  },
+  {
+   "line": 8,
+   "k": 10,
+   "ch": "恶",
+   "t": 47.24,
+   "frame": 1417,
+   "accent": true
+  },
+  {
+   "line": 8,
+   "k": 11,
+   "ch": "框",
+   "t": 47.7,
+   "frame": 1431,
+   "accent": true
+  },
+  {
+   "line": 9,
+   "k": 0,
+   "ch": "谁",
+   "t": 48.36,
+   "frame": 1451,
+   "accent": false
+  },
+  {
+   "line": 9,
+   "k": 1,
+   "ch": "的",
+   "t": 48.5,
+   "frame": 1455,
+   "accent": false
+  },
+  {
+   "line": 9,
+   "k": 2,
+   "ch": "规",
+   "t": 48.66,
+   "frame": 1460,
+   "accent": true
+  },
+  {
+   "line": 9,
+   "k": 3,
+   "ch": "矩",
+   "t": 49.0,
+   "frame": 1470,
+   "accent": false
+  },
+  {
+   "line": 9,
+   "k": 4,
+   "ch": "用",
+   "t": 49.38,
+   "frame": 1481,
+   "accent": false
+  },
+  {
+   "line": 9,
+   "k": 5,
+   "ch": "血",
+   "t": 49.62,
+   "frame": 1489,
+   "accent": true
+  },
+  {
+   "line": 9,
+   "k": 6,
+   "ch": "来",
+   "t": 49.86,
+   "frame": 1496,
+   "accent": false
+  },
+  {
+   "line": 9,
+   "k": 7,
+   "ch": "装",
+   "t": 50.16,
+   "frame": 1505,
+   "accent": false
+  },
+  {
+   "line": 9,
+   "k": 8,
+   "ch": "潢",
+   "t": 50.52,
+   "frame": 1516,
+   "accent": true
+  },
+  {
+   "line": 10,
+   "k": 0,
+   "ch": "我",
+   "t": 51.44,
+   "frame": 1543,
+   "accent": true
+  },
+  {
+   "line": 10,
+   "k": 1,
+   "ch": "不",
+   "t": 51.7,
+   "frame": 1551,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 2,
+   "ch": "信",
+   "t": 51.92,
+   "frame": 1558,
+   "accent": true
+  },
+  {
+   "line": 10,
+   "k": 3,
+   "ch": "天",
+   "t": 52.14,
+   "frame": 1564,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 4,
+   "ch": "不",
+   "t": 52.38,
+   "frame": 1571,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 5,
+   "ch": "信",
+   "t": 52.58,
+   "frame": 1577,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 6,
+   "ch": "命",
+   "t": 52.84,
+   "frame": 1585,
+   "accent": true
+  },
+  {
+   "line": 10,
+   "k": 7,
+   "ch": "不",
+   "t": 53.04,
+   "frame": 1591,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 8,
+   "ch": "信",
+   "t": 53.32,
+   "frame": 1600,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 9,
+   "ch": "谁",
+   "t": 53.5,
+   "frame": 1605,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 10,
+   "ch": "的",
+   "t": 53.78,
+   "frame": 1613,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 11,
+   "ch": "理",
+   "t": 54.0,
+   "frame": 1620,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 12,
+   "ch": "所",
+   "t": 54.18,
+   "frame": 1625,
+   "accent": true
+  },
+  {
+   "line": 10,
+   "k": 13,
+   "ch": "应",
+   "t": 54.46,
+   "frame": 1634,
+   "accent": false
+  },
+  {
+   "line": 10,
+   "k": 14,
+   "ch": "当",
+   "t": 55.1,
+   "frame": 1653,
+   "accent": true
+  },
+  {
+   "line": 11,
+   "k": 0,
+   "ch": "只",
+   "t": 55.66,
+   "frame": 1670,
+   "accent": false
+  },
+  {
+   "line": 11,
+   "k": 1,
+   "ch": "信",
+   "t": 55.74,
+   "frame": 1672,
+   "accent": false
+  },
+  {
+   "line": 11,
+   "k": 2,
+   "ch": "这",
+   "t": 56.04,
+   "frame": 1681,
+   "accent": false
+  },
+  {
+   "line": 11,
+   "k": 3,
+   "ch": "柄",
+   "t": 56.24,
+   "frame": 1687,
+   "accent": false
+  },
+  {
+   "line": 11,
+   "k": 4,
+   "ch": "刀",
+   "t": 56.5,
+   "frame": 1695,
+   "accent": true
+  },
+  {
+   "line": 11,
+   "k": 5,
+   "ch": "还",
+   "t": 57.04,
+   "frame": 1711,
+   "accent": false
+  },
+  {
+   "line": 11,
+   "k": 6,
+   "ch": "滚",
+   "t": 57.48,
+   "frame": 1724,
+   "accent": false
+  },
+  {
+   "line": 11,
+   "k": 7,
+   "ch": "烫",
+   "t": 57.76,
+   "frame": 1733,
+   "accent": true
+  }
+ ]
+}

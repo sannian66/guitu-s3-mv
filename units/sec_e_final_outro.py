@@ -47,6 +47,19 @@ HM = json.load(open(ROOT + '/crew/round4/E_hitmap.json'))
 KICKS = [(h['t'], h['strength']) for h in HM['hits'] if 'kick' in h['type'] and h['strength'] > 0.5]
 
 
+# [r4-DE#51] 用户：3m55 起 BGM 多记重音 → 跟鼓点做卡点节奏。
+# 窗口 234.4–239.6s 就是 E34(尾)+E35 这一整块；击打表来自 crew/round4/E_hitmap.json（HPSS percussive band flux）。
+OUTRO_HITS = [(h['t'], h['strength']) for h in HM['hits']
+              if 234.4 <= h['t'] <= 239.6 and h['strength'] >= 0.30]
+def outro_punch(t):
+    """尾段密集重音专用：脉冲更短（0.06s 衰减）更硬，用来做「跟鼓点」的顿挫（不闪、不提亮）。"""
+    p = 0.0
+    for th, s in OUTRO_HITS:
+        if th - 1 / 30 <= t < th + 0.22:
+            p = max(p, s * math.exp(-max(0.0, t - th + 1 / 30) / 0.06))
+    return p
+
+
 def kick_punch(t):
     p = 0.0
     for th, s in KICKS:
@@ -1049,8 +1062,11 @@ class E19(Shot):   # S125 CU 直视镜头；金匾碎片在他周围漂浮；「
     def render(self, t):
         u = self.u(t)
         fr = self.bg.copy()
+        _bg = fr.copy()  # [r4-props] 精灵合成前的背景（同坐标），供脸区真孔取样
         fr, info = put(fr, t, 'E_r5/stare_cu', (960, 1010), h=1000 * (1 + 0.06 * u), rim=GOLDW, rim_amt=2.4, rim_dir=(0.8, -0.6), wind=6,
                        grade=dict(expo=0.9, sat=0.6, tint=(1.06, 0.98, 0.88), lift=0.0, gamma=1.08))   # 第五棒：换同参考脸新生 CU（窄下颌，与 E13/E16/E21 统一）
+
+        fr = PD.silhouette_void_lyric(fr, info.get('A'), '伪装', (1000, 640, 1400, 880), phase=t, rise=0.6, feather=11.0, bore_out=12.0, bore_edge=3.5, hole_damp=0.18, bg=_bg, hole_style='black')  # [r4-props]
         fr = self.chips.draw(fr, (t - self.t0) * 0.5 + 0.2, to_cam=0.3, light=(0.6, -0.5, -0.6), dof=(3.0, 10.0), zfocus=1.4, emb=0.3)
         return bloom(fr, 0.8, 0.4)
 
@@ -1283,10 +1299,17 @@ class E25(Shot):   # S130（第三棒重做）低机位终极横斩：墨黑红�
             top = K.cam(fr, 1.0, oy=-gap / 2); bot = K.cam(fr, 1.0, oy=gap / 2)
             yy = np.arange(H, dtype=np.float32)[:, None, None]
             fr = np.where(yy < by, top, bot)
-            band = np.exp(-((yy[..., 0] - by) / max(2, gap * 0.6)) ** 2)
-            fr = fr * (1 - band[..., None] * 0.9) + band[..., None] * GOLDW * 2.2
-            fr = fr + np.exp(-((yy - by) / (gap + 40)) ** 2) * GOLD * 0.9 * (1 + 2 * math.exp(-q / 0.12))
-            if q < 0.08: fr = fr * 1.3 + np.array([0.3, 0.12, 0.04], np.float32) * (1 - q / 0.08)
+            # [r4-DE#49] 用户：劈开的光把主角挡住了 → ①光带收窄 ②压光（2.2→1.25）③用精灵 alpha 把光带从人物身上挖掉
+            band = np.exp(-((yy[..., 0] - by) / max(2, gap * 0.42)) ** 2)
+            subj = np.clip(info['A'], 0, 1)                                  # 人物精灵 alpha（H,W）
+            msk = 1 - 0.92 * subj                                            # 人物身上不出光带，光从两侧喷
+            band = band * msk
+            fr = fr * (1 - band[..., None] * 0.85) + band[..., None] * GOLDW * 1.25
+            glow = np.exp(-((yy[..., 0] - by) / (gap + 40)) ** 2) * msk
+            fr = fr + glow[..., None] * GOLD * 0.5 * (1 + 2 * math.exp(-q / 0.12))
+            coreL = np.exp(-((yy[..., 0] - by) / 2.2) ** 2) * (1 - 0.75 * subj)   # 切线上给一道细锐核心（也不盖人物）
+            fr = fr + coreL[..., None] * GOLDW * 0.85
+            if q < 0.08: fr = fr * 1.18 + np.array([0.3, 0.12, 0.04], np.float32) * (1 - q / 0.08)
             fr = RS.fx_sparks(fr, t, ts, (300, by), 1301, n=90, spd=1400, dirv=(1, -0.1), spread=0.35, grav=300, amt=1.2)
         fr = RS.fx_embers(fr, t, 1303, amt=0.7, n=50)
         return bloom(fr, 0.8, 0.6)
@@ -1693,14 +1716,20 @@ class E34(Credits):   # S136 ELS 日出全景，远处一粒走向太阳的人�
         sh = np.maximum(sh, np.exp(-(((xx - fx) / 11) ** 2 + ((yy - fy) / 3) ** 2)))     # 脚底接触影
         sh = cv2.GaussianBlur(sh.astype(np.float32), (0, 0), 3.5)
         fr = fr * (1 - 0.78 * sh[..., None])
-        fr, info = put(fr, t, 'S132/back_walk', (fx, fy - bob), h=80 - 14 * u, rim=GOLDW, rim_amt=4.0, grade=G_SIL, look='sil', wind=4)
+        fr, info = put(fr, t, 'S132/back_walk', (fx, fy - bob), h=80 - 14 * u, rim=GOLDW, rim_amt=6.5, grade=G_SIL, look='sil', wind=4)
         fr = bloom(fr, 0.85, 0.45)
         # 第八棒：辉光吃掉的人形压回去（核心实黑剪影 + 一圈细金边），远影在日面前可读
         A = np.clip(info['A'], 0, 1)
         core = cv2.erode(A, np.ones((3, 3), np.uint8))
-        fr = fr * (1 - 0.82 * core[..., None]) + core[..., None] * np.array([0.05, 0.035, 0.025], np.float32) * 0.82
+        # [r4-DE#50] 用户：逆光剪影头部看不清 → ① 人物外侧压一圈暗做分离（头不再糊进日面）
+        #            ② 剪影核心少压 6% + 提亮 8%（0.05→0.054）③ 轮廓光加强，头部那一截再加一道
+        halo = np.clip(cv2.GaussianBlur(A, (0, 0), 3.4) * 1.75 - A, 0, 1)
+        fr = fr * (1 - 0.78 * halo[..., None])
+        fr = fr * (1 - 0.76 * core[..., None]) + core[..., None] * np.array([0.054, 0.038, 0.027], np.float32) * 0.76
         rimL = np.clip(A - core, 0, 1)
-        return fr + rimL[..., None] * np.array([1.0, 0.82, 0.5], np.float32) * 0.35
+        heady = np.clip((np.arange(H, dtype=np.float32) - (fy - bob - (80 - 14 * u))) / max(1.0, 0.30 * (80 - 14 * u)), 0, 1)[:, None]
+        rimL = rimL * (1 + 0.9 * (1 - heady))          # 头部（A 顶部 30%）轮廓光再强一档
+        return fr + rimL[..., None] * np.array([1.0, 0.84, 0.54], np.float32) * 0.52
 
 
 class E35(Shot):   # S137 ECU 刀完全入鞘「咔」，朱印「鬼屠」盖在画面中心
@@ -1859,6 +1888,9 @@ SHAKE = {   # 冲击抖：(时刻, 幅度 px)
     'E05': [(CT(49, 11), 10)], 'E09': [(CT(51, 2), 12)], 'E11': [(6157 / 30, 12)], 'E12': [(CT(51, 9), 8)],
     'E25': [(CT(55, 6), 18)], 'E27b': [(6658 / 30, 14)], 'E27c': [(6678 / 30, 7)], 'E15': [(210.058, 16)], 'E30': [(TS, 8)], 'E35': [(238.24 - 1 / 30, 5)], 'E20': [(CT(54, 2), 10)],
 }
+# [r4-DE#51] 尾段跟鼓点：把 234.4–239.6 的密集重音逐颗变成镜头顿挫（amp = 2.5 + 5×强度，3–6px）
+SHAKE['E34'] = SHAKE.get('E34', []) + [(th, 2.5 + 5.0 * s) for th, s in OUTRO_HITS if th < 237.30]
+SHAKE['E35'] = SHAKE.get('E35', []) + [(th, 2.5 + 5.0 * s) for th, s in OUTRO_HITS if th >= 237.30]
 
 
 def ease(kind, u):
@@ -1888,7 +1920,7 @@ class _Sec:
         if mv:
             e = ease(mv[0], o.u(t))
             z = mv[1] + (mv[2] - mv[1]) * e; x = mv[3] + (mv[4] - mv[3]) * e; y = mv[5] + (mv[6] - mv[5]) * e; r = mv[7] + (mv[8] - mv[7]) * e
-            z *= 1 + 0.010 * kick_punch(t)
+            z *= 1 + 0.010 * kick_punch(t) + 0.020 * outro_punch(t)   # [r4-DE#51] 尾段跟鼓点：每个重音 2% 推近脉冲 + 抖动
             for (ts, amp) in SHAKE.get(sid, []):
                 q = t - ts
                 if 0 <= q < 0.5:

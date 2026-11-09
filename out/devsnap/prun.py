@@ -13,8 +13,10 @@ for key in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'VECLI
             'NUMEXPR_NUM_THREADS', 'BLIS_NUM_THREADS'):
     os.environ[key] = '1'
 os.environ['SPRITE_MODE'] = '1'
-os.environ['V4_FORCE'] = 'b_pre1,b_verse2'     # B 组未过线，按最新版强制接入；A/C/D/E 已 READY
-os.environ['C1_CAM'] = '3'; os.environ['C1_LYR'] = '3'; os.environ['C1_RIG'] = 'live'
+os.environ['V4_FORCE'] = 'b_pre1,b_verse2'
+os.environ['C1_CAM'] = '3'; os.environ['C1_RIG'] = 'live'
+# 统一字幕层接管时，副歌一自己的 lyric3 必须关掉（否则新老字幕同时出现）
+os.environ['C1_LYR'] = '0' if os.environ.get('LYRIC_UNI') == '1' else '3'
 for key in ('V4_OFF', 'V4_ONLY', 'SPRITE_SHOTS', 'SPRITE_EXT'):
     os.environ.pop(key, None)
 
@@ -81,11 +83,12 @@ def load():
     cv2.setNumThreads(1)
     import render_sprite_full as R
     import sections
-    return np, R, sections
+    import lyric_uni as LU                      # [lyric-uni] 全片唯一字幕层（LYRIC_UNI=1 生效）
+    return np, R, sections, LU
 
 
 def render_frame(f, cache, st):
-    np, R, sections = st
+    np, R, sections, LU = st
     f = int(f)
     m = sections.lookup(f)
     if m is not None:
@@ -96,6 +99,7 @@ def render_frame(f, cache, st):
         fr = C.to8(fr)
     else:
         raise RuntimeError(f'no renderer for frame {f}')
+    fr = LU.draw(fr, f)                        # [lyric-uni] 统一叠加点：段内 finish()/GU.apply() 之后
     if fr.shape != (1080, 1920, 3) or fr.dtype != np.uint8:
         raise RuntimeError(f'bad frame {f}: {fr.shape} {fr.dtype}')
     return fr

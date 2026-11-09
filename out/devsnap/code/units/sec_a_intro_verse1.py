@@ -2,12 +2,14 @@
 设计说明：crew/round4/A_storyboard.md（29 镜，平均 1.52s；主歌 21 镜平均 1.37s）。
 接口：READY / frame(f, cache) → uint8 (1080,1920,3) 成品帧（含黑边、颗粒、暗角）。
 结构仿 units/chorus1.py：每镜一个类 render(t)->(线性帧, ca)；CUTS 表驱动转场；VCam3 主运镜 + 卡点脉冲；屏幕层 = 署名 / 歌词竖排。"""
+# [r4-props] 主歌一 6 处：V01/V04/V08/V13/V17/V19 的 render 末尾各加一层 PD.play（只加不删，字幕仍由 lyric_uni 出；留空见 hidden_slots.json）。
 import os, sys, math, json, copy
 ROOT = '/Users/sannian/Downloads/鬼屠OP_new/out/devsnap/code'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 os.environ.setdefault('SPRITE_MODE', '1')
 import numpy as np, cv2
+import props_dev as PD
 import c1kit as K
 import typo as T
 import trans as TR
@@ -25,6 +27,7 @@ from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 READY = True
 FPS = 30
 W, H, BAR = 1920, 1080, 120
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
 F0, F1 = 0, 1321
 HMP = ROOT + '/crew/round4/A_hitmap.json'
 HM = json.load(open(HMP))
@@ -644,6 +647,7 @@ class V01(Shot):
         a = t - CT(0, 5)
         if a >= 0:
             fr = streak(fr, P0[1] - 40, P0[0], P1[0], a / 0.12, amt=1.3, ang=math.degrees(math.atan2(P1[1] - P0[1], P1[0] - P0[0])))
+        fr = PD.play(fr, 'L01', t)  # [r4-props]
         return fr, (4 if 0 <= a < 0.1 else 0)
 
 
@@ -753,6 +757,7 @@ class V04(Shot):
             cv2.fillConvexPoly(Lp, np.array([(int(x0 / 2) - 16, 0), (int(x0 / 2) + 16, 0), (int(x0 / 2), 70)], np.int32), 1.0)
         Lp = cv2.resize(cv2.GaussianBlur(Lp, (0, 0), 9), (W, H))[..., None]
         fr = fr * (1 - 0.93 * Lp)
+        fr = PD.play(fr, 'L02', t)  # [r4-props]
         return fr, 0
 
 
@@ -955,6 +960,7 @@ class V08(Shot):
         fr = fr * (1 - 0.55 * (1 - e) * sh)
         fr = K.sparks(fr, t, 83, (760, 540), n=24, life=0.6, speed=(40, 160), dirc=(0.4, -1), spread=2.0, grav=-40,
                       area=(180, 180), amt=0.35, t0=tsw - 0.02, burst=True, color=(0.95, 0.85, 0.65))      # 纸尘余烟
+        fr = PD.play(fr, 'L03', t)  # [r4-props]
         return fr, (2 if k < 0.06 else 0)
 
 
@@ -1383,6 +1389,7 @@ class V13(Shot):
         fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
                         rim_dir=(0.7, -0.6), grade=dict(expo=0.5 + 0.3 * (1 - fc), sat=0.4, gamma=1.3 - 0.2 * (1 - fc)), wind=3, rot=bow, defocus=0.3 + 5.5 * fc)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
+        fr = PD.play(fr, 'L05', t)  # [r4-props]
         return fr, 0
 
 
@@ -1626,6 +1633,7 @@ class V17(Shot):
             return fr, 0
         fr = self.top(t, a)
         if a < 0.15: fr = fr * (1 + 0.5 * (1 - a / 0.15))
+        fr = PD.play(fr, 'L07', t)  # [r4-props]
         return fr, 0
 
 
@@ -1711,6 +1719,7 @@ class V19(Shot):
         for p in ((0.514, 0.26), (0.441, 0.26)):
             fr = pupil_glint(fr, info['to_scr'](p), 0.45 * g, 0.7)
         fr = RAIN.draw(fr, t, 0.9, angle=4, light=(360, 160), layers=(1, 2))
+        fr = PD.play(fr, 'L08', t)  # [r4-props]
         return fr, (3 if g > 0.5 else 0)
 
 
@@ -1814,7 +1823,8 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 #   P0 转场去重 4 处：V02 hard→zoom_through、V06 hard→ink_bleed、V14 hard→a_zoom2、V17 hard→paper_tear
 #   P1 过渡长度 3 处：A08 post 0.40→0.20、V16 post 0.34→0.20、V18 post 0.30→0.20
 #   P0 二期 1 处：V04 occlusion→luma（原与 A07a 隔 5 刀重名）
-#   P2b 1 处：A 段 +3 刀（V01/V13/V16 各拆两拍，帧 483/950/1115，均落在重拍；只加切点，原切点与字层未动）
+#   P2b：A 段 +3 刀（V01/V13/V16 各拆两拍，帧 483/950/1115，均落在重拍；只加切点，原切点与字层未动）
+#         三刀的入转场 = 新增的 'impact_nf'（Section.raw 里新增分支：3 帧顿挫 8→4→1px + 1.02 推近，不闪不提亮不做 RGB 分离）
 CUTS = {
     'A02': ('a_cloud', 0.20, 0.24, dict(seed=2)),                                     # 云墙横扫：A01 云海 → A02 山脊
     'A03': ('a_glint', 0.14, 0.18, dict(angle=-12, center=(960, 560))),             # 第五棒：冷光掠刃（山脊线 → 刀身线），替换蓝色闪电圈
@@ -1825,7 +1835,7 @@ CUTS = {
     'A07b': ('zoom_through', 0.16, 0.20, dict(center=(960, 620), variant='raindrop')),  # 穿过一滴雨：滴内倒映城墙
     'A08': ('smoke_through', 0.06, 0.20, dict(seed=8, direction=1, density=0.65)),    # [r4-P1] post 0.40→0.20，烟不再压 A08 首帧字（原注释：片名化灰成烟，烟后露出城门）
     'V01': ('a_seam', 0.10, 0.20, {}),                                               # 城门合缝，门缝里开出雨刃
-    'V01b': ('none', 0, 0, {}),   # [r4-P2b] 新增刀（帧 483 / 16.100s）：重拍无闪硬切
+    'V01b': ('impact_nf', 0, 0, {}),   # [r4-P2b] 新增刀（帧 483 / 16.100s）：重拍 + 无闪顿挫(impact_nf)
     'V02': ('zoom_through', 0.08, 0.14, dict(center=(960, 540))),   # [r4-P0] 原 hard（轻闪白）→ 穿镜
     'V03': ('shatter', 0.04, 0.20, dict(seed=3, center=(1060, 880), n=60)),
     'V04': ('luma', 0.06, 0.14, dict()),   # [r4-P0b] 原 occlusion(kind=spear)：与 A07a 隔 5 刀重名 → 火把亮处起笔的亮度擦除
@@ -1838,11 +1848,11 @@ CUTS = {
     'V11': ('flash_red', 0.03, 0.10, {}),
     'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
     'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
-    'V13b': ('none', 0, 0, {}),   # [r4-P2b] 新增刀（帧 950 / 31.667s）：重拍无闪硬切
+    'V13b': ('impact_nf', 0, 0, {}),   # [r4-P2b] 新增刀（帧 950 / 31.667s）：重拍 + 无闪顿挫(impact_nf)
     'V14': ('a_zoom2', 0.10, 0.16, dict(center=(960, 520), seed=14)),   # [r4-P0] 原 hard（轻闪白）→ 墨边圆窗推镜（不用 a_cleave：V12 刚用过，2 刀内重名）
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
     'V16': ('a_glyph', 0.08, 0.20, dict(ch='主', center=(750, 650), size=230)),   # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）｜[r4-P1] post 0.34→0.20
-    'V16b': ('none', 0, 0, {}),   # [r4-P2b] 新增刀（帧 1115 / 37.167s）：重拍无闪硬切
+    'V16b': ('impact_nf', 0, 0, {}),   # [r4-P2b] 新增刀（帧 1115 / 37.167s）：重拍 + 无闪顿挫(impact_nf)
     'V17': ('paper_tear', 0.08, 0.16, dict(seed=217, angle=6)),   # [r4-P0] 原 hard（轻闪白）→ 撕纸
     'V18': ('smoke_through', 0.06, 0.20, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）｜[r4-P1] post 0.30→0.20
     'V19': ('hard', 0, 0, {}),
@@ -2240,7 +2250,7 @@ class Section:
             if j <= 0 or j >= len(self.shots): continue
             b = self.shots[j]; name, pre, post, kw = CUTS.get(self.ids[j], ('hard', 0, 0, {}))
             c = b.t0
-            if name in ('hard', 'whip') or not (c - pre - 1e-6 <= t < c + post - 1e-6): continue
+            if name in ('hard', 'whip', 'impact_nf') or not (c - pre - 1e-6 <= t < c + post - 1e-6): continue
             a = self.shots[j - 1]
             B, ca2 = b.render(t)
             Af, ca1 = a.render(t) if (pre > 0 or t < c) else (B, 0)
@@ -2265,6 +2275,16 @@ class Section:
                 a_ = 1.0 if k == 0 else 0.45
                 fr = K.cam(fr, 1 + 0.03 * a_) * (1 + 0.22 * a_) + 0.05 * a_
                 ca = max(ca, 3 if k == 0 else 1)
+        elif name == 'impact_nf' and i > 0:
+            # round4 P2b：**无闪的落拍顿挫**。与 'hard' 的分水岭：不闪、不提亮、不做 RGB 分离——
+            # 只有三样，且都很轻：① 切后 3 帧衰减 (1.0, 0.45, 0.18) ② 8→4→1px 竖向位移抖（不带旋转）
+            # ③ 1.02 倍推近。用于「加刀提速但不许出白帧」的刀（A 段 V01b/V13b/V16b）。
+            k = int((t - s.t0) * FPS + 1e-6)
+            if k < 3:
+                a_ = (1.0, 0.45, 0.18)[k]
+                dy = (8.0, -4.0, 1.0)[k]                     # 8→4→1px，方向交替才读得出「抖」
+                fr = K.cam(fr, 1 + 0.02 * a_, 0.0, dy)
+                ca = max(ca, 2 if k == 0 else 1)
         return fr, ca
 
     def frame(self, f):
@@ -2281,7 +2301,8 @@ class Section:
             fr = TITLE.draw(fr, t, out=clamp01((t - V(13.35)) / 0.45), sheen=clamp01((t - V(11.52)) / 0.7) if t >= V(11.52) else None,
                             glow=0.5 * math.exp(-max(0, k) / 0.3) + 0.22 * sum(math.exp(-max(0.0, t - V(b)) / 0.15) * (t >= V(b)) for b in (8.75, 9.22, 9.68, 10.15, 10.61, 11.05, 11.98, 12.45, 12.89)))
         if t < 7.9: fr = credits(fr, t)
-        fr = lyrics(fr, t)
+        # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+        if not LYRIC_UNI: fr = lyrics(fr, t)
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         out = K.finish(fr, t, ca=ca, vig=0.45, red_keep=1.0)
         out = GU.apply(out, t, 'a_intro_verse1')          # 统一 grade 层（材质层归一）

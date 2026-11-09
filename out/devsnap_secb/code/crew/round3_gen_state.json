@@ -1,0 +1,161 @@
+{
+ "spent": 36,
+ "jobs": {
+  "S098:point_down": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "47c1ec38-0e45-4361-8634-b19d64252eec",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S098/point_down_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S099:point_up": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "6d9cfcd1-59f3-416a-bb1b-81a117277dae",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S099/point_up_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S102:eye_open": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "ab718896-6c9b-4b2a-898e-f7cb20ff1cc8",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S102/eye_open_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S103:slow_draw": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "ca92ed88-da94-450e-ab62-6a519c40c052",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S103/slow_draw_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S105:charge_front": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "d9ac0ff9-9821-4798-aa54-5e6d454b0ad0",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S105/charge_front_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S045:spin": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "167e51ac-8c3c-4ae7-9f7c-8b31c2946849",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S045/spin_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S037:stand": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "7256241b-bbdb-4935-ae53-c61fd355e4fd",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S037/stand_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S062:puppeteer": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "ea2fc1ea-46f4-435a-8dda-17066de8cdd6",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S062/puppeteer_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S120:plant": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "dbe6ed15-38e8-46b7-8c6c-e9f8fe38143a",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S120/plant_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S084:knock_back": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "fb84e5a2-d843-490c-beb4-dff31dd73960",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S084/knock_back_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S073:spin1": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "109e32d9-b371-476b-8fa1-61a3f78dc96b",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S073/spin1_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  },
+  "S018:turn": {
+   "tries": [
+    {
+     "n": 1,
+     "task_id": "05c8e7eb-62ae-4a4b-8985-9cb35b03e01c",
+     "status": "done",
+     "pts": 3,
+     "file": "/workspace/projects/056c9682-39b0-4dca-a3b4-ab19434e714b/work/rest_cands/S018/turn_try1_0.png",
+     "verdict": "ok"
+    }
+   ],
+   "accepted": 1
+  }
+ }
+}

@@ -2,11 +2,13 @@
 设计说明：crew/round4/E_storyboard.md。36 镜：副歌终 26 镜（平均 1.08s）+ 尾奏 10 镜（含片名再现、6 条署名、收刀落印、收墨）。
 接口：READY=False；frame(f, cache) -> uint8 (1080,1920,3) 成品帧（含黑边/颗粒/暗角）。
 结构仿 units/chorus1.py：每镜一个类（render(t) 场景 + text(fr,t) 屏幕字层），SHOTS 表驱动切点，CUTS 表驱动转场，MOVE 表驱动运镜。"""
+# [r4-props] 终章 1 处：E07 末尾加 PD.play L51（烧穿挂轴）；L54 需 E19 交出精灵 alpha+bg，暂 skip。
 import math, os, sys, json
 ROOT = '/Users/sannian/Downloads/鬼屠OP_new/out/devsnap/code'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+import props_dev as PD
 import c1kit as K
 import typo as T
 import trans as TR
@@ -43,6 +45,19 @@ def cts(li, ks): return [CT(li, k) for k in ks]
 
 HM = json.load(open(ROOT + '/crew/round4/E_hitmap.json'))
 KICKS = [(h['t'], h['strength']) for h in HM['hits'] if 'kick' in h['type'] and h['strength'] > 0.5]
+
+
+# [r4-DE#51] 用户：3m55 起 BGM 多记重音 → 跟鼓点做卡点节奏。
+# 窗口 234.4–239.6s 就是 E34(尾)+E35 这一整块；击打表来自 crew/round4/E_hitmap.json（HPSS percussive band flux）。
+OUTRO_HITS = [(h['t'], h['strength']) for h in HM['hits']
+              if 234.4 <= h['t'] <= 239.6 and h['strength'] >= 0.30]
+def outro_punch(t):
+    """尾段密集重音专用：脉冲更短（0.06s 衰减）更硬，用来做「跟鼓点」的顿挫（不闪、不提亮）。"""
+    p = 0.0
+    for th, s in OUTRO_HITS:
+        if th - 1 / 30 <= t < th + 0.22:
+            p = max(p, s * math.exp(-max(0.0, t - th + 1 / 30) / 0.06))
+    return p
 
 
 def kick_punch(t):
@@ -457,6 +472,7 @@ class E07(Shot):   # S116 LS（第三棒重做）挂轴缝后，太上皇本人�
         side = np.clip(np.abs(np.arange(W, dtype=np.float32) - 960) / 160 - 3.6, 0, 1)[None, :]   # 第四棒：前景挂轴只在两侧画边、实体不透明，不再叠在纸扎身上
         C, A = R3.Scrolls.light(C, A, fr * 0.5, 0.5, blur=10)
         fr = R3.comp(fr, C * 0.35, A * side)
+        fr = PD.play(fr, 'L51', t)  # [r4-props]
         return bloom(fr, 0.85, 0.35)
 
     def text(self, fr, t): return self.l.draw(fr, t)
@@ -1046,8 +1062,11 @@ class E19(Shot):   # S125 CU 直视镜头；金匾碎片在他周围漂浮；「
     def render(self, t):
         u = self.u(t)
         fr = self.bg.copy()
+        _bg = fr.copy()  # [r4-props] 精灵合成前的背景（同坐标），供脸区真孔取样
         fr, info = put(fr, t, 'E_r5/stare_cu', (960, 1010), h=1000 * (1 + 0.06 * u), rim=GOLDW, rim_amt=2.4, rim_dir=(0.8, -0.6), wind=6,
                        grade=dict(expo=0.9, sat=0.6, tint=(1.06, 0.98, 0.88), lift=0.0, gamma=1.08))   # 第五棒：换同参考脸新生 CU（窄下颌，与 E13/E16/E21 统一）
+
+        fr = PD.silhouette_void_lyric(fr, info.get('A'), '伪装', (1000, 640, 1400, 880), phase=t, rise=0.6, feather=11.0, bore_out=12.0, bore_edge=3.5, hole_damp=0.18, bg=_bg, hole_style='black')  # [r4-props]
         fr = self.chips.draw(fr, (t - self.t0) * 0.5 + 0.2, to_cam=0.3, light=(0.6, -0.5, -0.6), dof=(3.0, 10.0), zfocus=1.4, emb=0.3)
         return bloom(fr, 0.8, 0.4)
 
@@ -1280,10 +1299,17 @@ class E25(Shot):   # S130（第三棒重做）低机位终极横斩：墨黑红�
             top = K.cam(fr, 1.0, oy=-gap / 2); bot = K.cam(fr, 1.0, oy=gap / 2)
             yy = np.arange(H, dtype=np.float32)[:, None, None]
             fr = np.where(yy < by, top, bot)
-            band = np.exp(-((yy[..., 0] - by) / max(2, gap * 0.6)) ** 2)
-            fr = fr * (1 - band[..., None] * 0.9) + band[..., None] * GOLDW * 2.2
-            fr = fr + np.exp(-((yy - by) / (gap + 40)) ** 2) * GOLD * 0.9 * (1 + 2 * math.exp(-q / 0.12))
-            if q < 0.08: fr = fr * 1.3 + np.array([0.3, 0.12, 0.04], np.float32) * (1 - q / 0.08)
+            # [r4-DE#49] 用户：劈开的光把主角挡住了 → ①光带收窄 ②压光（2.2→1.25）③用精灵 alpha 把光带从人物身上挖掉
+            band = np.exp(-((yy[..., 0] - by) / max(2, gap * 0.42)) ** 2)
+            subj = np.clip(info['A'], 0, 1)                                  # 人物精灵 alpha（H,W）
+            msk = 1 - 0.92 * subj                                            # 人物身上不出光带，光从两侧喷
+            band = band * msk
+            fr = fr * (1 - band[..., None] * 0.85) + band[..., None] * GOLDW * 1.25
+            glow = np.exp(-((yy[..., 0] - by) / (gap + 40)) ** 2) * msk
+            fr = fr + glow[..., None] * GOLD * 0.5 * (1 + 2 * math.exp(-q / 0.12))
+            coreL = np.exp(-((yy[..., 0] - by) / 2.2) ** 2) * (1 - 0.75 * subj)   # 切线上给一道细锐核心（也不盖人物）
+            fr = fr + coreL[..., None] * GOLDW * 0.85
+            if q < 0.08: fr = fr * 1.18 + np.array([0.3, 0.12, 0.04], np.float32) * (1 - q / 0.08)
             fr = RS.fx_sparks(fr, t, ts, (300, by), 1301, n=90, spd=1400, dirv=(1, -0.1), spread=0.35, grav=300, amt=1.2)
         fr = RS.fx_embers(fr, t, 1303, amt=0.7, n=50)
         return bloom(fr, 0.8, 0.6)
@@ -1690,14 +1716,20 @@ class E34(Credits):   # S136 ELS 日出全景，远处一粒走向太阳的人�
         sh = np.maximum(sh, np.exp(-(((xx - fx) / 11) ** 2 + ((yy - fy) / 3) ** 2)))     # 脚底接触影
         sh = cv2.GaussianBlur(sh.astype(np.float32), (0, 0), 3.5)
         fr = fr * (1 - 0.78 * sh[..., None])
-        fr, info = put(fr, t, 'S132/back_walk', (fx, fy - bob), h=80 - 14 * u, rim=GOLDW, rim_amt=4.0, grade=G_SIL, look='sil', wind=4)
+        fr, info = put(fr, t, 'S132/back_walk', (fx, fy - bob), h=80 - 14 * u, rim=GOLDW, rim_amt=6.5, grade=G_SIL, look='sil', wind=4)
         fr = bloom(fr, 0.85, 0.45)
         # 第八棒：辉光吃掉的人形压回去（核心实黑剪影 + 一圈细金边），远影在日面前可读
         A = np.clip(info['A'], 0, 1)
         core = cv2.erode(A, np.ones((3, 3), np.uint8))
-        fr = fr * (1 - 0.82 * core[..., None]) + core[..., None] * np.array([0.05, 0.035, 0.025], np.float32) * 0.82
+        # [r4-DE#50] 用户：逆光剪影头部看不清 → ① 人物外侧压一圈暗做分离（头不再糊进日面）
+        #            ② 剪影核心少压 6% + 提亮 8%（0.05→0.054）③ 轮廓光加强，头部那一截再加一道
+        halo = np.clip(cv2.GaussianBlur(A, (0, 0), 3.4) * 1.75 - A, 0, 1)
+        fr = fr * (1 - 0.78 * halo[..., None])
+        fr = fr * (1 - 0.76 * core[..., None]) + core[..., None] * np.array([0.054, 0.038, 0.027], np.float32) * 0.76
         rimL = np.clip(A - core, 0, 1)
-        return fr + rimL[..., None] * np.array([1.0, 0.82, 0.5], np.float32) * 0.35
+        heady = np.clip((np.arange(H, dtype=np.float32) - (fy - bob - (80 - 14 * u))) / max(1.0, 0.30 * (80 - 14 * u)), 0, 1)[:, None]
+        rimL = rimL * (1 + 0.9 * (1 - heady))          # 头部（A 顶部 30%）轮廓光再强一档
+        return fr + rimL[..., None] * np.array([1.0, 0.84, 0.54], np.float32) * 0.52
 
 
 class E35(Shot):   # S137 ECU 刀完全入鞘「咔」，朱印「鬼屠」盖在画面中心
@@ -1768,6 +1800,7 @@ CHORUS_END = 6638
 # [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
 #   P0 转场去重 7 处：E02→ink_swallow、E04→seal_cover、E07→blade_black、E08→paper_tear、E11→occlusion、E13→ink_swallow、E21 flash_red→door_open
 #   P1 过渡长度 5 处：E16/E22/E26 pre 0→0.08、E31 pre 0→0.08+post 0.40→0.20、E34 post 0.30→0.20
+#   E 段收尾轮：E14T/E18/E24/E30/E35（原 hard 提亮）+ E27b（原 impact 白金闪）→ 本地新招 'impact_nf'（3 帧 8→4→1px 顿挫，不闪不提亮）
 CUTS = {   # 第三棒：亮底上不再用白色系转场（flash_white 0 处、whip 1 处、zoom_through 0 处），换成暗色系：墨晕吞屏 / 刀光黑切 / 印章盖屏
     'E01': ('entry_flash', 0, 0.22, {}),
     'E02': ('ink_swallow', 0.14, 0.08, dict(center=(900, 380), seed=202)),   # [r4-P0] 原 hard（提亮闪）→ 墨吞屏
@@ -1782,30 +1815,30 @@ CUTS = {   # 第三棒：亮底上不再用白色系转场（flash_white 0 处�
     'E11': ('occlusion', 0.10, 0.14, dict(kind='pillar', direction=-1, color=(0.03, 0.02, 0.015))),   # [r4-P0] 原 hard（提亮闪）→ 前景遮挡
     'E12': ('seal_cover', 0.08, 0.16, dict(center=(820, 500), rot=-4)),
     'E13': ('ink_swallow', 0.16, 0.08, dict(center=(1000, 520), seed=13)),   # [r4-P0] 原 hard（提亮闪）→ 墨吞屏
-    'E14T': ('hard', 0, 0, {}),
+    'E14T': ('impact_nf', 0, 0, {}),   # [r4-E] 原 hard（提亮 15%）→ 无闪顿挫
     'E15': ('hard', 0, 0, {}),
     'E16': ('door_open', 0.08, 0.20, dict(cx=960)),             # [r4-P1] pre 0→0.08（原注释：第四棒：E15 沿竖缝裂开两扇滑出 → E16 自己的中缝（图形匹配））
     'E17': ('push_h', 0.07, 0.13, {}),                         # 第四棒：横推，中间帧 = 金脸 | 朱缝 | 朱脸 正面相对
-    'E18': ('hard', 0, 0, {}),
+    'E18': ('impact_nf', 0, 0, {}),    # [r4-E] 原 hard（提亮 15%）→ 无闪顿挫
     'E19': ('gold_leaf', 0.04, 0.22, dict(center=(960, 540), seed=19, red_frac=0.07)),   # 第六棒：三角碎片 → 有厚度的金箔碎片（与镜内箔片同质）
     'E20': ('light_sweep', 0.06, 0.22, dict(y=770)),           # 第六棒：圆形 iris → 贴地平线的横向光线扫入
     'E21': ('door_open', 0.0, 0.08, dict(cx=960)),   # [r4-P0] 原 flash_red → 门缝开
     'E22': ('match_cut', 0.08, 0.18, dict(shape='circle', center=(960, 330), radius=120)),   # [r4-P1] pre 0→0.08
     'E23': ('impact', 0, 0, dict(col=(1.0, 0.86, 0.6), amp=10, soft=True)),     # 第五棒：硬切加冲击；第八棒 soft：冲白减半护暗部、色散减半
-    'E24': ('hard', 0, 0, {}),
+    'E24': ('impact_nf', 0, 0, {}),    # [r4-E] 原 hard（提亮 15%）→ 无闪顿挫
     'E25': ('slash_wipe', 0.03, 0.12, dict(angle=-8)),
     'E26': ('match_cut', 0.08, 0.22, dict(shape='line', center=(960, 600), angle=0)),   # [r4-P1] pre 0→0.08
     'E27a': ('impact', 0, 0, dict(col=(1.0, 0.25, 0.12), amp=12)),   # 第五棒：朱红闪 + 抖
-    'E27b': ('impact', 0, 0, dict(col=(1.0, 0.9, 0.7), amp=12)),     # 第五棒：白金闪 + 抖
+    'E27b': ('impact_nf', 0, 0, {}),     # [r4-E] 原 impact 白金闪 + 抖 → 无闪顿挫（保留 E27a 朱红闪 + E27c 刀线，三连仍成立）
     'E27c': ('slash_wipe', 0.03, 0.10, dict(angle=-78)),               # 第五棒：E27b 刀光延续成斩线 → 匾
     'E28': ('impact', 0, 0, dict(col=(0.9, 0.2, 0.1), amp=10)),      # 第六棒：入转场不再带出匾（匾只在 E04/E05/E27c）
     'E29': ('ink_swallow', 0.18, 0.18, dict(center=(1000, 500), seed=9)),
-    'E30': ('hard', 0, 0, {}),
+    'E30': ('impact_nf', 0, 0, {}),    # [r4-E] 原 hard（提亮 15%）→ 无闪顿挫（落版入口）
     'E31': ('ink_bleed', 0.08, 0.20, dict(center=(960, 540), white=False, seed=9)),   # [r4-P1] pre 0→0.08、post 0.40→0.20
     'E32': ('blade_sweep', 0.12, 0.16, dict(direction=1)),      # 第五棒：平灰板 → 近景刀身掠镜（钢纹/脊线/刃口暖光/运动模糊）
     'E33': ('warm_veil', 0.14, 0.20, dict(axis='x', direction=-1, seed=7301, cap=0.66)),   # 第七棒：fog_wall 中间帧满屏平灰 → 暖雾封顶 66%（刀柄/刀穗剪影始终透出）+ 斜入光束 + 翻卷亮边
     'E34': ('warm_veil', 0.20, 0.20, dict(axis='y', seed=7341, cap=0.62, warm=(1.0, 0.82, 0.52), dark=(0.13, 0.09, 0.06))),   # [r4-P1] post 0.30→0.20（原注释：第七棒：灰烟平涂 → 自下翻涌的暖金烟（封顶 62%，烟里带光束与亮边））
-    'E35': ('hard', 0, 0, {}),
+    'E35': ('impact_nf', 0, 0, {}),    # [r4-E] 原 hard（提亮 15%）→ 无闪顿挫（落版）
     'E36': ('cut', 0, 0, {}),
 }
 CUSTOM = {'warm_veil': R7.warm_veil, 'light_sweep': R6.light_sweep, 'gold_leaf': R6.gold_leaf, 'blade_sweep': R5.blade_sweep, 'fog_wall': R5.fog_wall, 'blade_black': R3.blade_black, 'seal_cover': R3.seal_cover, 'ink_swallow': R3.ink_swallow, 'push_h': R3.push_h, 'door_open': R3.door_open}
@@ -1855,6 +1888,9 @@ SHAKE = {   # 冲击抖：(时刻, 幅度 px)
     'E05': [(CT(49, 11), 10)], 'E09': [(CT(51, 2), 12)], 'E11': [(6157 / 30, 12)], 'E12': [(CT(51, 9), 8)],
     'E25': [(CT(55, 6), 18)], 'E27b': [(6658 / 30, 14)], 'E27c': [(6678 / 30, 7)], 'E15': [(210.058, 16)], 'E30': [(TS, 8)], 'E35': [(238.24 - 1 / 30, 5)], 'E20': [(CT(54, 2), 10)],
 }
+# [r4-DE#51] 尾段跟鼓点：把 234.4–239.6 的密集重音逐颗变成镜头顿挫（amp = 2.5 + 5×强度，3–6px）
+SHAKE['E34'] = SHAKE.get('E34', []) + [(th, 2.5 + 5.0 * s) for th, s in OUTRO_HITS if th < 237.30]
+SHAKE['E35'] = SHAKE.get('E35', []) + [(th, 2.5 + 5.0 * s) for th, s in OUTRO_HITS if th >= 237.30]
 
 
 def ease(kind, u):
@@ -1884,7 +1920,7 @@ class _Sec:
         if mv:
             e = ease(mv[0], o.u(t))
             z = mv[1] + (mv[2] - mv[1]) * e; x = mv[3] + (mv[4] - mv[3]) * e; y = mv[5] + (mv[6] - mv[5]) * e; r = mv[7] + (mv[8] - mv[7]) * e
-            z *= 1 + 0.010 * kick_punch(t)
+            z *= 1 + 0.010 * kick_punch(t) + 0.020 * outro_punch(t)   # [r4-DE#51] 尾段跟鼓点：每个重音 2% 推近脉冲 + 抖动
             for (ts, amp) in SHAKE.get(sid, []):
                 q = t - ts
                 if 0 <= q < 0.5:
@@ -1900,7 +1936,7 @@ class _Sec:
             if j <= 0 or j >= len(SHOTS): continue
             name, pre, post, kw = CUTS.get(IDS[j], ('hard', 0, 0, {}))
             c = BOUNDS[j] / FPS
-            if name in ('hard', 'cut', 'entry_flash', 'impact') or not (c - pre - 1e-6 <= t < c + post - 1e-6): continue
+            if name in ('hard', 'cut', 'entry_flash', 'impact', 'impact_nf') or not (c - pre - 1e-6 <= t < c + post - 1e-6): continue
             B = self.full(j, t)
             A = self.full(j - 1, min(t, c - 1 / FPS) if pre == 0 else t)
             p = (t - (c - pre)) / (pre + post)
@@ -1929,6 +1965,13 @@ class _Sec:
             else:
                 fr = fr * (1 + 0.6 * fl) + np.asarray(kw.get('col', (1, 1, 1)), np.float32) * 0.45 * fl
                 ca = (6, 5, 3, 2, 1)[k]
+        elif name == 'impact_nf' and k < 3 and i > 0:
+            # round4 P2b/E：**无闪落拍顿挫**（与 sec_a 的 impact_nf 同规格，本地实现，不跨文件 import）：
+            # 切后 3 帧衰减 (1.0, 0.45, 0.18) + 竖向位移抖 8→4→1px + 1.02 推近；不闪、不提亮、不做 RGB 分离。
+            a_ = (1.0, 0.45, 0.18)[k]
+            dy = (8.0, -4.0, 1.0)[k]
+            fr = K.cam(fr, 1 + 0.02 * a_, oy=dy)
+            ca = 2 if k == 0 else 1
         elif name == 'hard' and k < 2 and i > 0:
             a = 1.0 if k == 0 else 0.45
             fr = K.cam(fr, 1 + 0.025 * a) * (1 + 0.15 * a) + 0.04 * a
