@@ -22,6 +22,13 @@ import c_piying as PY
 from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark, fbm
 
 READY = True
+# 第五轮（USER_NOTES_r5 #34–#43 前半）：去画内字 / 纲上线 / 大局为上做进匾 / C21·C22 人物位置。C_R5=0 回到第四轮效果。
+R5 = os.environ.get('C_R5', '1') != '0'
+if R5:   # 第五轮通用：人物精灵 wind_amp 统一 5–8px（0 = 道具/手/刀/影子，保持不动）
+    _put0 = put
+    def put(fr, t, name, *a, wind=6.0, **kw):
+        if wind: wind = min(8.0, max(5.0, float(wind)))
+        return _put0(fr, t, name, *a, wind=wind, **kw)
 
 # 第九棒：c_kit.tex 的缓存键只认名字不认 seed —— 'c1'/'c2'/'gw' 三张云/水纹底图由「本进程第一个调用的镜头」决定，
 # 导致分块渲染 / 联系表分批时同一帧长得不一样（例：C15 批渲成一团白曝、整段顺渲则是清楚的落地闪电）。
@@ -344,7 +351,7 @@ class C02(Shot):
         oy = lerp(70, -40, eio(u))
         fr = candle_room(t, glow_c=(960, 120), amt=1.3) * 0.8
         fr = fog(fr, t, 3, density=0.35, y0=200, y1=900, color=(0.30, 0.22, 0.15), speed=(12, -4))
-        tug = sum(pulse(t, V(b), 0.18) for b in (119.10, 119.57, 120.03))          # 第五棒：逐拍提线（手往上一拽，字被拽起）
+        tug = sum(pulse(t, V(b), 0.18) for b in ((119.10, 119.57, 120.03, 120.60) if R5 else (119.10, 119.57, 120.03)))   # 第五棒：逐拍提线（手往上一拽，字被拽起）；第五轮：「纲」落线那拍再拽一次
         hand_y = 70 - oy * 0.6 - 26 * tug
         tips = [(830, hand_y + 300), (900, hand_y + 330), (980, hand_y + 340), (1060, hand_y + 320), (1120, hand_y + 280), (790, hand_y + 250)]  # 第四棒：字 72→104px、挂低、画在手前
         bg0 = fr.copy()
@@ -357,6 +364,8 @@ class C02(Shot):
             g = np.clip((yy - (yb - 160)) / 150, 0, 1)
             fr = fr * (1 - g) + bg0 * g
         s = Sent(28, [5, 6, 7, 8, 9, 10], 0, 0, size=70, mode='type', red='', glitch='剧本')
+        if R5:
+            return self.render_r5(t, fr, oy, hand_y, tug)
         for i, x in enumerate(self.XS):
             ti = s.tin[i]
             sw = 14 * math.sin(t * 3.0 + i * 1.3) + 22 * pulse(t, ti, 0.25) * (1 if i % 2 else -1)
@@ -366,6 +375,46 @@ class C02(Shot):
             fr = red_line(fr, tips[i], end, w=2, amt=0.9)
             if t >= ti:
                 c = s.text[i]
+                L = glyph_layer(c, end[0], end[1] + 74, 104, CREAM if c not in '剧本' else (1.0, 0.86, 0.6), font='serif_sb',
+                                rot=-sw * 0.6, scale=1 + 0.15 * pulse(t, ti, 0.06))
+                fr = T.compose(fr, L, shadow=0.6, shadow_sigma=14, glow=0.25, glow_sigma=10)
+                if c in '剧本':
+                    off = 7 * pulse(t, ti, 0.3) + 3
+                    for dx, cc in ((-off, (1, 0.1, 0.1)), (off, (0.1, 0.6, 1.0))):
+                        L2 = glyph_layer(c, end[0] + dx, end[1] + 74, 104, cc, font='serif_sb', rot=-sw * 0.6, alpha=0.5)
+                        fr = T.compose(fr, L2, shadow=0, glow=0)
+        return fr
+
+    def render_r5(self, t, fr, oy, hand_y, tug):
+        """第五轮 #35：「剧本」后加第七条红线吊「纲」（提纲），七字以画面中轴对称排开（原来六字挤在右半、提线从左指尖斜拉到最右）。
+        「纲」在「提」那拍从手里顺着丝线放下来、120.60 那拍落定一拽，切点挪到「纲」字那拍（121.00 → C03 木偶齐被拽起）。"""
+        s = Sent(28, [5, 6, 7, 8, 9, 10, 11], 0, 0, size=70, mode='type', red='', glitch='剧本')
+        n = len(s.text)
+        td, tl = V(120.36) + 1 / FPS, V(120.60)
+        for i in range(n):
+            x = 960 + (i - 3) * 200
+            tip = (960 + (i - 3) * 64, hand_y + 300 + 40 * math.cos((i - 3) * 0.55) - 10)   # 指尖扇形对称分布
+            ti = s.tin[i] if i < 6 else td
+            sw = 14 * math.sin(t * 3.0 + i * 1.3) + 22 * pulse(t, ti if i < 6 else tl, 0.25) * (1 if i % 2 else -1)
+            ly = 700 + 48 * math.sin(i * 1.9 + 0.4) - oy * 0.4
+            jerk = -40 * pulse(t, ti if i < 6 else tl, 0.12) - 34 * tug
+            drop = 0.0
+            if i == 6:                                       # 纲：从手里放线落下，落定时过冲回弹
+                k = sm(td, tl, t)
+                drop = -(1 - eout(k)) * 430 + 26 * math.sin(max(0.0, t - tl) * 26) * math.exp(-max(0.0, t - tl) * 9) * (t >= tl)
+            end = (x + sw, ly + jerk - 50 + drop)
+            if i == 6 and t < td:
+                continue
+            fr = red_line(fr, tip, end, w=2, amt=0.9)
+            if t >= ti:
+                c = s.text[i]
+                if c == '纲':
+                    a = sm(td, td + 3 / FPS, t)
+                    col = (0.92, 0.17, 0.11)                      # 血红：被提起的那根「纲」
+                    L = glyph_layer(c, end[0], end[1] + 80, 124, col, font='serif_sb', rot=-sw * 0.6, alpha=a,
+                                    scale=1 + 0.10 * pulse(t, tl, 0.08))
+                    fr = T.compose(fr, L, shadow=0.7, shadow_sigma=14, glow=0.45, glow_sigma=12)
+                    continue
                 L = glyph_layer(c, end[0], end[1] + 74, 104, CREAM if c not in '剧本' else (1.0, 0.86, 0.6), font='serif_sb',
                                 rot=-sw * 0.6, scale=1 + 0.15 * pulse(t, ti, 0.06))
                 fr = T.compose(fr, L, shadow=0.6, shadow_sigma=14, glow=0.25, glow_sigma=10)
@@ -487,7 +536,7 @@ class C03(Shot):
             fr = red_line(fr, ends[i], (x, top + 4), w=2, amt=0.85)
             fr, hp = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.15 - 0.25 * abs(i - 3) / 3, flip=FLIP[i], glass=0.92, ghost=0.4)
             fr = red_line(fr, (ends[i][0] + (60 if not FLIP[i] else -60), ends[i][1] + 6), hp, w=1, amt=0.6)   # 手线（第二根提线）
-        if t >= tj:
+        if t >= tj and not R5:                 # 第五轮 #36：C03 去掉「纲」（已挪到 C02 第七根红线上）
             fr = paper_cut_glyph(fr, '纲', 960, 330, 270, scale=1 + 0.12 * pulse(t, tj, 0.06))
         fr = fog(fr, t, 4, density=0.4, y0=750, y1=980, color=(0.25, 0.17, 0.10), speed=(30, 0))
         fr = sparks(fr, t, 31, (960, 600), n=40, life=3.0, speed=(8, 30), dirc=(0, -1), spread=1.4, grav=-6, amt=0.25, area=(800, 300))
@@ -496,7 +545,7 @@ class C03(Shot):
 
 _GSEAL = {}
 def gold_seal():
-    if 'g' not in _GSEAL: _GSEAL['g'] = CP.StoneSeal('正', seed=404, res=192, front_text='正', base=(0.62, 0.42, 0.13))
+    if 'g' not in _GSEAL: _GSEAL['g'] = CP.StoneSeal('正', seed=404, res=192, front_text=None if R5 else '正', base=(0.62, 0.42, 0.13))   # 第五轮 #37/#43：印身正面不刻「正」（C04 / C40 共用）
     return _GSEAL['g']
 
 
@@ -561,7 +610,8 @@ class C04(Shot):
         fr = K.vol_light(fr, (1500, 250), 500, WARM, 0.12)
         # 前景虚焦烛焰（浅景深）
         fr = K.vol_light(fr, (180, 900), 150, (1.0, 0.6, 0.25), 0.55 + 0.05 * math.sin(t * 17))
-        fr = K.vol_light(fr, (960, 360), 120, GOLD, 0.6 * pulse(t, V(121.98), 0.12))   # 「正」金闪
+        if not R5:
+            fr = K.vol_light(fr, (960, 360), 120, GOLD, 0.6 * pulse(t, V(121.98), 0.12))   # 「正」金闪（第五轮：屏幕层「谁的正义」已去掉，金闪随之去掉）
         fr = dust(fr, t, 42, n=90, amt=0.35, drift=(8, -14), region=(0, BAR, W, H - BAR), color=(1.0, 0.8, 0.5))
         return fr
 
@@ -622,6 +672,8 @@ class C06(Shot):
         L = T.Layer()
         T.place(L, '箱', 1150, 450, 290, (1, 1, 1), 'serif_black', texture=False)
         self.g2 = L.A.copy()
+        if R5:                                   # 第五轮 #37：「暗箱」两个烙字去掉——只留箱盖、合盖动作与金缝
+            self.g1 = np.zeros_like(self.g1); self.g2 = np.zeros_like(self.g2)
         r = np.random.default_rng(66)
         self.nz = cv2.GaussianBlur(r.random((H // 2, W // 2)).astype(np.float32), (0, 0), 1.5)
         self.nz = cv2.resize((self.nz - self.nz.min()) / (np.ptp(self.nz) + 1e-6), (W, H))
@@ -658,7 +710,7 @@ class C06(Shot):
         base = self.brand(base, self.g2, t - t2)
         # 烙字白烟（冷却期往上飘）
         for g, ti, sd in ((self.g1, t1, 601), (self.g2, t2, 602)):
-            if t > ti:
+            if t > ti and not R5:
                 cx = 770 if sd == 601 else 1150
                 base = dust(base, t, sd, n=90, amt=0.55 * math.exp(-(t - ti) / 0.6), drift=(10, -90), region=(cx - 150, 320, cx + 150, 560),
                             size=(2, 6), color=(0.75, 0.7, 0.65))
@@ -758,8 +810,10 @@ class C10(Shot):
          [(696, 215), (780, 215), (784, 556), (708, 556)], [(864, 222), (948, 222), (962, 560), (890, 560)]]
     CORD = [408, 563, 722, 888]
     def __init__(self):
-        P = plate_view('C5/c10_tablets', 0.5, 0.5, 1.0)
-        pw = plate('C5/c10_tablets').shape[1]; ph = plate('C5/c10_tablets').shape[0]
+        # 第五轮 #38：「大局为上」不卡点——图生图把泥金字直接做进四块匾（R5_C/c10_tablets_gl，构图与 C5 底板逐像素对齐），开场就在
+        PN = 'R5_C/c10_tablets_gl' if R5 else 'C5/c10_tablets'
+        P = plate_view(PN, 0.5, 0.5, 1.0)
+        pw = plate(PN).shape[1]; ph = plate(PN).shape[0]
         self.mp = lambda x, y: (W / 2 + (x / 1280 - 0.5) * pw, H / 2 + (y / 720 - 0.5) * ph)
         self.P = P
         hole = np.zeros((H, W), np.uint8); self.tabs = []
@@ -805,7 +859,7 @@ class C10(Shot):
             else:
                 k = t - tc
                 dy = 1400 * k * k * (0.85 + 0.12 * i) + 60 * k; ang = sw + (50 + 25 * i) * k * (1 if i % 2 else -1)
-            gl = sm(ti - 0.06, ti + 0.04, t)
+            gl = 0.0 if R5 else sm(ti - 0.06, ti + 0.04, t)
             C = tb['C'].copy()
             gold = np.array([1.0, 0.76, 0.36], np.float32) * (0.75 + 0.9 * pulse(t, ti, 0.25) + 0.5 * fl)
             C = C * (1 - tb['G'][..., None] * gl) + tb['G'][..., None] * gl * gold
@@ -1306,11 +1360,13 @@ class C20(Shot):
         fl = bolt_env(t, tb) + 0.8 * bolt_env(t, tz)
         fr = storm(t, 20, horizon=1300, flash=0.3 + fl, fc=(600, 300), ground=False)
         a = sm(td - 0.06, td + 0.1, t) * (0.35 + 0.65 * min(1, fl + 0.3))
-        fr = paste_glyph(fr, '定', 480, 430, 430, GOLD_T, alpha=a, glow=0.9, glow_c=(1.0, 0.6, 0.2), shadow=0, scale=1 + 0.06 * u)
+        if not R5:                               # 第五轮 #39/#42：去掉雷云里的金字「定」（连同它的金色体积光）
+            fr = paste_glyph(fr, '定', 480, 430, 430, GOLD_T, alpha=a, glow=0.9, glow_c=(1.0, 0.6, 0.2), shadow=0, scale=1 + 0.06 * u)
         fr = bolt(fr, t, tb, 201, (300, 80), (500, 900), inten=0.9)
         fr, _ = put(fr, t, 'S074/head_turn', 1330, 1100, 1100, anchor='foot', rim=(0.9, 0.92, 1.0), rim_amt=3.0, rim_dir=(-0.9, -0.4),
                     flash=fl, expo=0.75, look=None, wind=6, sat=0.5)
-        fr = K.vol_light(fr, (480, 430), 260, GOLD, 0.5 * pulse(t, tz, 0.15))
+        if not R5:
+            fr = K.vol_light(fr, (480, 430), 260, GOLD, 0.5 * pulse(t, tz, 0.15))
         fr = rain(fr, t, 200, inten=0.8, angle=8)
         return fr
 
@@ -1318,6 +1374,7 @@ class C20(Shot):
 class C21(Shot):
     """对角分屏：左鬼屠（朱红边光）右太上皇（金边光），斜刀线隔开、两半反向滑；「正」在金侧、「邪」在红侧。"""
     def render(self, t):
+        if R5: return self.render_r5(t)
         u = self.u(t)
         tx = V(139.48)
         A = storm(t, 211, horizon=1300, flash=0.3, ground=False) * np.array([1.1, 0.75, 0.72], np.float32)
@@ -1341,6 +1398,27 @@ class C21(Shot):
         self.ca = 4 if 0 <= t - tx < 0.1 else 0
         return fr
 
+    def render_r5(self, t):
+        """第五轮 #40：两人各自完整入画（鬼屠左移下沉、头不顶黑边、肩不压分屏线；太上皇左移、手和脸不被右边裁），
+        「邪」「正」不再卡点弹出——开场就在，用各半场的底色（暗血红 / 旧铜金）低调画进雷云里、压在人物身后，雨从字前面落过。"""
+        u = self.u(t)
+        tx = V(139.48)
+        A = storm(t, 211, horizon=1300, flash=0.3, ground=False) * np.array([1.1, 0.75, 0.72], np.float32)
+        A = paste_glyph(A, '邪', 300, 430, 330, (0.22, 0.035, 0.025), alpha=0.8, glow=0.2, glow_c=(0.30, 0.04, 0.02), shadow=0, blur=1.6)
+        A, _ = put(A, t, 'S072/rise_draw', 470 - 40 * u, 1600, 1440, rim=RED * 1.3, rim_amt=3.2, rim_dir=(0.9, -0.4), expo=0.85, wind=7)
+        A = rain(A, t, 211, inten=0.7, angle=10, color=np.array([1.0, 0.5, 0.45], np.float32))
+        B = storm(t, 212, horizon=1300, flash=0.3, ground=False) * np.array([1.08, 0.98, 0.82], np.float32)
+        B = paste_glyph(B, '正', 1235, 345, 190, (0.34, 0.27, 0.14), alpha=0.75, glow=0.2, glow_c=(0.40, 0.30, 0.14), shadow=0, blur=1.4)
+        B, _ = put(B, t, 'S074/head_turn', 1450 + 30 * u, 1260, 1100, flip=True, rim=GOLD, rim_amt=3.0, rim_dir=(-0.9, -0.4), expo=0.7, wind=6)
+        B = rain(B, t, 212, inten=0.7, angle=10, color=np.array([1.0, 0.85, 0.6], np.float32))
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        d = (xx - 960) * 0.88 + (yy - 540) * 0.47
+        m = np.clip(d / 2 + 0.5, 0, 1)[..., None]
+        fr = A * (1 - m) + B * m
+        line = np.exp(-(d / 3) ** 2) + 0.4 * np.exp(-(d / 30) ** 2)
+        fr = fr + line[..., None] * np.array([1.0, 0.95, 0.9], np.float32) * (0.9 + 0.5 * pulse(t, tx, 0.2))
+        return fr
+
 
 class C22(Shot):
     """第五棒重做（评审 P1：扁平梯形字墙 = 代码味）：生图底板 C5/c22_wall——乌铁色城墙从积水直插雷云，极低机位仰拍、缓慢上摇；
@@ -1349,17 +1427,23 @@ class C22(Shot):
         u = self.u(t)
         tb = V(141.32)
         fl = bolt_env(t, tb) + 0.7 * bolt_env(t, V(141.94))
-        cy = lerp(0.56, 0.47, eio(u))
+        cy = lerp(0.60, 0.54, eio(u)) if R5 else lerp(0.56, 0.47, eio(u))   # 第五轮 #41：起幅压低、摇幅收小，人始终在画内
         fr = plate_view('C5/c22_wall', 0.5, cy, 1.0 + 0.04 * u) * (0.85 + 0.75 * fl)
         oy = (cy - 0.5) * plate('C5/c22_wall').shape[0]
         fr = bolt(fr, t, tb, 221, (1400, 40), (1250, 420), inten=0.9)
-        for i in range(4):
+        for i in range(0 if R5 else 4):           # 第五轮 #39/#42：去「若规则是」
             ti = V(CT(34, i))
             if t < ti - 0.1: continue
             e = eout((t - ti + 0.1) / 0.18)
             fr = paste_glyph(fr, '若规则是'[i], 960, 250 + i * 128 - oy * 0.0, 104, (0.95, 0.97, 1.0) if i != 1 else RED_T,
                              glow=0.8, glow_c=(0.7, 0.8, 1.0) if i != 1 else (0.9, 0.1, 0.05), scale=lerp(1.5, 1, e), alpha=e, font='serif_b')
-        fr, _ = put(fr, t, 'C/look_up_back', 960 + 10 * u, 905, 190, rim=COLD, rim_amt=2.8, rim_dir=(0.2, -1), flash=fl, expo=0.7, wind=6)
+        if R5:   # 第五轮 #41：人钉在底板上（墙脚礁石 py=0.845），随底板一起被上摇带下去，不再跟着镜头飘起来
+            z = 1.0 + 0.04 * u; ph = plate('C5/c22_wall').shape[0]
+            px, py, ph_ = 930, 540 + (0.845 - cy) * ph * z, 200 * z
+            px = 960 + (px - 960) * z
+        else:
+            px, py, ph_ = 960 + 10 * u, 905, 190
+        fr, _ = put(fr, t, 'C/look_up_back', px, py, ph_, rim=COLD, rim_amt=2.8, rim_dir=(0.2, -1), flash=fl, expo=0.7, wind=6)
         fr = fog(fr, t, 22, density=0.5, y0=780, y1=950, color=(0.4, 0.43, 0.5), speed=(40, 0))
         fr = rain(fr, t, 220, inten=1.0, angle=8)
         return fr
@@ -1388,8 +1472,9 @@ class C23(Shot):
             fr, _ = put(fr, t, 'C5/c23_bronze', x + dx, y + dy, sz, anchor='src', src=(0.5, 0.5), rim=COLD, rim_amt=1.4, rim_dir=(-0.6, -0.8),
                         flash=fl, expo=1.0, sat=0.8, tint=(1.0, 0.98, 0.95), wind=0, breathe=0.0)
             gs = sz * 0.55
-            fr = paste_glyph(fr, '铁壁铜'[i], x + dx + 2, y + dy + 3, gs, (0.85, 0.75, 0.55), glow=0.0, shadow=0.0, alpha=0.55)
-            fr = paste_glyph(fr, '铁壁铜'[i], x + dx, y + dy, gs, (0.07, 0.06, 0.05), glow=0.25, glow_c=(0.6, 0.45, 0.2), shadow=0.3)
+            continue_glyph = not R5              # 第五轮 #39/#42：铜牌照推、字不刻
+            if continue_glyph: fr = paste_glyph(fr, '铁壁铜'[i], x + dx + 2, y + dy + 3, gs, (0.85, 0.75, 0.55), glow=0.0, shadow=0.0, alpha=0.55)
+            if continue_glyph: fr = paste_glyph(fr, '铁壁铜'[i], x + dx, y + dy, gs, (0.07, 0.06, 0.05), glow=0.25, glow_c=(0.6, 0.45, 0.2), shadow=0.3)
             fr = dust(fr, t, 230 + i, n=70, amt=0.8 * e * (1 - sm(0.2, 0.8, t - ti)), drift=(0, 220),
                       region=(int(x - 150), int(y - 40), int(x + 150), int(y + 280)), size=(1, 5))
         fr = rain(fr, t, 230, inten=0.7, angle=4)
@@ -1447,6 +1532,7 @@ class C25(Shot):
     def __init__(self):
         L = T.Layer(); T.place(L, '劈', 960, 540, 600, (1, 1, 1), 'serif_black', texture=False)
         self.g = L.A.copy()
+        if R5: self.g = np.zeros_like(self.g)     # 第五轮 #39/#42：墙上不刻「劈」，只剩刀把整面墙劈开
     def render(self, t):
         u = self.u(t)
         ts = V(145.14)
@@ -1645,6 +1731,14 @@ class C28(Shot):
         r = np.random.default_rng(28)
         nz = cv2.resize(r.random((g // 10, g // 10)).astype(np.float32), (g, g))
         a = np.clip(cv2.dilate(a, np.ones((9, 9), np.uint8)) * (0.75 + 0.5 * nz) - 0.25, 0, 1) * 1.5
+        if R5:   # 第五轮 #42：裂口不再是「亮」字形——改成一道不规则的竖向破口（低频起伏 + 小锯齿）
+            g = 640
+            yy, xx = (np.mgrid[0:g, 0:g].astype(np.float32) - g / 2)
+            def _lf(sig, seed):
+                q = cv2.GaussianBlur(np.random.default_rng(seed).random((g, g)).astype(np.float32), (0, 0), sig)
+                return (q - q.mean()) / (q.std() + 1e-6)
+            e = 1 - np.sqrt((xx / 150) ** 2 + ((yy + 10) / 270) ** 2) + 0.28 * _lf(22, 281) + 0.08 * _lf(5, 282)
+            a = np.clip(e * 10, 0, 1)
         self.hole = np.zeros((H, W), np.float32)
         y0, x0 = 440 - g // 2, HX - g // 2
         self.hole[y0:y0 + g, x0:x0 + g] = np.clip(a, 0, 1)
@@ -2027,7 +2121,7 @@ class C38(Shot):
         # 指节滴水（握紧时甩落）
         fr = sparks(fr, t, 381, (930, 760), n=26, life=0.9, speed=(40, 160), dirc=(0, 1), spread=0.3, grav=1400, amt=0.7,
                     color=(0.85, 0.9, 1.0), area=(140, 20))
-        for j, (c, ti) in enumerate((('我', V(158.18)), ('来', V(158.36)))):
+        for j, (c, ti) in enumerate(() if R5 else (('我', V(158.18)), ('来', V(158.36)))):   # 第五轮 #43：去「我来」
             if t < ti - 0.08: continue
             e = eout((t - ti + 0.08) / 0.14)
             fr = paste_glyph(fr, c, 1440 + j * 150, 330, 130, (0.95, 0.96, 1.0), glow=0.6, glow_c=(0.6, 0.7, 1.0), alpha=e,
@@ -2043,7 +2137,8 @@ class C39(Shot):
         u = self.u(t)
         tq = V(158.56)
         fr = storm(t, 39, horizon=1300, flash=0.3 + 0.5 * pulse(t, V(159.01), 0.2) + 0.5 * pulse(t, tq, 0.15), ground=False, fc=(500, 200))
-        fr = K.vol_light(fr, (520, 520), 420, (1.0, 0.35, 0.15), 0.45 * sm(tq - 0.02, tq + 0.12, t) * (1 - 0.4 * sm(tq + 0.3, self.t1, t)))
+        if not R5:                               # 第五轮 #43：去「量」（连同它的红光、刻字火星）；出鞘冷光保留
+            fr = K.vol_light(fr, (520, 520), 420, (1.0, 0.35, 0.15), 0.45 * sm(tq - 0.02, tq + 0.12, t) * (1 - 0.4 * sm(tq + 0.3, self.t1, t)))
         fr, _ = put(fr, t, 'S090/wind_up', 1180, 1110, 900 * (1.0 + 0.04 * eout(u)), rim=COLD, rim_amt=2.6, rim_dir=(-0.8, -0.6), expo=1.0,
                     wind=7, flash=0.4 * pulse(t, V(159.01), 0.2) + 0.5 * pulse(t, tq, 0.12))
         gq = clamp((t - tq) / 0.30)                # 第五棒（评审 P1 C39 近静止）：出鞘冷光沿刀身从护手扫到刀尖
@@ -2051,8 +2146,8 @@ class C39(Shot):
             gx, gy = lerp(1400, 990, eio(gq)), lerp(520, 255, eio(gq))
             fr = K.vol_light(fr, (gx, gy), 38, (0.92, 0.96, 1.0), 0.75 * math.sin(math.pi * gq))
         q = (t - (tq - 0.03)) / 0.16
-        fr = carve_glyph(fr, '量', 520, 540, 330, q, ang=-35, seed=39, t=t)
-        if 0 < q < 2.5:
+        if not R5: fr = carve_glyph(fr, '量', 520, 540, 330, q, ang=-35, seed=39, t=t)
+        if 0 < q < 2.5 and not R5:
             fr = sparks(fr, t, 391, (lerp(380, 660, min(1, q)), lerp(400, 690, min(1, q))), n=70, life=0.5, speed=(200, 800), dirc=(0.6, 0.8),
                         spread=1.2, grav=1200, t0=tq, burst=True, color=(1.0, 0.45, 0.15), amt=1.2)
         fr = rain(fr, self.t0 + (t - self.t0) * 0.5, 390, inten=0.9, angle=8)
@@ -2146,7 +2241,7 @@ class C41(Shot):
         # 「答」：先是焦痕引燃的火线沿笔画爬，再整字烧穿（字槽透白金光）。第八棒：所有烧边都是连续的带，不用细噪声门限（去「蚂蚁线」）
         g, sd = self.g, self.sd
         front = 60 + 900 * ein(clamp((t - tr + 0.05) / (ta - tr + 0.05)), 1.4) if t > tr - 0.05 else -1
-        lit = np.clip((front - self.d) / 30.0 + 0.5, 0, 1) if front > 0 else None
+        lit = np.clip((front - self.d) / 30.0 + 0.5, 0, 1) if front > 0 and not R5 else None   # 第五轮 #43：去「答」（火线/烧穿/火星全去），只留刀光与焦痕
         if lit is not None and lit.max() > 0:
             thru = sm(ta - 0.03, ta + 0.05, t)                    # 烧穿
             ring = np.clip(1 - np.abs(sd + 4) / 16.0, 0, 1) * lit                     # 焦黑环（字边内外各约 15px）
@@ -2181,7 +2276,8 @@ class C41(Shot):
             fr = fr + (G + cv2.GaussianBlur(G, (0, 0), 8) * 1.5)[..., None] * np.array([1.0, 0.35, 0.08], np.float32) * (0.5 + 0.7 * math.exp(-k / 0.3))
         # 人：从横斩里旋进收势（前 0.15s 旋转拖影），之后呼吸、风；身后的「答」光勾亮发梢和刀脊
         kin = clamp((t - self.t0) / 0.16)
-        thru = sm(ta - 0.03, ta + 0.1, t)
+        thru = 0.0 if R5 else sm(ta - 0.03, ta + 0.1, t)
+        if R5: fl = fl + 0.45 * bolt_env(t, ta)       # 「答」那拍改成一记远雷照亮他（不再是身后字光）
         fr, _ = put(fr, t, 'C6/c41_sweep', 760, 600, 1000, anchor='src', src=(0.41, 0.56), rot=lerp(-7, 0, eout(kin)),
                     rotblur=6.0 * (1 - kin), rim=lerp(np.array(COLD), np.array((1.0, 0.72, 0.4)), thru), rim_amt=2.2 + 1.6 * thru,
                     rim_dir=(0.6, -0.8), flash=fl + 0.6 * thru, expo=0.95, wind=8, breathe=0.008)
@@ -2189,7 +2285,7 @@ class C41(Shot):
         fr = blade_smear(fr, (-100, 520), (2020, 440), (t - ts + 0.06) / 0.14, bend=-0.05, width=90, seed=411, amt=1.5, warm=0.2)
         fr = sparks(fr, t, 412, (1790, 470), n=120, life=0.6, speed=(200, 900), dirc=(1, -0.2), spread=1.0, grav=900, t0=ts, burst=True,
                     color=(1.0, 0.6, 0.25), amt=1.1)
-        fr = sparks(fr, t, 413, (1330, 545), n=200, life=0.9, speed=(100, 600), dirc=(0, -1), spread=1.6, grav=-80, t0=ta, burst=True,
+        if not R5: fr = sparks(fr, t, 413, (1330, 545), n=200, life=0.9, speed=(100, 600), dirc=(0, -1), spread=1.6, grav=-80, t0=ta, burst=True,
                     area=(260, 260), color=(1.0, 0.45, 0.18), amt=0.55)
         fr = rain(fr, t, 410, inten=0.8, angle=10, layers=(1, 2, 3), freeze=0.35 if t > ta else None)
         return fr
@@ -2204,6 +2300,8 @@ SHOTS = [C01, C02, C03, C04, C05, C06, C07, C08, C09, C10, C11, C12, C13, C14, C
 CUT_T = [117.80, 118.92, 120.53, 121.46, 122.83, 123.74, 124.88, 125.70, 126.27, 127.41, 128.87, 130.17, 131.50, 132.45, 133.38,
          134.57, 135.63, 136.56, 137.49, 138.39, 139.32, 140.69, 142.06, 143.43, 144.82, 145.73, 146.63, 147.56, 148.34, 149.15,
          150.30, 151.70, 152.60, 153.07, 153.97, 154.70, 155.36, 156.27, 157.18, 158.54, 159.47, 159.93, 160.38]
+if R5:
+    CUT_T[2] = 121.00     # 第五轮 #35：C02→C03 切点挪到「纲」字那拍（切帧 3628 = V(120.96)），「纲」在 C02 的红线上落定后再切、C03 一进来木偶就被拽起
 assert len(CUT_T) == len(SHOTS)
 # 第十二棒（critic_C_r6 P1①）：C13 起点 131.08 → 131.50（131.498 在拍强起音），镜长 1.37s → 0.97s；C12 顺延到 1.33s。段落边界不动。
 # 第五棒：评审 P1「整体比拍点晚 1–2 帧」→ 视觉帧再前移 1 帧（最近帧 -2，切在拍前）；间奏 C14/C15 改到拍点 132.45 / 133.38（评审 P0）
@@ -2325,6 +2423,9 @@ SENTS = [
     S(39, [2, 3, 4, 5], 1400, 290, size=110, mode='fly', red='刀', exit='shatter', out=V(160.30), track=0.2, lead=0.06),   # 第十棒 P2⑩：lead 0.20→0.06，「就」不再在「这一」未收时半透明提前出现        # 刀就是我
     S(39, [6, 7], 1330, 196, size=92, mode='fly', exit='glitch', out=V(161.20), track=0.2, back=0.5),   # 第八棒 P1①：横排压在「答」正上方，自上而下读「的回→答」   # 第六棒：的回（「答」由 C41 刀痕引燃、烧穿画面，画内字）
 ]
+if R5:
+    # 第五轮 #37/#39/#42/#43：2:02–2:28 与 2:37–2:41 的屏幕层字全部去掉；只留用户没提到的 2:30–2:36「血未冷 / 骨未凉 / 我自己扛 / 天不」
+    SENTS = [s for s in SENTS if s.li in (36, 37, 38)]
 
 
 # 第四棒：碎裂/故障出场不许跨切点（评审：切点帧上的碎字残片像出错）——出场在下一切点前收完，最短 0.12s
