@@ -1,0 +1,11 @@
+[
+ {"name":"sil_front_a","out":"assets/gen/R5_E","model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","out/round5/E/refs/cur_stare.png"],
+  "prompt":"Character on a perfectly flat pure green screen background (#00FF00, uniform, no shadows, no gradient). Reference 1 is the character sheet of swordsman 'Gui Tu': high ponytail, center-parted messy bangs, amber eyes, pale lean face, black cross-collar robe, dark red inner collar, leather bracers, dark red sash. Reference 2 is the current shot. Draw him in a perfectly frontal, symmetrical medium shot from the top of the ponytail down to the waist, standing still facing the camera, shoulders square, arms relaxed down at his sides, the black hilt of his long dao visible over his right shoulder. The outline must be very clear and readable as a silhouette: the high ponytail rising behind the head, the messy center-parted bangs and loose strands, the cross collar, the broad sleeves. Leave generous green margin around the whole figure, nothing cut off at the top. Realistic cinematic style, sharp edges, no motion blur, no text."},
+ {"name":"sil_front_b","out":"assets/gen/R5_E","model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png"],
+  "prompt":"纯绿幕背景（#00FF00，均匀平涂，无阴影无渐变）。参考图 = 男主鬼屠设定：高马尾、中分凌乱刘海、琥珀眼、苍白清瘦，黑色交领长衣、暗红内领、皮护腕、暗红腰带，长刀黑柄。画面：正面对称的中景，从马尾顶端到大腿中部，他笔直站立正对镜头，双肩平，双臂自然垂在身侧，长刀斜背在背后、黑色刀柄从右肩上方露出。剪影轮廓要非常清楚：高马尾在头后竖起、碎发和刘海的发丝、交领、宽袖、腰带。人物四周留足绿色边距，头顶不能被裁掉。写实电影质感，边缘锐利，无动态模糊，无任何文字。"},
+ {"name":"sil_front_c","out":"assets/gen/R5_E","model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","out/round5/E/refs/cur_stare.png"],
+  "prompt":"Pure flat green screen background #00FF00, no shadow. Reference 1: character sheet (swordsman Gui Tu — high ponytail, center-parted messy bangs, pale lean face, black robe with dark red inner collar, leather bracers). Reference 2: current shot. Draw him frontal and symmetrical, waist-up medium shot, head slightly lowered, wind lifting a few strands of hair and the tip of the ponytail to the right, broad shoulders of the black robe filling the lower frame, arms down. Strong clean outline readable as a pure black silhouette. Generous green margins on all sides, nothing cropped. Realistic cinematic, sharp, no text."}
+]

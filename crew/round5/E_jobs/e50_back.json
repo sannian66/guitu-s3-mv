@@ -1,0 +1,8 @@
+[
+ {"name":"back_rim_a","out":"assets/gen/R5_E","model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","assets/gen/S132/back_walk_raw.png","out/round5/E/refs/cur_sun.png"],
+  "prompt":"Pure flat green screen background #00FF00 (uniform, no floor shadow). Reference 1: character sheet of swordsman Gui Tu (high ponytail, center-parted messy bangs, black cross-collar robe, dark red inner collar and sash, leather bracers, long dao with black hilt, scabbard with red tassel). Reference 2: the old back-view walking pose. Reference 3: the shot it goes into — he walks away from camera toward a huge rising sun. Draw him full body from behind, walking away, mid-stride, strongly backlit by the low sun in front of him: the figure is mostly a dark silhouette, but a bright warm golden rim light clearly outlines the head, the high ponytail and loose hair strands, the ears, neck and shoulders, the scabbard and the red tassel; the head shape must be clearly readable. Realistic cinematic photography, natural proportions, sharp edges, generous green margin, nothing cut off, no text."},
+ {"name":"back_rim_b","out":"assets/gen/R5_E","model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","assets/gen/S132/back_walk_raw.png"],
+  "prompt":"纯绿幕背景（#00FF00 均匀平涂，无地面阴影）。参考图1 = 男主鬼屠设定（高马尾、中分乱刘海、黑色交领长衣、暗红内领和腰带、皮护腕、黑柄长刀、刀鞘红穗）。参考图2 = 旧的背影走路姿态。画面：全身背影，他背对镜头向前走，正迈步，左手握着腰间刀鞘，正前方是低低的太阳（画外），强烈逆光：人体大部分是暗色剪影，但一圈清晰的暖金色轮廓光勾出头型、高马尾和飘起的发丝、耳朵、脖颈、双肩、刀鞘与红穗；头部轮廓必须一眼可辨。写实电影摄影质感，比例真实，边缘锐利，四周留足绿色边距，无文字。"}
+]

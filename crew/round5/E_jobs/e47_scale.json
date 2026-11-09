@@ -1,0 +1,11 @@
+[
+ {"name":"scale_a","out":"assets/gen/R5_E","nocut":true,"model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","out/round5/E/refs/cur_scale.png"],
+  "prompt":"电影级写实暗黑水墨风格，宽银幕横构图（2.39:1 安全区：人物头顶和刀、秤盘全部落在画面中间 70% 高度内，上下留空）。参考图1 是角色设定：男主「鬼屠」——高马尾、中分凌乱刘海、琥珀色眼睛、苍白清瘦的脸，黑色交领长衣、暗红内领、皮护腕、暗红腰带。参考图2 是当前镜头的构图与色调（低机位，黎明逆光，远山地平线，金色天空）。画面：他正面站在山脊上，表情冷峻直视镜头；右手举在胸前，把一柄长刀（黑色刀柄、刀鞘红穗挂在腰间）水平横放、刀身在掌心找到平衡点，像一杆秤的秤杆；刀的两端各用暗红细绳吊着一只古铜小秤盘，两盘一高一低轻微失衡；初升的太阳正好在他身后、刀身支点的正后方，形成金色光晕与逆光轮廓。只用黑白灰、金色和血红色，不要任何文字，不要现代元素。真实的人体结构，双手五指正确，刀是一整把完整的长刀。"},
+ {"name":"scale_b","out":"assets/gen/R5_E","nocut":true,"model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","out/round5/E/refs/cur_scale.png"],
+  "prompt":"Cinematic realistic dark ink-wash painting, wide 2.39:1 composition (keep the head, blade and pans inside the middle 70% of the frame height). Reference 1 is the character sheet: young swordsman 'Gui Tu' — high ponytail, center-parted messy bangs, amber eyes, pale lean face, black cross-collar robe with dark red inner collar, leather bracers, dark red sash. Reference 2 is the current shot's composition and palette (low angle, dawn backlight, distant ridges, golden sky). The image: he stands facing camera on a ridge at sunrise, cold calm gaze into the lens; with both arms extended he holds his long single-edged dao perfectly horizontal at chest height like the beam of a balance scale — his right fist grips the black hilt at the center and the blade balances; from each end hangs a small antique bronze balance pan on thin blood-red cords, the two pans slightly uneven. The rising sun sits exactly behind the blade's pivot point, golden halo and rim light around him. Palette strictly black, white, grey, gold and blood red. No text, no letters. Correct anatomy, correct hands with five fingers, one complete continuous blade."},
+ {"name":"scale_c","out":"assets/gen/R5_E","nocut":true,"model":"gpt-image-2",
+  "refs":["assets/characters/png/男主_鬼屠.png","out/round5/E/refs/cur_scale.png"],
+  "prompt":"电影级写实暗黑水墨，宽银幕 2.39:1 横构图，主体全部在画面中部 70% 高度内。参考图1 = 男主鬼屠设定（高马尾、中分乱刘海、琥珀眼、苍白清瘦、黑衣暗红内领、皮护腕）。参考图2 = 当前镜头构图色调。画面：中景偏远，人物居中正面站立，左手掌心向上托住长刀刀身的中点，长刀水平横在胸前，宛如一杆天平的横梁，刀尖与刀柄两端各垂下一根暗红绳，吊着一只古铜秤盘；左边秤盘里落着一片焦黑的碎纸，右边秤盘空着却更低——秤已失衡。他低垂眼帘看着秤，冷静。身后正中一轮初日，日轮恰在刀的支点后，金色光束从刀两侧放射。晨雾、远山剪影。只用黑白灰 + 金 + 血红，无文字。人体与手部结构真实，刀为完整一把。"}
+]

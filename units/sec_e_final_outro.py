@@ -1945,6 +1945,13 @@ def frame(f, cache):
     return K.to8(fr)
 
 
+# 第五轮（E 组 r5，用户 #46–#51 + 「何须伪装」）：补丁在 units/e_r9.py，E_R5=0 整体回退；分项开关见该文件头
+E_R5 = os.environ.get('E_R5', '1') != '0'
+if E_R5:
+    import e_r9
+    e_r9.apply(sys.modules[__name__])
+
+
 if __name__ == '__main__':
     import time
     from PIL import Image
