@@ -253,3 +253,9 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
   - 单帧核查：`python3 tools/e_check.py /tmp/e.jpg 6080`（多帧：`tools/cpu_slot.sh python3 tools/e_check.py out.jpg f1 f2 …`，640 宽网格；`FULL=1` 另存全尺寸 `/tmp/e_<f>.png`）。
   - 联系表：`tools/cpu_slot.sh python3 tools/e_contact.py contact out/round4/E_contact_v7.jpg`；关键帧：`tools/cpu_slot.sh python3 tools/e_contact.py keys out/round4/E_keys_v7.jpg`；分块：`python3 tools/e_contact.py split out/round4/E_contact_v7.jpg`；只看帧号：`python3 tools/e_contact.py list`。
   - 提交只加自己的路径：`git add <文件> && git commit -m "[E组] …" -- <文件>`，shell 带 github 凭据。
+
+## D 组第七棒（2026-11-09 13:00–13:45 CST）· d_bridge 帧 4839–5797 · 30 镜 · 平均 1.06s
+- 对照 critic_D_r4（83.5）：P0 四条全部落实（S12 撕裂口 + 双轮廓光 + 三层山雾；「矩」182.92 落字；S08 去「人」；S06/S26 顶行收进安全框）。P1：天平换水墨生图并修好对位（右盘字堆、底座竖缝）；S08/S09 加主光、体积光束、纸纹浮雕、后景（碑影 / 远山雾）、前景虚焦纸屑飞墨、印/笔轮廓光；S11 同向轮廓光；S21 木牌去字；S22「闯」挪到侧边；两帧闪白 4→2（S14 burn_wipe、S24 bolt_cut）。
+- 交付：`out/round4/D_contact_v10.jpg`（+`_p0/_p1`）、`out/round4/D_keys_v6.jpg`（+`_p0/_p1/_p2`）；细节见 `crew/round4/D_storyboard.md` §8。
+- 积分：本棒 1 张（D_r7/scale 3 点），D 组累计 48/80。
+- 遗留：P2（S04「牲」被裁、S01 开头偏暗、S27 停顿、S30→E 接帧）；S07 字堆缩略图像墨团；未出 mp4 动态验证。下一步：派第五轮评审。

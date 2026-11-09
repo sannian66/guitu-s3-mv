@@ -416,3 +416,4 @@
 | 11-09 05:12 | D组/D_r7/scale | RH_image2 | 4K 16:9 | 3 | 62082483-b58a-4655-be47-e379901e985d | 待定 | assets/gen/D_r7/scale_raw.png | [D组] 第七棒 S06/S07/S26 水墨天平美术 try1 |
 | 11-09 05:12 | B组/v01_bell | RH_image2 | 4K 16:9 | 0 | 595af4b0-a05b-4005-81e2-6787001af170 | completed | b_cands/v01_bell_try1_0.png | try1 |
 | 11-09 05:12 | B组/v01_bell | RH_image2 | 4K 16:9 | 0 | 595af4b0-a05b-4005-81e2-6787001af170 | 采用 | assets/gen/B_r4/v01_bell_raw.png | try1 采用 |
+| 11-09 13:45 | D组/D_r7/scale | RH_image2 | 4K 16:9 | 0 | 62082483-b58a-4655-be47-e379901e985d | 采用 | assets/gen/D_r7/scale_raw.png | [D组] 第七棒验证后采用（S06/S07/S26），点数已在 05:12 行计 3 |

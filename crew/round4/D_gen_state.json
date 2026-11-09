@@ -1,5 +1,5 @@
 {
- "spent": 45,
+ "spent": 48,
  "jobs": {
   "walk_back": {
    "tries": [
@@ -147,6 +147,16 @@
      "tid": "2a80c463-976d-439d-989b-079e53b8125d",
      "pts": 3,
      "file": "/workspace/projects/d79262c3-6e04-4a12-8e03-b8eb93f884fc/work/d_cands/raise_low_try1_0.png"
+    }
+   ],
+   "state": "done"
+  },
+  "D_r7/scale": {
+   "tries": [
+    {
+     "tid": "62082483-b58a-4655-be47-e379901e985d",
+     "pts": 3,
+     "file": "assets/gen/D_r7/scale_raw.png"
     }
    ],
    "state": "done"
