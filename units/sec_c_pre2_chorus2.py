@@ -1933,38 +1933,55 @@ class C41(Shot):
     161.00「答」整字烧穿画面：字槽里透出白金色的光、烧边炭红，光从他身后勾亮发梢和刀脊；段尾故障切黑交给 Bridge。
     画面里不再有秤、印、纸人：权力的道具在 C40 已被斩断，最后一帧只留人、刀和他的回答。"""
     def __init__(self):
-        L = T.Layer(); T.place(L, '答', 1330, 520, 600, (1, 1, 1), 'serif_black', texture=False)
-        self.g = L.A.copy()
+        L = T.Layer(); T.place(L, '答', 1330, 545, 580, (1, 1, 1), 'serif_black', texture=False)
+        g0 = L.A.copy()
         r = np.random.default_rng(41)
         f = cv2.GaussianBlur(r.random((H, W)).astype(np.float32), (0, 0), 2.2)
         self.nf = np.clip(((f - f.mean()) / (f.std() + 1e-6)) * 0.5 + 0.5, 0, 1)
+        # 第八棒（critic_C_r4 P1①）：焦边改连续不规则——低频噪声扰动字的符号距离场，得到一条不断开的烧边
+        def lf(sig, seed):
+            q = cv2.GaussianBlur(np.random.default_rng(seed).random((H, W)).astype(np.float32), (0, 0), sig)
+            return (q - q.mean()) / (q.std() + 1e-6)
+        b = (g0 > 0.5).astype(np.uint8)
+        sd = cv2.distanceTransform(b, cv2.DIST_L2, 5) - cv2.distanceTransform(1 - b, cv2.DIST_L2, 5)   # 字内为正
+        sd = sd + 3.2 * lf(9, 411) + 1.2 * lf(3, 412)            # 不规则：大起伏 + 小锯齿
+        self.sd = sd.astype(np.float32)
+        self.g = np.clip(sd / 1.5 + 0.5, 0, 1).astype(np.float32)          # 烧穿的洞（边缘已不规则）
+        self.var = np.clip(0.75 + 0.25 * lf(6, 413), 0.45, 1.0).astype(np.float32)   # 烧边亮度起伏（不归零 → 不断开）
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         self.ty = 470 + 0.03 * (xx - 960)                         # 焦痕（刀路）高度
-        self.d = np.clip(self.ty - yy, 0, None) + 0.35 * np.abs(xx - 1330)      # 火从焦痕往上、从中间往两边烧
+        self.d = np.clip(self.ty - yy, 0, None) + 0.35 * np.abs(xx - 1330) + 25 * lf(12, 414)      # 火从焦痕往上、从中间往两边烧
     def render(self, t):
         u = self.u(t)
         ts, tr, ta = V(160.37), V(160.66), V(161.00)
         fl = 0.9 * pulse(t, ts, 0.12) + 0.5 * bolt_env(t, V(160.20))
         fr = storm(t, 41, horizon=1300, flash=0.25 + fl, fc=(1300, 200), ground=False) * 0.8
         fr = fog(fr, t, 41, density=0.35, y0=700, y1=1000, color=(0.30, 0.32, 0.38), speed=(30, 0))
-        # 「答」：先是焦痕引燃的火线沿笔画爬，再整字烧穿（字槽透白金光）
-        g = self.g
+        # 「答」：先是焦痕引燃的火线沿笔画爬，再整字烧穿（字槽透白金光）。第八棒：所有烧边都是连续的带，不用细噪声门限（去「蚂蚁线」）
+        g, sd = self.g, self.sd
         front = 60 + 900 * ein(clamp((t - tr + 0.05) / (ta - tr + 0.05)), 1.4) if t > tr - 0.05 else -1
-        burnt = g * (self.d < front)
-        if burnt.max() > 0:
-            edge = np.clip(cv2.GaussianBlur(burnt, (0, 0), 2.0) * 1.6, 0, 1)
-            fire = np.exp(-((self.d - front) / 40.0) ** 2) * g * np.clip((self.nf - 0.25) * 2.5, 0, 1)
+        lit = np.clip((front - self.d) / 30.0 + 0.5, 0, 1) if front > 0 else None
+        if lit is not None and lit.max() > 0:
             thru = sm(ta - 0.03, ta + 0.05, t)                    # 烧穿
-            fr = fr * (1 - 0.85 * edge[..., None] * (1 - thru))
-            fr = fr + fire[..., None] * np.array([1.0, 0.5, 0.15], np.float32) * 2.2
-            rim = np.clip(edge - cv2.erode(edge, np.ones((9, 9), np.uint8)), 0, 1) * np.clip((self.nf - 0.3) * 2.4, 0, 1)
-            fr = fr + rim[..., None] * np.array([1.0, 0.3, 0.06], np.float32) * 1.4
+            ring = np.clip(1 - np.abs(sd + 4) / 16.0, 0, 1) * lit                     # 焦黑环（字边内外各约 15px）
+            ash = np.clip(1 - np.abs(sd + 20) / 22.0, 0, 1) * lit * 0.55              # 外圈灰烬
+            ember = np.exp(-((sd - 2.5) / 3.5) ** 2) * lit * self.var                 # 内缘炭红（连续）
+            fire = np.exp(-((self.d - front) / 45.0) ** 2) * np.clip(sd / 3 + 1, 0, 1) * self.var   # 爬行火线（连续）
+            body = g * lit                                                             # 已烧到的字身：先焦黑
+            fr = fr * (1 - 0.88 * np.maximum(body * (1 - thru), ring)[..., None])
+            fr = fr * (1 - 0.25 * ash[..., None]) + ash[..., None] * np.array([0.10, 0.095, 0.09], np.float32)
+            fr = fr + fire[..., None] * np.array([1.0, 0.45, 0.12], np.float32) * 2.0 * (1 - 0.6 * thru)
+            fr = fr + ember[..., None] * np.array([1.0, 0.32, 0.07], np.float32) * (1.1 + 0.9 * thru)
+            fr = fr + cv2.GaussianBlur(ember, (0, 0), 6)[..., None] * np.array([1.0, 0.35, 0.08], np.float32) * 0.6 * (1 - 0.7 * thru)
             if thru > 0:
-                core = cv2.erode(edge, np.ones((7, 7), np.uint8))
+                core = np.clip((sd - 4.0) / 3.0, 0, 1) * lit
                 hot = np.array([1.0, 0.86, 0.6], np.float32) * (1.4 + 0.6 * pulse(t, ta, 0.12))
                 fr = fr * (1 - core[..., None] * thru) + core[..., None] * hot * thru
-                fr = fr + cv2.GaussianBlur(core, (0, 0), 40)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * 0.9 * thru
-                fr = K.vol_light(fr, (1330, 520), 700, (1.0, 0.7, 0.35), 0.35 * thru)
+                fr = fr + cv2.GaussianBlur(core, (0, 0), 40)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * 0.6 * thru
+                fr = K.vol_light(fr, (1330, 545), 700, (1.0, 0.7, 0.35), 0.35 * thru)
+            # 向上飘的少量火星（从烧边升起，循环发射）
+            fr = sparks(fr, t, 415, (1330, 600), n=36, life=1.1, speed=(40, 140), dirc=(0, -1), spread=0.5, grav=-60,
+                        area=(240, 220), color=(1.0, 0.55, 0.2), amt=0.7 * float(lit.max()))
         # 焦痕：刀路留在雨里的一条炭红线（刀光过后）
         if t > ts:
             k = t - ts
@@ -1983,7 +2000,7 @@ class C41(Shot):
         fr = blade_smear(fr, (-100, 520), (2020, 440), (t - ts + 0.06) / 0.14, bend=-0.05, width=90, seed=411, amt=1.5, warm=0.2)
         fr = sparks(fr, t, 412, (1790, 470), n=120, life=0.6, speed=(200, 900), dirc=(1, -0.2), spread=1.0, grav=900, t0=ts, burst=True,
                     color=(1.0, 0.6, 0.25), amt=1.1)
-        fr = sparks(fr, t, 413, (1330, 520), n=200, life=0.9, speed=(100, 600), dirc=(0, -1), spread=1.6, grav=-80, t0=ta, burst=True,
+        fr = sparks(fr, t, 413, (1330, 545), n=200, life=0.9, speed=(100, 600), dirc=(0, -1), spread=1.6, grav=-80, t0=ta, burst=True,
                     area=(260, 260), color=(1.0, 0.7, 0.35), amt=1.0)
         fr = rain(fr, t, 410, inten=0.8, angle=10, layers=(1, 2, 3), freeze=0.35 if t > ta else None)
         return fr
@@ -2116,7 +2133,7 @@ SENTS = [
     S(38, [0, 1], 960, 262, size=130, mode='fly', exit='shatter', out=V(156.38), track=0.3, back=1.0),             # 天不（暗衬，压在闪电天上可读）
     S(39, [0, 1], 1560, 720, size=100, mode='fly', exit='shatter', out=V(159.64), back=0.5),   # 第七棒 P2⑯：移出 C40 人物衣摆                         # 这一
     S(39, [2, 3, 4, 5], 1400, 290, size=110, mode='fly', red='刀', exit='shatter', out=V(160.30), track=0.2),        # 刀就是我
-    S(39, [6, 7], 1760, 250, size=110, mode='fly', layout='v', exit='glitch', out=V(161.20), track=0.2, back=0.5),   # 第六棒：的回（「答」由 C41 刀痕引燃、烧穿画面，画内字）
+    S(39, [6, 7], 1330, 196, size=92, mode='fly', exit='glitch', out=V(161.20), track=0.2, back=0.5),   # 第八棒 P1①：横排压在「答」正上方，自上而下读「的回→答」   # 第六棒：的回（「答」由 C41 刀痕引燃、烧穿画面，画内字）
 ]
 
 
