@@ -971,6 +971,7 @@ class V09(Shot):
 class V10(Shot):
     def __init__(self):
         T.warm('里', 'kai', 240); T.warm('称量', 'kai', 180)
+        import a_r6; self.R6 = a_r6
         self.tex = cv2.resize(A.tex(101, 512, 5, 6), (W, H)); self.tex2 = cv2.resize(A.tex(103, 512, 40, 3), (W, H))
         self.CX, self.CY, self.AX, self.AY, self.DEP = 960, 600, 1060, 96, 560
     def bowl(self, sway):
@@ -1008,11 +1009,20 @@ class V10(Shot):
         inner, wall, rimB, rimF = self.bowl(sway)
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         # 盘内：暗铜 + 积水反光
-        inn = (0.5 + 0.6 * self.tex)[..., None] * np.array([0.05, 0.035, 0.018], np.float32)
+        # 第七棒（critic_A_r4 P1-7）：盘面 = 铜质（同心铸纹环 + 后高前暗的受光 + 金光镜面斑 + 铜锈），不再平涂黑椭圆
+        cxs = self.CX + sway
+        re = np.sqrt(((xx - cxs) / self.AX) ** 2 + ((yy - self.CY) / self.AY) ** 2)
+        ring = 0.78 + 0.22 * (np.cos(re * 38) ** 10) - 0.25 * (np.abs(re - 0.62) < 0.012) - 0.25 * (np.abs(re - 0.86) < 0.010)
+        back = np.clip(1.25 - 0.95 * (yy - (self.CY - self.AY)) / (2 * self.AY), 0.25, 1.3)
+        inn = ((0.45 + 0.7 * self.tex) * ring * back)[..., None] * np.array([0.27, 0.17, 0.075], np.float32)
+        inn = inn + (np.exp(-(((xx - cxs + 260) / 360) ** 2 + ((yy - self.CY + 30) / 40) ** 2)) * (0.6 + 0.4 * self.tex2))[..., None] * np.array([0.55, 0.36, 0.15], np.float32)
+        inn = inn + np.clip((self.tex - 0.66) * 4, 0, 1)[..., None] * np.array([0.015, 0.05, 0.045], np.float32)
+        lipsh = np.clip(1 - (self.CY + self.AY - yy) / 70, 0, 1) * (yy < self.CY + self.AY)            # 前沿唇口在盘面投下的内影
+        inn = inn * (1 - 0.6 * lipsh[..., None])
         fr = fr * (1 - inner[..., None]) + inn * inner[..., None]
-        fr = fr + (rimB * 1.0 + cv2.GaussianBlur(rimB, (0, 0), 6) * 0.6)[..., None] * np.array([1.0, 0.72, 0.36], np.float32) * 0.8
+        fr = fr + (rimB * 0.7 + cv2.GaussianBlur(rimB, (0, 0), 4) * 0.25)[..., None] * np.array([0.85, 0.60, 0.30], np.float32) * 0.8
         # 人：单膝跪在盘中，盘沿以下被盘壁挡住
-        fr, info = A.place(fr, t, S('A/kneel_pan'), (930 + sway, 1030 + 6 * math.sin(t * 2.1 + 0.6)), h=820 * (1 + 0.02 * u), rim=COLD,
+        fr, info = A.place(fr, t, self.R6.hair_clean('A/kneel_pan'), (930 + sway, 1030 + 6 * math.sin(t * 2.1 + 0.6)), h=820 * (1 + 0.02 * u), rim=COLD,
                            rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
         fr = A.glow(fr, (930 + sway, 300), 260, 0.10, (1.0, 0.72, 0.4))
         # 盘壁：青铜（铸纹环带 + 铜锈 + 随摆动滑过的镜面高光）
@@ -1046,7 +1056,14 @@ class V10(Shot):
                 fr = K.sparks(fr, t, 271, (gx, gy + 100), n=50, life=0.6, speed=(150, 500), dirc=(0, -1), spread=1.4, grav=700,
                               area=(100, 10), amt=0.7, t0=tl, burst=True, color=(1.0, 0.75, 0.4))
         # 盘沿（前沿金线）+ 雨溅
-        fr = fr + (rimF * 1.4 + cv2.GaussianBlur(rimF, (0, 0), 8) * 0.8)[..., None] * np.array([1.0, 0.76, 0.40], np.float32) * (0.75 + 0.5 * spec[self.CY + self.AY - 4][None, :, None] if False else 0.9)
+        # 盘沿厚度：上沿亮铜倒角（随镜面斑走）+ 下沿暗铜唇面 20px（第七棒：去霓虹金线）
+        lipT = np.zeros((H, W), np.float32); lipU = np.zeros((H, W), np.float32)
+        cv2.ellipse(lipT, (int(cxs), self.CY - 4), (self.AX, self.AY), 0, 0, 180, 1.0, 7, cv2.LINE_AA)
+        cv2.ellipse(lipU, (int(cxs), self.CY + 12), (self.AX, self.AY + 4), 0, 0, 180, 1.0, 20, cv2.LINE_AA)
+        lipU = np.clip(lipU - lipT, 0, 1)
+        fr = fr * (1 - lipU[..., None]) + (lipU * (0.5 + 0.6 * self.tex))[..., None] * np.array([0.10, 0.06, 0.025], np.float32) * (1 + 3 * spec[..., None])
+        fr = fr * (1 - lipT[..., None]) + lipT[..., None] * (np.array([0.50, 0.34, 0.15], np.float32) + spec[..., None] * np.array([0.6, 0.45, 0.25], np.float32))
+        fr = fr + cv2.GaussianBlur(lipT * spec, (0, 0), 6)[..., None] * np.array([1.0, 0.75, 0.4], np.float32) * 0.5
         for k in range(7):
             ts_ = self.t0 + 0.22 * k + 0.05
             sx = 260 + 230 * k + sway
@@ -1066,10 +1083,7 @@ class V10(Shot):
             a = t - td
             fr = K.sparks(fr, t, 281, (rx, self.CY + 70), n=50, life=0.5, speed=(150, 600), dirc=(0, -1), spread=1.5, grav=1500,
                           area=(30, 6), amt=0.9, t0=td, burst=True, color=(0.85, 0.08, 0.05))
-            run = clamp01(a / 0.8)
-            Lr = np.zeros((H, W), np.float32)
-            cv2.line(Lr, (int(rx), self.CY + 70), (int(rx + 6), int(self.CY + 70 + 200 * run)), 1.0, 5, cv2.LINE_AA)
-            fr = fr * (1 - 0.8 * Lr[..., None] * wall[..., None]) + (Lr * wall)[..., None] * np.array([0.55, 0.04, 0.03], np.float32)
+            # 第七棒：去掉「称|量」中间那条竖向墨流线（看不出动机）
         L = T.Layer()
         for i, (ch, k) in enumerate((('称', 9), ('量', 10))):
             p = clamp01((t - (CT(3, k) - 0.12)) / 0.4)
