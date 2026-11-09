@@ -582,12 +582,12 @@ class V07(Shot):
         # 镂空窗棂投影：字形光斜投（sx 拉伸 + 倾斜），窗格木条把字切成几块
         pq = clamp01((t - (V(self.T_QUAN) - 0.06)) / 0.12)
         fl = 0.85 + 0.15 * math.sin(t * 23) * math.sin(t * 7.1)
-        L = T.Layer(); T.place(L, '权', 980, 520, 640, color='white', fname='serif_black', alpha=1.0, rot=8, sx=1.25, sy=1.0, texture=False)
+        L = T.Layer(); T.place(L, '权', 1180, 540, 600, color='white', fname='serif_black', alpha=1.0, rot=8, sx=1.2, sy=1.0, texture=False)
         lat = ((np.abs(((x + 0.25 * y) % 330) - 165) < 7) | (np.abs((y % 300) - 150) < 6)).astype(np.float32)
         Lm = np.clip(L.A, 0, 1) * (1 - lat)
         Lm = cv2.GaussianBlur(Lm, (0, 0), 5)
         light = Lm * pq * fl * (1 + 0.8 * pulse(t, V(self.T_QUAN), 0.15))
-        amb = 0.42 + 0.58 * (1 - pq)
+        amb = 0.55 + 0.45 * (1 - pq)
         fr = fr * (amb + light[..., None] * np.array([2.3, 1.45, 0.75], np.float32)) + light[..., None] * np.array([0.06, 0.03, 0.01], np.float32)
         # 光路里的浮尘（体积光）
         fr = fr + K.blur_ds(Lm, 40)[..., None] * np.array([0.10, 0.06, 0.02], np.float32) * pq
@@ -603,7 +603,7 @@ class V07(Shot):
 #   第七棒：去掉 RGB 故障字——「嚣」「张」是嵌在乌木杖身里的金字，镜头摇过时随字头一记记「炸金」：金箔崩起、裂纹沿木纹爬开；「柄在」白宋小字在左
 class V08(Shot):
     SRC, ROT, WPX = None, -12, 5200
-    QI = [(0.198, 0.075), (0.204, 0.150)]
+    QI = [(0.200, 0.095), (0.208, 0.195)]
     def __init__(self):
         self.sp = spr('S051/grip_scepter')
         self.bg = BK.dark_bg(5301, 0.01, 0.03, tint=(1.1, 1.0, 0.9))
@@ -613,7 +613,7 @@ class V08(Shot):
         u = self.u(t)
         e = eio(u)
         fr = self.bg.copy()
-        sy = 0.02 + 0.22 * e
+        sy = 0.155 + 0.15 * e                                       # 杖首画布上沿始终在黑边外
         src, dst = (0.20, sy), (1060, 540)
         fr, Aw = put_at(fr, self.sp, t, src, dst, self.WPX, rot=self.ROT,
                         grade=dict(expo=0.85, sat=0.7, tint=(1.08, 0.95, 0.80), lift=0.0, gamma=1.1),
@@ -629,7 +629,7 @@ class V08(Shot):
             if p <= 0: continue
             c = sp_pt(self.sp, src, dst, self.WPX, self.ROT, self.QI[i])
             hot = pulse(t, tk, 0.35) * (t >= tk)
-            A = BV.mask([(ch, c[0], c[1], 250 * (1 + 0.06 * hot), ang)], fname='serif_black')
+            A = BV.mask([(ch, c[0], c[1], 235 * (1 + 0.06 * hot), ang)], fname='serif_black')
             fr = BV.engrave(fr, A * min(1, p * 1.5), light=(-0.9, -0.2), depth=5, groove=0.6, fill=(0.95, 0.70, 0.30), fill_k=0.9,
                             hl=0.5, surface=np.clip(Aw * 1.2, 0, 1), glow=0.25 + 1.1 * hot, glow_col=(1.0, 0.6, 0.2))
             if t >= tk:                                              # 炸金：金箔屑崩起
