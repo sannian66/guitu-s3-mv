@@ -1085,7 +1085,11 @@ class V09(Shot):
         self.c0 = list(r.choice([0, 0, 1, 2, 3], BA.NR).astype(float))
         self.up0 = list(r.choice([0, 0, 1], BA.NR).astype(float))
         self.cols = [2, 4, 6, 7, 9]                                                    # 每字拨哪一档（字刻在这档右侧梁上）
-        self.txt = beam_text('牺牲多少才', [3.0, 4.7, 6.4, 8.1, 9.8], 150, beam_h=170)
+        if R5:                                                                         # 第五轮 #31：重新断句「牺牲多少 / 才算 / 够分量」——本镜只刻 4 字，「才」不再被画框切掉
+            self.cols = [2, 4, 6, 7]
+            self.txt = beam_text('牺牲多少', [3.0, 4.7, 6.4, 8.1], 150, beam_h=170)
+        else:
+            self.txt = beam_text('牺牲多少才', [3.0, 4.7, 6.4, 8.1, 9.8], 150, beam_h=170)
         sk = night_sky(5402, top=(0.02, 0.022, 0.028), bot=(0.08, 0.08, 0.09), horizon=0.6)
         x, y = K.grid()
         table = wood_plane(5406)
@@ -1172,7 +1176,7 @@ class V10(Shot):
     QUAD = np.float32([[-2400, -1080], [5200, -1780], [3600, 2820], [-3300, 4020]])  # 只取算盘中段（4–8 档）放大到满屏、斜透视
     def __init__(self):
         self.ab = BA.Abacus(5501, beam_h=120)
-        self.txt = beam_text('算够', [5, 7], 112, beam_h=120)
+        self.txt = beam_text('才算' if R5 else '算够', [5, 7], 112, beam_h=120)      # 第五轮 #31：本镜「才算」
         self.Mq = cv2.getPerspectiveTransform(np.float32([[0, 0], [BA.AW, 0], [BA.AW, BA.AH], [0, BA.AH]]), self.QUAD)
         self.bg = BK.dark_bg(5503, 0.01, 0.03)
         self.rain = fx2.RainSheet(5504, density=0.5)
@@ -1186,7 +1190,8 @@ class V10(Shot):
         g[6] = pulse(t, V(self.T_HIT), 0.3) * (t >= V(self.T_HIT)) * 1.0
         rgb, al = self.ab.flat(c, [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1], glow=g)
         for k, m in enumerate(self.txt):
-            tk = V(CT(22, 5 + k))
+            tk = V(CT(22, (4 if R5 else 5) + k))
+            if R5: tk = max(tk, self.t0 + 0.04)                                       # 「才」已唱过 → 开镜即烫上
             pk = clamp01((t - (tk - 0.04)) / 0.16)
             if pk > 0:
                 rgb = gild(rgb, m * pk, glow=0.6 * pulse(t, tk, 0.3) * (t >= tk) + 0.05)     # 第十棒：常亮辉光 0.3→0.05，只在拨珠瞬间热一下
@@ -1247,6 +1252,9 @@ class V11(Shot):
         self.rain = fx2.RainSheet(5603, density=0.7)
         self.drops = r.uniform(0, 1, (40, 3))
 
+    if R5:                                                                            # 第五轮 #31：「够分量」三字都在秤杆可见段上（间距收紧）
+        CH = [('够', 0.660), ('分', 0.705), ('量', 0.750)]
+
     def ang(self, t):
         th = V(self.T_LIANG)
         if t < th: return -1.5 + 0.6 * math.sin(t * 3.0)
@@ -1264,13 +1272,14 @@ class V11(Shot):
                         rim=dict(col=(0.85, 0.9, 1.0), amt=1.8, dir=(0.0, -1.0)), wind_amp=0, breathe=0.0, shade=None, wrap=0.25)
         # 浅景深：焦平面在两字之间
         cxs = [sp_pt(self.sp, (0.80, 0.29), pivot, self.WPX, rot, (cx, 0.29)) for _, cx in self.CH]
-        fx_ = 0.5 * (cxs[0][0] + cxs[1][0])
+        fx_ = 0.5 * (cxs[0][0] + cxs[-1][0])
         foc = np.exp(-((x - fx_) / 760) ** 2)[..., None]
         fr = fr * foc + K.blur_ds(fr, 9) * (1 - foc)
         fr = fr + np.exp(-((y - (cxs[0][1] - 50)) / 40) ** 2)[..., None] * np.array([0.05, 0.055, 0.065], np.float32) * Aw[..., None]   # 杆面顶光
         th = V(self.T_LIANG)
         for i, (ch, cx) in enumerate(self.CH):
-            tk = V(CT(22, 7 + i))
+            tk = V(CT(22, (6 if R5 else 7) + i))
+            if R5: tk = max(tk, self.t0 + 0.10)                                       # 「够」已唱过 → 开镜一路亮过去
             p = clamp01((t - (tk - 0.12)) / 0.2)
             if p <= 0: continue
             c = cxs[i]
