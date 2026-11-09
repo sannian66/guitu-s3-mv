@@ -442,3 +442,8 @@
 ## 代码墨线滤镜小样（2026-11-10 07:50 CST，0 分）
 - units/ink_style.py：XDoG 墨线 + 三阶水墨 + 暗平背景转朱砂 + 宣纸纹理，保留上下黑边
 - 对比 out/style_test/code_compare.jpg；已知问题：红底发暗有斑块、脸部颗粒重、74.5 刃面眼睛被冲白
+
+## V04 雨夜 NB Pro 分层动态样片（2026-11-10 07:58 CST）
+- 生图：assets/gen/NB/V04/bg_0.jpg（空景）、walk_0.jpg（绿幕人物；首版 walk_try1_bad.jpg 混入场景作废），共 9 分；脚本 tools/nb_v04_sample.py
+- 合成：tools/nb_v04_clip.py → out/style_test/v04_nb_clip.mp4（4s，带原曲 17.0s 起）
+- 已知：人物只有一个姿势，是平移+起伏，腿不迈步；需要真走路得补 2–4 张步态帧或图生视频
