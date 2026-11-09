@@ -668,6 +668,10 @@ def burning_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=
         places = _place_cells(places, cells, fit=cell_fit, ar=ar)
     n = len(places)
     pr = _char_progs(text, n, prog, times, t, lead, dur)
+    if t is None:                       # 静止证明帧：火已经烧进去
+        t = 0.60
+        if t_burn is None:
+            t_burn = 0.0
     if times is not None and t_burn is None:
         t_burn = min(v for v in times if v is not None)
     L = T.Layer()
@@ -692,6 +696,7 @@ def burning_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=
 # ------------------------------------------------------------------ 穿线
 def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1, size=None,
                    font='serif_b', ar=1.0, thread=(0.62, 0.05, 0.05), top=None, sway=9.0,
+                   track_v=0.26, track_h=0.16,
                    freq=0.9, length_pad=26.0, thread_w=1.6, hang=0.42, beads=0.0,
                    shadow=0.62, glow=0.10, cells=None, cell_fit=0.80,
                    lead=0.05, dur=0.25, alpha=1.0):
@@ -703,18 +708,22 @@ def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols
     相位 φ_i 逐字递增（越靠后的字越晚被带动），prog_i 让字「唱到才挂上去」。
     `beads`>0 时线穿过字的上下各打一个红结（像提线木偶的系点）。
     """
-    places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
+    places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar,
+                         track_v=track_v, track_h=track_h)
     if not places:
         return fr
     if cells:
         places = _place_cells(places, cells, fit=cell_fit, ar=ar)
     n = len(places)
     pr = _char_progs(text, n, prog, times, t, lead, dur)
+    if t is None:                      # 静止证明帧：取摆幅最大的那一瞬
+        t = 0.25 / max(1e-3, freq)
     if top is None:
         top = min(p['y'] - p['size'] * 0.5 for p in places) - length_pad
 
     thr = np.zeros((H, W), np.float32)                     # 丝线 alpha
     knots = np.zeros((H, W), np.float32)
+    rail_y = int(round(top))                               # 挂杆：横贯所有字的顶线（微垂）
     L = T.Layer()
     for i, (p, pl) in enumerate(zip(pr, places)):
         if p <= 0.004:
@@ -735,12 +744,24 @@ def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols
                        max(2, int(round(pl['size'] * 0.05 * beads))), float(p), -1, cv2.LINE_AA)
     if L.bb[2] <= L.bb[0]:
         return fr
+    xs_ = [p['x'] for p in places]
+    if len(xs_) >= 2:
+        x0r, x1r = min(xs_) - max(60.0, places[0]['size'] * 0.6), max(xs_) + max(60.0, places[0]['size'] * 0.6)
+        sag = max(6.0, (x1r - x0r) * 0.03)
+        ts_ = np.linspace(0, 1, 64)
+        for k in range(63):
+            xa = x0r + (x1r - x0r) * ts_[k]; xb = x0r + (x1r - x0r) * ts_[k + 1]
+            ya = rail_y + sag * (1 - (2 * ts_[k] - 1) ** 2); yb = rail_y + sag * (1 - (2 * ts_[k + 1] - 1) ** 2)
+            cv2.line(thr, (int(xa), int(ya)), (int(xb), int(yb)), 1.0, max(1, int(round(thread_w * 0.9))), cv2.LINE_AA)
     out = T.compose(fr, L, shadow=shadow, shadow_sigma=18, glow=glow, glow_sigma=14)
-    TH = cv2.GaussianBlur(thr, (0, 0), 0.6)[..., None] * np.array(thread, np.float32)
-    out = out * (1 - TH * 0.9) + TH * np.array(thread, np.float32)
+    # 丝线要「亮」才看得见：暗背景上加性提亮 + 一圈窄辉光；再补一根横贯的字块挂杆
+    colv = np.array(thread, np.float32)
+    TH = cv2.GaussianBlur(thr, (0, 0), 0.5)
+    glowT = cv2.GaussianBlur(thr, (0, 0), 3.2)
+    out = out + TH[..., None] * colv * 2.4 + glowT[..., None] * colv * 1.1
     if knots.max() > 0:
-        KN = cv2.GaussianBlur(knots, (0, 0), 0.5)[..., None] * np.array(thread, np.float32) * 1.15
-        out = out * (1 - np.clip(KN, 0, 1)) + np.clip(KN, 0, 1.4)
+        KN = cv2.GaussianBlur(knots, (0, 0), 0.45)
+        out = out + KN[..., None] * colv * 3.0 + cv2.GaussianBlur(knots, (0, 0), 2.4)[..., None] * colv * 1.2
     return np.clip(out, 0, 4)
 
 
@@ -992,16 +1013,22 @@ def plate(f, section):
         finally:
             M.lyrics = old
     if section == 'e':
-        import e_r3 as M
-        olds = [(M.Lyr, 'draw'), (M.LyrO, 'draw'), (M.Sub, 'draw')]
-        keep = [(c, n, getattr(c, n)) for c, n in olds]
-        for c, n, _ in keep:
-            setattr(c, n, lambda self, fr, t, **kw: fr)
+        import e_r3, e_r5
+        keep = []
+        for M in (e_r3, e_r5):
+            for nm in dir(M):
+                if not (nm in ('Lyr', 'LyrO') or nm.startswith('Sub')):
+                    continue
+                cls = getattr(M, nm)
+                if isinstance(cls, type) and 'draw' in cls.__dict__:
+                    keep.append((cls, cls.__dict__['draw']))
+        for cls, _ in keep:
+            cls.draw = lambda self, fr, t, **kw: fr
         try:
             return _render(f)
         finally:
-            for c, n, fn in keep:
-                setattr(c, n, fn)
+            for cls, fn in keep:
+                cls.draw = fn
     return _render(f)
 
 
@@ -1035,7 +1062,7 @@ _ITEMS = [
     dict(id='L35', sec='c', f=4306, text='若规则是铁壁铜墙', key='铁壁', box=(1080, 180, 1820, 700), fn='刻',
          kw=dict(depth=3.5, dark=0.62, hl=(0.55, 0.62, 0.80), hl_amt=0.75, bite=1.6, lip=0.95)),
     dict(id='L54', sec='e', f=6392, text='对就是对错就是错何须伪装', key='何须伪装', box=(1180, 200, 1830, 880), fn='刻'),
-    dict(id='L08', sec='a', f=1281, text='那我宁愿做乱世的锋芒', key='锋芒', box=(980, 190, 1780, 640), fn='烧'),
+    dict(id='L08', sec='a', f=1281, text='那我宁愿做乱世的锋芒', key='乱世', box=(980, 190, 1780, 640), fn='烧'),
     dict(id='L17', sec='chorus1', f=2278, text='血未冷 骨未凉', key='骨未凉', box=(620, 280, 1320, 800), fn='烧'),
     dict(id='L32', sec='c', f=3931, text='信这柄刀还在发烫', key='发烫', box=(300, 220, 1500, 780), fn='烧'),
     dict(id='L51', sec='e', f=6065, text='若规则是谎言伪装', key='谎言', box=(620, 380, 1300, 820), fn='烧'),
@@ -1049,21 +1076,24 @@ _ITEMS = [
     dict(id='L31', sec='c', f=3833, text='我不低头不认命不信什么大局为上', key='大局', box=(200, 200, 1500, 780), fn='擦'),
     dict(id='L03', sec='a', f=735, text='谁在高处定对错罪状', key='罪状', box=(1000, 560, 1720, 950), fn='印'),
     dict(id='L05', sec='a', f=954, text='我杀过恶徒也放过混账', key='混账', box=(200, 560, 1000, 950), fn='印'),
-    dict(id='L14', sec='chorus1', f=1945, text='谁人来定正邪一方', key='正邪', box=(760, 400, 1480, 900), fn='印'),
-    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='量', box=(700, 300, 1500, 860), fn='印'),
+    dict(id='L14', sec='chorus1', f=1945, text='谁人来定正邪一方', key='定', box=(830, 430, 1120, 800), fn='印',
+         kw=dict(press=1.0, wear=0.26, bleed=1.8, frame_box=False, seed=27)),
+    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='量', box=(1360, 240, 1760, 620), fn='印',
+         kw=dict(press=0.9, wear=0.24, bleed=1.3, frame_box=False, seed=29)),
 ]
 
 _CLS_DEFAULT = {
     '刻': dict(font='serif_black', cols=1, depth=5.5, dark=0.88, hl=(0.76, 0.84, 1.0), hl_amt=0.62,
                groove=(0.008, 0.010, 0.016), lip=0.78, bite=1.0, chisel=0.55, dust=0.85, seed=34),
     '烧': dict(font='serif_black', cols=1, seed=41),
-    '穿线': dict(font='serif_black', cols=1, sway=10.0, freq=0.85, thread=(0.62, 0.05, 0.05), seed=7),
+    '穿线': dict(font='serif_black', cols=1, sway=10.0, freq=0.85, thread=(0.62, 0.05, 0.05), beads=0.8,
+               track_v=0.52, length_pad=54.0),
     '擦': dict(font='serif_black', cols=1, wipe=0.55, keep=0.20, front=0.45, seed=13),
     '印': dict(font='serif_black', cols=1, press=1.0, wear=0.22, bleed=1.5, seed=21),
 }
 
 
-def _draw(item, base, t):
+def _draw(item, base, t, still=False):
     """按手法派发；返回处理后的帧。"""
     import json, os
     fn = item['fn']
@@ -1078,10 +1108,13 @@ def _draw(item, base, t):
         kw.setdefault('hot', item['hot'])
     _full = T.load_lines()[int(item['id'][1:]) - 1]
     times = key_times(_full['text'], _full['times'], text) or _full['times']
+    if still:                                    # 静止证明帧：整字已落（镜头内是按演唱逐字落）
+        times, t = None, None
+        kw.setdefault('prog', 1.0)
     if fn == '刻':
         cells = item.get('cells')
         if callable(cells):
-            cells = cells(t)
+            cells = cells(t if t is not None else item['f'] / 30.0)
         return etched_lyric(base, text, box, times=times, t=t, cells=cells, **kw)
     if fn == '烧':
         return burning_lyric(base, text, box, times=times, t=t, **kw)
@@ -1111,11 +1144,11 @@ def run_items(ids=None, out_dir=None, only=None):
         before = _render(f)
         pt = plate(f, it['sec'])
         t0 = time.monotonic()
-        after = _draw(it, pt.astype(np.float32) / 255.0, t)
+        after = _draw(it, pt.astype(np.float32) / 255.0, t, still=True)
         ms = (time.monotonic() - t0) * 1000.0
         # 再跑两次取中位（首次含字形缓存预热）
         for _ in range(2):
-            t0 = time.monotonic(); _draw(it, pt.astype(np.float32) / 255.0, t)
+            t0 = time.monotonic(); _draw(it, pt.astype(np.float32) / 255.0, t, still=True)
             ms = min(ms, (time.monotonic() - t0) * 1000.0)
         after8 = (np.clip(after, 0, 1) * 255).astype(np.uint8)
         p1 = os.path.join(out_dir, '%s_before.png' % it['id'])
