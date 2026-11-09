@@ -76,8 +76,10 @@ WHITE = (0xF2 / 255.0, 0xF0 / 255.0, 0xEC / 255.0)    # 4 暖白 #F2F0EC
 ACCENT = (0xB3 / 255.0, 0x26 / 255.0, 0x1A / 255.0)   # 4 朱红 #B3261A
 ACCENT_GLOW = 0.16            # 4 极轻朱晕（additive，占比很小）
 
+SCRIM_PAD_Y = 40              # 5 纵向：本列实际 y 区间 ±40px（不做通高暗带）
+SCRIM_FADE = 60               # 5 纵向两端各 60px 线性淡出
 SCRIM_PAD_L = 120             # 5 band 左端 = 最左列左缘 − 120px
-SCRIM_PAD_R = 40              # 5 band 右端 = 1792 + 40px
+SCRIM_PAD_R = 0               # 5 峰值落在 1792（往右到画边缘保持峰值，避免硬竖缝）
 SCRIM_A = 0.42                # 5 峰值 alpha（暗底/中性底）
 SCRIM_A_BRIGHT = 0.62         # 5 亮底峰值（组长批准破例）
 SCRIM_DARK = (0.10, 0.22)     # 5 暗底：背后中位亮度 ≤0.10 → 峰值减半，≥0.22 → 全量
@@ -521,7 +523,7 @@ def _scrim(F, xf, y0, xt, y1, ox=0, oy=0):
     F 是整帧的子区（左上角 = (ox, oy)）。返回 (F, 亮底系数 k) —— k 拿去决定要不要上 1px 描边。
     """
     h, w = F.shape[:2]
-    xa, xb = max(ox, int(xf)), min(ox + w, int(xt))
+    xa, xb = max(ox, int(xf) - 2), min(ox + w, W)     # 区域铺到画右边缘：1792 之后保持峰值，不留硬竖缝
     ya, yb = max(oy, int(y0), BAR), min(oy + h, int(y1), H - BAR)
     if xb <= xa or yb <= ya:
         return F, 0.0
@@ -536,7 +538,7 @@ def _scrim(F, xf, y0, xt, y1, ox=0, oy=0):
     ax = np.clip((xs - float(xf)) / max(1.0, float(xt) - float(xf)), 0.0, 1.0) * a
     ny = yb - ya
     fy = np.ones(ny, np.float32)
-    fe = min(26, ny // 2)
+    fe = min(SCRIM_FADE, ny // 2)                  # 2：两端各 60px 线性淡出（只贴字，不做通高暗带）
     if fe > 2:
         r = np.linspace(0.0, 1.0, fe, dtype=np.float32)
         e = 0.5 - 0.5 * np.cos(np.pi * r)
@@ -573,14 +575,14 @@ def _sentence(F, r, t, ox=0, oy=0):
     v = 1.0 if q <= 0 else max(0.0, 1.0 - q / 1.0)
     if v <= 0.0:
         return F
-    x0, y0, x1, y1 = r['box']
-    _hide = OUT_CHARS | IN_SCENE_HIDE              # 7：留空集合（画面内已有的字 + props 抽走的字）
-    xf, xt = r['band']                             # 5：band = 本句列范围 −120 / +40
-    F, kb = _scrim(F, xf, y0 - 48, xt, y1 + 40, ox, oy)
+    _hide = OUT_CHARS | IN_SCENE_HIDE              # 7：让位集合（画面内已有的字 + props 抽走的字）
+    lay = vis_layout(r, _hide)                     # 7：让位的字**从列里抽掉**、剩下的字上顺排（不留洞）
+    if not lay['pos']:
+        return F
+    xf, xt = lay['band']                           # 5：band = 本句列范围 −120 / +40
+    F, kb = _scrim(F, xf, lay['top'], xt, lay['bot'], ox, oy)
     out_a = OUTLINE_A * kb                         # 亮底才有描边，且随中位亮度平滑淡入
-    for key in r['pos']:
-        if (r['line'], key['k']) in _hide:         # 7 让位：留空占位，不画（IN_SCENE + props 两档）
-            continue
+    for key in lay['pos']:
         p = (t - (key['t'] - IN_LEAD)) / IN_DUR   # 6 逐字墨显
         if p <= 0.0:
             continue
@@ -611,26 +613,63 @@ def scrim_info(fr, f):
         return None
     r = act[0]
     F = (fr.astype(np.float32) / 255.0) if fr.dtype == np.uint8 else np.asarray(fr, np.float32)
-    xf, xt = r['band']
+    lay = vis_layout(r, OUT_CHARS | IN_SCENE_HIDE)
+    xf, xt = lay['band']
     x0, x1 = max(0, int(xf)), min(W, int(xt))
-    y0, y1 = max(BAR, int(r['box'][1]) - 48), min(H - BAR, int(r['box'][3]) + 40)
+    y0, y1 = max(BAR, int(lay['top'])), min(H - BAR, int(lay['bot']))
     reg = F[y0:y1, x0:x1]
     L = float(np.median(reg[..., 0] * 0.299 + reg[..., 1] * 0.587 + reg[..., 2] * 0.114))
     lo, hi = SCRIM_DARK
     kb_ = _ssl(*SCRIM_BRIGHT, L)
     a = (SCRIM_A * (0.5 + 0.5 * _ssl(lo, hi, L))) * (1.0 - kb_) + SCRIM_A_BRIGHT * kb_
-    left_edge = int(r['left'])
+    left_edge = int(lay['left'])
     frac = (left_edge - xf) / max(1.0, xt - xf)   # 最左列左缘落在 band 的比例（=scrim 峰值占比）
     return dict(line=r['line'], band=(int(xf), int(xt)), L=L, peak=a,
                 outline=OUTLINE_A * kb_, left_frac=frac, left_alpha=a * frac)
 
 
+_VLC = {}
+
+
+def vis_layout(r, hide):
+    """把被让位的字从列里抽掉，剩下的字按原字号/列距往上顺排（列变短、不留洞）。
+
+    字号与列宽仍按**整句**定（不因留空而变化），只是列内字数变少；
+    逐字时间不动 —— 抽掉的字跳过，后面字的出现时刻仍按 align 走。
+    """
+    hk = tuple(sorted(k for (ln, k) in hide if ln == r['line']))
+    key = (r['line'], hk)
+    v = _VLC.get(key)
+    if v is not None:
+        return v
+    vis = [c for c in r['chars'] if (r['line'], c['k']) not in hide]
+    pos = []
+    for ci in range(0, max(1, len(vis)), MAX_PER_COL):
+        chunk = vis[ci:ci + MAX_PER_COL]
+        xc = COL_R - r['size'] / 2.0 - (ci // MAX_PER_COL) * (r['size'] + COL_GAP)
+        for j, c in enumerate(chunk):
+            pos.append(dict(k=c['k'], ch=c['ch'], t=c['t'], x=xc,
+                            y=COL_TOP + r['size'] / 2.0 + j * r['size'] * LEAD))
+    if pos:
+        left = min(p['x'] for p in pos) - r['size'] / 2.0
+        bot = max(p['y'] for p in pos) + r['size'] / 2.0
+    else:                                          # 整句都被让位（理论上不该发生）
+        left, bot = COL_R - r['size'] / 2.0, COL_TOP + r['size']
+    v = dict(pos=pos, left=left,
+             band=(left - SCRIM_PAD_L, COL_R + SCRIM_PAD_R),
+             top=COL_TOP - SCRIM_PAD_Y, bot=bot + SCRIM_PAD_Y,
+             n=len(vis))
+    _VLC[key] = v
+    return v
+
+
 def roi(act):
     """当前同屏句子的绘制区（整帧坐标）：列 + scrim，只在这一块里做浮点运算。"""
-    xa = min(r['band'][0] for r in act) - 2         # 含整条 scrim 的起点
-    xb = max(r['band'][1] for r in act) + 2         # 含 scrim 的右端（1792+40）
-    ya = min(r['box'][1] for r in act) - 48
-    yb = max(r['box'][3] for r in act) + 40
+    lay = [vis_layout(r, OUT_CHARS | IN_SCENE_HIDE) for r in act]
+    xa = min(l['band'][0] for l in lay) - 2         # 含整条 scrim 的起点
+    xb = max(l['band'][1] for l in lay) + 2         # 含 scrim 的右端（1792+40）
+    ya = min(l['top'] for l in lay) - 12
+    yb = max(l['bot'] for l in lay) + 12
     return max(0, int(xa)), max(0, int(ya)), min(W, int(xb)), min(H, int(yb))
 
 
