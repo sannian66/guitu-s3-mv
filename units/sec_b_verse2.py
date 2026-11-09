@@ -398,10 +398,10 @@ class V02(Shot):
         sway = math.sin(t * 2.3) * 2.0
         hfig = 30 + 70 * self.persp                                    # 本地人形高度（px）
         mx = (self.xx - self.jx - sway * self.sc).astype(np.float32)
-        my = (self.yy - self.jy - b * hfig * 0.32).astype(np.float32)    # 叩首 = 下沉
+        my = (self.yy - self.jy - b * hfig * 0.45).astype(np.float32)    # 叩首 = 下沉
         F = cv2.remap(self.F, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
         A = cv2.remap(self.A, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)[..., None]
-        shade = self.tone * (1 - 0.30 * b)                             # 俯下去的背进阴影
+        shade = self.tone * (1 - 0.40 * b)                             # 俯下去的背进阴影
         F = F * shade[..., None]
         # 波前经过时：背上一道冷白顶光（钟声 + 雷光扫过人海）
         tw = t - (self.t0 + 0.12)
@@ -414,8 +414,8 @@ class V02(Shot):
         f2 = cv2.resize(np.roll(self.fog2, -int(t * 22) % self.fog2.shape[1], 1), (w, h))
         fog = (np.clip(f1 - 0.45, 0, 1) * (0.5 + 0.5 * (1 - self.persp)) * 0.55 + np.clip(f2 - 0.5, 0, 1) * 0.35)[..., None]
         P = P * (1 - fog * 0.6) + fog * np.array([0.30, 0.32, 0.35], np.float32)
-        zoom = 0.84 + 0.18 * ein(u, 1.6)                               # 顶拍压近（crane down）
-        fr = plate_view(P, zoom, w / 2 + 40 * e, h / 2 + 30 - 60 * e, -3.0 + 3.0 * e)
+        zoom = 0.80 + 0.16 * ein(u, 1.6)                               # 顶拍压近（crane down），大殿宫灯留在画内
+        fr = plate_view(P, zoom, w / 2 + 40 * e, h / 2 - 110 + 40 * e, -3.0 + 3.0 * e)
         # 纵深虚化：近排（画面下 1/4）轻虚，强调中层
         bl = cv2.GaussianBlur(fr, (0, 0), 3.2)
         x, y = K.grid()
@@ -435,7 +435,7 @@ class V02(Shot):
             r0 = 60 + 1100 * ph ** 1.6; r1 = r0 + 18 + 70 * ph
             p0 = (int((960 + math.cos(ang) * r0) / 2), int((560 + math.sin(ang) * r0 * 0.8) / 2)); p1 = (int((960 + math.cos(ang) * r1) / 2), int((560 + math.sin(ang) * r1 * 0.8) / 2))
             cv2.line(buf, p0, p1, 0.18 + 0.5 * ph, 1, cv2.LINE_AA)
-        fr = fr + cv2.resize(buf, (W, H))[..., None] * COLDC * 0.45
+        fr = fr + cv2.resize(buf, (W, H))[..., None] * COLDC * 0.28
         # 前景：钟楼檐角（虚焦黑剪影 + 冷边 + 滴水），视差最快
         ox = -140 + 260 * e
         ex = x - ox
@@ -454,8 +454,9 @@ class V02(Shot):
         fr = fr + cv2.GaussianBlur(dbuf, (0, 0), 3)[..., None] * COLDC * 0.5
         # 调色：冷灰，宫灯保留一点朱
         lum = fr.mean(-1, keepdims=True)
-        lanS = cv2.resize(self.lan, (W, H))[..., None] if False else 0.0
-        fr = (lum + (fr - lum) * 0.22) * np.array([0.95, 0.98, 1.03], np.float32)
+        redm = np.clip((fr[..., 0] - fr[..., 2]) * 4 - 0.1, 0, 1)[..., None]
+        fr = (lum + (fr - lum) * (0.20 + 0.55 * redm)) * np.array([0.95, 0.98, 1.03], np.float32)
+        fr = np.clip(fr, 0, 4); fr = 0.62 * (fr / 0.62) ** 1.28 * 1.08          # 拉开反差：湿地压黑、人背提亮
         if tl <= t: fr = fr * (1 + 0.35 * pulse(t, tl + 0.05, 0.12))
         return fr, (3 if abs(t - tl) < 0.04 else 0)
 
