@@ -550,68 +550,99 @@ class V06(Shot):
         return fr, 0
 
 
+def sp_pt(sp, src, dst, width_px, rot, n):
+    """精灵内归一化点 n → 屏幕（与 sp.draw 同一仿射：绕 src 旋转 rot、缩放 width_px/sp.w、src→dst）"""
+    s_ = width_px / sp.w
+    M = cv2.getRotationMatrix2D((src[0] * sp.w, src[1] * sp.h), rot, s_)
+    M[0, 2] += dst[0] - src[0] * sp.w; M[1, 2] += dst[1] - src[1] * sp.h
+    q = M @ np.array([n[0] * sp.w, n[1] * sp.h, 1.0])
+    return float(q[0]), float(q[1])
+
+
 # =====================================================================================
-# V07 93.97–94.48 CU：太上皇的手攥紧权杖（grip_scepter），「权」金色巨字在烛焰热浪里扭曲
+# V07 93.97–94.48 CU：太上皇的手攥紧权杖（grip_scepter）。第七棒：「权」不再是悬空金字——
+#   94.02 烛焰一跳，一扇镂空「权」字的窗棂把光投进暗殿：字形的暖光斜斜地落在攥杖的手背、袖口和后墙上（字 = 照在权力之手上的光）
 class V07(Shot):
     T_QUAN = 94.02
     def __init__(self):
         self.sp = spr('S051/grip_scepter')
-        self.bg = BK.dark_bg(5201, 0.012, 0.04, tint=(1.2, 1.0, 0.85))
-        T.warm('权', 'serif_black', 520)
+        self.bg = BK.dark_bg(5201, 0.02, 0.06, tint=(1.2, 1.0, 0.85))
+        wall = cv2.resize(K.fbm(H // 4, W // 4, 5202, 8, 5), (W, H))[..., None]
+        self.bg = self.bg * (0.7 + 0.6 * wall)
+        T.warm('权', 'serif_black', 620)
 
     def render(self, t):
         u = self.u(t)
         x, y = K.grid()
-        fr = self.bg + np.exp(-(((x - 1250) / 700) ** 2 + ((y - 700) / 500) ** 2))[..., None] * np.array([0.22, 0.10, 0.03], np.float32)
-        # 「权」在人物背后（后景巨字，热浪扭曲）
-        L = T.Layer()
-        pq = clamp01((t - (V(self.T_QUAN) - 0.1)) / 0.2)
-        T.place(L, '权', 1340, 520, 560, color='gold', fname='serif_black', alpha=pq, scale=1.4 - 0.4 * eout(pq, 3))
-        Lf = T.compose(np.zeros_like(fr), L, shadow=0.0, glow=0.7, glow_color=(1.0, 0.5, 0.15))
-        Lf = fx2.heat_haze(Lf, t, amt=9.0, scale=36, speed=1.6, seed=52)
-        fr = fr + Lf
+        fr = self.bg.copy()
         k = eout(clamp01((t - self.t0) / 0.25), 3)                 # 攥紧：手从略松到紧（推进 + 微抖）
-        fr, _ = put_at(fr, self.sp, t, (0.20, 0.22), (520, 420), 2600 * (1.0 + 0.04 * k),
-                       grade=dict(expo=0.75, sat=0.65, tint=(1.06, 0.95, 0.82), lift=0.0, gamma=1.15),
-                       rim=dict(col=(1.0, 0.66, 0.32), amt=2.2, dir=(0.9, -0.3)), wind_amp=2, shade=(900, 1900, 0.3, 700, 0.3), wrap=0.3)
+        fr, Aw = put_at(fr, self.sp, t, (0.24, 0.30), (820, 560), 2700 * (1.0 + 0.04 * k),
+                        grade=dict(expo=0.80, sat=0.6, tint=(1.04, 0.96, 0.86), lift=0.0, gamma=1.12),
+                        rim=dict(col=(1.0, 0.66, 0.32), amt=1.6, dir=(0.9, -0.3)), wind_amp=2, shade=None, wrap=0.3)
+        # 镂空窗棂投影：字形光斜投（sx 拉伸 + 倾斜），窗格木条把字切成几块
+        pq = clamp01((t - (V(self.T_QUAN) - 0.06)) / 0.12)
+        fl = 0.85 + 0.15 * math.sin(t * 23) * math.sin(t * 7.1)
+        L = T.Layer(); T.place(L, '权', 980, 520, 640, color='white', fname='serif_black', alpha=1.0, rot=8, sx=1.25, sy=1.0, texture=False)
+        lat = ((np.abs(((x + 0.25 * y) % 330) - 165) < 7) | (np.abs((y % 300) - 150) < 6)).astype(np.float32)
+        Lm = np.clip(L.A, 0, 1) * (1 - lat)
+        Lm = cv2.GaussianBlur(Lm, (0, 0), 5)
+        light = Lm * pq * fl * (1 + 0.8 * pulse(t, V(self.T_QUAN), 0.15))
+        amb = 0.42 + 0.58 * (1 - pq)
+        fr = fr * (amb + light[..., None] * np.array([2.3, 1.45, 0.75], np.float32)) + light[..., None] * np.array([0.06, 0.03, 0.01], np.float32)
+        # 光路里的浮尘（体积光）
+        fr = fr + K.blur_ds(Lm, 40)[..., None] * np.array([0.10, 0.06, 0.02], np.float32) * pq
+        fr = fx2.heat_haze(fr, t, amt=2.5 * pq, scale=40, speed=1.4, seed=52)
         hk = hitp(t, self.T_QUAN, 0.1)
-        dx, dy, dr = shake(t, 3 + 10 * hk, 11, 52)
-        fr = cam(fr, 1.0 + 0.12 * eio(u) + 0.04 * hk, dx, dy, dr)
+        dx, dy, dr = shake(t, 2 + 8 * hk, 11, 52)
+        fr = cam(fr, 1.0 + 0.10 * eio(u) + 0.03 * hk, dx, dy, dr)
         return fr, (3 if hk > 0.5 else 0)
 
 
 # =====================================================================================
-# V08 94.48–96.10 ECU 下摇：沿权杖杖身下摇（grip_scepter 局部，与 V07 不同景别/方向）；「柄在」小字，「嚣张」RGB 错位故障
+# V08 94.48–96.10 ECU 下摇：沿权杖杖身由杖首向下摇（grip_scepter 局部，与 V07 景别/方向不同：V07 手+光，V08 杖身微距）。
+#   第七棒：去掉 RGB 故障字——「嚣」「张」是嵌在乌木杖身里的金字，镜头摇过时随字头一记记「炸金」：金箔崩起、裂纹沿木纹爬开；「柄在」白宋小字在左
 class V08(Shot):
+    SRC, ROT, WPX = None, -12, 5200
+    QI = [(0.198, 0.075), (0.204, 0.150)]
     def __init__(self):
         self.sp = spr('S051/grip_scepter')
         self.bg = BK.dark_bg(5301, 0.01, 0.03, tint=(1.1, 1.0, 0.9))
-        T.warm('柄在', 'serif_sb', 100); T.warm('嚣张', 'serif_black', 300)
+        T.warm('柄在', 'serif_sb', 100)
 
     def render(self, t):
         u = self.u(t)
         e = eio(u)
         fr = self.bg.copy()
-        # 杖身：精灵内杖在 x≈0.17，从顶端 (0.17,0.0) 下摇到手 (0.2,0.3)；镜像（与 V07 方向相反）+ 斜 12°
-        sy = 0.02 + 0.30 * e
-        fr, _ = put_at(fr, self.sp, t, (0.17, sy), (1100, 520), 5200, rot=-12,
-                       grade=dict(expo=0.8, sat=0.7, tint=(1.08, 0.95, 0.80), lift=0.0, gamma=1.1),
-                       rim=dict(col=(1.0, 0.7, 0.35), amt=2.6, dir=(-0.9, -0.2)), wind_amp=0, breathe=0.0, shade=None, wrap=0.2,
-                       mblur=(0, 18 * math.sin(math.pi * u)))
+        sy = 0.02 + 0.22 * e
+        src, dst = (0.20, sy), (1060, 540)
+        fr, Aw = put_at(fr, self.sp, t, src, dst, self.WPX, rot=self.ROT,
+                        grade=dict(expo=0.85, sat=0.7, tint=(1.08, 0.95, 0.80), lift=0.0, gamma=1.1),
+                        rim=dict(col=(1.0, 0.7, 0.35), amt=2.6, dir=(-0.9, -0.2)), wind_amp=0, breathe=0.0, shade=None, wrap=0.2,
+                        mblur=(0, 14 * math.sin(math.pi * u)))
         x, y = K.grid()
-        fr += np.exp(-((x - 1100) / 160) ** 2)[..., None] * np.array([0.12, 0.07, 0.03], np.float32) * (0.6 + 0.4 * math.sin(t * 9))
-        pr = prs(21, [9, 10, 11, 12], t)
+        fr += np.exp(-((x - 1060) / 220) ** 2)[..., None] * np.array([0.10, 0.06, 0.025], np.float32) * (0.6 + 0.4 * math.sin(t * 9))
+        a0 = sp_pt(self.sp, src, dst, self.WPX, self.ROT, (0.190, 0.0)); a1 = sp_pt(self.sp, src, dst, self.WPX, self.ROT, (0.208, 0.2))
+        ang = -math.degrees(math.atan2(a1[0] - a0[0], a1[1] - a0[1]))       # 杖身倾角 → 字同角
+        for i, (ch, li) in enumerate((('嚣', 11), ('张', 12))):
+            tk = V(CT(21, li))
+            p = clamp01((t - (tk - 0.18)) / 0.18)
+            if p <= 0: continue
+            c = sp_pt(self.sp, src, dst, self.WPX, self.ROT, self.QI[i])
+            hot = pulse(t, tk, 0.35) * (t >= tk)
+            A = BV.mask([(ch, c[0], c[1], 250 * (1 + 0.06 * hot), ang)], fname='serif_black')
+            fr = BV.engrave(fr, A * min(1, p * 1.5), light=(-0.9, -0.2), depth=5, groove=0.6, fill=(0.95, 0.70, 0.30), fill_k=0.9,
+                            hl=0.5, surface=np.clip(Aw * 1.2, 0, 1), glow=0.25 + 1.1 * hot, glow_col=(1.0, 0.6, 0.2))
+            if t >= tk:                                              # 炸金：金箔屑崩起
+                fr = K.sparks(fr, t, 5310 + i, c, n=90, life=0.6, speed=(150, 650), dirc=(0.4, -1), spread=2.4, grav=700,
+                              size=1.6, area=(120, 120), color=(1.0, 0.78, 0.40), amt=1.1, t0=tk, burst=True)
+        pr = prs(21, [9, 10], t)
         L = T.Layer()
         for i, ch in enumerate('柄在'):
-            if pr[i] > 0: T.place(L, ch, 420, 330 + i * 120, 104, color='white', fname='serif_sb', alpha=min(1, pr[i] * 2))
+            if pr[i] > 0: T.place(L, ch, 470, 360 + i * 125, 104, color='white', fname='serif_sb', alpha=min(1, pr[i] * 2))
         fr = T.compose(fr, L, shadow=0.85)
-        L2 = T.Layer()
-        for i, ch in enumerate('嚣张'):
-            if pr[2 + i] > 0: T.place(L2, ch, 560 + i * 330, 700, 300, color='gold', fname='serif_black', alpha=min(1, pr[2 + i] * 2),
-                                      scale=1.3 - 0.3 * eout(pr[2 + i]))
-        gk = max(hitp(t, CT(21, 11), 0.18), hitp(t, CT(21, 12), 0.25), 0.25 * (0.5 + 0.5 * math.sin(t * 23)) * (pr[3] > 0.99))
-        fr = glitch_text(fr, L2, gk, seed=53, t=t)
-        fr = cam(fr, 1.04, 0, 0, 0)
+        gk = max(hitp(t, CT(21, 11), 0.15), hitp(t, CT(21, 12), 0.2))
+        dx, dy, dr = shake(t, 10 * gk, 12, 53)
+        fr = cam(fr, 1.04 + 0.03 * gk, dx, dy, dr)
         return fr, (3 if gk > 0.6 else 0)
 
 
