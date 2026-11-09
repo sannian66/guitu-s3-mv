@@ -903,6 +903,7 @@ class V06(Shot):
             L = T.Layer()
             L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
             L.paste(BG('光', 'kai', 230, cprog(1, [10], t, 0.12)[0], seed=2), 1080, 760, (0.86, 0.12, 0.08))
+            if NO_GLYPH_HANGUANG: L = T.Layer()      # [r1-#3] 用户：寒光巨字去掉 → 清空字层，只保留扫光/斩线
             a2 = t - ts2
             # 第十一棒（P0-2「寒光随刀光扫过点亮」）：每次刀身扫光走到刀尖后，一道冷光沿字行由左向右掠过 —— 扫到哪个字哪个字亮（逐字点亮，不是整体闪）
             for sa, sd in ((V(21.24), 0.30), (ts2 - 0.26, 0.24)):
@@ -1120,8 +1121,10 @@ class V09(Shot):
         # 天平：先在黑底合成拿到预乘色，再做倒影
         z = np.zeros((H, W, 3), np.float32)
         rot = 0.0
-        P, info = A.place(z, t, self.spr, (960, 880), h=740, anc=(0.5, 1.0), rim=COLD, rim_amt=1.4, rim_dir=(-0.8, -0.5),
-                          grade=dict(expo=1.05, sat=0.85, tint=(1.04, 1.0, 0.92), gamma=1.0), wind=0, breathe=0.0, rot=rot)
+        # [r1-#6] 用户：25s 是剪纸、26s 却变成写实主角 → 这一镜整镜改成「纸剪人形片」质感
+        P, info = A.place(z, t, self.spr, (960, 880), h=740, anc=(0.5, 1.0), rim=COLD, rim_amt=1.1, rim_dir=(-0.8, -0.5),
+                          look='paper',
+                          grade=dict(expo=1.02, sat=0.18, tint=(1.05, 1.0, 0.96), gamma=1.06), wind=0, breathe=0.0, rot=rot)
         Al = info['A'][..., None]
         # 第八棒（critic_A_r5 P0-1）：横梁按支点慢摆 —— 装进「人命」后纸人盘被金玺压得往上翘（右盘下沉），带一点阻尼余摆
         sl = 0.075 * eio(u) - 0.020 + 0.012 * math.sin(t * 4.2) * (1 - 0.6 * u)

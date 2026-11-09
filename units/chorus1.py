@@ -925,6 +925,9 @@ class S042(Shot):
         self.bg = K.sky(seed=42, cloud=0.3, top=(0.01, 0.012, 0.018), bot=(0.05, 0.055, 0.065)).copy()
         rgb, A = K.moon_sprite(240)
         self.bg = K.paste_sprite(self.bg, rgb, A, 960, 520)
+        # [r1-#26] 用户：删掉「天」字，改成卡点变成猩红之月 → 保存月盘蒙版用来染色
+        self.moon_m = A.astype(np.float32) if A.dtype != np.float32 else A
+        self.moon_c = (960, 520)
         self.cl = K.tile(1024, 421, 4, 6)
         self.L = T.giant_layer('天', MAIN_FONT['天'], (0.03, 0.03, 0.035), 960, 540, 440 if MAIN_FONT['天'].startswith('serif') else 500)
         T.warm('不判', 'xing', 110)
@@ -932,13 +935,18 @@ class S042(Shot):
     def render(self, t):
         u = self.u(t)
         fr = self.bg.copy()
-        # 天字（月晕中，墨色剪影在月面上更有压迫感）
-        if t < self.T_SL:
-            fr = T.compose(fr, self.L, shadow=0.0, outline=2, outline_color=(0.75, 0.8, 0.9), glow=0.6, glow_color=(0.7, 0.78, 0.95),
-                           opacity=eout((t - self.t0 - 0.1) / 0.4))
-        else:
-            fr = T.slash_layer(fr, self.L, clamp01((t - self.T_SL) / 0.8), (960, 540), -32, slide=0.35, sz=520, length=1700,
-                               style_kw=dict(shadow=0.0, outline=2, outline_color=(0.75, 0.8, 0.9), glow=0.6, glow_color=(0.7, 0.78, 0.95)), seed=42)
+        # [r1-#26] 用户：删掉「天」字 → 改为「刀落卡点，月亮变猩红」
+        _k = clamp01((t - self.T_SL) / 0.30) ** 0.7 if t >= self.T_SL else 0.0
+        if _k > 0.0:
+            # 用「底图里最亮的圆盘」当蒙版（比 alpha 可靠：天空 alpha 也是 1）
+            _b = self.bg
+            _lum = (_b[..., 0] * 0.299 + _b[..., 1] * 0.587 + _b[..., 2] * 0.114).astype(np.float32)
+            m = np.clip((_lum - 0.52) / 0.10, 0, 1)
+            m = np.clip((m - 0.55) / 0.32, 0, 1)          # 只染月盘本体，别把光晕也烧红
+            m = cv2.GaussianBlur(m, (0, 0), 3)[..., None] * _k
+            CRIMSON = np.array([0.62, 0.06, 0.05], np.float32)
+            fr = fr * (1 - 0.82 * m) + CRIMSON * (0.82 * m)
+            fr = fr + (m ** 2) * np.array([0.10, 0.0, 0.0], np.float32)   # 一点血色余晖
         # 云吞月（前景云卷过）
         sh = 200 + 900 * eio(u)
         cl = cv2.resize(K.tile_crop(self.cl, sh, 100 - 80 * u, H // 2, W // 2), (W, H))
