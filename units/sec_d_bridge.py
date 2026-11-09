@@ -560,7 +560,7 @@ class S08_Seals(Shot):
             if t >= th: hits.append(th)
             pre = fr
             fr = R5.zhupi(fr, ch, x, y, s_, p, seed=sd)
-            fr = R7.ink_sheen(fr, R7.diff_mask(pre, fr, 5.0), (-0.75, -0.6), 3, 0.30, (1.0, 0.86, 0.78), core=0.12)   # [r7b] 湿朱受光
+            fr = R7.rim_edge(fr, (R7.diff_mask(pre, fr, 5.0) > 0.6).astype(np.float32), (-0.75, -0.6), 2, 0.22, (1.0, 0.85, 0.75), glow=1, gamt=0.0)   # [r7b] 湿朱受光一线
             fr = D.ink_spray(fr, t, th, (x + 60, y + 40), n=26, seed=80 + sd, power=380, col=CINNABAR, size=(2, 6))
         fr = R7.key_light(fr, (240, 120), 1500, amt=0.12, dark=0.36)                       # [r7b] 主光左上，右下角压暗
         fr = R7.light_shaft(fr, t, (120, 20), 36, 200, 0.12, seed=81, motes=45, length=1700)
