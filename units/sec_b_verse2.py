@@ -475,6 +475,24 @@ def ring_wipe(A, B, p, center=(1300, 600), sy=0.85):
 BK.BTRANS['ring_wipe'] = ring_wipe
 
 
+def lattice_open(A, B, p, seed=7, cw=330, ch=300):
+    """B 组第十棒：窗格开门——B 一格一格从窗棂格里亮出来（与 V07 窗棂同尺度），格框留一道暖边，格内先亮的先开"""
+    x, y = K.grid()
+    gx = np.floor((x + 0.25 * y) / cw); gy = np.floor(y / ch)
+    r = np.random.default_rng(seed)
+    d = r.random((64, 64)).astype(np.float32)
+    dl = d[(gx.astype(int) + 8) % 64, gy.astype(int) % 64] * 0.55
+    q = np.clip((p - dl) / 0.45, 0, 1)
+    m = (q * q * (3 - 2 * q))[..., None]
+    lat = ((np.abs(((x + 0.25 * y) % cw) - cw / 2) > cw / 2 - 7) | (np.abs((y % ch) - ch / 2) > ch / 2 - 6)).astype(np.float32)[..., None]
+    out = A * (1 - m) + B * m
+    edge = lat * math.sin(math.pi * p)
+    return out * (1 - edge * 0.85) + edge * np.array([0.30, 0.18, 0.08], np.float32)
+
+
+BK.BTRANS['lattice_open'] = lattice_open
+
+
 # =====================================================================================
 # V03 89.40–90.77 LS：雨中纸人队列从队首到队尾依次鞠躬（顾全大局）；前景雨帘，后景雾中金光；
 #   「世人教我顾全」思源宋 3 个深度的空间字，随横移视差
@@ -1898,27 +1916,27 @@ SHOTS = [V01, V02, V03, V04, V05, V06, V07, V08, V09, V10, V11, V12, V13, V14, V
 CUTS = {
     'V02': ('ring_wipe', 0.06, 0.16, dict(center=(1300, 600))),    # 第六棒：钟声折射环开门（钟口圆 → 广场声波环）
     'V03': ('zoom_dark', 0.08, 0.14, dict(center=(960, 560))),     # 第六棒：顶拍压进跪拜的人群 → 平视纸人队列
-    'V04': ('punch', 0, 0, {}),                                     # 第七棒：金闪 → 落拍推近色散（刻刀第一记）
+    'V04': ('paper_tear', 0.05, 0.12, dict(seed=4, angle=-6)),   # 第十棒：punch 压到 ≤5 处 → 纸扎队列撕开露出笏板                                     # 第七棒：金闪 → 落拍推近色散（刻刀第一记）
     'V05': ('occlusion', 0.08, 0.16, dict(kind='pillar', direction=1, seed=5)),
     'V06': ('match_cut', 0.0, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32))),   # 第五棒：去金圈（≈副歌一 S045 光圈）
-    'V07': ('punch', 0, 0, {}),                                     # 第七棒：金闪 → 推近色散（窗棂光一跳）
+    'V07': ('lattice_open', 0.06, 0.12, dict(seed=7)),          # 第十棒：窗格一格格亮开（同 V07 窗棂尺度）                                     # 第七棒：金闪 → 推近色散（窗棂光一跳）
     'V08': ('rain_curtain', 0.06, 0.14, dict(seed=8)),            # 第九棒：split_slide 中间帧全黑 → 雨帘落幕（由暗殿进雨夜外景）
     'V09': ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160)),
-    'V10': ('punch', 0, 0, {}),                                     # 第七棒：hard → 推近色散冲击
+    'V10': ('slash_wipe', 0.04, 0.10, dict(angle=84)),                # 第十棒：punch → 沿算盘档竖线一记竖擦                                     # 第七棒：hard → 推近色散冲击
     'V11': ('slash_wipe', 0.05, 0.12, dict(angle=-70)),
     'V12': ('shatter', 0.04, 0.14, dict(seed=12, center=(960, 520), n=60)),
     'V13': ('punch', 0, 0, {}),                                     # 第六棒：none → 落拍 punch + 泥水冠状冲击（人物首帧在画内）
-    'V14': ('punch', 0, 0, {}),                                     # 第七棒：红闪 → 落拍冲击（起身气浪）
+    'V14': ('ring_wipe', 0.04, 0.12, dict(center=(960, 640), sy=0.7)),   # 第十棒：起身气浪环推开上一镜（与钟声环同形呼应）                                     # 第七棒：红闪 → 落拍冲击（起身气浪）
     'V15': ('ink_bleed', 0.06, 0.20, dict(seed=15)),
     'V16': ('rain_curtain', 0.08, 0.18, dict(seed=16)),             # 第四棒：灰雾 smoke → 雨帘落幕（b_kit）
     'V17': ('slash_wipe', 0.04, 0.12, dict(angle=7)),               # 第七棒：碑上那一刀顺势划开下一镜（刀线同向）
     'V18': ('punch', 0, 0, {}),
-    'V19': ('punch', 0, 0, {}),                                     # 第七棒：hard → 推近色散冲击                                      # 第五棒 9/n：match_cut 中点双影糊 → 落拍硬切冲击（推近+提亮 2 帧），拳 → 张开的手掌
+    'V19': ('shatter', 0.03, 0.10, dict(seed=19, center=(620, 520), n=50)),   # 第十棒：punch → 拳心一握，画面自拳心碎开                                     # 第七棒：hard → 推近色散冲击                                      # 第五棒 9/n：match_cut 中点双影糊 → 落拍硬切冲击（推近+提亮 2 帧），拳 → 张开的手掌
     'V20': ('split_slide', 0.06, 0.14, dict(angle=0.0, center=(960, 560))),   # 第四棒：whip 糊黑 → 水平分屏（水面线），上岸下影反向滑
     'V21': ('none', 0, 0, {}),
     'V22': ('punch', 0, 0, {}),                                     # 第四棒：灰 glitch → 落拍硬切冲击（推近+色散）
     'V23': ('slash_wipe', 0.05, 0.14, dict(angle=4)),
-    'V24': ('zoom_dark', 0.08, 0.14, dict(center=(960, 640))),     # 第四棒：去中点白场
+    'V24': ('rain_curtain', 0.06, 0.12, dict(seed=24)),            # 第十棒：zoom_dark 把上一镜朱字放大成红糊团 → 雨帘落幕
     'V25': ('zoom_dark', 0.06, 0.12, dict(center=(960, 620))),     # 第七棒：hard → 沿刀痕推进穿越
 }
 FG = {'V03': ('rain', 0.3), 'V07': ('ember', 0.3), 'V08': ('rain', 0.3), 'V09': ('rain', 0.3), 'V13': ('rain', 0.35),
