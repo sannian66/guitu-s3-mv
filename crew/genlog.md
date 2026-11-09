@@ -417,3 +417,4 @@
 | 11-09 05:12 | B组/v01_bell | RH_image2 | 4K 16:9 | 0 | 595af4b0-a05b-4005-81e2-6787001af170 | completed | b_cands/v01_bell_try1_0.png | try1 |
 | 11-09 05:12 | B组/v01_bell | RH_image2 | 4K 16:9 | 0 | 595af4b0-a05b-4005-81e2-6787001af170 | 采用 | assets/gen/B_r4/v01_bell_raw.png | try1 采用 |
 | 11-09 13:45 | D组/D_r7/scale | RH_image2 | 4K 16:9 | 0 | 62082483-b58a-4655-be47-e379901e985d | 采用 | assets/gen/D_r7/scale_raw.png | [D组] 第七棒验证后采用（S06/S07/S26），点数已在 05:12 行计 3 |
+| 11-09 06:03 | A/slash_coil | RH_image2 | 4K 16:9 | 3 | d6b37bc0-cad6-462a-aa95-6730b79d19f7 | submitted | - | A组 slash_coil try1 |

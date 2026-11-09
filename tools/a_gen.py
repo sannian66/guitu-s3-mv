@@ -73,6 +73,11 @@ JOBS = {
                               'pressing the blade forward and down so the blade extends straight out to the LEFT edge of the frame horizontally, the tip at the '
                               'very left edge, as if carving into a stone wall just outside the frame, intense focused eyes looking along the blade, jaw set, '
                               'rain-wet hair strands.', 'COLD'),
+    # 第八棒（r8）：V20 撩刀前蓄势（与 slash_up 组成两档姿态）
+    'slash_coil': (GT, 'LS', 'Dynamic low-angle view from below: full body, he is coiled low in a deep crouching lunge just BEFORE a rising sword cut, '
+                              'knees bent deeply, weight on the front left leg, torso twisted to his right, both hands gripping the dao held low behind '
+                              'his right hip with the blade pointing down and back toward the ground, eyes looking up fiercely toward the sky, '
+                              'black robe hem and dark red sash swirling around the legs, long high ponytail whipping. Whole figure inside the frame with margin.'),
 }
 LIGHTS = dict(WARM='Lighting: warm golden candlelight key from the upper right, a cold faint rim from behind left, deep shadows, cinematic photorealistic. ')
 PROP_LOOK = 'Grounded realistic ancient Chinese artifact, no people, no hands, no text, no letters. '

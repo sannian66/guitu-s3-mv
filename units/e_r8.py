@@ -112,19 +112,19 @@ class BladeECU:
         front = (y0 + gh) - p * (gh + 20)                                    # 刻线自下而上
         rev = np.clip((yy - front) / 6, 0, 1)
         Mr = M * rev
-        Mb = cv2.GaussianBlur(Mr, (0, 0), 1.6)
+        Mb = cv2.GaussianBlur(Mr, (0, 0), 2.2)
         gy, gx = np.gradient(Mb)
         # 光从左下来：凹槽里朝左下的壁（梯度朝右上的那侧）受光，另一侧投暗
-        lit = np.clip(-(gx * -0.7 + gy * 0.7) * 6, -1, 1)                    # >0 受光壁, <0 背光壁
+        lit = np.clip(-(gx * -0.7 + gy * 0.7) * 9, -1, 1)                    # >0 受光壁, <0 背光壁
         wall = np.clip(Mb * (1 - Mb) * 4, 0, 1)
         floor = np.clip((Mr - 0.6) / 0.4, 0, 1)
         rng = np.random.default_rng(seed)
         nz = cv2.GaussianBlur(rng.random((hh, ww)).astype(np.float32), (0, 0), 2.0)
-        blood = np.clip((nz - 0.30) * 5, 0, 1) * floor                       # 槽底残血（不满，斑驳）
+        blood = (0.55 + 0.45 * np.clip((nz - 0.40) * 5, 0, 1)) * floor                       # 槽底残血（不满，斑驳）
         out = col * (1 - 0.72 * Mb[..., None])                               # 凹下去：暗
-        out = out + (blood * 0.9)[..., None] * (np.array([0.62, 0.05, 0.03], np.float32) - out * 0.85)
-        out = out + (np.clip(lit, 0, 1) * wall * (0.35 + 1.8 * sh))[..., None] * np.array([1.0, 0.82, 0.58], np.float32)
-        out = out * (1 - (np.clip(-lit, 0, 1) * wall * 0.6))[..., None]
+        out = out + (blood * 0.9)[..., None] * (np.array([0.46, 0.035, 0.02], np.float32) * (0.7 + 0.6 * nz)[..., None] - out * 0.85)
+        out = out + (np.clip(lit, 0, 1) * wall * (0.75 + 2.2 * sh))[..., None] * np.array([1.0, 0.82, 0.58], np.float32)
+        out = out * (1 - (np.clip(-lit, 0, 1) * wall * 0.85))[..., None]
         # 刻线头熔红
         hot = np.exp(-((yy - front) / 5) ** 2) * M * (p < 1)
         out = out + (hot * 1.4)[..., None] * np.array([1.0, 0.35, 0.08], np.float32)
