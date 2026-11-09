@@ -321,12 +321,7 @@ class V01(Shot):
         # 第十棒：调色压回全段冷灰（原图饱和冷蓝 → 去饱和 82%，微冷）
         lum = fr.mean(-1, keepdims=True)
         fr = (lum + (fr - lum) * 0.18) * np.array([0.95, 0.98, 1.03], np.float32)
-        # 墨退：只留接缝 1 帧的朱墨斑（与副歌一 2585 连续），随后 3 帧被雨冲淡、往下淌走，不在钟楼上留红团
-        if t < T_IN + 0.12:
-            q = clamp01((t - T_IN) / 0.12)
-            m = K.ink_blot(0.93 + 0.07 * eout((t - T_IN) / 0.2, 2), seed=47, center=(960, 600), reverse=True)
-            m = np.roll(m, int(160 * q * q), 0) * (1 - q) ** 1.5
-            fr = over(fr, m, RED * 0.22 + 0.015)
+        # 第十一棒：总导演裁定 f2586 起归 B 组、副歌一只渲到 f2585 → 接缝不再续副歌一的朱墨斑（critic_B_r4 P0-3 暗红团），落拍干净硬切进钟楼
         return fr, (3 if abs(t - th) < 0.04 else 0)
 
 
@@ -1970,7 +1965,7 @@ def section():
 
 
 _C1 = [None]
-SEAM_N = 1                                    # 2586–2595：副歌一 S047 原帧 →（雨幕溶解）→ V01；墨退遮罩两边同一个
+SEAM_N = 0                                    # 第十一棒：f2586 起纯 B 组 V01（硬切，不混副歌一帧）；旧：2586–2595：副歌一 S047 原帧 →（雨幕溶解）→ V01；墨退遮罩两边同一个
 
 
 def frame(f, cache=None):
