@@ -1002,7 +1002,9 @@ class C15(Shot):
         x = 760 + 260 * eout(k / 0.6, 2) + 20 * k
         # 第五棒（评审 P0：扁平黑剪影）：真实雷光照亮的生图精灵——冷白轮廓光 + 闪电补光 + 体积光，不再填黑
         fr = K.vol_light(fr, (x + 120, y - 330), 520, (0.85, 0.9, 1.0), 0.35 + 0.5 * fl)
-        fr, _ = put(fr, t, 'C/leap_arc', x, y, 480, rim=(0.9, 0.93, 1.0), rim_amt=3.4, rim_dir=(0.3, -1), flash=0.6 * fl, expo=0.8 + 0.5 * bolt_env(t, tb),
+        e1_, e2_ = bolt_env(t, tb), bolt_env(t, tb2)          # 第十一棒（critic_C_r5 P2⑥ 雷光未勾人）：哪道闪电亮，轮廓光就从哪一侧勾出整个人
+        rdx = (0.75 * e1_ - 0.75 * e2_) / (e1_ + e2_ + 0.25) + 0.3 * 0.25 / (e1_ + e2_ + 0.25)
+        fr, _ = put(fr, t, 'C/leap_arc', x, y, 480, rim=(0.9, 0.93, 1.0), rim_amt=3.4 + 3.2 * min(1.0, e1_ + e2_), rim_dir=(rdx, -1), flash=0.6 * fl, expo=0.8 + 0.5 * bolt_env(t, tb),
                     sat=0.55, mblur=(0, 12 * (1 - sm(0.05, 0.22, k))), wind=10 * ramp)
         fr = rain(fr, self.t0 + 0.45 + (t - self.t0 - 0.45) * (0.08 if k > 0.45 else 1), 150, inten=1.1, angle=10,
                   freeze=sm(0.35, 0.6, k) * 0.5)
