@@ -16,3 +16,7 @@ out/chorus1_sprite/chorus1_sprite_master_crf18.mp4
 out/full_sprite/chunks/
 out/full_sprite/*master*.mp4
 out/full_sprite/*web*.mp4
+
+# 本机渲染快照（tools/devsnap.py 生成）
+out/devsnap*/
+out/r6tmp/

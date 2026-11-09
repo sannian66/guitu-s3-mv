@@ -422,3 +422,7 @@
 | 11-09 07:02 | B组/fist3 | RH_image2 | 4K 16:9 | 3 | a627b366-29e6-4c16-83dc-f50a8448fbac | submitted | - | try1 extreme close-up of ONLY his right hand and wrist, no face,  |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | completed | b_cands/fist3_try1_0.png | try1 |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | 采用 | assets/gen/B_r4/fist3_raw.png | try1 采用 |
+
+## 2026-11-10 03:17 · OpenAI 协议渠道批量生图（jobs.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `stand_defy_green`（56s）→ `out/r6tmp/pilot/stand_defy_green.png`
