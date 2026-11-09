@@ -462,14 +462,7 @@ def apply(mod):
             getattr(M, nm).text = _nil_text
         _wrap_init(M.E01, lambda s: setattr(s.B, 'engrave', lambda col, *a, **k: col))
         _wrap_init(M.E20, lambda s: setattr(s, 'tt', 1e9))
-        f31 = M.E31.__init__
-
-        def init31(self, *a, **k):                                         # 残纸照留、纸上不再有字
-            g = T.glyph
-            T.glyph = lambda *a_, **k_: np.zeros((8, 8), np.float32)
-            try: f31(self, *a, **k)
-            finally: T.glyph = g
-        M.E31.__init__ = init31
+        # 2026-11-10 用户：片尾烧纸露出的「天」「理」「规」「章」「律」残字要保留 → E31 不再去字
         if not ON['mark']:                                                   # 对/错 不换符号时，至少去副句
             _wrap_init(M.E16, lambda s: setattr(s, 'l2', _Nil()))
             _wrap_init(M.E17, lambda s: setattr(s, 'l2', _Nil()))
