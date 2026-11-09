@@ -1196,13 +1196,22 @@ class S22_Chuang(Shot):
     def render(self, t):
         u = self.u(t)
         th = V(O[45][8])
-        fr = D.night(t, 221, top=(0.045, 0.045, 0.055), glow=(1060, 480, 420, (0.55, 0.5, 0.5), 0.35))
+        # [r8] P1-2：整镜回到 S21/S23 的冷蓝雨夜（天光、雾都偏冷），不再灰平
+        fr = D.night(t, 221, top=(0.028, 0.038, 0.062), bot=(0.008, 0.010, 0.016), glow=(1060, 420, 460, (0.45, 0.56, 0.85), 0.32))
         fr = self.P.render(fr, t, light=0.7, rim=(1.0, 0.55, 0.45), rim_amt=0.8, blur_far=3.5)
-        fr = K.fog(fr, t, 222, amt=0.55, speed=(-60, -30), y0=0.35, y1=1.0, color=(0.3, 0.29, 0.3))
+        fr = K.fog(fr, t, 222, amt=0.42, speed=(-60, -30), y0=0.35, y1=1.0, color=(0.13, 0.16, 0.24))
         q = cl((t - self.t0) / (th - self.t0))
         h = lerp(820, 1250, ei(q, 2)) + (600 * eo(cl((t - th) / 0.4)) if t > th else 0)
-        fr, _ = D.real_figure(fr, self.sp, t, (0.5, 0.42), (1060, 600), D.fit_scale(self.sp, h), expo=0.85, sat=0.6,
-                              rim=(1.0, 0.45, 0.35), rim_amt=3.5, rim_dir=(0.6, -0.8), wind=12)
+        pin = cp(t, O[45][7], 0.25)
+        fr, Aw = D.real_figure(fr, self.sp, t, (0.5, 0.42), (1060, 600), D.fit_scale(self.sp, h), expo=0.95, sat=0.55, gamma=1.2,
+                               tint=(0.80, 0.92, 1.16), rim=(0.70, 0.82, 1.0), rim_amt=4.0, rim_dir=(-0.7, -0.7), wind=12)
+        # [r8] 「闯」朱红反光：右侧（字一侧）暖红轮廓 + 身体右半边的红色漫反射；脸 / 刀刃左上冷高光一线
+        x_, y_ = K.grid()
+        red = (1.0, 0.26, 0.14)
+        bounce = np.exp(-(((x_ - 1530) / 520) ** 2 + ((y_ - 640) / 420) ** 2)) * (0.35 + 0.65 * min(1.0, pin * 2))
+        fr = fr + (Aw * bounce * 0.22)[..., None] * np.array(red, np.float32)
+        fr = R7.rim_edge(fr, Aw * np.clip(bounce * 1.6, 0, 1), (0.95, -0.25), 5, 1.3, red, glow=9, gamt=0.35)
+        fr = R7.rim_edge(fr, Aw, (-0.75, -0.65), 3, 0.75, (0.80, 0.90, 1.0), glow=5, gamt=0.15)
         fr = K.radial_blur(fr, (1060, 520), 0.015 + 0.03 * q)
         if t < th:
             p_in = cp(t, O[45][7], 0.25)
@@ -1212,7 +1221,7 @@ class S22_Chuang(Shot):
             fr = T.shatter_out(fr, '闯', cl((t - th) / 0.5), places=self.P2, fname='serif_black', color='red', impact=(1330, 560), power=1.6, seed=7)
         its = [('我', 250, 280, 120, 1.0, 'w'), ('偏', 250, 420, 120, 1.0, 'w'), ('要', 250, 600, 190, cp(t, O[45][7], 0.14), 'w')]
         fr = D.song(fr, its)
-        fr = fr + impact(t, th, 0.08) * 0.8
+        fr = fr + impact(t, th, 0.08) * 0.7 * np.array([0.78, 0.86, 1.0], np.float32)   # [r8] 撞击闪改冷白，不把整帧洗灰
         return shake_cam(fr, t, [th], 14), 0.0
 
 
