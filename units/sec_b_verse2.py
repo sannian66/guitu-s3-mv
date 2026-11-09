@@ -1844,6 +1844,7 @@ class V20(Shot):
     下半 = 同一画面的水中倒影（涟漪、冷暗、雨点圈）。上下各自完整，倒影头部在 y≈900、不出 2.39 有效区。
     后半拍（u>0.45）世界开始 roll，V21 接着转到 180° —— 倒影翻到上方成「正面」，正是「黑白颠倒」。"""
     WL = 540
+    HX, HY, HS = 1290, 345, 175                 # r5 #33「黑」位置（岸上）；「白」= 关于水线的倒影位置
     def __init__(self):
         self.sp = spr('look_down')
         x, y = K.grid()
@@ -1858,11 +1859,19 @@ class V20(Shot):
         self.r = np.random.default_rng(6505).uniform(0, 1, (34, 3))
         self.wn = K.tile(256, 6506, 6, 3)
         T.warm('若这世', 'serif_black', 140); T.warm('道黑白颠倒', 'serif_black', 140)
+        if R5:
+            # r5 #33：画内只留两个常驻字（不卡点）——右侧空处岸上一个墨「黑」，水里它的「倒影」是一个倒置的白「白」；
+            #   V21 镜头转满 180° 后倒影翻到上方，「白」正过来读。「白」与人物倒影都落在下三分线（≈y700–740），转后到上三分线。
+            Lh = T.Layer(); T.place(Lh, '黑', self.HX, self.HY, self.HS, color='white', fname='serif_black', texture=False)
+            Lb = T.Layer(); T.place(Lb, '白', self.HX, 2 * (self.WL + 4) - self.HY, self.HS, color='white', fname='serif_black', rot=180, texture=False)
+            self.Ah = Lh.A.astype(np.float32); self.Ab = Lb.A.astype(np.float32)
+            self.Ah_rim = edge_rim(self.Ah, 3, 4, 1.5)      # 冷月雾光从右上来 → 字右上沿一线冷光，墨字在灰雾前立得住
 
     def scene(self, t):
         x, y = K.grid()
         up = self.fog.draw(self.sky.copy(), t, density=0.8, y0=300, y1=self.WL, color=(0.30, 0.32, 0.36), speed=(25, 0), top_fade=200)
-        up, _ = put(up, self.sp, t, 395, (760, self.WL + 4), rim=dict(col=(0.78, 0.86, 1.0), amt=3.0, dir=(0.5, -1.0)),
+        fh, fx_ = (320, 650) if R5 else (395, 760)          # r5 #33：人物左移到左三分线、缩小（转 180° 后倒影头顶仍离黑边 ≥60px），倒影中心落在左下井字交点附近
+        up, _ = put(up, self.sp, t, fh, (fx_, self.WL + 4), rim=dict(col=(0.78, 0.86, 1.0), amt=3.0, dir=(0.5, -1.0)),
                     grade=dict(expo=0.80, sat=0.55, tint=(0.92, 0.97, 1.06), lift=0.0, gamma=1.12), wind_amp=7, shade=None, wrap=0.3)
         # 倒影：上半关于水线翻转 + 涟漪 + 冷暗
         refl = np.zeros_like(up)
@@ -1870,6 +1879,10 @@ class V20(Shot):
         nz = cv2.resize(K.tile_crop(self.wn, t * 20, t * 55, H // 8, W // 8), (W, H))
         refl = cv2.remap(refl, (x + (nz - 0.5) * 12).astype(np.float32), (y + (nz - 0.5) * 5).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
         refl = refl * np.array([0.58, 0.64, 0.74], np.float32) * (0.9 + 0.2 * nz[..., None])
+        if R5:                                   # 岸上墨「黑」；水中倒置的白「白」（随涟漪抖动，冷暗一档）
+            up = up * (1 - 0.92 * self.Ah[..., None]) + self.Ah[..., None] * 0.02 + self.Ah_rim[..., None] * np.array([0.30, 0.34, 0.40], np.float32)
+            Ab = cv2.remap(self.Ab, (x + (nz - 0.5) * 12).astype(np.float32), (y + (nz - 0.5) * 5).astype(np.float32), cv2.INTER_LINEAR)
+            refl = refl * (1 - Ab[..., None]) + Ab[..., None] * np.array([0.80, 0.83, 0.88], np.float32) * (0.9 + 0.2 * nz[..., None])
         low = sstep(self.WL - 1, self.WL + 2, y)[..., None]
         fr = up * (1 - low) + refl * low
         fr += np.exp(-((y - self.WL) / 2.5) ** 2)[..., None] * np.array([0.25, 0.28, 0.33], np.float32)      # 水线高光
@@ -1882,6 +1895,7 @@ class V20(Shot):
         u = self.u(t)
         fr = self.scene(t)
         pr = prs(26, [0, 1, 2], t)
+        if R5: pr = [0.0] * 3                       # r5 #33：去「若这世」
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('若这世', pr)):
             if pc > 0: T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2) * (1 - sstep(0.5, 0.75, u)), scale=1.2 - 0.2 * eout(pc))   # 第八棒：roll 前退场，不被甩出画
@@ -1921,6 +1935,9 @@ class V21(Shot):
         ang = 90 + 90 * eout(u, 2)
         fr = roll_cover(fr, ang, 1.04 + 0.04 * (1 - e))
         pr = prs(26, [3, 4, 5, 6, 7], t)
+        if R5:                                      # r5 #33：去「道黑白颠倒」字列与压暗带，只留场景里常驻的 黑 / 倒影 白
+            k = sstep(0.2, 0.55, u)
+            return fr * (1 - k) + neg_grade(fr) * k, 0
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('道黑白颠倒', pr)):
             if pc <= 0: continue
