@@ -731,8 +731,8 @@ class V06(Shot):
     def render(self, t):
         u = self.u(t); ts = CT(1, 10); ts2 = V(21.86)                     # 第四棒：二次刀光斩字（寒光先完整可读 ≥0.55s）
         fr = night((0.015, 0.017, 0.025), (0.06, 0.065, 0.08), y1=900)
-        fr, _ = self.army.draw(fr, t, cam=dict(x=-1.0 * u, y=1.8, z=-2.5, pitch=1, f=1500), march=0.0, rim_color=COLDV, dof=1.4, fog_dist=50,
-                               level=1.0)
+        fr, _ = self.army.draw(fr, t, cam=dict(x=-1.0 - 3.0 * eio(u), y=1.8, z=-2.5, pitch=1, f=1500), march=0.0, rim_color=COLDV, dof=1.4, fog_dist=50,
+                               level=1.0)                                             # 第九棒：军阵与人物反向视差（配合 MOVES3 环绕）
         fr = cv2.GaussianBlur(fr, (0, 0), 2.0)
         a = t - ts
         if a >= 0:                                                                     # 前排被斩：一道红热裂线
@@ -740,10 +740,19 @@ class V06(Shot):
             cv2.line(L, (0, 610), (W, 590), 1.0, 3, cv2.LINE_AA)
             fr = fr + (cv2.GaussianBlur(L, (0, 0), 2) * 1.5 + cv2.GaussianBlur(L, (0, 0), 14))[..., None] * RED * 1.5 * math.exp(-a / 0.8)
         fr = fog(fr, t, 0, 640, 960, 0.5, (0.28, 0.3, 0.36), speed=(80, 0))
-        fr, info = A.place(fr, t, S('S010/slash_h'), (900, 1000), h=720, rim=COLD, rim_amt=3.0, wind=10, grade=dict(expo=0.9, sat=0.55),
-                           mblur=(30 * math.exp(-max(0, a) / 0.08), 0) if a >= 0 else (0, 0))
+        ax = 900 + 60 * eout(u)                                                       # 第九棒：收势跟进（人随刀前送 60px、身体由 -2.5° 回正）
+        fr, info = A.place(fr, t, S('S010/slash_h'), (ax, 1000), h=720, rim=COLD, rim_amt=3.0, wind=10, grade=dict(expo=0.9, sat=0.55),
+                           mblur=(30 * math.exp(-max(0, a) / 0.08), 0) if a >= 0 else (0, 0), rot=-2.5 * (1 - eout(u)))
         if a >= 0:
             fr = streak(fr, 600, -100, 2100, a / 0.08, w=5, amt=1.6, ang=-0.6)
+        # 第九棒（critic_A_r6 P0-1）：寒光沿刀身两次扫过（护手 → 刀尖），每次扫到刀尖，「寒光」被点亮一次
+        g0, g1 = (ax + 33, 447), (ax + 480, 424)
+        lit = 0.0
+        for sa, sd in ((V(21.24), 0.30), (ts2 - 0.26, 0.24)):
+            q = (t - sa) / sd
+            if -0.1 <= q <= 1.15:
+                fr = R9.blade_sheen(fr, g0, g1, eio(clamp01(q)), width=26, amt=1.3 * (1 - clamp01((q - 1.0) / 0.15)), length=180)
+            lit = max(lit, math.exp(-max(0.0, t - (sa + sd)) / 0.18) * (t >= sa + sd))
         if 0 <= a < 0.07: fr = fr * 1.55 + 0.06 * COLDV          # 第三棒：冲击改冷色曝光脉冲（不再白闪）
         # 「寒光」斩开：字在屏幕下方，被同一刀切开两半错位
         p = cprog(1, [9], t, 0.25)[0]
@@ -753,7 +762,7 @@ class V06(Shot):
             L.paste(T.brush_glyph('光', 'kai', 230, cprog(1, [10], t, 0.12)[0], seed=2), 1080, 760, (0.86, 0.12, 0.08))
             a2 = t - ts2
             if a2 < 0:
-                fr = T.compose(fr, L, shadow=0.7, glow=0.2)
+                fr = T.compose(fr, L, shadow=0.7, glow=0.2 + 0.9 * lit, glow_color=(0.7, 0.85, 1.0))
             else:
                 fr = T.slash_layer(fr, L, clamp01(a2 / 0.66), (940, 760), -4, slide=0.25, sz=230, length=900, sparks=50,
                                    style_kw=dict(shadow=0.7, glow=0.3))
@@ -1726,7 +1735,7 @@ MOVES3 = {
     'V03': M3('sine_io', 'beat', x=(-60, 60), pitch=(6, 0), note='高机位横移 + 俯仰'),
     'V04': M3('sine_io', 'beat', x=(-50, 60), note='横移跟走'),
     'V05': M3('expo_in', None, z=(1.0, 1.12), note='急推'),
-    'V06': M3('expo_out', None, z=(1.10, 1.0), x=(30, -20), note='冲击后拉'),
+    'V06': M3('expo_out', None, z=(1.12, 1.03), yaw=(-9, 8), x=(70, -50), note='第九棒：冲击后环绕 orbit（沿刀身方向绕过人物，军阵反向视差）'),
     'V07': M3('sine_io', 'beat', y=(60, -40), pitch=(-6, 0), note='摇臂升 crane up'),
     'V08': M3('sine_io', 'beat', z=(1.0, 1.06), note='推'),
     'V09': M3('sine_io', 'beat', yaw=(-12, 8), z=(1.0, 1.06), note='环绕 orbit'),

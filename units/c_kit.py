@@ -282,6 +282,57 @@ def _glitch_slices(L, q, seed):
     return L
 
 
+def _back_shade(fr, L, back):
+    """整句一块柔和暗衬（椭圆渐变），不是逐字黑团"""
+    a4 = cv2.resize(L.A, (W // 4, H // 4), interpolation=cv2.INTER_AREA)
+    bx_ = L.box(0)
+    m = np.zeros_like(a4)
+    if bx_ is not None:
+        x0_, y0_, x1_, y1_ = [v / 4 for v in bx_]
+        cv2.ellipse(m, (int((x0_ + x1_) / 2), int((y0_ + y1_) / 2)), (int((x1_ - x0_) * 0.62 + 10), int((y1_ - y0_) * 0.62 + 10)),
+                    0, 0, 360, 1.0, -1)
+        m = cv2.GaussianBlur(m, (0, 0), 10)
+    m = np.clip(m, 0, 1) * back
+    return fr * (1 - cv2.resize(m, (W, H))[..., None] * 0.7)
+
+
+_CAST_N = {}
+def cast_metal(L, seed=0, light=(-0.55, -0.83)):
+    """第十棒：铅字/铸字质感。字面 = 原色金属（奶白 → 锡铅灰，金 → 铸铜金）
+    · 倒角：alpha 模糊作高度 → 法线 · 烛光方向漫反射 + 边缘高光 · 砂铸麻点（两档噪声）· 字心微凹（冲压）。"""
+    bx = L.box(6)
+    if bx is None: return L
+    x0, y0, x1, y1 = bx
+    A = L.A[y0:y1, x0:x1]; C = L.C[y0:y1, x0:x1]
+    hh, ww = A.shape
+    if seed not in _CAST_N:
+        r = np.random.default_rng(seed)
+        n1 = cv2.GaussianBlur(r.random((H, W)).astype(np.float32), (0, 0), 1.1)
+        n2 = cv2.resize(r.random((H // 18, W // 18)).astype(np.float32), (W, H), interpolation=cv2.INTER_CUBIC)
+        _CAST_N[seed] = (n1, n2)
+    n1, n2 = _CAST_N[seed]
+    n1 = n1[y0:y1, x0:x1]; n2 = n2[y0:y1, x0:x1]
+    hgt = cv2.GaussianBlur(A, (0, 0), 3.2)
+    inner = cv2.GaussianBlur(A, (0, 0), 9.0)
+    hgt = hgt - 0.35 * np.clip(inner - 0.85, 0, 1) / 0.15 * 0.25      # 字心微凹（冲压痕）
+    gy, gx = np.gradient(hgt)
+    nz = 0.09
+    nn = np.sqrt(gx * gx + gy * gy + nz * nz)
+    lx, ly = light
+    dif = np.clip((-gx * lx - gy * ly) / nn * 1.0 + nz / nn * 0.55, 0, None)
+    rim = np.clip(np.sqrt(gx * gx + gy * gy) / nn, 0, 1)
+    spec = np.clip(dif - 0.75, 0, 1) ** 1.5 * 3.0
+    pit = 0.80 + 0.30 * n1 + 0.18 * (n2 - 0.5)
+    pit = pit - 0.35 * (n1 > 0.62) * (A > 0.9)                          # 麻点（砂眼）
+    lum = C.mean(-1, keepdims=True)
+    warm = (C[..., 0:1] - C[..., 2:3]) > 0.35                           # 金字（暖）→ 铸铜金；其余 → 锡铅灰
+    base = np.where(warm, np.array([0.95, 0.66, 0.30], np.float32), np.array([0.70, 0.66, 0.60], np.float32) * np.clip(lum + 0.05, 0, 1.2))
+    shade = (0.42 + 0.85 * dif)[..., None] * pit[..., None]
+    out = base * shade + spec[..., None] * np.array([1.0, 0.86, 0.62], np.float32) * 0.55 - rim[..., None] * 0.10 * (1 - dif[..., None])
+    L.C[y0:y1, x0:x1] = np.clip(out, 0, 1.6)
+    return L
+
+
 def draw_sent(fr, s, t, cam=(0.0, 0.0, 1.0)):
     """cam=(dx,dy,z)：字层随镜头轻微漂移（字是空间里的物体，不是死贴屏幕）"""
     if t < s.tin[0] - s.lead - 0.02: return fr
@@ -302,11 +353,12 @@ def draw_sent(fr, s, t, cam=(0.0, 0.0, 1.0)):
             jit = (np.random.default_rng(int(ti * 100) + i).normal(0, 1.2, 2) if k < 0.07 else (0, 0))
             sc = 1.0 + 0.10 * pulse(t, ti, 0.05)
             T.place(L, c, px + jit[0], py + jit[1], sz * z, colr, s.font, scale=sc, texture=False)
-            if c in s.glitch:                           # RGB 错位
+            # 第十棒（critic_C_r5 P1①）：RGB 错位不再整镜挂着 → 只在落字那一拍闪 2 帧（k < 0.067s）就回正
+            if c in s.glitch and k < 0.067:
                 Lr = Lr or T.Layer()
-                off = 6 + 10 * pulse(t, ti, 0.15) + 3 * math.sin(t * 40 + i)
-                T.place(Lr, c, px - off, py, sz * z, (1.0, 0.1, 0.1), s.font, alpha=0.65, texture=False)
-                T.place(Lr, c, px + off, py + 1, sz * z, (0.1, 0.6, 1.0), s.font, alpha=0.55, texture=False)
+                off = 9 * (1 - k / 0.067) + 3
+                T.place(Lr, c, px - off, py, sz * z, (1.0, 0.1, 0.1), s.font, alpha=0.55, texture=False)
+                T.place(Lr, c, px + off, py + 1, sz * z, (0.1, 0.6, 1.0), s.font, alpha=0.45, texture=False)
         else:
             ee = eout(e, 3)
             sc = lerp(2.4, 1.0, ee)
@@ -323,30 +375,12 @@ def draw_sent(fr, s, t, cam=(0.0, 0.0, 1.0)):
         else:
             L.A *= (1 - q_out)
     if s.mode == 'type':
-        # 朱红块光标：跟在最后一个已出字后面，闪烁
-        n = sum(1 for ti in s.tin if t >= ti)
-        if n < len(s.text) or t < s.out:
-            j = max(0, n - 1); (px, py) = s.P[j]; sz = s.sizes[j]
-            px = W / 2 + (px - W / 2) * z + dx; py = H / 2 + (py - H / 2) * z + dy
-            if n == 0: px -= sz * (1 + s.track)
-            if (int(t * 6) % 2 == 0) or n < len(s.text):
-                if s.layout == 'h': cx, cy, w_, h_ = px + sz * (0.5 + s.track) + 6, py, sz * 0.12, sz * 0.9
-                else: cx, cy, w_, h_ = px, py + sz * (0.5 + s.track) + 6, sz * 0.9, sz * 0.12
-                a = np.ones((max(2, int(h_)), max(2, int(w_))), np.float32)
-                L.paste(a, cx, cy, RED_T, alpha=0.95 * (1 - q_out))
-        out = T.compose(fr, L, shadow=0.75, shadow_sigma=18, glow=0.18, glow_sigma=10)
+        # 第十棒（critic_C_r5 P1①）：去掉打字机朱红光标（古装片出戏）；整句改「铸字」——粗黑体 + 倒角 + 砂铸麻点 + 烛光高光
+        L = cast_metal(L, seed=s.li * 13 + 5)
+        if getattr(s, 'back', 0) > 0: fr = _back_shade(fr, L, s.back)
+        out = T.compose(fr, L, shadow=0.85, shadow_sigma=16, glow=0.10, glow_sigma=12)
     else:
-        if getattr(s, 'back', 0) > 0:
-            a4 = cv2.resize(L.A, (W // 4, H // 4), interpolation=cv2.INTER_AREA)
-            bx_ = L.box(0)
-            m = np.zeros_like(a4)
-            if bx_ is not None:                      # 整句一块柔和暗衬（椭圆渐变），不是逐字黑团
-                x0_, y0_, x1_, y1_ = [v / 4 for v in bx_]
-                cv2.ellipse(m, (int((x0_ + x1_) / 2), int((y0_ + y1_) / 2)), (int((x1_ - x0_) * 0.62 + 10), int((y1_ - y0_) * 0.62 + 10)),
-                            0, 0, 360, 1.0, -1)
-                m = cv2.GaussianBlur(m, (0, 0), 10)
-            m = np.clip(m, 0, 1) * s.back
-            fr = fr * (1 - cv2.resize(m, (W, H))[..., None] * 0.7)
+        if getattr(s, 'back', 0) > 0: fr = _back_shade(fr, L, s.back)
         out = T.compose(fr, L, shadow=0.8, shadow_sigma=22, glow=0.45, glow_sigma=16, glow_color=None)
         # 电白冷辉
         bx = L.box(30)
