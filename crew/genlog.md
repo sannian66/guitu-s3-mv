@@ -438,3 +438,7 @@
 ## GPT Image 2.5（sunburst）小样（2026-11-10 07:34 CST）
 - 6 分/张；同提示词同参考；tools/style_gen_test.py sunburst g25 [镜头]；74.5 首次提交连接被断开后重提（可能重复扣 6 分）
 - 对比 out/style_test/g25_compare.jpg（第一版 / NB Pro / GPT 2.5）
+
+## 代码墨线滤镜小样（2026-11-10 07:50 CST，0 分）
+- units/ink_style.py：XDoG 墨线 + 三阶水墨 + 暗平背景转朱砂 + 宣纸纹理，保留上下黑边
+- 对比 out/style_test/code_compare.jpg；已知问题：红底发暗有斑块、脸部颗粒重、74.5 刃面眼睛被冲白
