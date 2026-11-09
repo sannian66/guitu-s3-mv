@@ -201,7 +201,7 @@ def warm_veil(A, B, p, axis='x', direction=-1, seed=7301, cap=0.68, warm=(1.0, 0
         d = (xx - c) * (-direction)
     else:
         span = h2 * 2.8; c = h2 * 1.9 - span * e
-        d = -(yy - c)
+        d = yy - c                                                   # 自下而上：前缘以下已换成 B
     core = (w2 if axis == 'x' else h2) * 0.40
     dd = d + (N - 0.5) * 260
     dens = sstep_(-core - 120, -core + 60, dd) * sstep_(core + 120, core - 60, dd)
