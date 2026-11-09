@@ -1281,9 +1281,12 @@ class V13(Shot):
         yy = np.arange(H, dtype=np.float32)[:, None, None]
         gm = np.clip((yy - 900) / 30, 0, 1); fr = fr * (1 - 0.6 * gm)
         fr = fog(fr, t, 2, 760, 960, 0.45, (0.22, 0.25, 0.32), speed=(-40, 0))
+        # 第九棒（critic_A_r6 P0-1）：焦点转移 rack focus —— 起：前景跪者实、鬼屠与雨幕虚；31.00→31.32 焦点拉到鬼屠（跪者虚成冷剪影），「放」落在焦点到位之后
+        fc = eio(clamp01((t - V(31.0)) / 0.32))
+        fr = V3.defocus(fr, 7.0 * (1 - fc))
         # 第八棒（critic_A_r5 P0-1）：鬼屠收刀后站定 —— 身体由微侧回正（rot 3°→0）+ 中景缓移；跪者在前景反向大幅横移（视差）并越磕越深、发抖
         fr, info = A.place(fr, t, S('S014/sheath'), (1290 - 70 * eio(u), 930), h=600 * (1 + 0.03 * u), rim=COLD, rim_amt=3.2, wind=8,
-                           grade=dict(expo=0.85, sat=0.5), rot=3.0 * (1 - eout(u)))
+                           grade=dict(expo=0.85, sat=0.5), rot=3.0 * (1 - eout(u)), defocus=6.0 * (1 - fc))
         L = T.Layer(); p = cprog(4, [6], t, 0.25)[0]
         if p > 0:
             L.paste(T.ink_bleed_glyph('放', 'kai', 330, p, seed=6, bleed=0.6), 880, 520, (0.70, 0.76, 0.88))
@@ -1293,7 +1296,7 @@ class V13(Shot):
         bow = -1.5 + 7.0 * eio(u) + 1.6 * math.sin(t * 6.0)                       # 越磕越深 + 磕头起伏
         trem = 2.5 * math.sin(t * 41) + 1.5 * math.sin(t * 67)                       # 发抖
         fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
-                        rim_dir=(0.7, -0.6), grade=dict(expo=0.5, sat=0.4, gamma=1.3), wind=3, rot=bow, defocus=2.6)
+                        rim_dir=(0.7, -0.6), grade=dict(expo=0.5 + 0.3 * (1 - fc), sat=0.4, gamma=1.3 - 0.2 * (1 - fc)), wind=3, rot=bow, defocus=0.3 + 5.5 * fc)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
         return fr, 0
 
