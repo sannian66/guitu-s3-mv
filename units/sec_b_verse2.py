@@ -563,9 +563,10 @@ class V02(Shot):
         flick = 0.85 + 0.15 * math.sin(t * 17.0) * math.sin(t * 5.3)
         h, w = self.h, self.w
         b = self.bow(t)
-        sh = b * self.hfig * self.Ad
-        my = (self.yy - sh * 0.20).astype(np.float32)
-        mx = (self.xx - sh * 0.02 * np.sign(self.xx - w / 2)).astype(np.float32)
+        bs = cv2.resize(cv2.GaussianBlur(cv2.resize(b, (w // 8, h // 8), interpolation=cv2.INTER_AREA), (0, 0), 4), (w, h), interpolation=cv2.INTER_CUBIC)
+        sh = bs * self.hfig * self.Ad                                    # 位移只用大尺度平滑的叩首场（≤≈14px），人群内部不再出现液化扭曲
+        my = (self.yy - sh * 0.05).astype(np.float32)
+        mx = self.xx
         F = cv2.remap(self.F, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)   # 只动人群（Ad 权重），御道 / 水面原样
         A = cv2.remap(self.A, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)[..., None]
         bb = cv2.remap(b.astype(np.float32), mx, my, cv2.INTER_LINEAR)[..., None]
@@ -613,7 +614,7 @@ def zoom_iris(A, B, p, center=(W / 2, H / 2), strength=1.0):
     a = TR._radial_blur(TR._zoom(A, 1 + 1.2 * ein(p, 2.2) * strength, center), center, 0.30 * ein(p, 2))
     b = TR._zoom(B, 1 + 0.6 * (1 - eout(p, 2.5)) * strength, center)
     d = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-    r = -60 + 2300 * e ** 1.3
+    r = -80 + 2600 * e ** 1.6
     m = np.clip((r - d) / 50, 0, 1)[..., None]
     rim = np.exp(-((d - r) / 18) ** 2)[..., None] * math.sin(math.pi * p)
     return a * (1 - m) + b * m + rim * COLDC * 0.18
