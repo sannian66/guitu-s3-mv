@@ -198,6 +198,37 @@ def probe(tag_only=None):
 
 
 # ---------------------------------------------------------------- 对拍图
+_STC = {}
+
+
+def st_cache(st):
+    """渲染用 cache（每帧复用，和管线里一样）。"""
+    return _STC.setdefault('c', {})
+
+
+def compare_pair(f, a, b, dt, np_mod, prefix=''):
+    import cv2
+    from PIL import Image
+    OUT.mkdir(parents=True, exist_ok=True)
+    sa, sb = stats_of(np_mod, a), stats_of(np_mod, b)
+    lab = [('FRAME %d  %s  t=%.2fs   %s' % (f, key_of(f), f / FPS,
+            'left = 统一 grade（look OFF） / right = + 胶片 look'), None)]
+    for k in ('lum_mean', 'lum_std', 'p5', 'p99', 'cast_rb', 'red_pur', 'grain_hp', 'vig_ratio'):
+        lab.append(('%-9s %7.4f  |  %7.4f' % (k, sa[k], sb[k]), (sa[k], sb[k])))
+    top, bot = 28, 18 + 22 * len(lab)
+    gap = 12
+    canvas = np_mod.zeros((H + top + bot, W * 2 + gap, 3), np_mod.uint8)
+    canvas[top:top + H, :W] = a
+    canvas[top:top + H, W + gap:] = b
+    y = top + H + 20
+    for i, (txt, _) in enumerate(lab):
+        cv2.putText(canvas, txt, (8, y + i * 22), cv2.FONT_HERSHEY_PLAIN, 1.5, (210, 210, 210), 2)
+    Image.fromarray(canvas).save(OUT / ('%sf_%05d.png' % (prefix, f)))
+    print('CMP %s%d %s  lum %.4f→%.4f  red_pur %.4f→%.4f  %.1fs' %
+          (prefix, f, key_of(f), sa['lum_mean'], sb['lum_mean'], sa['red_pur'], sb['red_pur'], dt), flush=True)
+    return dict(frame=f, key=key_of(f), secs=round(dt, 2), before=sa, after=sb)
+
+
 def render_compare(frames, np_mod, prun, st, G):
     import cv2
     from PIL import Image
@@ -237,6 +268,7 @@ def main():
     ap.add_argument('--frames', default=DEFAULT_FRAMES)
     ap.add_argument('--frames-dir', default='')
     ap.add_argument('--probe', action='store_true')
+    ap.add_argument('--look', action='store_true', help='只对拍第 9 阶段「胶片 look」：左=关 / 右=开')
     ap.add_argument('--fit', action='store_true')
     args = ap.parse_args()
 
@@ -295,6 +327,21 @@ def main():
             a, b = part.split('-'); frames += list(range(int(a), int(b) + 1))
         elif part.strip():
             frames.append(int(part))
+    if args.look:
+        look = dict(G.TGT['look'])
+        rows = []
+        for f in frames:
+            t0 = time.monotonic()
+            os.environ['GRADE_UNIFY'] = '1'
+            G.TGT['look'] = None
+            a = prun.render_frame(f, st_cache(st), st).copy()
+            G.TGT['look'] = look
+            b = prun.render_frame(f, st_cache(st), st).copy()
+            rows.append(compare_pair(f, a, b, time.monotonic() - t0, np_mod, 'look_'))
+        G.TGT['look'] = look
+        (OUT / 'look_stats.json').write_text(json.dumps(rows, ensure_ascii=False, indent=1))
+        print('输出:', OUT)
+        return
     rows = render_compare(frames, np_mod, prun, st, G)
     print('输出:', OUT)
 
