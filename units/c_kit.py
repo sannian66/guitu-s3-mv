@@ -232,7 +232,7 @@ class Sent:
         self.tin = [V(CT(li, k)) for k in self.ks]
         self.x, self.y, self.size, self.mode, self.layout = x, y, size, mode, layout
         self.red, self.gold, self.glitch = red, gold, glitch
-        self.font = font or ('serif_m' if mode == 'type' else 'serif_black')
+        self.font = font or 'serif_black'      # 第十棒：铅字也改粗黑（铸字）
         self.exit, self.track, self.lead = exit, track, lead
         self.color = color
         self.out = out if out is not None else self.tin[-1] + 0.6
@@ -314,7 +314,7 @@ def cast_metal(L, seed=0, light=(-0.55, -0.83)):
     n1 = n1[y0:y1, x0:x1]; n2 = n2[y0:y1, x0:x1]
     hgt = cv2.GaussianBlur(A, (0, 0), 3.2)
     inner = cv2.GaussianBlur(A, (0, 0), 9.0)
-    hgt = hgt - 0.35 * np.clip(inner - 0.85, 0, 1) / 0.15 * 0.25      # 字心微凹（冲压痕）
+    hgt = hgt - 0.08 * np.clip((inner - 0.85) / 0.15, 0, 1)            # 字心微凹（冲压痕）
     gy, gx = np.gradient(hgt)
     nz = 0.09
     nn = np.sqrt(gx * gx + gy * gy + nz * nz)
@@ -326,7 +326,7 @@ def cast_metal(L, seed=0, light=(-0.55, -0.83)):
     pit = pit - 0.35 * (n1 > 0.62) * (A > 0.9)                          # 麻点（砂眼）
     lum = C.mean(-1, keepdims=True)
     warm = (C[..., 0:1] - C[..., 2:3]) > 0.35                           # 金字（暖）→ 铸铜金；其余 → 锡铅灰
-    base = np.where(warm, np.array([0.95, 0.66, 0.30], np.float32), np.array([0.70, 0.66, 0.60], np.float32) * np.clip(lum + 0.05, 0, 1.2))
+    base = np.where(warm, np.array([0.95, 0.66, 0.30], np.float32), np.array([0.74, 0.67, 0.56], np.float32) * np.clip(lum + 0.05, 0, 1.2))
     shade = (0.42 + 0.85 * dif)[..., None] * pit[..., None]
     out = base * shade + spec[..., None] * np.array([1.0, 0.86, 0.62], np.float32) * 0.55 - rim[..., None] * 0.10 * (1 - dif[..., None])
     L.C[y0:y1, x0:x1] = np.clip(out, 0, 1.6)
