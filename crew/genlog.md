@@ -419,3 +419,4 @@
 | 11-09 13:45 | D组/D_r7/scale | RH_image2 | 4K 16:9 | 0 | 62082483-b58a-4655-be47-e379901e985d | 采用 | assets/gen/D_r7/scale_raw.png | [D组] 第七棒验证后采用（S06/S07/S26），点数已在 05:12 行计 3 |
 | 11-09 06:03 | A/slash_coil | RH_image2 | 4K 16:9 | 3 | d6b37bc0-cad6-462a-aa95-6730b79d19f7 | submitted | - | A组 slash_coil try1 |
 | 11-09 06:57 | A/slash_coil | RH_image2 | 4K 16:9 | 0 | d6b37bc0-cad6-462a-aa95-6730b79d19f7 | 采用 | assets/gen/A/slash_coil_raw.png | A组 采用 |
+| 11-09 07:02 | B组/fist3 | RH_image2 | 4K 16:9 | 3 | a627b366-29e6-4c16-83dc-f50a8448fbac | submitted | - | try1 extreme close-up of ONLY his right hand and wrist, no face,  |
