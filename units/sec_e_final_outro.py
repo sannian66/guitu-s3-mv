@@ -1768,7 +1768,7 @@ CUTS = {   # 第三棒：亮底上不再用白色系转场（flash_white 0 处�
     'E20': ('light_sweep', 0.06, 0.22, dict(y=770)),           # 第六棒：圆形 iris → 贴地平线的横向光线扫入
     'E21': ('flash_red', 0.0, 0.16, {}),
     'E22': ('match_cut', 0.0, 0.18, dict(shape='circle', center=(960, 330), radius=120)),
-    'E23': ('impact', 0, 0, dict(col=(1.0, 0.86, 0.6), amp=10)),     # 第五棒：硬切加冲击（金白闪 2 帧 + 抖 4 帧 + 色散）
+    'E23': ('impact', 0, 0, dict(col=(1.0, 0.86, 0.6), amp=10, soft=True)),     # 第五棒：硬切加冲击；第八棒 soft：冲白减半护暗部、色散减半
     'E24': ('hard', 0, 0, {}),
     'E25': ('slash_wipe', 0.03, 0.12, dict(angle=-8)),
     'E26': ('match_cut', 0.0, 0.22, dict(shape='line', center=(960, 600), angle=0)),
@@ -1898,8 +1898,14 @@ class _Sec:
             fl = (1.0, 0.55, 0, 0, 0)[k]
             sx = amp * (1, -0.8, 0.6, -0.35, 0.15)[k]; sy = amp * (-0.6, 0.7, -0.4, 0.25, -0.1)[k]
             fr = K.cam(fr, 1 + 0.03 * (1 - k / 5), ox=sx, oy=sy)
-            fr = fr * (1 + 0.6 * fl) + np.asarray(kw.get('col', (1, 1, 1)), np.float32) * 0.45 * fl
-            ca = (6, 5, 3, 2, 1)[k]
+            if kw.get('soft'):                                  # 第八棒（E23）：冲白减半且护暗部——闪只加在亮部，脸/衣暗部保留，色散减半
+                lum = np.clip(fr.mean(-1, keepdims=True), 0, 1)
+                hi = np.clip((lum - 0.12) / 0.5, 0, 1)
+                fr = fr * (1 + 0.3 * fl * hi) + np.asarray(kw.get('col', (1, 1, 1)), np.float32) * 0.16 * fl * hi
+                ca = (3, 2, 1, 1, 0)[k]
+            else:
+                fr = fr * (1 + 0.6 * fl) + np.asarray(kw.get('col', (1, 1, 1)), np.float32) * 0.45 * fl
+                ca = (6, 5, 3, 2, 1)[k]
         elif name == 'hard' and k < 2 and i > 0:
             a = 1.0 if k == 0 else 0.45
             fr = K.cam(fr, 1 + 0.025 * a) * (1 + 0.15 * a) + 0.04 * a
