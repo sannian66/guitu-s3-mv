@@ -1264,16 +1264,19 @@ class V13(Shot):
         yy = np.arange(H, dtype=np.float32)[:, None, None]
         gm = np.clip((yy - 900) / 30, 0, 1); fr = fr * (1 - 0.6 * gm)
         fr = fog(fr, t, 2, 760, 960, 0.45, (0.22, 0.25, 0.32), speed=(-40, 0))
-        fr, info = A.place(fr, t, S('S014/sheath'), (1270 - 30 * u, 930), h=600, rim=COLD, rim_amt=3.2, wind=8, grade=dict(expo=0.85, sat=0.5))
+        # 第八棒（critic_A_r5 P0-1）：鬼屠收刀后站定 —— 身体由微侧回正（rot 3°→0）+ 中景缓移；跪者在前景反向大幅横移（视差）并越磕越深、发抖
+        fr, info = A.place(fr, t, S('S014/sheath'), (1290 - 70 * eio(u), 930), h=600 * (1 + 0.03 * u), rim=COLD, rim_amt=3.2, wind=8,
+                           grade=dict(expo=0.85, sat=0.5), rot=3.0 * (1 - eout(u)))
         L = T.Layer(); p = cprog(4, [6], t, 0.25)[0]
         if p > 0:
             L.paste(T.ink_bleed_glyph('放', 'kai', 330, p, seed=6, bleed=0.6), 880, 520, (0.70, 0.76, 0.88))
             fr = T.compose(fr, L, shadow=0.7, glow=0.25, glow_color=(0.5, 0.6, 0.9))
             a_ = t - (CT(4, 6) - 0.22)
             fr = streak(fr, 520, 640, 1140, a_ / 0.22, w=3, amt=0.9, ang=-3, col=(0.75, 0.85, 1.0))
-        bow = 0.5 + 0.5 * math.sin(t * 6.0)
-        fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (430, 1085), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
-                        rim_dir=(0.7, -0.6), grade=dict(expo=0.5, sat=0.4, gamma=1.3), wind=3, rot=2.0 * bow, defocus=2.6)
+        bow = -1.5 + 7.0 * eio(u) + 1.6 * math.sin(t * 6.0)                       # 越磕越深 + 磕头起伏
+        trem = 2.5 * math.sin(t * 41) + 1.5 * math.sin(t * 67)                       # 发抖
+        fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
+                        rim_dir=(0.7, -0.6), grade=dict(expo=0.5, sat=0.4, gamma=1.3), wind=3, rot=bow, defocus=2.6)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
         return fr, 0
 
@@ -1580,9 +1583,18 @@ class V20(Shot):
         fr = A.clouds(fr, t, 83, speed=(0, 60), y0=120, y1=520, amt=0.8, col=(0.12, 0.10, 0.09), light=(1300, 200), light_r=500,
                       light_col=(1.0, 0.8, 0.5), thr=0.44)
         fr = RAIN.draw(fr, t, 0.6, angle=-6, light=(1300, 200), layers=(0, 1))
-        fr, info = A.place(fr, t, S('A/slash_up', 'dm'), (900, 1020), h=820, rim=COLD, rim_amt=3.2, rim_dir=(0.6, -0.8), wind=12,
-                           grade=dict(expo=0.82, sat=0.38))                       # 第四棒：降饱和 + 冷雨边光
+        # 第八棒（critic_A_r5 P0-1）：两档姿态 —— 42.0 前蓄势（人压低、身体向左后拧 −13°、背光压暗成剪影），
+        #   42.0 撩刀瞬间人随刀上提（0.12s 升 150px、回正 +2° 过冲）+ 震屏，之后继续缓升收势
         a = t - V(42.0)
+        k = eout(clamp01(a / 0.12)) if a >= 0 else 0.0
+        pre = clamp01((t - self.t0) / max(1e-3, V(42.0) - self.t0))
+        y_ = 1150 - 8 * pre - 150 * k - 25 * clamp01(a / 0.6) if a >= 0 else 1150 - 12 * eio(pre)
+        rot_ = -13 + 15 * k - 2 * clamp01((a - 0.12) / 0.3) if a >= 0 else -13 - 2 * eio(pre)
+        sx_, sy_ = R8.shake(t, V(42.0), amp=16, tau=0.10, seed=3)
+        expo_ = 0.82 if a >= 0 else 0.55
+        fr, info = A.place(fr, t, S('A/slash_up', 'dm'), (900 + 30 * (1 - k) + sx_, y_ + sy_), h=820 * (0.9 + 0.1 * k), rot=rot_, rim=COLD,
+                           rim_amt=3.2 if a >= 0 else 5.0, rim_dir=(0.6, -0.8), wind=12,
+                           grade=dict(expo=expo_, sat=0.38), mblur=(0, 30 * k * (1 - clamp01(a / 0.2))))
         if a >= 0:
             fr = K.sparks(fr, t, 81, (1300, 330), n=70, life=0.6, speed=(200, 900), dirc=(0, 1), spread=1.3, grav=900, area=(300, 10), amt=0.8, t0=V(42.0), burst=True)
             L = np.zeros((H // 2, W // 2), np.float32)
