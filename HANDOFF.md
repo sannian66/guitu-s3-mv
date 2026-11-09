@@ -288,3 +288,14 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - **提交**：c5ddf4d（1/n E08）、66e9997（2/n E01）、2e86249（3/n P1）、a869553（4/n E28）、a15696b（5/n 联系表）、c157f50（6/n storyboard）、7/n keys、8/n 本节。
 - **风险**：E01 刀为代码绘制，刃面偏哑光、铁镡无纹；E08 接缝斜穿脸面近看像划痕、洞内眉形偏浓；E12 刀柄穗偏图形化；P2 的 E34 远影、E10、E15 挂轴材质、E30 静置、E06 未做；仍无 mp4。
 - **下一步**：派全新上下文第五轮评审（看 E_contact_v7_p* + E_keys_v7_p*）。
+
+## A 组第七棒（2026-11-09 13:32–14:10 CST）
+- **对照**：`crew/round4/critic_A_r4.md`（75 分；「不重复」6/10 未达线；不可交付 V17 印坑、V08 后景脸、V12 入、V21 入）。逐镜记录见 `crew/round4/A_storyboard.md`「第七棒返工」。
+- **新文件**：`units/a_r7.py`（Crater 凹坑 / flagstones 石板 / tsh_seal_noface / candle_screen / a_cleave / ink_bg / face_shade，只被 sec_a 用）、`tools/a_peek.py`（多时刻核帧网格，`FULL=1` 存全尺寸）。`tools/a_contact.py` 加 `triple` 与新版 `keys`，part 可续跑。
+- **P0**：V17 石板真凹坑（崩口、内壁厚度、碎石、裂缝暖光，「正」只凹刻靠侧光读，无框无色；去砖墙/闪电/碎屑/色散）；V08 去脸 → 屏风烛光，「定对错」移右下；V12 入、V21 入改 `a_cleave`（根因：`Section.raw` 在 pre=0 时把 A 设成 B → 两半是同一镜的复制），V21 去印面灰平板；节奏素材 `A_rhythm_v1`。方印母题只剩 V08「罪状」。
+- **P1**：V10 铜盘质感 + 盘沿厚度、删竖线；V13 入 → a_glint；A04 入署名提前退净；V05「拦不住」右移；V18 同套石板 + 印坑一角、「那我」160px；V19 压亮冷调 + 侧光；A02 月心出框。
+- **交付**：`out/round4/A_contact_v7.jpg`（+`_p0/_p1`）、`out/round4/A_keys_v6.jpg`（+`_p0–_p3`）、`out/round4/A_rhythm_v1.jpg`（+`_p0–_p3`，每镜起/中/止）。低清 mp4 未出。
+- **积分**：本棒 0 点；A 组累计 **57/80**（剩 23）。
+- **提交**：7996a77（1/n V17）、574f727（2/n V08）、4102d8f（3/n 转场）、c06c1b7（4/n V10）、a03f88a（5/n P1）、8d2f1fd（6/n 联系表）、e41685b / 5a849d5（7–8/n 三帧表 + 歌词）、6800c92（9/n storyboard）。
+- **风险**：V18 坑沿横贯亮折边可能读成一条线；V17 方形凹坑本身仍是方形；P2-13/14/16（Cait 横排、V02 字号、V09 入红块）未改；无 mp4。
+- **下一步**：派全新上下文第五轮评审（看 A_contact_v7_p* + A_keys_v6_p* + A_rhythm_v1_p*）。
