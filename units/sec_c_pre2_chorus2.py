@@ -219,6 +219,28 @@ def arc_glyph(fr, ch, c, size, a, rot=0.0, split=0.0, split_ang=-62.0, seed=0, w
     return T.compose(fr, L, shadow=0.4, shadow_sigma=18, glow=0.8, glow_sigma=16, glow_color=(0.55, 0.7, 1.0))
 
 
+def etched_glyph(fr, ch, c, size, a, rot=0.0, edge=(0.85, 0.93, 1.0), seed=0):
+    """第七棒（critic_C_r3 P1⑤「对」压在高光刀面读不出）：刀面反光里的镂空字——字心压暗（像刻进钢里的槽），
+    外沿一圈冷白亮边 + 字外一圈软暗衬，白刀面/暗雨幕上都读得出。a=0..1 出现度（亮边先亮、字槽后压暗）。"""
+    if a <= 0.01: return fr
+    L = T.Layer(); T.place(L, ch, c[0], c[1], size, (1, 1, 1), 'serif_black', alpha=1.0, rot=rot, texture=False)
+    M = L.A
+    x0, y0, x1, y1 = L.box(int(size * 0.35))
+    m = M[y0:y1, x0:x1]
+    r = max(2, int(size * 0.022))
+    dil = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1)))
+    rim = np.clip(dil - m, 0, 1)
+    halo = np.clip(cv2.GaussianBlur(dil, (0, 0), size * 0.06) * 1.4, 0, 1)
+    ae = clamp(a * 1.6); ag = clamp(a * 1.2 - 0.2)
+    sub = fr[y0:y1, x0:x1]
+    sub = sub * (1 - 0.55 * halo * ae)[..., None]                                     # 字外软暗衬
+    sub = sub * (1 - 0.88 * m * ag)[..., None] + (m * ag)[..., None] * np.array([0.05, 0.05, 0.06], np.float32)   # 字槽
+    gl = cv2.GaussianBlur(rim, (0, 0), 3.0)
+    sub = sub + (rim * 1.4 + gl * 0.9)[..., None] * np.asarray(edge, np.float32) * ae   # 亮边 + 微辉
+    fr = fr.copy(); fr[y0:y1, x0:x1] = sub
+    return fr
+
+
 def flash_frame(fr, amt, col=(0.92, 0.95, 1.0)):
     return fr * (1 + amt * 0.6) + amt * np.asarray(col, np.float32) * 0.5
 
@@ -1556,7 +1578,7 @@ class C30(Shot):
     def render(self, t):
         u = self.u(t)
         fr = storm(t, 30, horizon=1300, flash=0.25 + 0.6 * bolt_env(t, V(149.70)), ground=False)
-        fr, _ = put(fr, t, 'S083/sash', 900 - 80 * u, 700, 1500, anchor='src', src=(0.5, 0.62), rim=COLD, rim_amt=1.8, expo=1.0, sat=0.9,
+        fr, _ = put(fr, t, 'S083/sash', 900 - 80 * u, 560, 1500, anchor='src', src=(0.5, 0.62), rim=COLD, rim_amt=1.8, expo=1.0, sat=0.9,
                     wind=22, flash=0.4 * bolt_env(t, V(149.70)))
         fr = rain(fr, t, 300, inten=1.0, angle=20)
         self.ca = 3 if 0 <= t - V(149.70) < 0.1 else 0
@@ -1616,16 +1638,18 @@ class C33(Shot):
         td, tc = V(152.70), V(152.90)
         fl = 0.5 * bolt_env(t, td) + 0.5 * bolt_env(t, tc)
         fr = storm(t, 33, horizon=1300, flash=0.3 + fl, ground=False, fc=(500, 200)) * 0.85
-        for ch, c in (('是', (520, 380)), ('非', (1420, 360))):
-            fr = arc_glyph(fr, ch, c, 170, 0.28 * (1 - u * 0.5), rot=0)
+        for ch, c in (('是', (1280, 250)), ('非', (1580, 250))):            # 第七棒：残影移到右上空区（原来压在刀后读不出），亮度 0.28 → 0.6
+            fr = arc_glyph(fr, ch, c, 150, 0.6 * (1 - u * 0.4), rot=0)
         fr = blade_smear(fr, (200, 760), (1720, 300), (t - td) / 0.12, bend=-0.10, width=80, seed=331, amt=1.2)
         fr = blade_smear(fr, (1720, 760), (200, 320), (t - tc) / 0.10, bend=0.10, width=80, seed=332, amt=1.2)
         ang = lerp(-14, 12, ein(clamp((t - self.t0) / 0.2))) if t < td else lerp(12, -16, eout(clamp((t - td) / 0.2)))
         if t >= tc: ang = lerp(-16, 6, eout(clamp((t - tc) / 0.12)))
         fr, _ = put(fr, t, 'C5/c16_drip', 960, 560, 1500, anchor='src', src=(0.497, 0.5), rot=90 + ang, rim=COLD, rim_amt=2.0, flash=fl,
                     expo=1.0, sat=0.7, wind=0, breathe=0.0)        # 刃（c16_drip 第 2 次：横转、挥动、带血），不露手
-        e = eout(clamp((t - td + 0.02) / 0.09)); fr = arc_glyph(fr, '对', (700, 520), 240 * lerp(1.3, 1, e), e, rot=-10)
-        e = eout(clamp((t - tc + 0.02) / 0.09)); fr = arc_glyph(fr, '错', (1240, 560), 240 * lerp(1.3, 1, e), e, rot=10, warm=1.0)
+        # 第七棒：「对」「错」= 刀面反光里的镂空字（暗槽亮边），跟着刀转（rot 跟刀），不再是白字压白刀面
+        e = eout(clamp((t - td + 0.02) / 0.09)); fr = etched_glyph(fr, '对', (700, 560), 250 * lerp(1.25, 1, e), e, rot=-ang * 0.6)
+        e = eout(clamp((t - tc + 0.02) / 0.09)); fr = etched_glyph(fr, '错', (1240, 560), 250 * lerp(1.25, 1, e), e, rot=-ang * 0.6,
+                                                                   edge=(1.0, 0.72, 0.4))
         fr = rain(fr, t, 330, inten=1.0, angle=12)
         self.ca = 6 if (0 <= t - td < 0.08 or 0 <= t - tc < 0.08) else 0
         return fr

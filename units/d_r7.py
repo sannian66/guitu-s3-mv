@@ -212,3 +212,57 @@ def torn_slit(fr, cx, y_top, y_bot, w_bot, seed=0, ld=(-0.7, -0.7), open_=1.0, f
     out = out * (1 - ed[..., None]) + np.array([0.99, 0.98, 0.95], np.float32) * ed[..., None]
     over = np.clip((edge + flaps * np.exp(-(np.minimum(np.abs(dl), np.abs(dr)) / 10) ** 2)) * (v > 0.55), 0, 1).astype(np.float32)
     return out, over
+
+
+# ------------------------------------------------------------------ [r7b] 白纸段景深：后景碑影 / 前景虚焦纸屑飞墨
+def stele_shadows(fr, t, seed=5, n=5, ang=35, amt=0.20, drift=18.0, width=(70, 130), col=(0.86, 0.88, 0.97)):
+    """俯拍纸面上的后景层：画外一排石碑 / 殿柱被低角度斜光投下的长影（软边、近实远虚、影内偏冷），随光缓移。"""
+    key = ('stl', seed, n, ang)
+    x, y = _grid()
+    if key not in _C:
+        r = np.random.default_rng(seed)
+        th = math.radians(ang); d = (math.cos(th), math.sin(th)); nn = (-d[1], d[0])
+        acc = np.zeros((H, W), np.float32); grads = []
+        offs = np.sort(r.uniform(-900, 900, n))
+        for o in offs:
+            wv = r.uniform(*width)
+            s = (x - 960) * nn[0] + (y - 540) * nn[1] - o
+            a = (x - 960) * d[0] + (y - 540) * d[1]
+            taper = wv * (1 + 0.35 * np.clip((a + 700) / 1400, 0, 1))          # 影子远端变宽变虚
+            m = np.clip((taper - np.abs(s)) / (6 + 0.03 * np.clip(a + 700, 0, None)), 0, 1)
+            aend = r.uniform(150, 650)
+            head = np.clip((aend - a) / 30, 0, 1) * np.clip((aend - a + 60) / 60, 0, 1) ** 0.5   # 碑首：影子远端（光从左上来，影向右下）
+            acc = np.maximum(acc, (m * head * r.uniform(0.7, 1.0)).astype(np.float32))
+        _C[key] = (cv2.GaussianBlur(acc, (0, 0), 5), nn)
+    acc, nn = _C[key]
+    dx = int(drift * math.sin(t * 0.7)); dy = int(drift * 0.5 * math.cos(t * 0.5))
+    m = np.roll(np.roll(acc, dx, 1), dy, 0)
+    c = np.array(col, np.float32)
+    return fr * (1 - m[..., None] * amt * (1.15 - 0.15 * c))
+
+
+def fg_debris(fr, t, seed=9, n=14, blur=11, amt=0.55, cinnabar=0.25, speed=(80, 180), size=(18, 46), wind=(1.0, 0.35)):
+    """前景层：离镜头很近的纸屑 / 墨点，强虚焦、斜向飘过（深一点的灰墨，少量朱红碎屑），给白纸镜头一层前景。"""
+    r = np.random.default_rng(seed)
+    L = np.zeros((H, W), np.float32); Lr = np.zeros((H, W), np.float32)
+    for i in range(n):
+        x0, y0 = r.uniform(-200, W + 200), r.uniform(-200, H + 200)
+        v = r.uniform(*speed)
+        px = (x0 + wind[0] * v * t) % (W + 400) - 200
+        py = (y0 + wind[1] * v * t + 20 * math.sin(t * 1.3 + i)) % (H + 400) - 200
+        sz = r.uniform(*size); rot = (t * r.uniform(-90, 90) + r.uniform(0, 180)) % 180
+        tgt = Lr if r.random() < cinnabar else L
+        if r.random() < 0.6:     # 纸屑：歪四边形
+            pts = cv2.boxPoints(((px, py), (sz, sz * r.uniform(0.35, 0.8)), rot)).astype(np.int32)
+            cv2.fillConvexPoly(tgt, pts, r.uniform(0.5, 1.0), cv2.LINE_AA)
+        else:                    # 墨点
+            cv2.circle(tgt, (int(px), int(py)), int(sz * 0.35), r.uniform(0.6, 1.0), -1, cv2.LINE_AA)
+    L = cv2.GaussianBlur(L, (0, 0), blur); Lr = cv2.GaussianBlur(Lr, (0, 0), blur)
+    out = fr * (1 - L[..., None] * amt) + INK * L[..., None] * amt * 0.6
+    out = out * (1 - Lr[..., None] * amt) + np.array([0.70, 0.10, 0.06], np.float32) * Lr[..., None] * amt
+    return out
+
+
+def diff_mask(a, b, k=4.0):
+    """两帧差 → 新画上去的东西的遮罩（给已合成层补投影 / 轮廓光用）。"""
+    return np.clip(np.abs(a - b).mean(-1) * k, 0, 1).astype(np.float32)

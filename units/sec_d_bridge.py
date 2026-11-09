@@ -549,18 +549,35 @@ class S08_Seals(Shot):
         u = self.u(t)
         fr = D.paper(16).copy()
         fr = D.wash(fr, 0.06, 0.0, 1.0, seed=17)
+        # [r7b] 后景：画外碑林被左上低角度主光投下的长影（冷灰、软边、随光缓移）+ 纸纹在斜光下起伏
+        fr = R7.paper_relief(fr, 81, amt=0.12)
+        fr = R7.stele_shadows(fr, t, seed=8, n=5, amt=0.17, drift=14)
         hits = []                                            # [r7] 去掉纸心朱「人」（与三方朱批同屏读成「理人所应」）
         for (ch, x, y, s_, sd), on in zip(self.PI, O[41][9:12]):
             th = V(on)
             p = cl((t - (th - 0.14)) / 0.32)
             if p <= 0: continue
             if t >= th: hits.append(th)
+            pre = fr
             fr = R5.zhupi(fr, ch, x, y, s_, p, seed=sd)
+            fr = R7.ink_sheen(fr, R7.diff_mask(pre, fr, 5.0), (-0.75, -0.6), 3, 0.30, (1.0, 0.86, 0.78), core=0.12)   # [r7b] 湿朱受光
             fr = D.ink_spray(fr, t, th, (x + 60, y + 40), n=26, seed=80 + sd, power=380, col=CINNABAR, size=(2, 6))
+        fr = R7.key_light(fr, (240, 120), 1500, amt=0.12, dark=0.36)                       # [r7b] 主光左上，右下角压暗
+        fr = R7.light_shaft(fr, t, (120, 20), 36, 200, 0.12, seed=81, motes=45, length=1700)
         ch, x, y, s_, rot = self.DANG
         th = V(O[41][12])
         if t >= th: hits.append(th)
+        pre = fr
         fr = R5.iron_seal(fr, ch, x, y, s_, t, th, rot=rot, seed=8)
+        if t >= th:                                                                      # [r7b] 铁印受主光：左上暖轮廓 + 右下冷反光
+            Ms = (R7.diff_mask(pre, fr, 3.0) > 0.5).astype(np.uint8)
+            cs, _ = cv2.findContours(Ms, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            Ms = np.zeros((H, W), np.float32)
+            if cs: cv2.fillConvexPoly(Ms, cv2.convexHull(max(cs, key=cv2.contourArea)), 1.0, cv2.LINE_AA)   # 整方外轮廓（不描内部金字）
+            Ms = cv2.GaussianBlur(cv2.erode(Ms, np.ones((7, 7), np.uint8)), (0, 0), 1.2)
+            fr = R7.rim_edge(fr, Ms, (-0.75, -0.6), 5, 0.55, (1.0, 0.9, 0.72), glow=8, gamt=0.0)
+            fr = R7.rim_edge(fr, Ms, (0.8, 0.6), 3, 0.18, (0.7, 0.8, 1.0), glow=5, gamt=0.0)
+        fr = R7.fg_debris(fr, t, seed=82, n=12, blur=12, amt=0.5, cinnabar=0.3)            # [r7b] 前景虚焦纸屑 / 朱屑
         if t >= th:
             fr = D.ink_spray(fr, t, th, (x - s_ * 0.55, y + s_ * 0.5), n=40, seed=88, power=700, size=(2, 6))
             fr = D.ink_spray(fr, t, th, (x + s_ * 0.55, y - s_ * 0.45), n=40, seed=89, power=700, size=(2, 6))
@@ -607,6 +624,9 @@ class S09_Brush(Shot):
         pa = cv2.GaussianBlur(np.roll(pa, int(-30 * u), 1), (0, 0), 4) * (0.75 + 0.5 * cv2.resize(D._tile(919)[:H // 4, :W // 4], (W, H)))
         fr = fr * (1 - pa[..., None] * 0.10)
         fr = D.wash(fr, 0.10, 0.75, 1.0, seed=171)
+        # [r7b] 后景再加一层更远的淡墨山 + 雾（宫阙落在山前），纸纹斜光浮雕
+        fr = R7.mist_mountains(fr, 17, y0=560, amp=150, dens=(0.08, 0.14, 0.0), drift=-60 * u)
+        fr = R7.paper_relief(fr, 91, amt=0.11)
         L = T.Layer(); hd = None
         for ch, x, y, s, a0, a1 in self.CH:
             p = cl((t - a0) / (a1 - a0))
@@ -616,11 +636,17 @@ class S09_Brush(Shot):
             if p < 1: hd = self.head(ch, x, y, s, p) or hd
             else: hd = hd
         fr = D.ink_text(fr, L, bleed=0.3, sig=8)
+        fr = R7.ink_sheen(fr, np.clip(L.A, 0, 1).astype(np.float32), (-0.75, -0.6), 4, 0.34, core=0.2)   # [r7b] 湿墨：受光一线反光、墨芯更浓
+        fr = R7.key_light(fr, (260, 80), 1500, amt=0.12, dark=0.36)
+        fr = R7.light_shaft(fr, t, (60, -20), 30, 230, 0.13, seed=91, motes=50, length=1800)
         if hd is None: hd = (1500, 760)
         # 巨笔（笔尖压在笔序前沿）
-        fr, _ = D.ink_figure(fr, self.sp, t, self.tip, (hd[0] + 14, hd[1] + 18), 1.5, rot=-6 + 4 * math.sin(t * 9), wind=0, k=1.4, dens=0.98)
+        fr, Ab = D.ink_figure(fr, self.sp, t, self.tip, (hd[0] + 14, hd[1] + 18), 1.5, rot=-6 + 4 * math.sin(t * 9), wind=0, k=1.4, dens=0.98)
+        fr = R7.ink_cast(fr, Ab, (-0.75, -0.6), 60, 12, 0.30)                                # [r7b] 笔杆投影落纸
+        fr = R7.rim_edge(fr, Ab, (-0.75, -0.6), 4, 0.6, (1.0, 0.93, 0.8), glow=7, gamt=0.25)   # 笔杆/手背受光轮廓
         fr = vcol(fr, '若正义由你定义', 1750, 212, 92, O[42][0:7], t, 'ink', fname='serif_black', adv=1.1)   # [r4] 放大（停用小竖排）
         fr = D.fall_chars(fr, t, '正义', 909, density=2, sizes=(100, 170), speed=(240, 380), layers=1, alpha=0.35, near_blur=9)   # [r5] 前景虚焦落字
+        fr = R7.fg_debris(fr, t, seed=92, n=9, blur=13, amt=0.45, cinnabar=0.0)                # [r7b] 前景飞墨
         return K.cam(fr, 1.05 + 0.04 * u, (hd[0] - 960) * 0.05, (hd[1] - 540) * 0.05), 1.0
 
 

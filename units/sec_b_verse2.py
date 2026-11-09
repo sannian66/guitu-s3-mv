@@ -223,6 +223,35 @@ class V01(Shot):
         self.spl = fx2.Splashes(4707)
         r = np.random.default_rng(4710)
         self.dust = r.uniform(0, 1, (260, 4))
+        # 第七棒：撞木（左侧悬吊圆木）抠成独立层，撞钟前后真的摆动——拉后 → 加速撞上钟体 → 回弹。原位用 inpaint 补背景
+        S = 1.14
+        poly = np.int32([[-40, 395], [975, 588], [975, 718], [-40, 560]]) * S
+        m = np.zeros((h, w), np.uint8); cv2.fillConvexPoly(m, poly.astype(np.int32), 255)
+        small = cv2.resize(self.P, (w // 2, h // 2)); ms = cv2.resize(cv2.dilate(m, np.ones((15, 15), np.uint8)), (w // 2, h // 2))
+        bgi = cv2.inpaint((np.clip(small, 0, 1) * 255).astype(np.uint8), ms, 9, cv2.INPAINT_TELEA).astype(np.float32) / 255
+        self.Pbg = cv2.resize(bgi, (w, h))
+        self.ramA = cv2.GaussianBlur(m.astype(np.float32) / 255, (0, 0), 2.0)
+        self.ramF = self.P * self.ramA[..., None]
+        self.rdir = np.array([0.981, 0.193], np.float32)
+
+    def ram_off(self, t):
+        th = V(self.T_HIT)
+        if t < th:
+            q = clamp01((t - self.t0) / (th - self.t0))
+            return -170 * (1 - q ** 2.2)                     # 拉后 → 加速撞上
+        q = t - th
+        return -55 * math.sin(min(q / 0.32, 1.0) * math.pi * 0.5) * math.exp(-max(0, q - 0.32) / 0.6)   # 回弹
+
+    def plate_at(self, t):
+        o = self.ram_off(t); o2 = self.ram_off(t - 1 / 60)
+        acc = None; n = 3
+        for k in range(n):                                   # 快速摆动时沿运动方向做 3 次采样的运动模糊
+            oo = (o + (o2 - o) * k / (n - 1)) * 1.14
+            M = np.float32([[1, 0, self.rdir[0] * oo], [0, 1, self.rdir[1] * oo]])
+            Fw = cv2.warpAffine(self.ramF, M, (self.P.shape[1], self.P.shape[0])); Aw = cv2.warpAffine(self.ramA, M, (self.P.shape[1], self.P.shape[0]))
+            layer = self.Pbg * (1 - Aw[..., None]) + Fw
+            acc = layer if acc is None else acc + layer
+        return acc / n
 
     def render(self, t):
         u = self.u(t); e = eio(u)
@@ -231,7 +260,7 @@ class V01(Shot):
         ring_t = max(0.0, t - th)
         # 远雷：撞钟后 0.25s 窗外云层亮一下
         thunder = pulse(t, th + 0.28, 0.18) * (t > th)
-        P = self.P * (1 + self.win * (0.25 + 2.2 * thunder))
+        P = self.plate_at(t) * (1 + self.win * (0.25 + 2.2 * thunder))
         bx, by = self.BELL[0] * 1.14, self.BELL[1] * 1.14
         zoom = 0.93 + 0.07 * e
         dx, dy, dr = shake(t, 3 + 22 * hk, 13, 471)
@@ -1513,7 +1542,7 @@ def section():
 
 
 _C1 = [None]
-SEAM_N = 10                                    # 2586–2595：副歌一 S047 原帧 →（雨幕溶解）→ V01；墨退遮罩两边同一个
+SEAM_N = 3                                    # 2586–2595：副歌一 S047 原帧 →（雨幕溶解）→ V01；墨退遮罩两边同一个
 
 
 def frame(f, cache=None):
