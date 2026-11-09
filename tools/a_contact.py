@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 import sec_a_intro_verse1 as M
 
 FPS = 30
+ACON = os.environ.get('ACON', '/tmp/acon')            # 第八棒：每版用独立缓存目录，part 可续跑
 font = ImageFont.truetype(ROOT + '/fonts/NotoSerifSC-Bold.otf', 22)
 
 
@@ -42,6 +43,7 @@ def items_for(cmd):
             if c and c[0] != 'hard':
                 items.append((S.__name__ + ' ' + c[0][:10] + ' 中点', S.t0 + (c[2] - c[1]) / 2))
         items += [('V12入 前', 29.80), ('V12入 后', 29.93), ('V21入 前', 42.60), ('V21入 后', 42.76),
+                  ('V10 膝部', 27.98), ('V20 蓄势', 41.95), ('V20 上提', 42.05), ('V21 末段余烬', 43.80), ('Cait 竖排', 5.0), ('V02 刀锋', 17.6),
                   ('署名', 1.6), ('署名2', 4.9), ('片名', 8.6), ('片名化灰', 13.5), ('长夜', 16.4), ('五百', 19.1), ('拦不住', 20.9),
                   ('寒光', 21.6), ('谁在高处', 23.3), ('V08', 23.80), ('V08 落印', 24.44), ('V08 俯拍印痕', 24.62), ('罪状', 24.95),
                   ('沿梁', 26.95), ('V10 铜盘', 27.9), ('称量', 28.7), ('杀', 30.3), ('放', 32.2), ('火星成字', 34.25), ('主张', 36.0),
@@ -63,11 +65,11 @@ if __name__ == '__main__' and sys.argv[1] in ('part', 'assemble'):
     # 分块渲染（每次 shell ≤120s）：part <contact|keys> <i0> <i1>  → /tmp/acon/<kind>_<i>.jpg；assemble <kind> <out> [块高 rows]
     kind = sys.argv[2]; its = items_for(kind)
     if sys.argv[1] == 'part':
-        os.makedirs('/tmp/acon', exist_ok=True); cache = {}
+        os.makedirs(ACON, exist_ok=True); cache = {}
         for i in range(int(sys.argv[3]), min(len(its), int(sys.argv[4]))):
             lab, t = its[i]
-            if os.path.exists('/tmp/acon/%s_%03d.jpg' % (kind, i)): continue
-            Image.fromarray(M.frame(int(round(t * FPS)), cache)).resize((480, 270), Image.LANCZOS).save('/tmp/acon/%s_%03d.jpg' % (kind, i), quality=90)
+            if os.path.exists(ACON + '/%s_%03d.jpg' % (kind, i)): continue
+            Image.fromarray(M.frame(int(round(t * FPS)), cache)).resize((480, 270), Image.LANCZOS).save(ACON + '/%s_%03d.jpg' % (kind, i), quality=90)
             print(i, lab, flush=True)
     else:
         out = sys.argv[3]; cols, tw, th = (3 if kind == 'triple' else 4), 480, 270; per = int(sys.argv[4]) if len(sys.argv) > 4 else 4
@@ -75,7 +77,7 @@ if __name__ == '__main__' and sys.argv[1] in ('part', 'assemble'):
         sh = Image.new('RGB', (cols * tw, rows * (th + 30)), (12, 12, 12)); d = ImageDraw.Draw(sh)
         for i, (lab, t) in enumerate(its):
             x, y = (i % cols) * tw, (i // cols) * (th + 30)
-            sh.paste(Image.open('/tmp/acon/%s_%03d.jpg' % (kind, i)), (x, y + 30)); d.text((x + 6, y + 2), f'{lab}  {t:.2f}s', fill=(240, 220, 120), font=font)
+            sh.paste(Image.open(ACON + '/%s_%03d.jpg' % (kind, i)), (x, y + 30)); d.text((x + 6, y + 2), f'{lab}  {t:.2f}s', fill=(240, 220, 120), font=font)
         sh.save(out, quality=86)
         for b in range(0, rows, per):                     # 切块 ≤1920×1400 供查看
             sh.crop((0, b * (th + 30), cols * tw, min(rows, b + per) * (th + 30))).save(out.replace('.jpg', '_p%d.jpg' % (b // per)), quality=86)
