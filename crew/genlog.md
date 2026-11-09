@@ -549,3 +549,9 @@
 ## 2026-11-09 22:40 · OpenAI 协议渠道批量生图（green_respr.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✗ `green_hero_front` 失败：<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1011)>
+
+## 2026-11-09 22:52 · OpenAI 协议渠道批量生图（green_respr.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `green_hero_front`（60s）→ `assets/gen/green/green_hero_front_cut.png`
+
+## 2026-11-09 22:53 · 渠道恢复后自动补跑：jobs/green_respr.json
