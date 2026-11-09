@@ -647,12 +647,34 @@ def freeze_glitch(A, B, p, seed=0, black_at=0.8, frames=10):
     return out
 
 
+
+def luma(A, B, p, seed=0, soft=0.10, invert=False):
+    """亮度擦除：按 B 自身的亮度场决定"先亮哪儿"（亮处先显、暗处后显），
+    invert=True 则暗处先显。用于「火把亮处起笔」「赤热刃口亮处长出风眼」这类需要
+    顺着画面已有明暗生长的转场。边缘带 soft 宽度的软过渡，不产生硬边。"""
+    lum = (B[..., 0] * 0.299 + B[..., 1] * 0.587 + B[..., 2] * 0.114).astype(np.float32)
+    n = _noise(H // 4, W // 4, 3, seed) - 0.5
+    n = cv2.resize(n, (W, H))
+    f = lum * (1.0 - 1.0 if invert else 1.0) + (0.0 if invert else 0.0)
+    f = (1.0 - lum) if invert else lum
+    f = f + n * 0.10
+    lo = f.min() - 0.02
+    hi = f.max() + 0.02
+    f = (f - lo) / max(1e-5, hi - lo)
+    thr = -soft + p * (1.0 + 2 * soft)
+    m = np.clip((thr - f) / max(1e-4, soft * 2.0), 0.0, 1.0)
+    m = cv2.GaussianBlur(m, (0, 0), 1.2)[..., None]
+    out = A * (1.0 - m) + B * m
+    # 先亮起处给一点点冷提亮，读作"光先到"
+    out = out + (m * (1.0 - m) * 4.0) * 0.05
+    return np.clip(out, 0, 1)
+
 TRANSITIONS = {
     'hard_cut_on_beat': hard_cut_on_beat, 'match_cut': match_cut, 'slash_wipe': slash_wipe, 'ink_bleed': ink_bleed,
     'whip_pan_blur': whip_pan_blur, 'flash_white': flash_white, 'flash_red': flash_red, 'paper_tear': paper_tear,
     'shatter': shatter, 'occlusion': occlusion, 'iris_moon': iris_moon, 'smoke_through': smoke_through,
     'zoom_through': zoom_through, 'glitch_cut': glitch_cut, 'fade_black': fade_black, 'split_slide': split_slide,
-    'freeze_glitch': freeze_glitch,
+    'freeze_glitch': freeze_glitch, 'luma': luma,
     # 别名
     'spin_slash': lambda A, B, p, **kw: slash_wipe(A, B, p, circle=True, **kw),
     'cut': hard_cut_on_beat,
