@@ -401,6 +401,51 @@ def compact(frames=None):
     return out
 
 
+# ---------------------------------------------------------------- ⑧ 通用「整句删」前后对照表
+def suppsheet(name, lines_):
+    """给一组句号（0 基）出「删前 / 删后」对照表（每句 1 帧）。"""
+    from PIL import Image, ImageDraw, ImageFont
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    L = LU.lines()
+    jobs, rows = [], []
+    for li in lines_:
+        r = L[li]
+        f = fnum(t_of(r))
+        pb = os.path.join(TMP, f'ss_{name}_{li}_b.png')
+        pa = os.path.join(TMP, f'ss_{name}_{li}_a.png')
+        jobs += [(0, f, pb), (1, f, pa)]
+        rows.append((r, f, pb, pa))
+    render(jobs)
+    f_ttl = ImageFont.truetype(FONT, 26)
+    f_cap = ImageFont.truetype(FONT, 19)
+    f_sml = ImageFont.truetype(FONT_L, 16)
+    TW, TH = 560, 315
+    W = 20 + 2 * (TW + 16) + 220
+    H = 108 + len(rows) * (TH + 58)
+    sheet = Image.new('RGB', (W, H), (14, 14, 15))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), '%s：左=删前（统一层原样）/ 右=删后（整句不出）' % name, fill=(236, 232, 224), font=f_ttl)
+    d.text((20, 46), '全部走 SUPPRESS 时间窗（不在段里硬删）；整句删只关「字幕层」这一路，画面里的保留字由镜头自己画、原样保留',
+           fill=(150, 165, 150), font=f_sml)
+    for i, (r, f, pb, pa) in enumerate(rows):
+        y = 108 + i * (TH + 58)
+        if os.path.exists(pb):
+            sheet.paste(_tile(Image.open(pb).convert('RGB'), TW, TH), (20, y))
+        if os.path.exists(pa):
+            im = Image.open(pa).convert('RGB')
+            sheet.paste(_tile(im, TW, TH), (36 + TW, y))
+            sheet.paste(_tile(im.crop((1400, 120, 1920, 960)), 180, 315), (56 + 2 * TW, y))
+        d.text((20, y + TH + 3), '第 %d 句 f%d（%.2fs）%s' % (r['line'] + 1, f, f / 30.0, r['text'].replace(' ', '·')),
+               fill=(232, 200, 120), font=f_cap)
+        d.text((20, y + TH + 25), '删前 %d 字 → 删后整句不出（SUPPRESS %.2f–%.2fs）' % (
+            r['n'], LU.SUPPRESS[r['line']][0], LU.SUPPRESS[r['line']][1]), fill=(160, 156, 148), font=f_sml)
+    out = os.path.join(OUTDIR, 'supp_%s.jpg' % name)
+    sheet.save(out, quality=91)
+    print('sheet', out, flush=True)
+    return out
+
+
 # ---------------------------------------------------------------- ⑦ C 段字幕需求前后对照
 def cnotes():
     """C 段：被整句删的 6 句 + 被留空/部分删的 4 处，各 1 帧「删前 / 删后」。"""
@@ -1017,6 +1062,11 @@ if __name__ == '__main__':
         strips([int(x) for x in sys.argv[2:]] or None)
     elif c == 'audit':
         audit()
+    elif c == 'sheets':
+        sys.path.insert(0, os.path.join(ROOT, 'units'))
+        import lyric_uni as LU
+        suppsheet('E_12句整句删', [44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55])
+        suppsheet('B_第27句整句删', [26])
     elif c == 'cnotes':
         cnotes()
     elif c == 'compact':

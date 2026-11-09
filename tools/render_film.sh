@@ -24,8 +24,8 @@ else
   echo "== 1/4 复用快照 $SNAP（--resume）"
 fi
 
-cp out/full_sprite/chunks/full30_50589e0_20261109/prun.py "$SNAP/" 2>/dev/null || true
-cp out/full_sprite/chunks/full30_50589e0_20261109/pxcheck.py "$SNAP/" 2>/dev/null || true
+cp out/devsnap/prun.py "$SNAP/"            # 用带 lyric_uni/grade 钩子的最新渲染器
+cp out/devsnap/pxcheck.py "$SNAP/" 2>/dev/null || true
 
 echo "== 2/4 并行渲染：7 进程 × ${FINE} 帧/块，开关 SPRITE_MODE=1 GRADE_UNIFY=1 LYRIC_UNI=1"
 cd "$SNAP"

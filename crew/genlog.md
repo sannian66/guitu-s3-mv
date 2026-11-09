@@ -537,3 +537,15 @@
 - ✔ `wt_s035_jump`（52s）→ `assets/gen/wt/wt_s035_jump.png`
 - ✔ `wt_s046_blade`（49s）→ `assets/gen/wt/wt_s046_blade.png`
 - ✔ `wt_p12_blade`（47s）→ `assets/gen/wt/wt_p12_blade.png`
+
+## 2026-11-09 22:39 · OpenAI 协议渠道批量生图（green_respr.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✗ `green_hero_front` 失败：<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1011)>
+
+## 2026-11-09 22:39 · OpenAI 协议渠道批量生图（green_respr.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✗ `green_hero_front` 失败：<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1011)>
+
+## 2026-11-09 22:40 · OpenAI 协议渠道批量生图（green_respr.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✗ `green_hero_front` 失败：<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1011)>
