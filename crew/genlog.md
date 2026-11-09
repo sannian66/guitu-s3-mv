@@ -505,3 +505,12 @@
 - ✔ `d17_char` 3 点（task 4eda7dad）→ `assets/gen/r1/d17_char.png` + `_cut.png`
 - ✔ `e22_scale` 3 点（task e3d02dc2）→ `assets/gen/r1/e22_scale.png` + `_cut.png`
 - ✔ `e218_fix` 3 点（task 302f6a57）→ `assets/gen/r1/e218_fix.png` + `_cut.png`
+
+## 2026-11-09 21:26 · 批量生图（r1_fixes2.json，6 张 / 18 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `g_v16_seal` 3 点（task 42a3e6b0）→ `assets/gen/r1/g_v16_seal_raw.png` + `_cut.png`
+- ✔ `g_v21_hand` 3 点（task afbf3c83）→ `assets/gen/r1/g_v21_hand_raw.png` + `_cut.png`
+- ✔ `g_c22_hero` 3 点（task 6dd351ce）→ `assets/gen/r1/g_c22_hero_raw.png` + `_cut.png`
+- ✔ `g_p12_hero` 3 点（task d2027d0d）→ `assets/gen/r1/g_p12_hero_raw.png` + `_cut.png`
+- ✔ `s_d17_eye` 3 点（task c724a5b6）→ `assets/gen/r1/s_d17_eye.png` + `_cut.png`
+- ✔ `s_e218_hilt` 3 点（task d90fa859）→ `assets/gen/r1/s_e218_hilt.png` + `_cut.png`
