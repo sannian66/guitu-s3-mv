@@ -53,17 +53,41 @@ def find_id(o):
     return None
 
 
+def upload(local_path):
+    """本地图片 → presign → PUT → asset_url（参考图生图用；upload_url 只用于上传，不能传给模型）"""
+    data = pathlib.Path(local_path).read_bytes()
+    size = len(data)
+    ct = 'image/png' if str(local_path).lower().endswith('.png') else 'image/jpeg'
+    pre = post('/api/skills/uploads/presign', {'filename': pathlib.Path(local_path).name,
+                                               'content_type': ct, 'size': size, 'media_type': 'image'})['upload']
+    req = urllib.request.Request(pre['upload_url'], data=data, method='PUT', headers=pre['headers'])
+    with urllib.request.urlopen(req, timeout=120) as r:
+        assert 200 <= r.status < 300, r.status
+    return pre['asset_url']
+
+
+def refs_of(job):
+    out = []
+    if job.get('ref'):
+        out.append(ref_url(job['ref']))
+    for lp in job.get('ref_local', []):
+        out.append(upload(ROOT / lp))
+    return out
+
+
 def quote(job):
     req = {'model': MODEL, 'prompt': job['prompt'], 'ratio': job.get('ratio', '3:4'), 'size': job.get('size', '4K')}
-    if job.get('ref'):
-        req['input'] = [ref_url(job['ref'])]
+    r = refs_of(job)
+    if r:
+        req['input'] = r
     return post('/api/skills/images/quote', req).get('billing', {})
 
 
 def submit(job):
     req = {'model': MODEL, 'prompt': job['prompt'], 'ratio': job.get('ratio', '3:4'), 'size': job.get('size', '4K')}
-    if job.get('ref'):
-        req['input'] = [ref_url(job['ref'])]
+    r = refs_of(job)
+    if r:
+        req['input'] = r
     return find_id(post('/api/skills/generate', req))
 
 

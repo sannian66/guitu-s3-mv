@@ -1,140 +1,130 @@
 {
-  "init_s": 0.19,
+  "init_s": 0.16,
   "h": 680,
   "reps": 4,
-  "sprite_baseline_ms": 114.0,
+  "sprite_baseline_ms": 94.8,
   "poses": {
-    "idle": {
-      "min": 59.3,
-      "med": 61.6,
-      "pose": {},
-      "extra": {}
-    },
-    "head_turn −0.6（左）": {
-      "min": 73.6,
-      "med": 77.5,
-      "pose": {
-        "head_turn": -0.6
-      },
-      "extra": {}
-    },
-    "head_turn 0（正）": {
-      "min": 65.1,
-      "med": 71.1,
-      "pose": {
-        "head_turn": 0.0
-      },
-      "extra": {}
-    },
-    "head_turn +0.6（右）": {
-      "min": 80.7,
-      "med": 85.5,
-      "pose": {
-        "head_turn": 0.6
-      },
-      "extra": {}
-    },
-    "arm_r 45°": {
-      "min": 80.4,
-      "med": 87.3,
-      "pose": {
-        "arm_r": 45
-      },
-      "extra": {}
-    },
-    "arm_r 90°": {
-      "min": 76.6,
-      "med": 78.0,
-      "pose": {
-        "arm_r": 90
-      },
-      "extra": {}
-    },
-    "lean 0.2（后仰）": {
-      "min": 80.2,
-      "med": 82.3,
-      "pose": {
-        "lean": 0.2
-      },
-      "extra": {}
-    },
-    "slash 中段 key_w .5": {
-      "min": 104.9,
-      "med": 106.6,
-      "pose": {
-        "key": "slash",
-        "key_w": 0.5
-      },
-      "extra": {
-        "mblur": 7
+    "key='idle'  angle='front'": {
+      "min": 35.8,
+      "med": 36.8,
+      "kw": {
+        "key": "idle",
+        "angle": "front"
       }
     },
-    "slash 落刀 key_w 1": {
-      "min": 89.2,
-      "med": 104.0,
-      "pose": {
-        "key": "slash",
-        "key_w": 1.0
-      },
-      "extra": {}
+    "key='idle'  angle='tq_r'": {
+      "min": 34.7,
+      "med": 36.9,
+      "kw": {
+        "key": "idle",
+        "angle": "tq_r"
+      }
     },
-    "expr angry（脸部放大）": {
-      "min": 52.0,
-      "med": 61.6,
-      "pose": {
-        "expr": "angry"
-      },
-      "extra": {}
+    "key='idle'  angle='side_r'": {
+      "min": 28.4,
+      "med": 29.0,
+      "kw": {
+        "key": "idle",
+        "angle": "side_r"
+      }
     },
-    "expr smirk（脸部放大）": {
-      "min": 50.6,
-      "med": 56.9,
-      "pose": {
-        "expr": "smirk"
-      },
-      "extra": {}
+    "角度溶解 tq_r←front mix.5": {
+      "min": 37.1,
+      "med": 40.2,
+      "kw": {
+        "key": "idle",
+        "angle": "tq_r",
+        "angle_from": "front",
+        "mix": "0.5"
+      }
     },
-    "expr look（脸部放大，配 turn 0.5）": {
-      "min": 59.1,
-      "med": 61.2,
-      "pose": {
-        "expr": "look",
-        "head_turn": 0.5
-      },
-      "extra": {}
-    },
-    "raise 举刀 key_w 1": {
-      "min": 76.2,
-      "med": 81.1,
-      "pose": {
+    "key='raise' 举刀": {
+      "min": 39.5,
+      "med": 41.4,
+      "kw": {
         "key": "raise"
-      },
-      "extra": {}
+      }
+    },
+    "key='slash' 落刀": {
+      "min": 48.2,
+      "med": 48.7,
+      "kw": {
+        "key": "slash"
+      }
+    },
+    "key='draw' 半身拔刀": {
+      "min": 17.2,
+      "med": 17.9,
+      "kw": {
+        "key": "draw"
+      }
+    },
+    "expr='angry'": {
+      "min": 35.8,
+      "med": 37.2,
+      "kw": {
+        "key": "idle",
+        "expr": "angry"
+      }
+    },
+    "expr='smirk'": {
+      "min": 41.9,
+      "med": 43.3,
+      "kw": {
+        "key": "idle",
+        "expr": "smirk"
+      }
+    },
+    "key='raise' + mblur9（过渡盖叠影）": {
+      "min": 61.9,
+      "med": 63.8,
+      "kw": {
+        "key": "raise",
+        "mblur": "9"
+      }
+    },
+    "key='slash' + mblur9": {
+      "min": 77.0,
+      "med": 84.0,
+      "kw": {
+        "key": "slash",
+        "mblur": "9"
+      }
+    },
+    "key='idle' 不加任何修饰": {
+      "min": 32.1,
+      "med": 33.5,
+      "kw": {
+        "key": "idle"
+      }
     },
     "rig: idle": {
-      "min": 51.1,
-      "med": 55.6,
-      "pose": {}
+      "min": 31.3,
+      "med": 31.8,
+      "kw": {
+        "key": "idle"
+      }
     },
-    "rig: 转头 +0.6": {
-      "min": 60.7,
-      "med": 62.5,
-      "pose": {
-        "head_turn": 0.6
+    "rig: 角度 side_r": {
+      "min": 25.4,
+      "med": 27.1,
+      "kw": {
+        "key": "idle",
+        "angle": "side_r"
       }
     },
     "rig: 举刀": {
-      "min": 58.4,
-      "med": 60.4,
-      "pose": {
+      "min": 36.6,
+      "med": 41.1,
+      "kw": {
         "key": "raise"
       }
     },
-    "rig: 左手抬 arm_r=90": {
-      "min": 54.0,
-      "med": 55.5,
-      "pose": {
-        "arm_r": 90
+    "rig: 落刀": {
+      "min": 46.4,
+      "med": 47.3,
+      "kw": {
+        "key": "slash"
       }
     }
   }
