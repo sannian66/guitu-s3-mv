@@ -921,6 +921,7 @@ class V12(Shot):
         self.rain = fx2.RainSheet(5703, density=0.6)
         self.mist = fx2.Fog(5705)
         T.warm('被牺牲的人', 'kai', 110)
+        self.wn = K.tile(256, 5707, 6, 3); self.rr = np.random.default_rng(5708).uniform(0, 1, (22, 3))
 
     def pose(self, t):
         q = clamp01((t - self.t0) / (self.t1 - self.t0))
@@ -953,6 +954,19 @@ class V12(Shot):
             wet = 0.25 + 0.6 * clamp01(q * 1.2)                # 第四棒：雨打湿更重（墨晕开）、整体压暗冷调，去「奶油色纸板」感
             fr, _ = BC.draw(fr, self.fig, (980 + 80 * q + 40 * math.sin(q * 2.6), 620 + 300 * q), 500 + 300 * q ** 1.3, tilt=-6 + 30 * q + 4 * math.sin(q * 9),
                             expo=0.95, sat=0.5, tint=(0.94, 0.97, 1.04), rim_col=(0.80, 0.86, 1.0), rim_amt=0.7, rim_dir=(-0.6, -0.8), alpha=(0.15, 0.25, 1.0)[k], blur=(6, 3, 0.6)[k] + 1.2 * q, wet=wet)
+        # 第八棒（P2-14：纸人贴在黑底上没有空间）：单一冷顶光柱（左上 → 右下）+ 积水地面 GL=880 + 坠落纸人在水面上的倒影与雨点涟漪
+        GL = 880
+        beam = np.exp(-(((x - 0.45 * (y - 0)) - 640) / 260) ** 2) * np.clip(1 - y / 1300, 0.2, 1)
+        fr = fr * (0.78 + 0.22 * beam[..., None]) + beam[..., None] * np.array([0.08, 0.088, 0.11], np.float32)
+        refl = np.zeros_like(fr); refl[GL:] = fr[GL - 1::-1][:H - GL]
+        nz = cv2.resize(K.tile_crop(self.wn, t * 25, t * 60, H // 8, W // 8), (W, H))
+        refl = cv2.remap(refl, (x + (nz - 0.5) * 14).astype(np.float32), (y + (nz - 0.5) * 6).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        low = sstep(GL - 2, GL + 3, y)[..., None]
+        ground = 0.02 + 0.015 * nz[..., None]
+        fr = fr * (1 - low) + (ground + refl * np.array([0.60, 0.65, 0.76], np.float32) * np.clip(1.2 - (y - GL) / 260, 0, 1)[..., None]) * low
+        fr += np.exp(-((y - GL) / 3.0) ** 2)[..., None] * np.array([0.16, 0.17, 0.20], np.float32) * (0.5 + beam[..., None])
+        cs = [(a_ * W, GL + 20 + b_ * 180) for a_, b_, _ in self.rr]; ts = [math.floor(t * 2 + c_ * 2) / 2 - c_ * 0.5 for _, _, c_ in self.rr]
+        fr = fx2.ripples(fr, t, cs, ts, amt=0.5, flat=0.3, speed=150, life=0.9)
         pr = prs(23, [0, 1, 2, 3, 4], t, 0.22)
         P = [dict(ch=c, x=1360, y=250 + i * 128 + 60 * eio(u), size=112, rot=0, font='kai', idx=i, emph=c in '牺牲') for i, c in enumerate('被牺牲的人')]
         fr = fr * (1 - 0.65 * K.blur_ds(((np.abs(x - 1360) < 95) & (y > 180) & (y < 980)).astype(np.float32), 30)[..., None])   # 第七棒：暗衬加重，「的人」可读
@@ -1377,6 +1391,14 @@ class V20(Shot):
         return fr, 0
 
 
+def edge_rim(A, dx, dy, blur=2.0):
+    """第八棒：轮廓光——A 的 (dx,dy) 方向外缘（自身在、偏移后不在的那一圈），朝光源一侧亮"""
+    M = np.float32([[1, 0, -dx], [0, 1, -dy]])
+    sh = cv2.warpAffine(A.astype(np.float32), M, (A.shape[1], A.shape[0]))
+    e = np.clip(A - sh, 0, 1)
+    return cv2.GaussianBlur(e, (0, 0), blur)
+
+
 def roll_cover(fr, ang, extra=1.0):
     """第五棒：旋转时按角度补足缩放（cos|θ| + 16/9·sin|θ|），画面四角永远被内容填满——不再露出 BORDER_REFLECT 的镜像人/黑角"""
     a = math.radians(ang)
@@ -1611,7 +1633,10 @@ class V24(Shot):
         fr, Am = put(fr, self.sp, t, 500, (fx0 - 300, fy + 40), rim=dict(col=(0.78, 0.86, 1.0), amt=3.4, dir=(0.4, -1.0)),
                      grade=dict(expo=0.42, sat=0.5, tint=(1.05, 0.92, 0.88), lift=0.0, gamma=1.15), wind_amp=8, shade=None, wrap=0.35)
         x_, y_ = K.grid()
-        fr = fr + (Am * np.clip((y_ - (fy - 300)) / 340, 0, 1))[..., None] * RED * 0.22
+        # 第八棒：原红光是整块下半身均匀染红（读成红裤子）→ 方向性：刀痕在人右侧，红光只沿右/下缘反打；冷月轮廓沿左上缘
+        fr = fr + (Am * np.clip((y_ - (fy - 300)) / 340, 0, 1))[..., None] * RED * 0.06
+        fr = fr + (edge_rim(Am, 10, 4, 3.5) * np.clip((y_ - (fy - 420)) / 300, 0.15, 1))[..., None] * RED * 0.7
+        fr = fr + (edge_rim(Am, -6, -8) * np.clip(((fy - 80) - y_) / 300, 0, 1))[..., None] * np.array([0.55, 0.62, 0.75], np.float32)
         fr = self.spl.draw(fr, t, y_far=fy - 30, y_near=fy + 60, rate=60, amt=0.6) if hasattr(self, 'spl') else fr
         # 「出方」立在刀痕两侧（远近两处，近大远小），随刀痕到达时燃起
         pr = prs(27, [8, 9], t)
@@ -1671,7 +1696,9 @@ class V25(Shot):
         fr = self.fog.draw(fr, t, density=0.5, y0=420, y1=760, color=(0.30, 0.30, 0.33), light=(960, 600), light_r=500, light_color=RED * 0.8)
         fr, Am = put(fr, self.sp, t, 520, (760, 800), rim=dict(col=(0.78, 0.86, 1.0), amt=3.6, dir=(0.3, -1.0)), wind_amp=9,
                      grade=dict(expo=0.38, sat=0.5, tint=(1.05, 0.92, 0.88), lift=0.0, gamma=1.15), shade=None, wrap=0.4)   # 第七棒：冷轮廓光 + 刀痕红光反打
-        fr = fr + (Am * np.clip((y - 520) / 300, 0, 1))[..., None] * RED * 0.25
+        fr = fr + (Am * np.clip((y - 520) / 300, 0, 1))[..., None] * RED * 0.10
+        fr = fr + (edge_rim(Am, 0, 9, 3.5) + 0.3 * edge_rim(Am, 7, 3, 3.5) + 0.3 * edge_rim(Am, -7, 3, 3.5))[..., None] * RED * 0.6   # 第八棒：红光从脚下刀痕反打 → 只上下缘
+        fr = fr + (edge_rim(Am, 0, -8) * np.clip((700 - y) / 300, 0, 1))[..., None] * np.array([0.5, 0.57, 0.7], np.float32)
         pr = prs(27, [10], t, 0.3)[0]
         if pr > 0:
             fr = T.burn_in(fr, '向', pr, places=[dict(ch='向', x=1460, y=450, size=300, rot=0, font='xing', idx=0, emph=False)],
