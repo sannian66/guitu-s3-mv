@@ -434,3 +434,10 @@
 - **计费说明（诚实记）**：第一批提交时我的 id 解析 bug（响应 id 在顶层，不在 task 里）导致 8 个任务拿不到 id、结果取不回，白花 **24 点**；重提 8 张成功，**24 点**。本批合计 **48 点**。已修脚本（稳取顶层 id）。
 - 资产：`assets/gen/char/hero_{expr_*,pose_*,view_tq_l}_{raw,cut}.png`；`hero_back_cut.png` 已从「正+背」双人同框中裁出背面（816×2051 原生）。
 - 汇总对比图：`out/char_sheet.jpg`。
+
+## 2026-11-09 18:39 · 歌词道具化 #3/#4（props 组）
+- 报价：`POST /api/skills/images/quote`，model=`RH_image2`，size=4K，16:9 → **各 3 points，kind=fixed，合计 6**（控制组同价，确认按张固定计费）。lead 已批准。
+- `seal`（#3 手执玉玺压下）task `f0d8483c-ac7d-48c6-97d9-529f39293fdd`：completed，71s。3840×2160 → `assets/gen/props/seal_raw.png` → `tools/cutout_green.py` → `seal_cut.png`（bg_green=0.843, alpha_mean=0.720）。
+- `blood`（#4 血手印按状纸）task `6acd55b2-a6cb-4320-885a-0015cc55033d`：completed。3840×2160 → `blood_raw.png` → `blood_cut.png`（alpha_mean=0.647）。
+- 背景按要求用纯绿幕 #00FF00（本片新规矩，灰板发丝抠不干净）；印面篆书已要求正字非镜像。
+- 无失败/重抽，本次消耗 6 points。
