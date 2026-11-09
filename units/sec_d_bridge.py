@@ -391,7 +391,7 @@ class S06_Scale(Shot):
     t0, t1 = 167.25, 168.62
     paper = 1.0
     PIV = (960, 330)
-    LP, RP = (577, 752), (1494, 752)
+    LP, RP = (577, 752), (1348, 752)        # [r7b] 对齐生图秤盘实测中心（左 576 / 右 1348，盘沿 y≈755）
     _ART = {}
 
     @classmethod
@@ -406,8 +406,9 @@ class S06_Scale(Shot):
         lum = R.mean(-1, keepdims=True)
         R = np.clip((R - 0.04) * 1.08, 0, 1) * np.array([1.0, 0.97, 0.92], np.float32)
         x, y = K.grid()
-        post = ((np.abs(x - cls.PIV[0]) < 82) & (y > cls.PIV[1] + 40)).astype(np.float32)
-        post = cv2.GaussianBlur(post, (0, 0), 1.5)
+        # [r7b] 不动部分 = 立柱 + 底座（实测立柱 x 910–1012、底座 y>815 宽到 ±185）；旧版 ±82 方框切过底座留下竖缝
+        post = (((np.abs(x - 961) < 64) & (y > cls.PIV[1] + 50)) | ((np.abs(x - 961) < 215) & (y > 812))).astype(np.float32)
+        post = cv2.GaussianBlur(post, (0, 0), 2.5)
         cls._ART['a'] = (R, A, post)
         return cls._ART['a']
 
@@ -421,9 +422,9 @@ class S06_Scale(Shot):
         self.moon = np.clip((1 - np.sqrt(((x - 960) / 440) ** 2 + ((y - 500) / 420) ** 2)) * 3 - (n2 - 0.5) * 2.2, 0, 1) * 0.10
         r = np.random.default_rng(66)
         items = []
-        for i in range(950):
+        for i in range(620):                    # [r7b] 字堆坐进右盘（半宽 138、底在盘沿），字号放大到可读「人」
             a = r.uniform(-1, 1); hgt = (1 - a * a) ** 0.75
-            items.append(('人', self.RP[0] + a * 160, self.RP[1] - 8 - r.uniform(0, 1) ** 0.7 * hgt * 190, r.uniform(12, 28), 0.95, 1.0, r.uniform(-50, 50)))
+            items.append(('人', self.RP[0] + a * 138, self.RP[1] - 4 - r.uniform(0, 1) ** 0.8 * hgt * 175, r.uniform(16, 34), 0.95, 1.0, r.uniform(-35, 35)))
         items.sort(key=lambda c: -c[2])
         self.heap = D.text_layer(items, fname='serif_b')
         self.one = D.text_layer([('人', self.LP[0], self.LP[1] - 50, 112, 1.0, 1.0, 0.0, CINNABAR)], fname='serif_black')
@@ -462,7 +463,8 @@ class S06_Scale(Shot):
         for i, (ch, p) in enumerate(zip('什么叫以一人换千人', prog)):
             if p <= 0: continue
             big = i < 3                                            # [r5] 递进 3/3：「什么叫」在句首放大成 96px
-            xx = (500 + i * 96) if big else (800 + (i - 3) * 90); yy = (262 if big else 278) + ty - 40 * (1 - eo(p))   # [r7] 坐在横梁上，收进安全框
+            xx = (360 + i * 96) if big else ((640 + (i - 3) * 86) if i < 6 else (1110 + (i - 6) * 86))   # [r7b] 「以一人」左臂 /「换千人」右臂，让开支点
+            yy = (262 if big else 278) + ty - 40 * (1 - eo(p))   # [r7] 坐在横梁上，收进安全框
             c = CINNABAR if i in (2, 4, 5) else 'ink'
             items.append((ch, xx, yy, 88 if big else 60, min(1, p * 1.5) * sent_a, 1 + 0.35 * (1 - eo(p)), 0.0, c))
         L = D.text_layer(items, fname='serif_sb')
@@ -486,7 +488,7 @@ class S07_Heap(Shot):
         u = self.u(t)
         if self.base is None: self.base = S06_Scale()
         fr = self.base.scene(t)
-        fr = K.cam(fr, 2.3 + 0.25 * u, 1270 - 960 + 20 * u, 540 - 540, center=(960, 540))
+        fr = K.cam(fr, 2.3 + 0.25 * u, 1348 - 960 + 20 * u, 640 - 540, center=(960, 540))
         x = np.linspace(0, 1, W, dtype=np.float32)[None, :]
         bl = cv2.GaussianBlur(fr, (0, 0), 9)
         m = (1 - K.sstep(0.18, 0.42, x))[..., None]
@@ -1325,7 +1327,7 @@ class S26_Judge(Shot):
         if self.sc is None: self.sc = S06_Scale()
         ts = V(O[46][4]); tj = V(O[46][5])
         pap = self.sc.scene(t, sent_a=1 - cl((t - V(O[46][4])) / 0.2), ty=10)    # [r7] 劈开错位前句子先隐去，不随半张纸滑出画
-        pap = D.song(pap, [('我', 400, 330, 140, 1.0, 'k'), ('来', 400, 500, 140, cp(t, O[46][4], 0.1), 'k')])
+        pap = D.song(pap, [('我', 390, 440, 140, 1.0, 'k'), ('来', 390, 600, 140, cp(t, O[46][4], 0.1), 'k')])   # [r7b] 下移，让开顶行残句
         s = eo(cl((t - ts - 0.04) / 0.45), 2)
         back = None
         if s <= 0:
@@ -1630,7 +1632,7 @@ CUTS = {
     'S04_Snow': ('smoke_through', 0.12, 0.2, dict(color=(0.93, 0.91, 0.86), seed=4)),
     'S05_Ren': ('ink_bleed_hd', 0.1, 0.2, dict(seed=5, center=(1420, 560))),
     'S06_Scale': ('match_cut', 0, 0.3, dict(shape='circle', center=(577, 726), radius=40, glow=np.array([0.74, 0.1, 0.06], np.float32))),
-    'S07_Heap': ('zoom_through', 0.1, 0.15, dict(center=(1270, 580))),
+    'S07_Heap': ('zoom_through', 0.1, 0.15, dict(center=(1348, 640))),
     'S08_Seals': ('seal_iris', 0.1, 0.14, dict(center=(760, 400), ch='理')),
     'S09_Brush': ('ink_bleed_hd', 0.001, 0.28, dict(seed=9, center=(1560, 260))),
     'S10_Giant': ('hard_cut_x', 0, 0.07, dict(impact=0.07, tint=(0.05, 0.05, 0.06), amt=0.5, ca=6, jolt=(0, 20))),
