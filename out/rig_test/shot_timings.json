@@ -1,0 +1,13 @@
+{
+  "S043": {
+    "n": 8,
+    "old_mean": 0.917,
+    "new_mean": 1.189,
+    "delta": 0.273,
+    "old_min": 0.823,
+    "new_min": 0.992,
+    "sprite_old_ms": 238.0,
+    "rig_new_ms": 438.3,
+    "sprite_delta_ms": 200.3
+  }
+}

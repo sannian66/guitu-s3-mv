@@ -29,6 +29,13 @@ import typo as T
 
 W, H = 1920, 1080
 BAR = 120
+
+
+def _off():
+    """PROPS_OFF=1 时所有道具字函数直接返回原帧 —— 用于「接入前 / 接入后」同帧 A/B 实渲，
+    保证两条路径除了道具字之外每个像素都相同（不靠旧图对比，也不混入 grade 差异）。"""
+    import os
+    return os.environ.get('PROPS_OFF') == '1'
 SAFE = (60, BAR + 30, W - 60, H - BAR - 30)
 
 try:                      # 阴刻浮雕算法来自 A 组第六棒（units/a_r6.py:engraved），这里做包围盒内版本
@@ -120,6 +127,212 @@ def prop_layout(text, box, layout='v', cols=1, size=None, font='serif_b',
             out.append(dict(ch=c, x=cx, y=yc + advy * i, size=size, font=font,
                             idx=j * per + i, emph=False))
     return out
+
+
+# ============================ §0 新规则（2026-11-09 19:0x）============================
+# 字幕是主，道具只抬重音。关键词必须来自「逐字时长最长 / 已被标朱红」的那个字，不许手挑。
+_RED = set('血刀邪墙扛判量骨烫锋幌伪装罪状混账权势寒光长夜锋芒正邪铁壁自己我来长夜')
+
+
+def pick_keyword(li, prefer_red=True, maxlen=2, ban=''):
+    """按 §0 规则 5 选关键词：优先取 align.json 里**逐字时长最长**的字（朱红字加权），
+    允许向两侧扩展到 1–3 字。返回 (keyword, 依据字符串)。"""
+    L = T.load_lines()[li]
+    text, times = L['text'], L['times']
+    ch = [c for c in text]
+    best, bi = -1.0, 0
+    for i, (c, t0) in enumerate(zip(ch, times)):
+        if c == ' ' or t0 is None or c in ban:
+            continue
+        nb = times[i + 1] if i + 1 < len(times) and times[i + 1] is not None else L['end']
+        d = max(0.05, nb - t0)
+        if prefer_red and c in _RED:
+            d *= 1.35
+        if d > best:
+            best, bi = d, i
+    k = ch[bi]
+    why = 'align 逐字 %.2fs（%s%s）' % (best, '朱红加权后' if prefer_red and k in _RED else '', k)
+    if maxlen >= 2 and bi + 1 < len(ch) and ch[bi + 1] != ' ' and len(k) < maxlen:
+        k = k + ch[bi + 1]; why += '+右邻'
+    return k, why
+
+
+SKIP_GLYPH = set()          # 运行期要抽走的字（只在字幕区生效）
+SKIP_REGION = (1600, 780)   # (x 阈值, y 阈值)：x>阈值 视为右竖排字幕，y>阈值 视为底部横排字幕
+
+
+def _is_caption_pos(cx, cy):
+    return cx > SKIP_REGION[0] or cy > SKIP_REGION[1]
+
+
+class hide_glyphs:
+    """上下文管理器：在**字幕区**里跳过指定字的绘制（字宽/字序一点不变，纯空白）。
+
+    只 patch `typo.place` / `typo.brush_glyph`，用完立刻还原；因为作用域限定在字幕区，
+    画面里的巨字、精灵、道具字都不受影响。这就是 lead 要的「纯空白占位」的 demo 实现，
+    正式版由 `lyric_uni.py` 统一层负责，本模块只提供 `hidden_slots()` 的坐标数据。
+    """
+
+    def __init__(self, keyword):
+        self.kw = set(keyword)
+
+    def __enter__(self):
+        global SKIP_GLYPH
+        SKIP_GLYPH = set(self.kw)
+        self._place = T.place
+
+        def place(L, ch, cx, cy, *a, **k):
+            if ch in SKIP_GLYPH and _is_caption_pos(cx, cy):
+                return
+            return self._place(L, ch, cx, cy, *a, **k)
+        T.place = place
+        return self
+
+    def __exit__(self, *exc):
+        global SKIP_GLYPH
+        T.place = self._place
+        SKIP_GLYPH = set()
+        return False
+
+
+def hidden_slots(items=None):
+    """输出「哪一句的第几个字被抽走」——交给 lyric_uni.py 统一层做真正的空白占位。
+
+    返回 [{line: 1-based 句号, idx: 句内可见字序号(0-based), ch, text}]
+    """
+    out = []
+    for it in (items or _ITEMS):
+        if it.get('skip'):
+            continue
+        iid = it['id']; li = int(iid[1:]) - 1
+        kw = it.get('key') or ''
+        full = T.load_lines()[li]['text']
+        i = full.find(kw)
+        if i < 0 or not kw:
+            continue
+        vis = 0
+        for j, c in enumerate(full[:i]):
+            if c != ' ':
+                vis += 1
+        for off, c in enumerate(kw):
+            if c == ' ':
+                continue
+            out.append(dict(line=li + 1, idx=vis + off, ch=c, text=full))
+    return out
+
+
+def caption_hide(sec, keyword, floor=0.0):
+    """把关键词从**字幕层**里抽走（运行期把该字的字号压到 0，不碰任何源文件）。
+
+    sec: 'chorus1' → lyric3 的 Sentence.P；'c' → SENTS 的 s.sizes/s.P；'e' → e_kit.Sub.c；'a' → LY2
+    返回被隐藏的字数（0 表示这一层里没找到这个词，调用方要报出来）。
+    """
+    import os
+    n = 0
+    if sec == 'chorus1':
+        import chorus1 as M
+        for s in getattr(M, 'SENTENCES', []):
+            for pl in getattr(s, 'P', []):
+                if pl.get('ch') in keyword:
+                    pl['size'] = 0.0 * pl.get('size', 0) + floor
+                    n += 1
+    elif sec == 'c':
+        import sec_c_pre2_chorus2 as M
+        for s in getattr(M, 'SENTS', []):
+            for i, c in enumerate(getattr(s, 'text', '')):
+                if c in keyword and i < len(getattr(s, 'sizes', [])):
+                    s.sizes[i] = floor
+                    if i < len(getattr(s, 'P', [])):
+                        s.P[i] = (s.P[i][0], s.P[i][1])
+                    n += 1
+    return n
+
+
+def silhouette_void_lyric(fr, A, text, box, face=None, rim=(0.55,0.68,1.0), rise=0.6, phase=0.0,
+                          press=1.0, seed=0, feather=11.0, bore_edge=3.5, bore_out=12.0, hole_damp=0.18,
+                          dur_breath=3.4, gold=(1.0, 0.86, 0.62), bg=None):
+    """「人是空的、伪装的是壳」。
+
+    1) 整个人填成纯黑剪影（保留 alpha 轮廓）；
+    2) **脸区挖成真孔**：alpha 归零，背景的暖色散景直接透过来 —— 这才读成「脸没了」；
+    3) 孔缘 3–5px 内阴影（内侧压暗一圈）+ 低频扰动，避免圆得太假；
+    4) 整身一圈 1.5px 冷光边（随呼吸明灭）；
+    5) 关键词**极暗压印**在躯干里 + 迎光侧一线淡金（不用朱红：黑剪影上朱红像印上去的），
+       随呼吸 ±rise px 起伏。
+
+    hole_damp：若孔内背景太亮扎眼，给孔内压暗的比例（0.12–0.18；**不许退回灰填充**）。
+    """
+    if _off() or A is None or A.max() <= 0.01:
+        return fr
+    al = cv2.GaussianBlur(A.astype(np.float32), (0, 0), 0.8)
+    body = np.clip((al - 0.25) / 0.5, 0, 1)
+    # 1) 纯黑剪影
+    out = fr * (1 - body[..., None] * 0.965) + np.float32(0.010) * body[..., None]
+    # 4) 外轮廓冷光边
+    r0 = 2
+    edge = np.clip(cv2.dilate(body, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r0 + 1, 2 * r0 + 1))) - body, 0, 1)
+    br = 0.85 + 0.15 * math.sin(2 * math.pi * phase / max(0.5, dur_breath))
+    out = out + edge[..., None] * np.array(rim, np.float32) * 0.80 * br
+    # 2) 脸孔 = 人物自己的**肤色区**（erode 10–14px 收在脸内，头发/耳/下颌自然保留）+ feather
+    sk = skin_mask(fr, body)
+    if face is not None:                       # 也允许再用椭圆限制一下，避免把眼神杀到脖子
+        cx, cy, rx, ry = face
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        sk = sk * np.clip(((xx - cx) / max(1.0, rx * 1.35)) ** 2 +
+                          ((yy - cy) / max(1.0, ry * 1.35)) ** 2 < 1.0, 0, 1).astype(np.float32)
+    if sk.max() <= 0.02:                       # 抽不到肤色就退回椭圆（记录在返回里）
+        ys, xs = np.nonzero(body > 0.5)
+        cx, cy = (xs.min() + xs.max()) / 2.0, ys.min() + (ys.max() - ys.min()) * 0.24
+        rx, ry = (xs.max() - xs.min()) * 0.20, (ys.max() - ys.min()) * 0.145
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        sk = np.clip(1.0 - (((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2), 0, 1)
+    kk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(round(bore_out)) + 1, 2 * int(round(bore_out)) + 1))
+    sk = cv2.erode((sk > 0.4).astype(np.float32), kk)
+    hole = cv2.GaussianBlur(sk, (0, 0), max(1.0, feather))
+    hole_soft = hole
+    # 把剪影挖穿：孔内 alpha 归零，露出背景（out 里已经是背景色，这里直接把孔内还原成原帧）
+    # 孔内填「人物背后的背景」才是真孔：bg 传进来就用它（`put()` 之前的帧），
+    # 没有 bg 时退化为「原帧模糊外推」，绝不用灰填充。
+    if bg is not None:
+        bgf = bg.astype(np.float32) / (255.0 if bg.max() > 1.5 else 1.0)
+    else:
+        bgb = cv2.GaussianBlur(fr * (1 - body)[..., None], (0, 0), 46)
+        bw = cv2.GaussianBlur((1 - body).astype(np.float32), (0, 0), 46)[..., None]
+        bgf = np.clip(bgb / np.maximum(bw, 1e-3), 0, 1)
+    out = out * (1 - hole_soft[..., None]) + (bgf * 0.84) * hole_soft[..., None]   # 0.84：孔内背景整体压低，避免扎眼
+    if hole_damp > 0:                                  # 孔内压暗（不是灰填充）
+        out = out * (1 - hole_damp * hole[..., None] * (fr.mean(-1, keepdims=True) > 0.18) * 0.9)
+    # 3) 孔缘内侧一圈内阴影
+    hole_out = cv2.dilate((hole > 0.35).astype(np.uint8), cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE, (2 * int(round(bore_edge)) + 1, 2 * int(round(bore_edge)) + 1))).astype(np.float32)
+    inner = np.clip(hole_out - (hole > 0.35).astype(np.float32), 0, 1)
+    inner = cv2.GaussianBlur(inner, (0, 0), 1.2) * body
+    out = out * (1 - 0.62 * inner[..., None])
+    # 5) 关键词：极暗压印 + 迎光侧一线淡金（无屑末、无朱红）
+    dy = rise * math.sin(2 * math.pi * phase / max(0.5, dur_breath))
+    L = T.Layer()
+    places = prop_layout(text, (box[0], box[1] + dy, box[2], box[3] + dy),
+                         cols=2 if len(text) >= 7 else 1, font='serif_black')
+    for pl in places:
+        T.place(L, pl['ch'], pl['x'], pl['y'], pl['size'], (1.0, 1.0, 1.0), pl['font'], texture=False)
+    M = cv2.GaussianBlur(L.A, (0, 0), 1.6) * body
+    lx, ly = -0.8, -0.55
+    sh = np.clip(M - cv2.warpAffine(M, np.float32([[1, 0, -lx * 3.4], [0, 1, -ly * 3.4]]), (W, H)), 0, 1)
+    hi = np.clip(M - cv2.warpAffine(M, np.float32([[1, 0, lx * 2.0], [0, 1, ly * 2.0]]), (W, H)), 0, 1)
+    out = out * (1 - (0.42 * press) * M[..., None])                 # 极暗压印（凹槽）
+    out = out * (1 - 0.62 * sh[..., None])
+    out = out + hi[..., None] * np.array(gold, np.float32) * (0.42 * press)   # 迎光侧一线淡金
+    return np.clip(out, 0, 4)
+
+
+def caption_restore(sec):
+    """caption_hide 的逆操作（同一进程里做 A/B 时用）：重新从源表重建。
+    因为 hide 是破坏性的，A/B 请分两个进程，或在 hide 前先 deepcopy。"""
+    import importlib
+    m = {'chorus1': 'chorus1', 'c': 'sec_c_pre2_chorus2'}.get(sec)
+    if m:
+        importlib.reload(importlib.import_module(m))
+# =====================================================================================
 
 
 def key_times(full_text, times, key):
@@ -477,6 +690,93 @@ def _place_sub(places, pr, rect, alpha=1.0, ar=1.0, only=None):
 
 
 # ------------------------------------------------------------------ 刻
+SKIP_GLYPH = set()           # 运行期要抽走的字（只在字幕区生效）
+SKIP_REGION = (1600, 780)    # (x 阈值, y 阈值)：x>阈值 视为右竖排字幕，y>阈值 视为底部横排字幕
+
+
+def _is_caption_pos(cx, cy):
+    return cx > SKIP_REGION[0] or cy > SKIP_REGION[1]
+
+
+class hide_glyphs:
+    """上下文管理器：在**字幕区**里跳过指定字的绘制 —— 字宽/字序一点不变，纯空白，不画任何占位符。
+
+    只临时 patch `typo.place`；作用域限定在字幕区，画面巨字/精灵/道具字都不受影响。
+    （正式版由 `lyric_uni.py` 统一层做空白占位，本模块只提供 `hidden_slots()` 的坐标数据。）
+    """
+
+    def __init__(self, keyword):
+        self.kw = set(keyword)
+
+    def __enter__(self):
+        global SKIP_GLYPH
+        SKIP_GLYPH = set(self.kw)
+        self._place = T.place
+
+        def place(L, ch, cx, cy, *a, **k):
+            if ch in SKIP_GLYPH and _is_caption_pos(cx, cy):
+                return
+            return self._place(L, ch, cx, cy, *a, **k)
+        T.place = place
+        return self
+
+    def __exit__(self, *exc):
+        global SKIP_GLYPH
+        T.place = self._place
+        SKIP_GLYPH = set()
+        return False
+
+
+def skin_mask(fr, body, head_frac=0.46, grow=0.0):
+    """头部区域内的**肤色** mask（暗发/黑衣/背景都不算）—— 用作「脸孔」的天然形状。
+
+    肤色判据（RGB 0–1）：R>G>B 且 R∈[0.32,1.0]、G/R∈[0.52,0.92]、B/R∈[0.30,0.86]、
+    饱和度不过高。只在 body 的「上 head_frac 段」里取，避免把露出的手/脖子全算进来。
+    """
+    r, g, b = fr[..., 0], fr[..., 1], fr[..., 2]
+    rr = np.maximum(r, 1e-3)
+    sk = ((r > 0.32) & (r > g) & (g > b * 0.92) &
+          (g / rr > 0.52) & (g / rr < 0.94) & (b / rr > 0.28) & (b / rr < 0.88))
+    sk = sk.astype(np.float32)
+    sk = cv2.GaussianBlur(sk, (0, 0), 1.6)
+    sk = np.clip((sk - 0.35) * 2.2, 0, 1)
+    ys, xs = np.nonzero(body > 0.5)
+    if len(xs) == 0:
+        return np.zeros_like(body)
+    y0, y1 = ys.min(), ys.max()
+    head = np.zeros_like(body)
+    head[y0:int(y0 + (y1 - y0) * head_frac), :] = 1.0
+    m = sk * head * (body > 0.4)
+    if grow > 0:
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(grow) + 1, 2 * int(grow) + 1))
+        m = cv2.dilate(m, k)
+    return np.clip(m, 0, 1)
+
+
+def soft_lift(fr, box, gain=0.05, radius=160.0, center=None):
+    """局部提亮：**只乘亮度、不改色温**（三通道同倍率 → 冷墙上不会出现暖斑）。
+
+    gain 0.05（保守）/0.08（上限）；radius 羽化半径 px，中心默认 box 中心。
+    权重是高斯圆，边界连续，不会出现矩形或光斑硬边。
+    """
+    if gain <= 0:
+        return fr
+    cx, cy = center or ((box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+    wgt = np.exp(-(d / max(1.0, radius)) ** 2)
+    lum = fr.mean(-1, keepdims=True)
+    return np.clip(fr + lum * gain * wgt[..., None], 0, 4)
+
+
+def _mask_box(m, pad=0):
+    ys, xs = np.nonzero(m > 0.02)
+    if len(xs) == 0:
+        return None
+    return (max(0, int(xs.min()) - pad), max(0, int(ys.min()) - pad),
+            min(W, int(xs.max()) + 1 + pad), min(H, int(ys.max()) + 1 + pad))
+
+
 def _bite(m, seed, amt=1.0):
     """凿口：两档噪声啃字缘 —— 手工阴刻的边不会是干净的字体轮廓，会有崩口。"""
     if amt <= 0.01:
@@ -592,6 +892,8 @@ def etched_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1
     hot       朱红关键字（如 '墙'）：这几个字的槽底渗朱，替掉「红字浮在屏幕上」的老做法
     bite / chisel / dust ：崩口 / 凿痕 / 石屑 强度
     """
+    if _off():
+        return fr
     places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
     n = len(places)
     if n == 0:
@@ -661,6 +963,8 @@ def burning_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=
     t_burn        火烧的起点时间（默认 = 首字字头），逐字火势用它算 q。
     """
     import e_r7 as R7
+    if _off():
+        return fr
     places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
     if not places:
         return fr
@@ -708,6 +1012,8 @@ def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols
     相位 φ_i 逐字递增（越靠后的字越晚被带动），prog_i 让字「唱到才挂上去」。
     `beads`>0 时线穿过字的上下各打一个红结（像提线木偶的系点）。
     """
+    if _off():
+        return fr
     places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar,
                          track_v=track_v, track_h=track_h)
     if not places:
@@ -777,6 +1083,8 @@ def wiped_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1,
     streak  沿擦除方向的纤维拖痕强度（干笔/纸纤维；换向即为雨冲）
     wipe    擦除进度 0–1；None 时用逐字进度里最后一个字的位置推（唱到哪擦到哪）
     """
+    if _off():
+        return fr
     places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
     if not places:
         return fr
@@ -835,6 +1143,8 @@ def stamped_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=
     另外三件事让它像真印：① 边缘纸纤维洇开（`bleed`）② 印面残损（`wear`）③ 落印回弹（`drop`）。
     `frame_box` 时给整句套一圈朱色边框（4 字以上自动走 `props.seal_face` 的印章布局感）。
     """
+    if _off():
+        return fr
     places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
     if not places:
         return fr
@@ -1060,8 +1370,10 @@ _ITEMS = [
                  groove=(0.008, 0.010, 0.016), lip=0.85, bite=0.85, chisel=0.50, seed=34)),
     dict(id='L18', sec='chorus1', f=2385, text='是非对错我自己扛', key='自己扛', box=(1400, 210, 1860, 880), fn='刻'),
     dict(id='L35', sec='c', f=4306, text='若规则是铁壁铜墙', key='铁壁', box=(1080, 180, 1820, 700), fn='刻',
-         kw=dict(depth=3.5, dark=0.62, hl=(0.55, 0.62, 0.80), hl_amt=0.75, bite=1.6, lip=0.95)),
-    dict(id='L54', sec='e', f=6392, text='对就是对错就是错何须伪装', key='何须伪装', box=(1180, 200, 1830, 880), fn='刻'),
+         kw=dict(depth=4.0, dark=0.82, hl=(0.62, 0.70, 0.88), hl_amt=1.05, bite=1.5, lip=1.15,
+                 groove=(0.004, 0.005, 0.008), virt_light=0.62)),
+    dict(id='L54', sec='e', f=6392, text='对就是对错就是错何须伪装', key='何须伪装', box=(1180, 200, 1830, 880), fn='刻',
+         skip='E125(S125) 时间窗内只有人脸特写 + 小散景碎片，没有可刻的匾面 → 按 lead 指令退回字幕，不接'),
     dict(id='L08', sec='a', f=1281, text='那我宁愿做乱世的锋芒', key='乱世', box=(980, 190, 1780, 640), fn='烧'),
     dict(id='L17', sec='chorus1', f=2278, text='血未冷 骨未凉', key='骨未凉', box=(620, 280, 1320, 800), fn='烧'),
     dict(id='L32', sec='c', f=3931, text='信这柄刀还在发烫', key='发烫', box=(300, 220, 1500, 780), fn='烧'),
@@ -1078,7 +1390,7 @@ _ITEMS = [
     dict(id='L05', sec='a', f=954, text='我杀过恶徒也放过混账', key='混账', box=(200, 560, 1000, 950), fn='印'),
     dict(id='L14', sec='chorus1', f=1945, text='谁人来定正邪一方', key='定', box=(830, 430, 1120, 800), fn='印',
          kw=dict(press=1.0, wear=0.26, bleed=1.8, frame_box=False, seed=27)),
-    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='量', box=(1360, 240, 1760, 620), fn='印',
+    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='量', box=(1390, 338, 1730, 662), fn='印',
          kw=dict(press=0.9, wear=0.24, bleed=1.3, frame_box=False, seed=29)),
 ]
 
@@ -1125,6 +1437,87 @@ def _draw(item, base, t, still=False):
     if fn == '印':
         return stamped_lyric(base, text, box, times=times, t=t, **kw)
     raise ValueError(fn)
+
+
+def play(fr, iid, t):
+    """接线用的一行入口：`fr = PD.play(fr, 'L15', t)`。
+
+    从 `_ITEMS` 取该项的关键词/载面框/手法/参数，逐字时间按**当前演唱进度**给（不是静止证明帧），
+    所以镜头里就是「唱到哪凿到哪 / 烧到哪」。PROPS_OFF=1 时原样返回。
+    """
+    import os
+    if _off():
+        return fr
+    it = next((x for x in _ITEMS if x['id'] == iid), None)
+    if it is None or it.get('skip'):
+        return fr
+    text = it.get('key') or it['text']
+    full = T.load_lines()[int(iid[1:]) - 1]
+    times = key_times(full['text'], full['times'], text) or full['times']
+    kw = dict(_CLS_DEFAULT[it['fn']]); kw.update(it.get('kw') or {})
+    if 'cols' not in (it.get('kw') or {}):
+        nch = len([c for c in text if c != ' '])
+        kw['cols'] = 2 if nch >= 7 else 1
+        if nch >= 11:
+            kw['cols'] = 3
+    if it.get('hot'):
+        kw.setdefault('hot', it['hot'])
+    fn = it['fn']
+    box = it['box']
+    if fn == '刻':
+        cells = it.get('cells')
+        if callable(cells):
+            cells = cells(t)
+        return etched_lyric(fr, text, box, times=times, t=t, cells=cells, **kw)
+    if fn == '烧':
+        return burning_lyric(fr, text, box, times=times, t=t, **kw)
+    if fn == '穿线':
+        return threaded_lyric(fr, text, box, times=times, t=t, **kw)
+    if fn == '擦':
+        return wiped_lyric(fr, text, box, times=times, t=t, **kw)
+    return stamped_lyric(fr, text, box, times=times, t=t, **kw)
+
+
+def run_detail(only=('擦',), out_dir=None, box_px=560):
+    """按类出 1:1 细节图：每项一行，左=载面原样（含旧字幕位），右=接入道具字后的同区域。"""
+    import os
+    from PIL import Image, ImageDraw, ImageFont
+    out_dir = out_dir or os.environ.get('PROPS_OUT') or os.path.abspath(os.path.join('out', 'props_dev'))
+    os.makedirs(out_dir, exist_ok=True)
+    sel = [it for it in _ITEMS if it['fn'] in only and not it.get('skip')]
+    try:
+        F = ImageFont.truetype(os.path.join(T.ROOT, 'fonts', 'NotoSerifSC.otf'), 26)
+    except Exception:
+        F = ImageFont.load_default()
+    rows = []
+    for it in sel:
+        f = int(it['f']); t = f / 30.0
+        b = _render(f)
+        pt = plate(f, it['sec']).astype(np.float32) / 255.0
+        a = _draw(it, pt, t, still=True)
+        b0, b1, b2, b3 = it['box']
+        cx, cy = (b0 + b2) / 2, (b1 + b3) / 2
+        h = int(box_px); w = int(box_px * it.get('dar', 0.78))
+        x0 = int(max(0, min(W - w, cx - w / 2))); y0 = int(max(0, min(H - h, cy - h / 2)))
+        ca = (np.clip(a, 0, 1) * 255).astype(np.uint8)[y0:y0 + h, x0:x0 + w]
+        cb = np.asarray(b, np.uint8)[y0:y0 + h, x0:x0 + w]
+        rows.append((it, cb, ca))
+    if not rows:
+        return None
+    h = rows[0][1].shape[0]; w = rows[0][1].shape[1]
+    sheet = Image.new('RGB', (w * 2 + 36, (h + 40) * len(rows) + 52), (12, 12, 12))
+    d = ImageDraw.Draw(sheet)
+    d.text((14, 10), '「%s」类 1:1 细节（左=原字层 / 右=道具字）' % '/'.join(only), font=F, fill=(255, 214, 110))
+    for i, (it, cb, ca) in enumerate(rows):
+        y = 58 + i * (h + 40)
+        sheet.paste(Image.fromarray(cb), (12, y))
+        sheet.paste(Image.fromarray(ca), (w + 24, y))
+        d.text((12, y - 28), '%s  %s  f=%d' % (it['id'], it.get('key') or it['text'], it['f']),
+               font=F, fill=(235, 225, 190))
+    p = os.path.join(out_dir, 'class_%s_detail.png' % '_'.join(only))
+    sheet.save(p)
+    print('DETAIL', p, flush=True)
+    return p
 
 
 def run_items(ids=None, out_dir=None, only=None):

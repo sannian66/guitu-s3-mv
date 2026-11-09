@@ -181,22 +181,34 @@ def _geom(path, width=1024):
     nl, lab, st, cen = cv2.connectedComponentsWithStats(sk, 8)
     order = [i for i in np.argsort(-st[1:, cv2.CC_STAT_AREA]) + 1 if st[i, cv2.CC_STAT_AREA] > 300]
     bust = False
+    face = None
     if order:
         i0 = order[0]
         x, y, w_, h_, ar = st[i0]
-        if ar > 0.20 * span * ww:                       # 半身特写：整幅都是人
-            bust = True
-        face = (float(cen[i0][0]), float(y), float(w_), float(h_))   # (fx, 脸框顶, 脸宽, 脸框高)
-        # 半身/胸像：alpha 三边以上顶到画布边缘（人物被画框裁掉）→ 没有脚底，改用脸宽定尺度
-        if xs.min() <= 2 and ys.min() <= 2 and (xs.max() >= ww - 3 or ys.max() >= hh - 3):
-            bust = True
+        if y < top + 0.30 * span:                        # 最大的皮肤块在身体上部 → 那是脸
+            face = (float(cen[i0][0]), float(y), float(w_), float(h_))   # (fx, 脸框顶, 脸宽, 脸框高)
+            if ar > 0.20 * span * ww:                     # 特写：皮肤块占了画面一大片
+                bust = True
+            # 半身/胸像：alpha 三边以上顶到画布边缘（人物被画框裁掉）→ 没有脚底
+            if xs.min() <= 2 and ys.min() <= 2 and (xs.max() >= ww - 3 or ys.max() >= hh - 3):
+                bust = True
+    if face is None:
+        # 没有正脸（背面图 / 纯剪影）：用 alpha 轮廓按比例推眼行。
+        # 标定值来自 front 实测：(眼行-头顶)/(脚底-头顶) = 0.104 → headtop_u 自动落在 1.116
+        face = (cx, top + 0.104 * span - 0.21 * (0.104 * span), 0.065 * span, 0.104 * span)
+        eye_faceless = top + 0.104 * span
     else:
-        face = (cx, top + 0.06 * span, 0.06 * span, 0.08 * span)
+        eye_faceless = None
     fx, ftop, fw, fh = face
-    eye = ftop + 0.21 * fh                              # 眉毛/眼 行（实测：皮肤块顶 + 21%）
+    eye = eye_faceless if eye_faceless is not None else ftop + 0.21 * fh
+    # 半身判定的第四条：脚不在画面里时 (脚底-头顶)/(脚底-眼) 会明显 > 1.2（真全身图 1.10~1.19）。
+    # S043 那种「脸很大的半身横幅」(1024×576，人物只占中间) 就是被这条抓回来的。
+    if not bust and (feet - eye) > 8 and (feet - top) / (feet - eye) > 1.34:
+        bust = True
     if bust:
         H = fw / FACE_W_U                               # 半身：用脸宽定尺度（同人物 FACE_W_U 恒定）
         feet = eye + H
+        cx = fx                                         # 半身图里「身体中线」没有意义，用脸心
     else:
         H = feet - eye
     # 两只手：脸以外最大的两个皮肤块（画面左 = 人物右手 = 持刀手）
@@ -399,13 +411,17 @@ _KEY_FILES = {'raise': 'hero_pose_raise_cut.png', 'slash': 'hero_pose_slash_cut.
 class PoseRig:
     """生图立绘 puppet：正面 + 转头 + 举刀/劈砍 + 表情。"""
 
-    def __init__(self, base='assets/gen/char', work_w=2048):
+    def __init__(self, base='assets/gen/char', work_w=2048, angles=None):
         self.base = str(base)
-        self.work_w = int(min(int(work_w), 1280))     # 解码 mip 宽度上限（1024 已足够，2048 只更慢）
+        self.work_w = int(min(int(work_w), 2048))     # 解码 mip 宽度上限；全身 1024 足够，特写要 2048
         self.angles = []
-        for name, fn, yaw, use in _ANGLE_FILES:
-            p = (MIR + os.path.join(self.base, fn[len(MIR):])) if fn.startswith(MIR) \
-                else os.path.join(self.base, fn)
+        # angles 可覆盖角度表：给「半身特写镜头」用（base 指向那张特写图，只有 1 个角度）。
+        # 条目：(名字, 绝对路径或相对 base 的文件名, 头部偏转, 'both'/'head'/'body')
+        for name, fn, yaw, use in (angles if angles is not None else _ANGLE_FILES):
+            if str(fn).startswith(MIR):
+                p = MIR + (fn[len(MIR):] if os.path.isabs(fn[len(MIR):]) else os.path.join(self.base, fn[len(MIR):]))
+            else:
+                p = fn if os.path.isabs(str(fn)) else os.path.join(self.base, fn)
             chk = str(p)[len(MIR):] if _mirrored(p) else str(p)
             if os.path.exists(chk):
                 self.angles.append((name, p, yaw, use))
@@ -583,10 +599,12 @@ class PoseRig:
 
     # ------------------------------------------------------------ 主入口
     def draw(self, fr, t, pose, dst=(960, 900), h=680, look=None, rim=None, grade=None,
-             alpha=1.0, defocus=0.0, mblur=0.0, wrap=0.0):
+             alpha=1.0, defocus=0.0, mblur=0.0, wrap=0.0, shade=None, keep_red=None):
         pose = dict(pose or {})
         Hpx, Wpx = fr.shape[:2]
-        grade = grade or dict(expo=0.66, sat=0.55, tint=(0.90, 0.96, 1.06), lift=0.0, gamma=1.25)
+        grade = dict(grade or dict(expo=0.66, sat=0.55, tint=(0.90, 0.96, 1.06), lift=0.0, gamma=1.25))
+        if keep_red is not None:
+            grade['keep_red'] = float(keep_red)
         rim = rim or dict(col=(0.62, 0.74, 1.0), amt=1.6, dir=(-0.8, -0.6))
         turn = float(np.clip(pose.get('head_turn', 0.0), -1.2, 1.2))
         # 身体朝向：默认**不换**（两张不同姿势的正身交叉 = 双影，见 report）；
@@ -629,7 +647,8 @@ class PoseRig:
             r = self._map_rect(M, gk0['bbox'])
             bx0, by0 = min(bx0, r[0]), min(by0, r[1])
             bx1, by1 = max(bx1, r[2]), max(by1, r[3])
-        pad = 18.0 + abs(mblur) + (3.2 * defocus if defocus > 0.3 else 0.0) + (14 if wrap else 0)
+        mb_abs = (abs(mblur[0]) + abs(mblur[1])) if isinstance(mblur, (tuple, list)) else abs(mblur or 0)
+        pad = 18.0 + mb_abs + (3.2 * defocus if defocus > 0.3 else 0.0) + (14 if wrap else 0)
         X0, Y0 = int(math.floor(max(0, bx0 - pad))), int(math.floor(max(0, by0 - pad)))
         X1, Y1 = int(math.ceil(min(Wpx, bx1 + pad))), int(math.ceil(min(Hpx, by1 + pad)))
         if X1 - X0 < 8 or Y1 - Y0 < 8:
@@ -691,9 +710,13 @@ class PoseRig:
                 fa = a[fy0:fy1, fx0:fx1]
                 ff = f[fy0:fy1, fx0:fx1].copy()
                 m = (feather[fy0:fy1, fx0:fx1] > 0.6) & (fa > 0.9)
-                if m.sum() > 120:                        # 与原脸的均值差修正
-                    d = accF[sub][m].mean(0) - ff[m].mean(0)
-                    ff = np.clip(ff + np.clip(d, -0.12, 0.12) * feather[fy0:fy1, fx0:fx1][..., None], 0, 1)
+                if m.sum() > 120:
+                    # 与原脸的**低频**差值修正（整块均值差只修正色调偏移；模糊成低频后连
+                    # 「补丁边缘一圈亮/暗线」也一起抹平，比全局常数好很多）
+                    d = (accF[sub] - ff) * m[..., None]
+                    wsum = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 6)
+                    d = cv2.GaussianBlur(d, (0, 0), 6) / np.maximum(wsum, 1e-3)[..., None]
+                    ff = np.clip(ff + np.clip(d, -0.12, 0.12), 0, 1)
                 accF[sub] = accF[sub] * (1 - fa[..., None]) + ff * fa[..., None]
                 accA[sub] = np.clip(accA[sub] * (1 - fa) + fa, 0, 1)
         # ---- 整姿势键帧
@@ -719,6 +742,12 @@ class PoseRig:
             accF = cv2.remap(accF, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
             accA = cv2.remap(accA, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
             accF, accA = _fill_holes(accF, accA, preA)
+        if shade:                                   # 屏幕空间主光衰减（与 sprite.py 同义）
+            xs2 = np.arange(X0, X1, dtype=np.float32)[None, :]
+            ys2 = np.arange(Y0, Y1, dtype=np.float32)[:, None]
+            r2 = (np.clip((xs2 - shade[0]) / (shade[1] - shade[0]), 0, 1) * shade[2] +
+                  np.clip((ys2 - shade[3]) / (Hpx - shade[3]), 0, 1) * shade[4])
+            accF = accF * (1 - r2)[..., None]
         # ---- 调色（与 sprite.py._front 同一套公式）+ rim + look
         lum = (accF * np.array([0.3, 0.59, 0.11], np.float32)).sum(-1, keepdims=True)
         _lk, red_fn = _look_import()
@@ -739,10 +768,15 @@ class PoseRig:
         if look:
             accF, accA = _lk(accF, accA, rimm, rim, redmask, look)
         # ---- 模糊 / 淡出
-        if mblur:
-            L = int(max(2, abs(mblur) * 0.5))
+        if mblur is not None and (mblur if not isinstance(mblur, (tuple, list)) else (abs(mblur[0]) + abs(mblur[1]))):
+            # mblur：标量（斜向）或 (dx,dy) 元组（与 sprite.py 的 draw 同义）
+            if isinstance(mblur, (tuple, list)):
+                mbx, mby = float(mblur[0]), float(mblur[1])
+            else:
+                mbx, mby = float(mblur), float(mblur) * 0.4
+            L = int(max(2, max(abs(mbx), abs(mby)) * 0.5))
             k = np.zeros((2 * L + 1, 2 * L + 1), np.float32)
-            cv2.line(k, (L, L), (L + int(mblur), L + int(mblur * 0.4)), 1.0, 1)
+            cv2.line(k, (L, L), (L + int(mbx), L + int(mby)), 1.0, 1)
             k /= max(k.sum(), 1e-6)
             accF = cv2.filter2D(accF * accA[..., None], -1, k)
             accA = cv2.filter2D(accA, -1, k)

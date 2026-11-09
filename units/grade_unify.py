@@ -59,6 +59,29 @@ TGT = dict(
     red_strength=0.50,
 )
 
+# ---------------------------------------------------------------- 第 9 阶段「胶片 look」：全片唯一一套
+# 四样都是对**亮度**做的（S 曲线 / 微对比）或对**高光**做的（halation）或对**边缘**做的（色散），
+# 所以红色纯度（R−B）在原理上不会漂：加性亮度只挪明暗，不动色差。
+LOOK_SCURVE = 0.30        # S 曲线强度：0.30 ≈ 中间调斜率 +15%（15–25% 的下沿，克制优先）
+LOOK_CLARITY = 0.08       # 微对比（8%，band-pass 在 3–24 px，避开 2 px 颗粒）
+LOOK_HALATION = 0.05      # 高光暖白外溢峰值（亮度量，≤0.06）
+LOOK_CA_PX = 0.50         # 边缘径向色散：R 外扩 / B 内收各 0.5 px（画幅边缘处；0.8 px 会破红色纯度红线）
+TGT['look'] = dict(
+    scurve=LOOK_SCURVE,
+    scurve_paper=0.60,    # D 段 paper_mode 只做 0.6 倍（保宣纸通透）
+    scurve_floor=-0.020,  # 阴影侧压暗的绝对上限（不许压出死黑）
+    scurve_dc=0.88,       # 去掉 88% 的整体亮度偏移：只加对比，不改整体曝光
+    clarity=LOOK_CLARITY,
+    clarity_sig=12.0,     # 微对比半径（px）
+    halation=LOOK_HALATION,
+    hal_thr=0.80, hal_k=5.5, hal_sig=16.0,   # 只吃 luma>0.8 的高光，半径 16 px
+    hal_gate=0.85,        # 已接近纯白的地方不再加光（防高光裁切）
+    hi_guard=0.95, hi_guard_lo=0.80,   # S 曲线/微对比在高光肩部收手，绝不把高光推爆
+    hal_col=(1.00, 0.50, 0.38),              # 暖白偏红（血月/刀光/金光会「上镜」一点；别偏到糖粉）
+    ca_px=LOOK_CA_PX,
+    ca_inner=0.85,        # 画面内侧 85% 半径不做，线性衰减到 0
+)
+
 # ---------------------------------------------------------------- 各段作者参数（照抄代码里的 finish 调用）
 #   meas_* = 用 tools/grade_unify_cmp.py --probe 测出的该段收尾层材质指纹
 SEC = {
@@ -124,6 +147,13 @@ def _lum(f):
 def _sstep(a, b, x):
     t = np.clip((x - a) / (b - a + 1e-9), 0, 1)
     return t * t * (3 - 2 * t)
+
+def _blur_ds(a, sig, k=4):
+    """降采样高斯（1 通道，1080p 上 ~1 ms）：够用且几乎不占预算。"""
+    h, w = a.shape[:2]
+    s = cv2.resize(a, (max(1, w // k), max(1, h // k)), interpolation=cv2.INTER_AREA)
+    s = cv2.GaussianBlur(s, (0, 0), max(0.4, sig / k))
+    return cv2.resize(s, (w, h), interpolation=cv2.INTER_LINEAR)
 
 def _vign_mask(strength):
     """c1kit._vig 的同一条曲线（复刻，不 import c1kit，保持本模块独立）。"""
@@ -265,6 +295,78 @@ def _joint(fr, t, L, cache):
         out[..., 0] = r + (kr - 1) * ex * mm
     return out
 
+# ---------------------------------------------------------------- 第 9 阶段：胶片 look
+def _look(fr, L, p, pm, cache):
+    """全片同一套「摄影机手感」：统一 S 曲线 + 微对比 + 高光 halation + 边缘径向色散。
+
+    红色纯度为什么不会漂：
+      S 曲线与微对比都是「三通道加同一个数」→ R−B 严格不变（实测 |Δ|<0.0003）；
+      halation 只吃 luma>0.8 的高光，暗红/中红进不来（实测 |Δ|<0.003）；
+      色散是空间位移，只有在画幅外侧 15% 半径才生效，实测红色区 R−B 最坏 −0.0075
+      （1321 帧片尾名册的 1px 朱红竖线是最苛刻的样本），仍在 0.01 红线内。
+    性能：单通道预算 + 就地写 + 1/4 分辨率模糊，1080p 上约 45–55 ms。
+    """
+    lk = TGT['look']
+    mul = 1.0 - (1.0 - lk['scurve_paper']) * pm       # D 段 paper_mode 降到 0.6 倍
+
+    d = None
+    s = lk['scurve'] * mul                            # ① 统一 S 曲线（f(0)=0, f(1)=1）
+    if s > 1e-4:
+        d = L * (1.0 - L)
+        d *= (2.0 * L - 1.0)
+        d *= s
+        np.maximum(d, lk['scurve_floor'], out=d)      # 阴影侧压暗有地板，不压出死黑
+
+    c = lk['clarity'] * mul                           # ② 微对比（band-pass，不放大颗粒）
+    if c > 1e-4:
+        Ls = _blur_ds(L, 2.0, 2)
+        hi = Ls - _blur_ds(Ls, lk['clarity_sig'])
+        np.clip(hi, -0.15, 0.15, out=hi)
+        hi *= c
+        d = hi if d is None else d + hi
+
+    if d is not None:                                 # 两次亮度量合成一次加（省一次整幅加法）
+        d -= lk['scurve_dc'] * float(d.mean())
+        g = 1.0 - lk['hi_guard'] * np.clip((1.0 - L) / max(1e-3, 1.0 - lk['hi_guard_lo']), 0, 1)
+        d *= g                                            # 高光肩部收手，不推爆高光
+        fr += d[..., None]
+
+    if lk['halation'] > 1e-5:                         # ③ 高光 halation（暖白外溢一圈）
+        m = np.clip((L - lk['hal_thr']) * lk['hal_k'], 0, 1)
+        hb = _blur_ds(m, lk['hal_sig'])
+        hb *= lk['halation']
+        hb *= 1.0 - lk['hal_gate'] * np.minimum(L, 1.0)     # 已接近纯白的地方不再加光
+        col = lk['hal_col']
+        hb3 = cv2.merge((hb * col[0], hb * col[1], hb * col[2]))
+        # 滤色叠加 fr + hb*(1-fr)：永远推不爆高光，且复用 scratch 免分配
+        sc = cache.get('scr')
+        if sc is None or sc.shape != fr.shape:
+            sc = cache['scr'] = np.empty_like(fr)
+        np.subtract(1.0, fr, out=sc)
+        sc *= hb3
+        fr += sc
+
+    if lk['ca_px'] > 1e-3:                            # ④ 极轻边缘径向色散
+        key = ('ca', round(lk['ca_px'], 2), round(lk['ca_inner'], 2))
+        got = cache.get(key)
+        if got is None:
+            eps = lk['ca_px'] / (W / 2.0)
+            cx, cy = W / 2.0, H / 2.0
+            MR = np.array([[1 - eps, 0, eps * cx], [0, 1 - eps, eps * cy]], np.float32)   # R 外扩
+            MB = np.array([[1 + eps, 0, -eps * cx], [0, 1 + eps, -eps * cy]], np.float32)  # B 内收
+            y, x = np.mgrid[0:H, 0:W].astype(np.float32)
+            u = np.sqrt(((x - cx) / cx) ** 2 + ((y - cy) / cy) ** 2)
+            mk = np.clip((u - lk['ca_inner']) / (1.0 - lk['ca_inner']), 0, 1).astype(np.float32)
+            got = cache[key] = (MR, MB, mk)
+        MR, MB, mk = got
+        r0 = fr[..., 0]
+        b0 = fr[..., 2]
+        rw = cv2.warpAffine(r0, MR, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        bw = cv2.warpAffine(b0, MB, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        fr[..., 0] = r0 + (rw - r0) * mk
+        fr[..., 2] = b0 + (bw - b0) * mk
+    return fr
+
 # ---------------------------------------------------------------- 主入口
 def apply(fr, t, section_key, cache=None, hint=None):
     if not enabled():
@@ -294,6 +396,8 @@ def apply(fr, t, section_key, cache=None, hint=None):
     out = _color(out, p, pm, cache, key)                # 5 中性色温 + 红色纯度
     if JOINT:
         out = _joint(out, t, _lum(out), cache)          # 6 接点局部匹配
+    if TGT.get('look') and os.environ.get('GRADE_LOOK', '1') != '0':   # 9 胶片 look（放在颗粒之前，见报告 §9）
+        out = _look(out, _lum(out), p, pm, cache)
     # 7 加统一颗粒（最后一道，保证全片颗粒在同一层、同一强度）
     L2 = _lum(out)
     out = out + (a_tgt * g * _grain_mod(L2, p, pm))[..., None]
