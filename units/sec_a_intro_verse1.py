@@ -1120,7 +1120,8 @@ class V10(Shot):
 #     左侧朱红轮廓光（承接 V10 朱墨），29.40「我」起一线红光沿刃口自下而上爬升 —— 「我杀过」之前的一口气
 class V11(Shot):
     def __init__(self):
-        self.path = A.defringe('A/blade_face')
+        import a_r6                                                                      # 第八棒（P1-7 左上灰残片）：发外灰底按与灰底色距清掉，刀身保护
+        self.path = a_r6.hair_clean('A/blade_face', protect=(0.45, 0.0, 0.57, 1.0), thr=0.07, soft=0.08, band=81)
     def render(self, t):
         u = self.u(t)
         fr = night((0.012, 0.005, 0.005), (0.035, 0.012, 0.012))
