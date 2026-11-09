@@ -682,8 +682,8 @@ class V06(Shot):
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('是谁的', pr)):
             if pc <= 0: continue
-            T.place(L, ch, 260, 330 + i * 110, 92, color='gold' if ch == '谁' else 'white', fname='serif_sb', alpha=min(1, pc * 2))
-        fr = T.compose(fr, L, shadow=0.85, glow=0.2, glow_color=(1.0, 0.55, 0.2))
+            T.place(L, ch, 260, 330 + i * 110, 92, color='white', fname='serif_sb', alpha=min(1, pc * 2))     # 第十棒：去金「谁」
+        fr = T.compose(fr, L, shadow=0.85, glow=0.0)
         fr = cam(fr, 1.0 + 0.05 * eio(u), 0, 0)
         return fr, 0
 
@@ -985,7 +985,7 @@ class V10(Shot):
             tk = V(CT(22, 5 + k))
             pk = clamp01((t - (tk - 0.04)) / 0.16)
             if pk > 0:
-                rgb = gild(rgb, m * pk, glow=pulse(t, tk, 0.3) * (t >= tk) + 0.3)
+                rgb = gild(rgb, m * pk, glow=0.6 * pulse(t, tk, 0.3) * (t >= tk) + 0.05)     # 第十棒：常亮辉光 0.3→0.05，只在拨珠瞬间热一下
         Mq = self.Mq.copy()
         W_ = cv2.warpPerspective(rgb, Mq, (W, H), flags=cv2.INTER_LINEAR)
         A_ = cv2.warpPerspective(al, Mq, (W, H), flags=cv2.INTER_LINEAR)
