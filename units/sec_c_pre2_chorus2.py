@@ -1505,7 +1505,10 @@ class C23(Shot):
             cv2.rectangle(hole, (int((x - 120) / 2), int((y - 120) / 2)), (int((x + 120) / 2), int((y + 120) / 2)), 1.0, -1)
             fr = fr * (1 - cv2.resize(cv2.GaussianBlur(hole, (0, 0), 6), (W, H))[..., None] * 0.85 * e)
             dx, dy = (x - 960) * 0.08 * e, (y - 540) * 0.08 * e
-            fr, _ = put(fr, t, 'C5/c23_bronze', x + dx, y + dy, sz, anchor='src', src=(0.5, 0.5), rim=COLD, rim_amt=1.4, rim_dir=(-0.6, -0.8),
+            # 2026-11-09 23:2x 用户：铜牌外面的"画框"边去掉 → 改用内缩 6% 的无框版资产
+            import os as _os
+            _nb = 'C5/c23_bronze_nb' if _os.path.exists(ROOT + '/assets/gen/C5/c23_bronze_nb_cut.png') else 'C5/c23_bronze'
+            fr, _ = put(fr, t, _nb, x + dx, y + dy, sz, anchor='src', src=(0.5, 0.5), rim=COLD, rim_amt=1.4, rim_dir=(-0.6, -0.8),
                         flash=fl, expo=1.0, sat=0.8, tint=(1.0, 0.98, 0.95), wind=0, breathe=0.0)
             # [r4-c-r1 #42] 142–148s 文字全去掉：三块铜牌上不再阴刻「铁壁铜」，改成铸面的空槽（牌本身照样逐拍推出）
             fr = dust(fr, t, 230 + i, n=70, amt=0.8 * e * (1 - sm(0.2, 0.8, t - ti)), drift=(0, 220),

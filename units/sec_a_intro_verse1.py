@@ -822,6 +822,10 @@ class V04(Shot):
 
 
 # V05 20.69–21.20 ECU 手 + 刀特写（第四棒：脸完全出画，hand_draw_cu 精灵）：右手握柄、左拇指推开护手，刃口一线寒光，急推
+# 2026-11-09 23:2x 用户：V05/V06 画内「寒光」两个巨字去掉（字幕层照常出整句）
+NO_GLYPH_HANGUANG = True
+
+
 class V05(Shot):
     def render(self, t):
         u = self.u(t)
@@ -835,7 +839,7 @@ class V05(Shot):
         fr = A.glow(fr, p, 140, 0.5 * g, (0.75, 0.85, 1.0), aspect=0.35)
         fr = RAIN.draw(fr, t, 0.5, angle=10, layers=(2,))
         p = cprog(1, [9], t, 0.16)[0]                                   # 第五棒：「寒」20.82 随刃口寒光落下（与 V06 同位，跨切点连续）
-        if p > 0:
+        if p > 0 and not NO_GLYPH_HANGUANG:
             L = T.Layer(); L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
             fr = T.compose(fr, L, shadow=0.8, shadow_sigma=16, glow=0.2)
         return fr, (3 if g > 0.5 else 0)
@@ -895,7 +899,7 @@ class V06(Shot):
         if 0 <= a < 0.07: fr = fr * 1.55 + 0.06 * COLDV          # 第三棒：冲击改冷色曝光脉冲（不再白闪）
         # 「寒光」斩开：字在屏幕下方，被同一刀切开两半错位
         p = cprog(1, [9], t, 0.25)[0]
-        if p > 0:
+        if p > 0 and not NO_GLYPH_HANGUANG:
             L = T.Layer()
             L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
             L.paste(BG('光', 'kai', 230, cprog(1, [10], t, 0.12)[0], seed=2), 1080, 760, (0.86, 0.12, 0.08))

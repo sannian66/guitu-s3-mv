@@ -78,6 +78,7 @@ ACCENT_GLOW = 0.16            # 4 极轻朱晕（additive，占比很小）
 
 # ---- 2026-11-09 22:5x 用户改口径：**歌词改为底部横向居中**（取代右侧竖排）
 LAYOUT_H = True               # True = 底部横排居中；False = 回到右侧竖排
+NO_SCRIM = True               # 2026-11-09 23:2x 用户：字幕不要底色（"有一层浮在底面上"）→ 只留字 + 极淡描边
 H_BY = 858                    # 首行字心 y（下黑边上沿 960，再留 ~100px 呼吸）
 H_LEAD = 1.26                 # 横排行距
 H_MAX = 1656                  # 允许的最大行宽（1920 − 两侧各 132）
@@ -695,8 +696,21 @@ def _sentence(F, r, t, ox=0, oy=0):
     if not lay['pos']:
         return F
     xf, xt = lay['band']                           # 5：band = 本句列范围 −120 / +40
-    F, kb = _scrim(F, xf, lay['top'], xt, lay['bot'], ox, oy)
-    out_a = OUTLINE_A * kb                         # 亮底才有描边，且随中位亮度平滑淡入
+    if NO_SCRIM:
+        # 不画任何衬底；改用「按底亮度自适应的极淡描边」保证亮底可读（描边贴字，不是一块底色）
+        kb = 0.0
+        h_, w_ = F.shape[:2]
+        _right = max(p_['x'] for p_ in lay['pos']) + r['size'] / 2.0
+        xs0 = int(max(ox, min(lay['left'] - 20, W - 1))); xs1 = int(min(ox + w_, max(_right + 20, 1)))
+        ys0 = int(max(oy, min(lay['top'], H - 1)));        ys1 = int(min(oy + h_, max(lay['bot'], 1)))
+        if xs1 > xs0 and ys1 > ys0:
+            reg = F[ys0 - oy:ys1 - oy, xs0 - ox:xs1 - ox]
+            L = float(np.median(reg[..., 0] * 0.299 + reg[..., 1] * 0.587 + reg[..., 2] * 0.114))
+            kb = _ssl(*SCRIM_BRIGHT, L)                # 亮底 → 1，暗底 → 0
+        out_a = OUTLINE_A * (0.55 + 0.75 * kb)         # 只加描边，不加底色
+    else:
+        F, kb = _scrim(F, xf, lay['top'], xt, lay['bot'], ox, oy)
+        out_a = OUTLINE_A * kb                     # 亮底才有描边，且随中位亮度平滑淡入
     for key in lay['pos']:
         p = (t - (key['t'] - IN_LEAD)) / IN_DUR   # 6 逐字墨显
         if p <= 0.0:
