@@ -1258,15 +1258,18 @@ class S23_Eye(Shot):
         u = self.u(t)
         th = V(O[46][0])
         fl = impact(t, th, 0.15)
-        fr = D.storm(t, 231, c=(1180, 400), spin=0.09, twist=0.8, base=(0.02, 0.022, 0.032), lit=(0.30, 0.33, 0.42), eye=170, bright=1.0,
+        fr = D.storm(t, 231, c=(1310, 400), spin=0.09, twist=0.8, base=(0.02, 0.022, 0.032), lit=(0.30, 0.33, 0.42), eye=170, bright=1.0,
                      glow=(1300, 300, 0.6 * fl + 0.4 * impact(t, 184.85, 0.12)))
         fr = D.lightning(fr, t, 184.85, (500, 120), (900, 420), seed=11, amt=1.2)
         fr = D.lightning(fr, t, th, (1650, 120), (1240, 380), seed=12, amt=1.8, life=0.25)
         p = cl((t - th + 0.03) / 0.12)
-        p = max(p, 0.62 * cl((t - self.t0) / 0.25) * (0.85 + 0.15 * math.sin(t * 17)))     # [r5] 闪电前「天」已在云眼里可读（≥0.6）
+        p = max(p, 0.8 * cl((t - self.t0) / 0.25) * (0.85 + 0.15 * math.sin(t * 17)))     # [r5] 闪电前「天」已在云眼里可读（≥0.6）
         if p > 0:
-            L = D.text_layer([('天', 1180, 410, 420, p * (0.9 + 0.1 * math.sin(t * 30)), 1.0 + 0.1 * (1 - p))], fname='serif_black', color=(0.92, 0.95, 1.0))
+            L = D.text_layer([('天', 1320, 410, 420, p * (0.9 + 0.1 * math.sin(t * 30)), 1.0 + 0.1 * (1 - p))], fname='serif_black', color=(0.92, 0.95, 1.0))
             fr = T.compose(fr, L, shadow=0.75, shadow_sigma=26, glow=0.9 + 0.8 * fl, glow_color=(0.6, 0.7, 1.0), glow_sigma=30)
+            # [r8] P2-7：闪电前也有一圈冷白字缘（云眼背光），字从灰雾里分离出来；字整体右移让开人物后脑
+            fr = R7.rim_edge(fr, L.A, (0.0, -1.0), 3, 0.55, (0.85, 0.92, 1.0), glow=6, gamt=0.25)
+            fr = R7.rim_edge(fr, L.A, (0.0, 1.0), 2, 0.25, (0.85, 0.92, 1.0), glow=4, gamt=0.1)
             if t >= th:   # [r5] 185.26 闪电描边：字缘一圈电光（带抖动的分形断续亮边）
                 ed = np.clip(cv2.dilate(L.A, np.ones((7, 7), np.uint8)) - L.A, 0, 1)
                 nz = (cv2.resize(D._tile(int(t * 30) % 50 + 600)[:135, :240], (W, H)) > 0.45).astype(np.float32)
@@ -1279,7 +1282,7 @@ class S23_Eye(Shot):
         fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), (560 - 30 * u, 2520 - 40 * u), sc, expo=0.6 + 0.4 * fl, sat=0.45,
                               tint=(0.9, 0.95, 1.08), rim=(0.75, 0.85, 1.0), rim_amt=8.0 + 6 * fl, rim_dir=(0.75, -0.65), wind=8)
         fr = K.rain(fr, t, 23, n=300, amt=0.25, angle=-6)
-        return K.cam(fr, 1.0 + 0.06 * u, 0, -20 * u, rot=2 * u, center=(1180, 400)), 0.0
+        return K.cam(fr, 1.0 + 0.06 * u, 0, -20 * u, rot=2 * u, center=(1310, 400)), 0.0
 
 
 class S24_Defy(Shot):

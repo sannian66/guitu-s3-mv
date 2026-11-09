@@ -1007,40 +1007,72 @@ class V13(Shot):
 
 
 # =====================================================================================
-# V14 102.14–103.14 ECU：「反抗」二字：宋体被火从下往上烧成志莽行书（字体即立场），朱红火光，雨中蒸汽
+# V14 102.14–103.14 LS 低机位：第七棒——不再只有字。鬼屠在跪满纸扎百官的雨地里猛然起身（生图 stand_defy，束发、怒吼、刀垂手）；
+#   102.18「反」：起身的气浪以他脚下为圆心炸开一圈泥水冲击环，周围跪伏的纸人被掀得向后仰倒；「反」「抗」两字（马善政楷，朱红，同一字体）
+#   随气浪从泥地里拔起、带着火星与泥点立定在他身侧。前＝虚焦跪伏纸人，中＝人，后＝雨幕中更多跪着的人影。
 class V14(Shot):
+    FOOT = (760, 1040)
     def __init__(self):
-        self.bg = BK.dark_bg(5901, 0.01, 0.03, tint=(1.15, 1.0, 0.95))
-        self.emb = fx2.Embers(5902, n=220, box=(300, 300, 1620, 960), mode='fire', rise=260)
-        self.fog = fx2.Fog(5903)
-        self.rain = fx2.RainSheet(5904, density=0.6)
-        T.warm('反抗', 'song', 400)
+        self.sp = spr('B_r4/stand_defy')
+        self.figs = BC.figs('crowd_bow')
+        sk = night_sky(5901, top=(0.02, 0.022, 0.03), bot=(0.12, 0.12, 0.13), horizon=0.75)
+        x, y = K.grid()
+        self.gm = sstep(760, 790, y)
+        mud = (0.02 + 0.035 * cv2.resize(K.fbm(H // 2, W // 2, 5902, 10, 6), (W, H)))[..., None] * np.ones(3, np.float32)
+        self.bg = sk * (1 - self.gm[..., None]) + mud * self.gm[..., None]
+        self.bg += np.exp(-(((x - 760) / 420) ** 2 + ((y - 520) / 380) ** 2))[..., None] * np.array([0.10, 0.06, 0.05], np.float32)
+        r = np.random.default_rng(5903)
+        self.back = [(r.uniform(-50, 1970), r.uniform(770, 800), r.uniform(150, 200), int(r.integers(6))) for _ in range(12)]
+        self.front = [(80, 1180, 760, 1, True), (1900, 1180, 760, 4, False)]
+        self.fog = fx2.Fog(5904)
+        self.rain = fx2.RainSheet(5905, density=1.0)
+        self.spl = fx2.Splashes(5906)
+        T.warm('反抗', 'kai', 270)
 
     def render(self, t):
         u = self.u(t)
-        fr = self.bg.copy()
         x, y = K.grid()
-        pr = prs(23, [10, 11], t, 0.25)
-        m = [clamp01((t - (V(CT(23, k)) - 0.05)) / 0.45) for k in (10, 11)]
-        P = [dict(ch='反', x=700, y=540, size=400, rot=0, font='xing', idx=0, emph=False),
-             dict(ch='抗', x=1220, y=540, size=400, rot=0, font='xing', idx=1, emph=False)]
-        heat = max(m)
-        fr += np.exp(-(((x - 960) / 800) ** 2 + ((y - 760) / 260) ** 2))[..., None] * RED * 0.5 * heat
-        if pr[0] > 0:
-            fr = T.font_morph(fr, '反抗', [min(1.0, mm) for mm in m], fa='song', fb='xing', places=P, color='white',
-                              colorB=(0.88, 0.12, 0.06), burst=True, style_kw=dict(shadow=0.6, glow=0.6, glow_color=(1.0, 0.3, 0.08)))
-            # 火线：沿字自下而上（烧过处转为朱红行书）
-            for pp, mm in zip(P, m):
-                if 0 < mm < 1:
-                    fy = pp['y'] + 220 - 440 * mm
-                    band = np.exp(-((y - fy) / 18) ** 2) * (np.abs(x - pp['x']) < 230)
-                    fr += band[..., None] * np.array([1.0, 0.5, 0.15], np.float32) * 0.9
-        fr = self.emb.draw(fr, t, intensity=0.4 + heat, wind=(30, 0))
-        fr = self.fog.draw(fr, t, density=0.3 * heat, y0=300, y1=900, color=(0.55, 0.5, 0.48), speed=(10, -60))
-        fr = self.rain.draw(fr, t, intensity=0.6, angle=6)
-        hk = hitp(t, CT(23, 11), 0.12)
-        dx, dy, dr = shake(t, 4 + 14 * hk, 10, 59)
-        fr = cam(fr, 1.0 + 0.08 * eio(u) + 0.04 * hk, dx, dy, dr)
+        fr = self.bg.copy()
+        tf = V(CT(23, 10)); tk2 = V(CT(23, 11))
+        blast = clamp01((t - tf) / 0.5)
+        push = eout(blast, 2)
+        fr = self.fog.draw(fr, t, density=0.45, y0=520, y1=820, color=(0.30, 0.31, 0.34), speed=(20 + 260 * pulse(t, tf, 0.4), 0))
+        for (bx, fy, hh, idx) in self.back:                                   # 远排跪伏的人（被气浪推得后仰）
+            away = 1 if bx > self.FOOT[0] else -1
+            fr, _ = BC.draw(fr, self.figs[idx], (bx, fy), hh, tilt=-20 + 14 * push * away, flip=bx < self.FOOT[0], expo=0.40, sat=0.4,
+                            rim_col=(0.6, 0.65, 0.8), rim_amt=0.6, blur=2.5, wet=0.4)
+        rise = eout(clamp01((t - self.t0) / 0.30), 3)                          # 起身：0.3s 内从画下拔起站定
+        fr, _ = put(fr, self.sp, t, 860 * (0.96 + 0.04 * rise), (self.FOOT[0], self.FOOT[1] + 170 * (1 - rise)),
+                    rim=dict(col=(0.80, 0.86, 1.0), amt=3.0, dir=(0.4, -1.0)),
+                    grade=dict(expo=1.05, sat=0.6, tint=(0.95, 0.97, 1.04), lift=0.01, gamma=1.08), wind_amp=10,
+                    shade=(500, 1600, 0.15, 600, 0.3), mblur=(0, 30 * (1 - rise)))
+        if t >= tf:                                                            # 泥水冲击环
+            q = t - tf
+            d = np.sqrt((x - self.FOOT[0]) ** 2 + ((y - self.FOOT[1] + 10) * 4.0) ** 2)
+            R = 80 + 1800 * eout(clamp01(q / 0.5), 2)
+            ring = np.exp(-((d - R) / (16 + 40 * q)) ** 2) * (y > 760) * (1 - clamp01(q / 0.5))
+            fr = fr + ring[..., None] * COLDC * 0.5
+            fr = K.sparks(fr, t, 5907, (self.FOOT[0], self.FOOT[1] - 10), n=180, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.6,
+                          grav=1600, size=1.6, area=(260, 10), color=(0.55, 0.55, 0.58), amt=1.0, t0=tf, burst=True)
+        # 「反」「抗」从泥里拔起立定（马善政楷，同一字体，朱红）
+        for i, (ch, tk, cx, cy) in enumerate((('反', tf, 1300, 420), ('抗', tk2, 1380, 690))):
+            p = clamp01((t - (tk - 0.04)) / 0.22)
+            if p <= 0: continue
+            e = eout(p, 3)
+            L = T.Layer(); T.place(L, ch, cx, cy + 320 * (1 - e), 270, color=(0.92, 0.14, 0.07), fname='kai', alpha=min(1, p * 2.5),
+                                    sy=0.75 + 0.25 * e, blur=6 * (1 - e))
+            fr = fr * (1 - 0.5 * K.blur_ds(L.A, 24)[..., None])
+            fr = T.compose(fr, L, shadow=0.9, outline=2, outline_color=(0.10, 0.01, 0.01), glow=0.5 + 0.6 * pulse(t, tk, 0.3), glow_color=(1.0, 0.3, 0.08))
+            fr = K.sparks(fr, t, 5910 + i, (cx, cy + 150), n=80, life=0.5, speed=(200, 800), dirc=(0, -1), spread=1.2, grav=1200,
+                          size=1.4, area=(160, 10), color=(1.0, 0.55, 0.2), amt=1.0, t0=tk, burst=True)
+        for (fx_, fy, hh, idx, fl) in self.front:                             # 前景虚焦跪伏纸人
+            fr, _ = BC.draw(fr, self.figs[idx], (fx_ + (-40 if fl else 40) * push, fy), hh, tilt=-24 + 10 * push * (-1 if fl else 1), flip=fl,
+                            expo=0.30, sat=0.35, rim_col=(0.6, 0.66, 0.85), rim_amt=0.9, rim_dir=(0.0, -1.0), sil=0.6, blur=9, wet=0.4)
+        fr = self.spl.draw(fr, t, y_far=780, y_near=1000, rate=140, amt=0.7)
+        fr = self.rain.draw(fr, t, intensity=1.0, angle=8)
+        hk = max(hitp(t, CT(23, 10), 0.12), hitp(t, CT(23, 11), 0.12))
+        dx, dy, dr = shake(t, 3 + 16 * hk, 10, 59)
+        fr = cam(fr, 1.0 + 0.05 * eio(u) + 0.04 * hk, dx, dy, dr)
         return fr, (3 if hk > 0.5 else 0)
 
 
