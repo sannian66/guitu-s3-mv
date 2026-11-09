@@ -21,6 +21,8 @@ import b_crowd as BC
 READY = True   # 第五轮：用户看的是含 B 组新版的整片，接入
 F0, F1 = 2586, 3534
 T_IN = 86.192                       # 副歌一 S047 的起点（墨退时间基准）
+# 第五轮用户意见（B_R5=0 整体回滚到第四轮版本）
+R5 = os.environ.get('B_R5', '1') != '0'
 
 # 切点（秒）：落拍 / 字头（第二棒按 align.json 逐字时间修正，避免字头跨镜）
 CUT_T = [86.192, 87.53, 89.40, 90.77, 91.67, 93.34, 93.97, 94.48, 96.10, 97.52, 98.48, 99.47, 100.58, 102.14,
@@ -212,7 +214,8 @@ def ring_warp(fr, c, r, w, amp, sy=1.0):
 class V01(Shot):
     T_HIT = 86.66
     BELL = (1300, 560)
-    HIT_X = 60
+    HIT_X = 80 if R5 else 60          # 第五轮 #29：撞木头（底板 x≈951）真的顶到钟沿（x≈1030）——原 60 差 ~20px 撞空
+    TIP = (951.0, 658.0)              # 撞木头在底板（/1.14）中的位置（实测）
     def __init__(self):
         self.P = _plate('v01_bell', 1.14)
         h, w = self.P.shape[:2]
@@ -249,16 +252,40 @@ class V01(Shot):
             q = clamp01((t - self.t0) / (th - self.t0))
             return -120 + (120 + self.HIT_X) * q ** 2.6
         q = t - th
+        if R5:                                               # 第五轮 #29：顶住钟沿 ~1.5 帧（30fps 采样必落在接触帧上）再弹开
+            q = max(0.0, q - 0.05)
         return self.HIT_X * math.exp(-q / 0.05) - 75 * math.sin(min(q / 0.34, 1.0) * math.pi * 0.5) * math.exp(-max(0, q - 0.34) / 0.6)   # 弹开
+
+    def bell_dx(self, t):
+        """第五轮 #29：钟体位移场（只作用在钟上、不带撞木）：撞上瞬间被顶向右 + 衰减高频震 + 慢摆"""
+        th = V(self.T_HIT)
+        if t < th: return None
+        rt = t - th
+        hk = math.exp(-rt / 0.35); hk2 = math.exp(-rt / 0.06)
+        if hk < 0.01: return None
+        h_, w_ = self.P.shape[:2]
+        if not hasattr(self, '_bm5'):
+            xx, yy = np.meshgrid(np.arange(w_, dtype=np.float32), np.arange(h_, dtype=np.float32))
+            self._xx, self._yy = xx, yy
+            self._bm5 = (np.clip((xx - 1000 * 1.14) / 45, 0, 1) * np.clip((yy - 140 * 1.14) / 80, 0, 1)).astype(np.float32)
+        push = 16.0 * (1 - math.exp(-rt / 0.012)) * math.exp(-rt / 0.10)          # 被撞木顶开（1 帧内到位、3 帧回）
+        osc = math.sin(rt * 2 * math.pi * 11.0) * hk * 5.0
+        ang = math.sin(rt * 2 * math.pi * 3.2 + 0.4) * hk * 0.004
+        return self._bm5 * (push + osc + (self._yy - 140 * 1.14) * ang)
 
     def plate_at(self, t):
         o = self.ram_off(t); o2 = self.ram_off(t - 1 / 60)
+        Pbg = self.Pbg
+        if R5:
+            dxm = self.bell_dx(t)
+            if dxm is not None:
+                Pbg = cv2.remap(self.Pbg, (self._xx - dxm).astype(np.float32), self._yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
         acc = None; n = 3
         for k in range(n):                                   # 快速摆动时沿运动方向做 3 次采样的运动模糊
             oo = (o + (o2 - o) * k / (n - 1)) * 1.14
             M = np.float32([[1, 0, self.rdir[0] * oo], [0, 1, self.rdir[1] * oo]])
             Fw = cv2.warpAffine(self.ramF, M, (self.P.shape[1], self.P.shape[0])); Aw = cv2.warpAffine(self.ramA, M, (self.P.shape[1], self.P.shape[0]))
-            layer = self.Pbg * (1 - Aw[..., None]) + Fw
+            layer = Pbg * (1 - Aw[..., None]) + Fw
             acc = layer if acc is None else acc + layer
         return acc / n
 
@@ -272,7 +299,7 @@ class V01(Shot):
         P = self.plate_at(t) * (1 + self.win * (0.20 + 1.6 * thunder))
         # 第十棒：钟体被撞后真的在震——钟区（撞点右侧）做衰减高频横摆 + 轻微摆角，撞木与梁不动
         h_, w_ = P.shape[:2]
-        if hk > 0.01:
+        if hk > 0.01 and not R5:
             if not hasattr(self, '_bm'):
                 xx, yy = np.meshgrid(np.arange(w_, dtype=np.float32), np.arange(h_, dtype=np.float32))
                 self._xx, self._yy = xx, yy
@@ -292,6 +319,10 @@ class V01(Shot):
         fr = self.rain.draw(fr, t, intensity=0.8, angle=12, light=(1600, 380), light_r=800)
         bell = (self.BELL[0], self.BELL[1] + 40)
         hit = (1000, 640)                                            # 撞木头顶上钟沿的点
+        if R5:                                                       # 第五轮 #29：冲击点 = 撞木头的真实接触点（底板 → 屏幕）
+            tx = (self.TIP[0] + self.rdir[0] * self.HIT_X) * 1.14; ty = (self.TIP[1] + self.rdir[1] * self.HIT_X) * 1.14
+            cx_, cy_ = W * 1.14 / 2 + 60 * e, H * 1.14 / 2 - 20 * e
+            hit = (zoom * (tx - cx_) + W / 2 + dx, zoom * (ty - cy_) + H / 2 + dy)
         if t >= th:
             x, y = K.grid()
             for k in range(3):
