@@ -418,3 +418,15 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - **评审简报**：`crew/round4/A_r8_review_brief.md`（底线 86，回退点 2aa55eb）。本棒无法派评审，总导演派。
 - **积分**：0 点（未生图）。
 - **仍弱 / 留意**：V06 人物本身是 2D 精灵，环绕只靠场景层视差 + 轮廓光；V16 丹陛是程序矩形台阶，质感一般；V21 42.68 斩缝边缘仍切着「锋」左半一帧；1/n 提交被 16:29 自动同步 72c3ba1 卷走（内容已在库）；本环境无 background shell，未能自己重启 autosync_loop（检查时循环一直在跑）。
+
+## B 组第十一棒（2026-11-09 16:41–17:15 CST）· b_pre1 1321–1784 + b_verse2 2586–3534 · 40 镜
+- 对照 critic_B_r4（83，各项过线，差总分 2，无不可交付）整改，逐条表见 `crew/round4/B_storyboard.md` §12。**回退点 `39af4ab`**（本棒开始时 HEAD）。
+- 接缝（总导演裁定，已写进 storyboard §12.0）：86.19–89.40（f2586 起）归 B 组 V01/V02，副歌一只到 f2585 → `SEAM_N=0`，f2586 起纯 V01 硬切，**去掉 f2586–2589 暗红团**。
+- P0 V02：换生图人海 `v02_plaza3`（无行列、姿势/朝向/疏密各异、落笏落帽）；不抠洞的位移场叩首波浪（下沉 + 压暗 + 波前冷光由殿至镜）；推近 1.00→1.24 钉殿门；前景两名虚焦跪者 `fg_kneeler` 波前到时伏下。
+- P0 V17：改写实湿掌 ECU `palm_ecu`（与 V18 fist3 同手 → 掌→拳匹配，V18 改 none 硬切）；「命」马善政楷 340px，沿掌纹渗红后洇满成字，与皮肤明暗相乘，高光留字面。
+- P1 束发：生图（以设定图为参考）改发重抠 8 张精灵，全段统一高马尾 + 暗红发带：P07 look_up_low、P09 fist/pommel_thrust、P12 blade_face2、V14 stand_defy、V15 walk_look_up、V20/V25 back_stand、V23/V24 drag_blade（`assets/gen/B_r4/*_pt_cut.png`，原 S023/S024/S055 共享资产未动）。
+- P1 V12 加施加者铁秤砣（`weight_cut.png`）悬顶 → 「人」字头砸地；「的人」放大 + 暗衬 0.88。V06/V07 加镜内运动。V18 拳去白边压暗。punch 5→4（P06/P14/V13/V22）。
+- 交付：`out/round4/B_contact_v8_p0–p4.jpg`、`out/round4/B_keys_v8_p0–p9.jpg`、`out/round4/B_rhythm_v3_p0–p2.jpg`、改前改后对比 `out/round4/B_b11_before_after.jpg`。
+- **第五轮评审未派**（本棒无 run_subagent）：简报 `crew/round4/B_review_brief_r5.md`，核对对象 critic_B_r4，底线 83，回退点 39af4ab。READY 仍 False。
+- 生图：tools/nb.py 仍 401（invalid_skill_key）；本棒改用 Hark generate_image（参考图需 <5MB，先缩成 jpg）。
+- 仍弱 / 未做：V02 生图底板 1408 宽，推近到 1.24 后中景略软；V17 摊掌是右手、V18 拳朝向不完全一致；P2：V20/V21 城墙、P08「天」裂缝未动。部分步骤被 autosync 循环先行提交（16:56/16:59/17:02/17:04 自动同步里含 B 组文件）。
