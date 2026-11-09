@@ -880,12 +880,15 @@ class V11(Shot):
             p = clamp01((t - (tk - 0.12)) / 0.2)
             if p <= 0: continue
             c = cxs[i]
-            A = BV.mask([(ch, c[0], c[1], 150, -rot)], fname='serif_black')
-            fr = fr * (1 - K.blur_ds(A, 10)[..., None] * 0.55 * Aw[..., None] * min(1, p * 2))      # 字区压暗（原有秤星让位）
-            st = star_glyph(A, step=8, r=3.0, p=p, seed=5610 + i) * Aw
+            A = BV.mask([(ch, c[0], c[1], 195, -rot)], fname='serif_black')
+            Ab = K.blur_ds(A, 10)
+            fr = fr * (1 - Ab[..., None] * 0.6 * Aw[..., None] * min(1, p * 2))          # 字区压暗（原有秤星让位）
+            Ap, _ = BV.reveal(A, p, axis='x', soft=30)                                    # 秤星一路亮过去
+            st = star_glyph(A, step=7, r=2.6, p=p, seed=5610 + i) * Aw
             hot = pulse(t, tk, 0.3) * (t >= tk)
-            fr = fr * (1 - st[..., None] * 0.8) + st[..., None] * np.array([1.0, 0.80, 0.45], np.float32) * (0.9 + 0.8 * hot)
-            fr = fr + K.blur_ds(st, 10)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * (0.35 + 0.9 * hot)
+            fr = BV.engrave(fr, Ap, light=(0.0, -1.0), depth=3, groove=0.5, fill=(0.90, 0.68, 0.36), fill_k=0.7, hl=0.4, surface=Aw)
+            fr = fr + st[..., None] * Ap[..., None] * np.array([1.0, 0.85, 0.55], np.float32) * (0.5 + 0.8 * hot)
+            fr = fr + K.blur_ds(Ap * Aw, 10)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * (0.25 + 0.9 * hot)
         # 秤杆上的雨珠：落定前沿杆滚动，99.0 一磕全部震飞
         hk = hitp(t, self.T_LIANG, 0.14)
         if t >= th:
