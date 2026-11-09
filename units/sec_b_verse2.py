@@ -325,8 +325,8 @@ class V01(Shot):
         return fr, (3 if abs(t - th) < 0.04 else 0)
 
 
-class V02(Shot):
-    """第十棒重做：宫城广场顶拍——跪拜人海「动起来」并去复制阵列感。
+class V02_r10(Shot):
+    """（第十棒版，第十一棒弃用）第十棒重做：宫城广场顶拍——跪拜人海「动起来」并去复制阵列感。
     人群从底板里按亮度抠成独立层（背景 inpaint），人群层用随机场位移：
       · 静态错位（人形尺度的噪声位移，打乱行列）+ 每人明暗差异（湿袍/干袍、宫灯照到与否）；
       · 叩首波浪：钟声自大殿方向推来，波前经过时人群「沉」下去叩首（下沉 + 压暗 + 背部受顶光），每人早晚不一；
@@ -453,6 +453,123 @@ class V02(Shot):
         fr = (lum + (fr - lum) * (0.20 + 0.55 * redm)) * np.array([0.95, 0.98, 1.03], np.float32)
         fr = np.clip(fr, 0, 4); fr = 0.62 * (fr / 0.62) ** 1.28 * 1.08          # 拉开反差：湿地压黑、人背提亮
         if tl <= t: fr = fr * (1 + 0.35 * pulse(t, tl + 0.05, 0.12))
+        return fr, (3 if abs(t - tl) < 0.04 else 0)
+
+
+class V02(Shot):
+    """第十一棒重做（critic_B_r4 P0-1 复制阵列）：换生图底板 v02_plaza3（人海无行列：伏地 / 半躬 / 直跪 / 爬行各异，
+    疏密不均，落笏、落帽漂在积水里）。人群按暗度抠层（背景 inpaint 成湿石），在上面做：
+      · 叩首波浪：钟声从大殿推向镜头，波前过处人群依次下沉 + 压暗、背上掠过一道冷光，每人早晚深浅不一；
+      · 推近：zoom 1.00 → 1.17 压向御道，带 -2°→0° 微旋；
+      · 前景两名虚焦跪者（生图 fg_kneeler，近大远小、左大右小），波前最后到达时他们也伏下去（压扁 + 前倾），视差最快；
+      · 雨、积水涟漪、雾带漂移、宫灯摇曳；88.905 雷闪照亮殿顶。"""
+    T_THUNDER = 88.905
+    S = 1.22
+    def __init__(self):
+        from PIL import Image
+        S = self.S
+        w, h = int(W * S), int(H * S); self.w, self.h = w, h
+        P = np.asarray(Image.open(GEN_B + 'v02_plaza3_raw.png').convert('RGB').resize((w, h), Image.LANCZOS)).astype(np.float32) / 255
+        P = np.clip(P * 1.6 - cv2.GaussianBlur(P, (0, 0), 2.2) * 0.6, 0, 1)      # 生图 1408 宽 → 放大后轻锐化
+        lum = P.mean(-1); bgl = cv2.GaussianBlur(lum, (0, 0), 25)
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32); self.xx, self.yy = xx, yy
+        y0 = 0.245 * h
+        m = ((lum < bgl - 0.02) | (lum < 0.13)) & (yy > y0)
+        m = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+        self.A = cv2.GaussianBlur(cv2.dilate(m.astype(np.float32), np.ones((3, 3), np.uint8)), (0, 0), 1.2)
+        sm = cv2.resize(P, (w // 2, h // 2)); ms = cv2.resize((cv2.dilate(m, np.ones((9, 9), np.uint8)) * 255).astype(np.uint8), (w // 2, h // 2))
+        bg = cv2.inpaint((np.clip(sm, 0, 1) * 255).astype(np.uint8), ms, 7, cv2.INPAINT_TELEA).astype(np.float32) / 255
+        bg = cv2.resize(bg, (w, h))
+        hole = cv2.GaussianBlur(cv2.dilate(m.astype(np.float32), np.ones((9, 9), np.uint8)), (0, 0), 5)[..., None]
+        sub = cv2.GaussianBlur(P, (0, 0), 6) * 0.45                     # 伏下去露出的是后排人的暗影，不是亮石（避免白块）
+        self.BG = bg * (1 - hole) + sub * hole                           # 人伏下去后露出的地 = 更暗的湿石（人影压过的水）
+        self.F = P
+        persp = np.clip((yy - y0) / (h - y0), 0, 1); self.persp = persp
+        def nz(seed, sc):
+            return cv2.resize(K.fbm(max(4, h // sc), max(4, w // sc), seed, 3, 3), (w, h), interpolation=cv2.INTER_CUBIC)
+        self.delay = (nz(4831, 40) - 0.5) * 0.34
+        self.depth = 0.55 + 0.6 * nz(4832, 40)
+        self.hfig = 18 + 190 * persp ** 1.25
+        red = np.clip((P[..., 0] - P[..., 2]) * 3 - 0.10, 0, 1) * np.clip(P[..., 0] * 2 - 0.3, 0, 1)
+        self.lan = cv2.GaussianBlur(red, (0, 0), 8)[..., None]
+        self.roof = np.clip(1 - yy / (h * 0.26), 0, 1)[..., None]
+        self.fog1 = K.fbm(h // 6, w // 3, 4836, 3, 5); self.fog2 = K.fbm(h // 6, w // 3, 4837, 3, 5)
+        kn = np.asarray(Image.open(GEN_B + 'fg_kneeler_cut.png').convert('RGBA')).astype(np.float32) / 255
+        ys, xs = np.nonzero(kn[..., 3] > 0.5); kn = kn[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        self.kn = kn
+        self.rain = fx2.RainSheet(4838, density=0.9)
+        self.spl = fx2.Splashes(4839)
+
+    def bow(self, t):
+        t0 = self.t0 + 0.10
+        arr = t0 + 1.05 * self.persp + self.delay
+        q = np.clip((t - arr) / 0.34, 0, 1)
+        b = q * q * (3 - 2 * q)
+        tl = V(self.T_THUNDER)
+        if t > tl: b = b * (1 + 0.12 * math.exp(-(t - tl) / 0.25) * math.sin((t - tl) * 38))
+        return b * self.depth
+
+    def kneeler(self, fr, t, cx, base_y, width, flip, t_bow, blur, z):
+        kn = self.kn[:, ::-1] if flip else self.kn
+        kh, kw = kn.shape[:2]
+        q = clamp01((t - t_bow) / 0.32); b = q * q * (3 - 2 * q)
+        sw = width; sh = width * kh / kw * (1.0 - 0.13 * b)          # 伏下去：压扁
+        sw *= z; sh *= z
+        im = cv2.resize(kn, (max(2, int(sw)), max(2, int(sh))), interpolation=cv2.INTER_AREA)
+        ang = (-6 if not flip else 6) * b                              # 前倾（朝大殿）
+        M = cv2.getRotationMatrix2D((im.shape[1] / 2, im.shape[0]), ang, 1.0)
+        M[0, 2] += cx - im.shape[1] / 2; M[1, 2] += base_y - im.shape[0]
+        L = cv2.warpAffine(im, M, (W, H), flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0, 0))
+        L = cv2.GaussianBlur(L, (0, 0), blur)
+        a = L[..., 3:4]; c = L[..., :3] / np.maximum(a, 1e-3)
+        lumc = c.mean(-1, keepdims=True)
+        c = lumc * 0.40 * np.array([0.88, 0.92, 1.0], np.float32) + 0.01
+        rim = np.clip(a - cv2.GaussianBlur(a[..., 0], (0, 0), 6)[..., None], 0, 1) * (np.mgrid[0:H, 0:W][0][..., None] < base_y - sh * 0.4)
+        return fr * (1 - a) + c * a + rim * COLDC * 0.35
+
+    def render(self, t):
+        u = self.u(t); e = eio(u)
+        tl = V(self.T_THUNDER)
+        env = 0.0 if t < tl else math.exp(-(t - tl) / 0.28)
+        flick = 0.85 + 0.15 * math.sin(t * 17.0) * math.sin(t * 5.3)
+        h, w = self.h, self.w
+        b = self.bow(t)
+        my = (self.yy - b * self.hfig * 0.30).astype(np.float32)
+        mx = (self.xx - b * self.hfig * 0.05 * np.sign(self.xx - w / 2)).astype(np.float32)
+        F = cv2.remap(self.F, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)   # 整体位移场（人连同脚下水影一起下沉），不抠洞 → 无 inpaint 白晕
+        A = cv2.remap(self.A, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)[..., None]
+        bb = cv2.remap(b.astype(np.float32), mx, my, cv2.INTER_LINEAR)[..., None]
+        F = F * (1 - 0.40 * bb * A)                                     # 俯下去的背进阴影
+        tw = t - (self.t0 + 0.10)
+        front = np.exp(-((self.persp * 1.05 - tw) / 0.07) ** 2)          # 波前：背上掠过冷光
+        P = F + (front * 0.13)[..., None] * np.array([0.82, 0.86, 0.95], np.float32) * (0.35 + 0.65 * A)
+        P = P * (1 + self.lan * (1.2 * flick)) * (1 + self.roof * 1.8 * env) * (1 + 0.35 * env)
+        f1 = cv2.resize(np.roll(self.fog1, int(t * 40) % self.fog1.shape[1], 1), (w, h))
+        f2 = cv2.resize(np.roll(self.fog2, -int(t * 22) % self.fog2.shape[1], 1), (w, h))
+        fog = (np.clip(f1 - 0.45, 0, 1) * (0.25 + 0.4 * (1 - self.persp)) * 0.6 + np.clip(f2 - 0.5, 0, 1) * 0.3)[..., None]
+        P = P * (1 - fog * 0.5) + fog * np.array([0.42, 0.44, 0.47], np.float32) * 0.5
+        zoom = (1.0 + 0.11 * ein(u, 1.5)) / self.S * 1.01
+        fr = plate_view(P, zoom, w / 2, 0.07 * h + 400 / zoom, -2.0 + 2.0 * e)        # 推近钉住大殿（压向殿门）
+        fr = fx2.ripples(fr, t, [(820, 860), (1180, 920), (560, 1000), (1500, 980)], [self.t0 + 0.4, self.t0 + 0.6, self.t0 + 0.8, self.t0 + 0.9],
+                         amt=0.5, flat=0.25, speed=200, life=1.0)
+        rt = t - self.t0
+        for k in range(2):                                              # 钟声环（与 V01 同形）从大殿方向掠过广场
+            rr = 60 + 1500 * max(0.0, rt - 0.18 * k) ** 0.85
+            if rt > 0.18 * k:
+                fr, edge = ring_warp(fr, (960, 150), rr, 34, 12 * math.exp(-rt / 1.2), sy=0.5)
+                fr = fr + edge[..., None] * COLDC * 0.08 * math.exp(-rt / 1.0)
+        fr = self.spl.draw(fr, t, y_far=500, y_near=1060, rate=110, size=0.8, amt=0.5)
+        fr = self.rain.draw(fr, t, intensity=0.75, angle=10, light=(960, 120), light_r=700)
+        # 前景虚焦跪者：推近时视差最快（往两侧、往下出画）；波前最后到达近处时伏下
+        zk = 1 + 0.35 * ein(u, 1.4)
+        fr = self.kneeler(fr, t, 300 - 160 * e, H + 70 + 60 * e, 980, False, self.t0 + 1.12, 11, zk)
+        fr = self.kneeler(fr, t, 1700 + 120 * e, H + 110 + 50 * e, 720, True, self.t0 + 1.00, 8, zk)
+        lum = fr.mean(-1, keepdims=True)
+        redm = np.clip((fr[..., 0] - fr[..., 2]) * 4 - 0.1, 0, 1)[..., None]
+        fr = (lum + (fr - lum) * (0.20 + 0.60 * redm)) * np.array([0.95, 0.98, 1.03], np.float32)
+        fr = np.clip(fr, 0, 4); fr = 0.62 * (fr / 0.62) ** 1.12 * 0.95
+        if tl <= t: fr = fr * (1 + 0.30 * pulse(t, tl + 0.05, 0.12))
         return fr, (3 if abs(t - tl) < 0.04 else 0)
 
 
@@ -1954,7 +2071,7 @@ def _bind():
 _bind()
 
 # 第八棒：节奏表（B_rhythm_v1）里起/中/止近乎同框、静止 >1 拍的镜头补镜内运镜 (z0, z1, dx, dy, rot)
-MOVE = {'V01': (1.02, 1.08, 30, 0, 0), 'V02': (1.03, 1.12, 0, 50, 0), 'V05': (1.04, 1.10, 60, 0, 0), 'V11': (1.04, 1.10, -60, 0, 0),
+MOVE = {'V01': (1.02, 1.08, 30, 0, 0), 'V02': (1.0, 1.04, 0, 20, 0), 'V05': (1.04, 1.10, 60, 0, 0), 'V11': (1.04, 1.10, -60, 0, 0),
         'V13': (1.0, 1.08, 0, -40, 0), 'V15': (1.0, 1.06, 0, 0, 0), 'V18': (1.03, 1.10, 0, 0, 2.0)}
 _SEC = [None]
 
