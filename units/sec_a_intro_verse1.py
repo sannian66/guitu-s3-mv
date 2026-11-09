@@ -19,6 +19,7 @@ import a_kit as A
 import a_r7 as R7
 import a_r8 as R8
 import a_r9 as R9
+import a_r5 as R5                                     # 第五轮（用户 12 条）开关
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
 READY = True
@@ -563,6 +564,78 @@ class A08(Shot):
         self.tex = cv2.resize(A.tex(141, 512, 5, 6), (W, H)); self.tex2 = cv2.resize(A.tex(142, 512, 30, 3), (W, H))
     def close(self, t): return eio((t - self.t0) / (V(15.05) - self.t0))
     def render(self, t):
+        return self.render_r5(t) if R5.ON['walkout'] else self.render_old(t)
+    def render_r5(self, t):
+        """第五轮 2：主角真的走出城门 —— 门槛 y=905；门内（近）→ 跨过门槛 → 门外大道上越走越远，
+        城门随后在他身后合上（ease-in 先慢后快），14.28 闪电把门外的他打成剪影，15.05 合成一线门缝。"""
+        q = clamp01((t - self.t0) / (V(15.05) - self.t0)); c = q ** 2.2
+        env = 0.0
+        for t0, a in ((V(14.28), 1.0), (V(14.28) + 0.12, 0.6), (V(14.28) + 0.3, 0.4)):
+            if t >= t0: env = max(env, a * math.exp(-(t - t0) / 0.09))
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        TH, HZ = 905.0, 742.0                                              # 门槛线 / 门外地平线
+        # 门洞外：冷雾天光 + 门外大道（地平线 742，路面湿反光向远处收窄）
+        fr = A.vgrad((0.10, 0.12, 0.16), (0.05, 0.055, 0.07)) * (1 + 3 * env)
+        fr = A.glow(fr, (960, 640), 460, 0.6 + 2.0 * env, (0.6, 0.7, 0.95), aspect=0.6)
+        gnd = np.clip((yy - HZ) / 6, 0, 1)
+        dz = np.clip((yy - HZ) / (TH - HZ), 0, 1)
+        road = np.exp(-((xx - 960) / (30 + 420 * dz)) ** 2)
+        sky = fr[int(HZ) - 6:int(HZ) - 5].copy()                                    # 湿路面反射地平线天光：近地平线亮、向门槛渐暗 → 读成往远处去的大道
+        refl = (0.85 - 0.62 * dz) * (0.75 + 0.5 * self.tex2)
+        gcol = sky * refl[..., None] + road[..., None] * np.array([0.05, 0.06, 0.085], np.float32) * (1 + 2 * env) * (1 - 0.4 * dz[..., None])
+        gcol = gcol * (1 - 0.35 * ((np.mod((xx - 960) / (0.25 + dz), 260) < 3) * dz)[..., None])
+        fr = fr * (1 - gnd[..., None]) + gcol * gnd[..., None]
+        fr = fr + np.exp(-((yy - HZ) / 3) ** 2)[..., None] * np.array([0.25, 0.3, 0.42], np.float32) * (0.3 + 1.2 * env)
+        fr = RAIN.draw(fr, t, 0.8, angle=6, light=(960, 400), layers=(0,))
+        # 主角：z = 1 + 2.6 s（等速往纵深走）；s≈0.31 跨过门槛
+        s = clamp01((t - self.t0) / (V(14.98) - self.t0))
+        z = 1 + 2.6 * s
+        hh = 760 / z; by = HZ + 298 / z + 7 * abs(math.sin(t * 6.2)) / z
+        outside = by < TH - 2
+        def hero(fr):
+            fr, _ = A.place(fr, t, S('A/back_walk'), (960 + 22 * math.sin(t * 3.1) / z, by), h=hh, rim=COLD, rim_amt=3.0 + 6 * env,
+                            rim_dir=(0, -1), grade=dict(expo=0.6 * (1 - 0.75 * env) if outside else 0.6, sat=0.5, gamma=1.2), wind=7)
+            return fr
+        if outside:                                                        # 门外：先画人，再画门/墙 → 合门把他挡在外面
+            sh = np.exp(-(((xx - 960) / (90 / z)) ** 2 + ((yy - by) / (8 / z)) ** 2))
+            fr = fr * (1 - 0.6 * sh[..., None])
+            fr = hero(fr)
+        # 城门两扇（门洞 x 520–1400，门底 = 门槛）
+        gx0, gx1 = 520, 1400; half = (gx1 - gx0) / 2
+        wL = half * (0.12 + 0.88 * c)
+        door = (((xx < gx0 + wL) & (xx >= gx0)) | ((xx > gx1 - wL) & (xx <= gx1))) & (yy < TH)
+        door = door.astype(np.float32)
+        plank = 0.75 + 0.35 * self.tex2 + 0.15 * (np.mod(xx, 70) < 3)
+        studs = ((np.mod(xx - gx0, 88) - 44) ** 2 + (np.mod(yy, 96) - 48) ** 2 < 49).astype(np.float32)
+        dcol = (plank * (0.5 + 0.5 * self.tex))[..., None] * np.array([0.05, 0.035, 0.025], np.float32) * (1 + 2 * env)
+        dcol = dcol + studs[..., None] * np.array([0.10, 0.09, 0.08], np.float32) * (1 + 3 * env)
+        fr = fr * (1 - door[..., None]) + dcol * door[..., None]
+        seamL = np.exp(-((xx - (gx0 + wL)) / 4) ** 2); seamR = np.exp(-((xx - (gx1 - wL)) / 4) ** 2)
+        fr = fr + ((seamL + seamR) * (yy > 200) * (yy < TH))[..., None] * np.array([0.6, 0.7, 1.0], np.float32) * (0.8 + 3 * env)
+        # 城墙 + 拱门
+        wall = np.ones((H, W), np.float32)
+        hole = ((((xx - 960) / 440) ** 2 + ((yy - 470) / 300) ** 2 < 1) & (yy < 470)) | ((xx > gx0) & (xx < gx1) & (yy >= 470)) | (yy >= TH)
+        wall[hole] = 0; wall = cv2.GaussianBlur(wall, (0, 0), 1.2)
+        brick = (0.7 + 0.5 * self.tex) * (1 - 0.4 * ((np.mod(yy, 60) < 3) | (np.mod(xx + 60 * (np.mod(yy // 60, 2)), 120) < 3)))
+        wcol = brick[..., None] * np.array([0.035, 0.038, 0.05], np.float32) * (1 + 2.5 * env)
+        fr = fr * (1 - wall[..., None]) + wcol * wall[..., None]
+        ed = np.clip(cv2.dilate(1 - wall, np.ones((5, 5), np.uint8)) - (1 - wall), 0, 1) * (yy < TH - 4)
+        fr = fr + ed[..., None] * np.array([0.5, 0.6, 0.85], np.float32) * (0.5 + 2 * env)
+        # 门内石板地（门槛以下）+ 门槛石 + 门缝光在湿地上的竖条倒影
+        fl = np.clip((yy - TH) / 3, 0, 1)
+        slab = (0.7 + 0.5 * self.tex) * (1 - 0.35 * ((np.mod(np.maximum(yy - TH, 0), 46 + np.maximum(yy - TH, 0) * 0.3) < 2) | (np.mod((xx - 960) / (1 + np.maximum(yy - TH, 0) / 120), 150) < 2)))
+        fcol = slab[..., None] * np.array([0.03, 0.033, 0.042], np.float32) * (1 + 2 * env)
+        fr = fr * (1 - fl[..., None]) + fcol * fl[..., None]
+        sill = np.exp(-((yy - TH - 4) / 4) ** 2) * (xx > gx0 - 40) * (xx < gx1 + 40)
+        fr = fr * (1 - 0.5 * sill[..., None]) + sill[..., None] * np.array([0.12, 0.13, 0.16], np.float32) * (1 + 3 * env)
+        gap = max(2.0, (gx1 - gx0) - 2 * wL)
+        fr = fr + (fl * np.exp(-((xx - 960) / (gap * 0.45)) ** 2) * np.exp(-(yy - TH) / 160))[..., None] * np.array([0.22, 0.27, 0.40], np.float32) * (1 + 2 * env)
+        if not outside:
+            fr = hero(fr)
+        fr = RAIN.draw(fr, t, 0.9, angle=6, light=(960, 400), layers=(1, 2))
+        fr = fog(fr, t, 0, 880, 1060, 0.30, (0.16, 0.18, 0.23), speed=(-45, 0))
+        return fr, (3 if env > 0.6 else 0)
+    def render_old(self, t):
         u = self.u(t)
         env = 0.0
         for t0, a in ((V(14.28), 1.0), (V(14.28) + 0.12, 0.6), (V(14.28) + 0.3, 0.4)):
@@ -935,6 +1008,8 @@ class V08(Shot):
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         fr = fr * (1 - 0.45 * np.clip((np.hypot(xx - 1300, yy - 300) - 500) / 1300, 0, 1))[..., None]     # 烛光衰减
         # 纸上原有墨书（诏文，淡）：右侧三列小楷
+        if not hasattr(self, 'doc') and R5.ON['garble']:
+            self.doc = R5.garble_doc(T)                                                        # 第五轮 5：诏文 → 乱码（天书式假字）
         if not hasattr(self, 'doc'):
             L = T.Layer()
             for ci, col in enumerate(('奉旨查办逆犯一名', '目无王法擅杀官兵', '罪证确凿着即拿问')):
@@ -1826,6 +1901,7 @@ CUTS = {
     'V06': ('hard', 0, 0, {}),
     'V07': ('match_cut', 0.08, 0.10, dict(shape='line', center=(960, 600), angle=0, mode='cut')),   # 寒光横线 ↔ 丹陛顶边
     'V08': ('paper_tear', 0.10, 0.20, dict(seed=8, angle=6)),
+    **({'V08': ('a_zoom2', 0.14, 0.20, dict(center=(860, 470), seed=8))} if R5.ON['zoom'] else {}),   # 第五轮 4：撕纸 → 推镜穿越（推进高处剪影，玉玺从中心开出）
     'V09': ('a_brush', 0.14, 0.20, dict(seed=9)),                                    # 第五棒：飞白大笔横扫（水墨），替换蓝色闪电圈
     'V10': ('hard', 0, 0, {}),
     'V11': ('flash_red', 0.03, 0.10, {}),
@@ -2217,7 +2293,7 @@ class Section:
             k = t - TITLE_HIT
             fr = TITLE.draw(fr, t, out=clamp01((t - V(13.35)) / 0.45), sheen=clamp01((t - V(11.52)) / 0.7) if t >= V(11.52) else None,
                             glow=0.5 * math.exp(-max(0, k) / 0.3) + 0.22 * sum(math.exp(-max(0.0, t - V(b)) / 0.15) * (t >= V(b)) for b in (8.75, 9.22, 9.68, 10.15, 10.61, 11.05, 11.98, 12.45, 12.89)))
-        if t < 7.9: fr = credits(fr, t)
+        if t < 7.9 and not R5.ON['credits_off']: fr = credits(fr, t)          # 第五轮 1：开头署名去掉（片尾已有）
         fr = lyrics(fr, t)
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         out = K.finish(fr, t, ca=ca, vig=0.45, red_keep=1.0)
