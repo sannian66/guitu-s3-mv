@@ -194,3 +194,32 @@ def shake(t, t0, amp=14.0, tau=0.12, seed=0):
     if a < 0: return 0.0, 0.0
     k = amp * math.exp(-a / tau)
     return k * math.sin(a * 71 + seed), k * math.cos(a * 57 + 2 * seed)
+
+
+_FEATH = None
+def a_cleave8(A_, B_, p, angle=32.0, center=(960, 540), mode='open', col=(1.0, 0.35, 0.15)):
+    """a_r7.a_cleave 的修正版（critic_A_r5 P1-6/7）：原版两块用「有效画面（黑边内）」作遮罩平移，
+    一块往上走时它的下沿取自黑边外 → 遮罩为 0 → 漏出 B 的碎片（V12 入右半脸上的恶徒衣角）。
+    这里改用整帧（镜头本来就渲染满 1080）+ 画框四周 80px 羽化，碎片不再出现。"""
+    global _FEATH
+    import a_r7
+    if p < 0.3: return a_r7.a_cleave(A_, B_, p, angle, center, mode, col)
+    if _FEATH is None:
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        _FEATH = np.clip(np.minimum.reduce([xx, W - 1 - xx, yy, H - 1 - yy]) / 80.0, 0, 1)
+    th = math.radians(angle); dv = (math.cos(th), math.sin(th)); nv = (-dv[1], dv[0])
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    sd = (xx - center[0]) * nv[0] + (yy - center[1]) * nv[1]
+    q = (p - 0.3) / 0.7; e = q ** 1.6
+    sep, sl = (40 + 1300 * e, 120 * e) if mode == 'open' else (20 + 80 * e, 2400 * e)
+    out = B_.copy()
+    for sgn in (1, -1):
+        tx = sgn * (nv[0] * sep + dv[0] * sl); ty = sgn * (nv[1] * sep + dv[1] * sl)
+        M = np.float32([[1, 0, tx], [0, 1, ty]])
+        half = cv2.warpAffine(A_, M, (W, H), borderMode=cv2.BORDER_REPLICATE)
+        mk = cv2.warpAffine(((sd > 0) if sgn > 0 else (sd <= 0)).astype(np.float32) * _FEATH, M, (W, H))
+        mk = mk * (1 - max(0.0, (q - 0.65) / 0.35))
+        edge = np.exp(-((sd - sgn * sep) / 3.0) ** 2) * mk
+        out = out * (1 - mk[..., None]) + half * mk[..., None]
+        out = out + edge[..., None] * np.array(col, np.float32) * 1.6 * (1 - q)
+    return out

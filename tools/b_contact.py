@@ -1,7 +1,7 @@
 """[B组] 联系表 / 关键帧（按本组 SHOTS/CUT 表取帧，不用 tools/sec_contact.py）
   python3 tools/b_contact.py render <tag> i0 i1     渲第 i0..i1 帧条目到 $B_CACHE（默认 ../b_cache）/<tag>/（分块跑，>1 帧须 tools/cpu_slot.sh 包裹）
   python3 tools/b_contact.py sheet  <tag> out.jpg   拼图
-tag: contact（每镜中点帧，预副歌一 14 + 主歌二 25） | keys（转场中间帧 + 歌词关键帧）"""
+tag: rhythm（每镜起/中/止三帧）| contact（每镜中点帧，预副歌一 14 + 主歌二 25） | keys（转场中间帧 + 歌词关键帧）"""
 import sys, os, json
 ROOT = '/workspace/work/mv'; sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
 os.environ.setdefault('SPRITE_MODE', '1')
@@ -17,6 +17,11 @@ def items(tag):
         for m, key in ((P1, 'pre1'), (V2, 'verse2')):
             for S, a, b in zip(m.SHOTS, m.CUT_F, m.CUT_F[1:]):
                 out.append((key, (a + b) // 2, f'{S.__name__} {a / FPS:.2f}-{b / FPS:.2f}'))
+    elif tag == 'rhythm':                       # 第八棒：每镜起/中/止三帧（评审判镜内运动）
+        for m, key in ((P1, 'pre1'), (V2, 'verse2')):
+            for S, a, b in zip(m.SHOTS, m.CUT_F, m.CUT_F[1:]):
+                for nm, f in (('起', a + 4), ('中', (a + b) // 2), ('止', b - 2)):
+                    out.append((key, f, f'{S.__name__} {nm}'))
     else:
         for m, key in ((P1, 'pre1'), (V2, 'verse2')):
             for S, a in zip(m.SHOTS[1:], m.CUT_F[1:]):
@@ -28,6 +33,8 @@ def items(tag):
                ('verse2', 99.1, '量'), ('verse2', 102.7, '反抗'), ('verse2', 104.0, '天命'), ('verse2', 105.4, '上苍'), ('verse2', 105.75, '碑断'),
                ('verse2', 107.3, '命'), ('verse2', 110.3, '倒影'), ('verse2', 111.8, '颠倒'), ('verse2', 113.5, '刀'), ('verse2', 114.9, '锋重新划'), ('verse2', 117.0, '向')]
         out += [(k, int(round(t * FPS)), f'字 {s}') for k, t, s in lyr]
+        # 第八棒：上轮评审出问题的帧号复核
+        out += [('pre1' if f < 2000 else 'verse2', f, '复核') for f in (1405, 1445, 1712, 2925, 3014, 3017, 3021, 3027, 3162, 3170, 3330, 3440, 3471, 3513)]
     return out
 
 
@@ -36,13 +43,14 @@ def render(tag, i0, i1):
     for i, (key, f, lab) in enumerate(items(tag)):
         if not (i0 <= i <= i1): continue
         m = P1 if key == 'pre1' else V2
+        if os.path.exists(f'{d}/{i:03d}.jpg') and not os.environ.get('B_REDO'): continue
         im = Image.fromarray(m.frame(f, {})).resize((640, 360), Image.LANCZOS)
         im.save(f'{d}/{i:03d}.jpg', quality=90); print(i, f, lab, flush=True)
 
 
 def sheet(tag, out):
     font = ImageFont.truetype(ROOT + '/fonts/NotoSerifSC-Bold.otf', 20)
-    its = items(tag); cols = 6; rows = (len(its) + cols - 1) // cols
+    its = items(tag); cols = 6 if tag != 'rhythm' else 3; rows = (len(its) + cols - 1) // cols
     sh = Image.new('RGB', (cols * 640 // 2 * 2, rows * 360))
     for i, (key, f, lab) in enumerate(its):
         p = f'{CACHE}/{tag}/{i:03d}.jpg'

@@ -1630,7 +1630,11 @@ class V21(Shot):
         a = t - ts
         L = T.Layer()
         p = cprog(7, [8], t, 0.12)[0]
-        if p > 0: T.place(L, '锋', 690, 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=eout(p), scale=1 + 0.3 * (1 - eout(p)))
+        tf = CT(7, 8)
+        if t < tf:                                                                      # 第八棒（P1-6）：转场斩缝里就露出「锋」——随刀势自右滑入，42.80 落定
+            s_ = clamp01((t - (self.t0 - 0.12)) / (tf - (self.t0 - 0.12)))
+            T.place(L, '锋', 690 + 760 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=0.9)
+        elif p > 0: T.place(L, '锋', 690, 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=max(0.9, eout(p)), scale=1 + 0.08 * (1 - eout(p)))
         p2 = cprog(7, [9], t, 0.12)[0]
         if p2 > 0: T.place(L, '芒', 1240, 530, 500, (0.86, 0.12, 0.08), 'xing', alpha=eout(p2), scale=1 + 0.3 * (1 - eout(p2)))
         if a < 0:
@@ -1640,7 +1644,7 @@ class V21(Shot):
                                style_kw=dict(shadow=0.7, glow=0.3))
             if a < 0.07: fr = fr * 1.5 + 0.07 * RED
             # 墨缝：斩线处渗出墨（给 B 组 ink_bleed 入口）
-            k = clamp01((a - 0.35) / 0.38)
+            k = clamp01((a - 0.42) / 0.31) ** 1.5                                         # 第八棒（P1-6）：墨缝收得更晚，43.9 前「锋芒」余烬仍在
             if k > 0:
                 yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32)
                 th = math.radians(-62); n = (-(xx * 2 - 960) * math.sin(th) + (yy * 2 - 540) * math.cos(th))
@@ -1695,7 +1699,7 @@ CUTS = {
     'V18': ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）
     'V19': ('hard', 0, 0, {}),
     'V20': ('hard', 0, 0, {}),
-    'V21': ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(1320, 540), mode='open', col=(1.0, 0.85, 0.6))),   # 第七棒：V20 撩刀弧光一线斩开画面，露出「锋」（原灰平板 + 半截「锋」重复）
+    'V21': ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(1420, 540), mode='open', col=(1.0, 0.85, 0.6))),   # 第七棒：V20 撩刀弧光一线斩开画面，露出「锋」（原灰平板 + 半截「锋」重复）
 }
 
 M3 = V3.Move3
@@ -2022,7 +2026,7 @@ class Section:
             if name == 'a_seam': return a_seam(Af, B, p), max(ca1, ca2)
             if name == 'a_split': return a_split(Af, B, p, **kw), max(ca1, ca2)
             if name == 'a_glyph': return a_glyph(Af, B, p, **kw), max(ca1, ca2)
-            if name == 'a_cleave': return R7.a_cleave(Af, B, p, **kw), 0
+            if name == 'a_cleave': return R8.a_cleave8(Af, B, p, **kw), 0
             return TR.transition(name, Af, B, p, **kw), max(ca1, ca2)
         fr, ca = s.render(t)
         name = CUTS.get(self.ids[i], ('hard',))[0]
