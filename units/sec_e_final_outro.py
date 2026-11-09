@@ -24,7 +24,7 @@ Sub = R5.SubD          # 第五棒：副句随画面漂移、去句首朱印、�
 from e_kit import (W, H, BAR, GOLD, GOLDW, RED, REDT, WHITE_T, GOLD_T, INK, put, Lyr, row, sstep, c01, eio, eout, ein,
                    G_DAWN, G_HOT, G_SIL)
 
-READY = False
+READY = True
 FPS = 30
 F0, F1 = 5797, 7241
 LINES = T.load_lines()
