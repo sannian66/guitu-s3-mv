@@ -1484,21 +1484,21 @@ class C26(Shot):
         r = np.random.default_rng(26)
         S = 2; w, h = W // S, H // S
         pts = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
-        for _ in range(110):
-            a = r.uniform(0, 6.283); d = (r.random() ** 0.7) * 620
+        # 第十一棒（critic_C_r5 P2⑤ 三角碎片低多边形感）：Delaunay 三角 → Voronoi 多边形石块（5–8 边、大小不一），
+        # 中心密（碎）外圈疏（大块）；边再被噪声打成毛口
+        for _ in range(170):
+            a = r.uniform(0, 6.283); d = (r.random() ** 0.85) * 640
             pts.append((min(w - 1, max(0, w / 2 + math.cos(a) * d * 1.2)), min(h - 1, max(0, h / 2 + 20 + math.sin(a) * d * 0.75))))
-        for x in np.linspace(0, w - 1, 9):
-            pts += [(x, 0), (x, h - 1)]
-        for y in np.linspace(0, h - 1, 6):
-            pts += [(0, y), (w - 1, y)]
-        sd = cv2.Subdiv2D((0, 0, w, h))
+        sd = cv2.Subdiv2D((-200, -200, w + 400, h + 400))
         for p_ in pts: sd.insert((float(p_[0]), float(p_[1])))
+        facets, _ = sd.getVoronoiFacetList([])
         tris = []
-        for tr in sd.getTriangleList():
-            q = tr.reshape(3, 2)
-            if (q < -1).any() or (q[:, 0] > w + 1).any() or (q[:, 1] > h + 1).any(): continue
+        for q in facets:
+            q = np.asarray(q, np.float32).reshape(-1, 2)
+            q[:, 0] = np.clip(q[:, 0], 0, w - 1); q[:, 1] = np.clip(q[:, 1], 0, h - 1)
+            if cv2.contourArea(q) < 30: continue
             c = q.mean(0); d = math.hypot(c[0] - w / 2, (c[1] - h / 2 - 20) / 0.75)
-            tris.append((q.astype(np.float32), c, d, r.uniform(-1, 1), r.uniform(0.6, 1.3)))
+            tris.append((q, c, d, r.uniform(-1, 1), r.uniform(0.6, 1.3)))
         self.tris = tris; self.S = S
         self.wall = cv2.resize(plate_view('C5/c22_wall', 0.5, 0.62, 2.0), (w, h))
         self.nz = cv2.GaussianBlur(r.random((h, w)).astype(np.float32), (0, 0), 2.5)
@@ -1519,7 +1519,7 @@ class C26(Shot):
             dirv = np.array([c[0] - w / 2, c[1] - h / 2 - 20], np.float32); dirv /= (np.linalg.norm(dirv) + 1e-3)
             mv = dirv * (fly * 260 + fly * fly * 300)
             M = cv2.getRotationMatrix2D((float(c[0]), float(c[1])), sp * 160 * fly, sc); M[:, 2] += mv
-            m = np.zeros((h, w), np.float32); cv2.fillConvexPoly(m, q.astype(np.int32), 1.0, cv2.LINE_AA)
+            m = np.zeros((h, w), np.float32); cv2.fillPoly(m, [q.astype(np.int32)], 1.0, cv2.LINE_AA)
             if fly > 0.002:
                 x0_, y0_ = q.min(0).astype(int) - 4; x1_, y1_ = q.max(0).astype(int) + 5
                 sl = (slice(max(0, y0_), min(h, y1_)), slice(max(0, x0_), min(w, x1_)))
@@ -1536,7 +1536,7 @@ class C26(Shot):
             th = np.float32([[1, 0, -dirv[0] * 5 * min(1, fly * 3)], [0, 1, 6 * min(1, fly * 3)]])      # 厚度：暗侧面
             As = cv2.warpAffine(Am, th, (w, h))
             out = out * (1 - As[..., None] * 0.9) + As[..., None] * 0.03
-            out = out * (1 - Am[..., None]) + Pm * shade + edge * np.array([0.8, 0.85, 1.0], np.float32) * 0.6 * fl
+            out = out * (1 - Am[..., None]) + Pm * shade + edge * np.array([0.8, 0.85, 1.0], np.float32) * 0.38 * fl   # 第十一棒：勾边 0.6→0.38（去贴纸描边感）
         fr = cv2.resize(out, (W, H))
         fr = dust(fr, t, 261, n=200, amt=0.6, drift=(0, 160), region=(0, BAR, W, H - BAR))
         fr = rain(fr, self.t0 + (t - self.t0) * 0.4, 260, inten=0.8, angle=6)
