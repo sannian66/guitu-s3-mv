@@ -434,3 +434,7 @@
 ## Nano Banana 长安版小样（2026-11-10 07:27 CST）
 - gemini-3-pro-image-preview 3 分/张 ×4；参考=当前帧+风格图（只取配色线条）；脚本 tools/style_nb_test.py；任务号 out/style_test/nb_tasks.txt
 - 首次运行代理 502 中断，丢失 2 个已提交任务号（约 6 分），另测试提交 3 分
+
+## GPT Image 2.5（sunburst）小样（2026-11-10 07:34 CST）
+- 6 分/张；同提示词同参考；tools/style_gen_test.py sunburst g25 [镜头]；74.5 首次提交连接被断开后重提（可能重复扣 6 分）
+- 对比 out/style_test/g25_compare.jpg（第一版 / NB Pro / GPT 2.5）
