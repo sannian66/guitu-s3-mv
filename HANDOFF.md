@@ -197,3 +197,59 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - 导出：`export_full_sprite.sh` → 母版 `full_sprite_master.mp4`（视频流拷贝 CRF17 + AAC 320k，不入库）、网络版 `full_sprite_web.mp4`（1080p CRF21 + AAC 192k，不入库）、预览版 `full_sprite_720p.mp4`（CRF26 + AAC 128k，入库）；每个文件 ffprobe + 全量解码校验，结果写 `out/full_sprite/verify.txt`。
 - 同步：`crew/export_chat.py` 改为以 `CONVERSATION_part2.md`（前三任冻结）为底 + 本任 journal（旧版指向上一任的 journal 目录，在新会话里会把前任记录清空）。另设定时任务每 30 分钟 autosync + 渲染中断自动续跑（到 2026-11-11 08:00）。
 - 安全：之前贴进对话的 RH Key 建议作废换新（仓库公开，导出时已打码）。
+
+## A 组第六棒交接（2026-11-09）
+- **负责文件**：`units/sec_a_intro_verse1.py`（a_intro_verse1，帧 0–1321，29 镜，SHOTS/CUTS 表驱动）、`units/a_r6.py`（第六棒辅助：精灵预处理/去灰边、宣纸、纸面印痕、凹刻字、按原图点锚定，只被 sec_a 用）、`units/a_kit.py`、`units/a_contact6.py`（联系表分块脚本）、`tools/a_test.py`（逐镜试渲）、`crew/round4/A_storyboard.md`、`crew/round4/A_gen_state.json`。
+- **本棒改了什么**（对照 `crew/round4/critic_A_r3.md` = 72 分、不可交付 V08/V09/V17；提交 787810e → 8ce2eb6，12:47–13:11 CST）：
+  - **V08**：握玺侧面 CU → 俯拍纸面印痕，层级 纸 → 印 → 玺影（精灵 `A_r6/tsh_seal_lift`，只裁手 + 玺）。（08b78d8）
+  - **V09**：青铜天平生图 `A_r6/bronze_scale` 作底 + 暗殿三层 + 歌词梁下两列竖排。（08b78d8）
+  - **V15**：换 `A_r6/carve_grip` 双手握柄横刻一行「我的主张」；后又改刻完收刀让字。（eecf2ec、8ce2eb6）
+  - **V16**：金光里巨印剪影成形（`A_r6/giant_seal`）；入转场改 `a_glyph`（「主」字遮罩，原叠化两脸糊在一起）。（eecf2ec、8ce2eb6）
+  - **V17**：重做 = 巨印侧面坠落 → 石坑凹刻「正」，不着红（去红方印）；减体积光。（eecf2ec、8ce2eb6）
+  - **V18**：印坑裂缝作人物引导线；入转场 flash_red → 尘浪 `smoke_through`（去红印感）。（6b82d5e、8ce2eb6）
+  - **V13**：重构图；入转场 → slash_wipe（6b82d5e），最终 CUTS 表为 `a_split` 沿 V12 斩线一刀两块（8ce2eb6）。
+  - **V14**：鞘口火星成字，字不再上刀身（去撞 S046）。**V12**：红雨幕 + 歌词移左下。**V04**：改远处火把光斑长街，军阵背景减到 2 次。**V03**：「五百」切前退净。**A03**：入转场改冷光细线。**A07a**：片名区城楼压暗虚焦、去前景旗。（均 6b82d5e）
+  - 歌词错位修正（eecf2ec）。
+- **联系表 / 关键帧**：`out/round4/A_contact_v6.jpg` + `A_contact_v6_p0.jpg`、`_p1.jpg`（每镜 55% 帧）；`out/round4/A_keys_v5.jpg` + `A_keys_v5_p0.jpg`–`_p3.jpg`（转场中点 + 关键帧，含 V08 落印前后、V17 落地前后、V09 中帧、A07a 11.5/12.9）。
+- **积分**：本棒 4 张 × 3 = 12 点（tsh_seal_lift、bronze_scale、giant_seal、carve_grip，均 try1 采用）；A 组累计 **57/80**（`A_gen_state.json` spent=57；genlog 已记采用行）。
+- **生图资产**：`assets/gen/A_r6/{tsh_seal_lift,bronze_scale,giant_seal,carve_grip}_{raw,cut}.png`；候选原图在仓库外 `gen_cands/A_r6/*_try1_0.png`。
+- **已知风险 / 未决**：
+  - `crew/round4/A_storyboard.md` 只记到第五棒，**第六棒返工没写进 storyboard**（以本节和 git log 为准）。
+  - `out/round4` 没有 A 的每镜三帧（triple）联系表或低清 mp4；critic_A_r3「下轮评审要看到的」要求二选一，`a_contact6.py triple` 已支持但未出图。镜内运动仍只靠单帧判断。
+  - critic_A_r3 P1 第 18 条（V10 盘体厚度 /「里」字）、P2 15–17、19（Cait 署名、A02 月、脸部特写 5 次、V21 锋芒背景）git log 里没有第六棒对应改动。
+- **下一步**：第四轮评审中（总导演派全新上下文评审，看 A_contact_v6_p* + A_keys_v5_p*）。
+- **接手要点**：
+  - 代码路径写死 `/workspace/work/mv`（软链到仓库）。超过 1 帧的渲染必须 `tools/cpu_slot.sh` 包一层。
+  - 单帧 / 逐镜试渲：`python3 tools/a_test.py V08 V17`（每镜 15%/55%/92% 三帧 → `/tmp/at_<镜>_<比例>.jpg`，打印耗时/报错）；代码内取帧 `M.frame(f, cache)`（`import sec_a_intro_verse1 as M`）。
+  - 联系表：`tools/cpu_slot.sh python3 units/a_contact6.py part <contact|keys|triple> <i0> <i1>`（→ `/tmp/acon6/`，可续跑，已渲帧跳过）→ `python3 units/a_contact6.py assemble <kind> out/round4/A_contact_v7.jpg [每块行数，默认 4]`（整图 + `_p<n>.jpg` 分块）。
+  - 提交只加自己的路径：`git add <文件> && git commit -m "[A组] …" -- <文件>`，shell 带 github 凭据。
+
+## E 组第六棒交接（2026-11-09）
+- **负责文件**：`units/sec_e_final_outro.py`（e_final_outro，帧 5797–7241，38 镜）、`units/e_r6.py`（第六棒新增：纸脸材质、light_sweep、gold_leaf、lava_crack、秤）、`units/e_kit.py`、`units/e_r3.py`、`units/e_r5.py`、`tools/e_contact.py`、`tools/e_check.py`、`crew/round4/E_storyboard.md`（「第六棒返工」一节是逐镜权威记录）。
+- **本棒改了什么**（对照 `crew/round4/critic_E_r3.md` = 72.5 分、不可交付 E08/E02/E20，主攻「不重复」；提交 d6303ff → 520f821，12:49–13:12 CST，1–18/n）：
+  - **E08**：换 `E_r6/emperor_cu`（与 E07 同一白发老者）+ 宣纸叠皱/接缝 `R6.paper_skin`，火从眉心烧洞露出鬼屠双眼（f189950）；亮部去暖，白发不读成金发（9cb299b）。
+  - **E02**：去背影举刀指日 → 正面极低机位 3/4 扛刀（`E_r6/shoulder_low`），「刀」「不」「放」三方小朱印随唱盖在拳与护臂上（storyboard；git 里随 22a0218「E02 联动」）。
+  - **E20**：低地平线、日轮露上缘偏右，偏左墨色巨字「天」逆光剪影自下熔塌；入转场 → `R6.light_sweep`。（89be222）
+  - **E01**：竖刀刀尖朝天（`E_r6/blade_tip`，4K 原图裁刀尖重抠），碑拓「血」在刃面 + 刃面倒影，日光沿刃自下而上扫，「未冷」移右上。（22a0218）
+  - **E29/E30**：片名重排（340px 行书、字距 0.14em、墨迹宽 58%，224.57s 前四字成形、「邪」朱红金边）；E30 入点改沿斩线暖闪。（64b8950）
+  - **E22**：横刀成秤（「我」「来」两端秤盘、「量」刀心秤砣、日为支点）。（7d267ca）
+  - **E27c / E28 / E26**：斩线移到「理｜昭」字缝、去重影与下坠模糊；E28 入转场 impact 不带出匾；「正道沧桑」全金 + 墨描边 + 暗衬、上移。（8506f1d）
+  - **E31**：正俯拍微距焦土残纸残字；E34 入转场改灰烟（e0e09c3），烟色压暖（b7febc9）。**E33**：近景黑漆刀鞘 + 红穗（`E_r6/scabbard_tassel`，见 storyboard），署名提前 1.0s 出完（9cb299b）。**E34**：推镜 + 远影向日走（storyboard）。
+  - **E11 / E12**：E11 正面压暗 + 右侧暖轮廓光 + 接触阴影；E12 俯拍人物 ×1.5 + 印心插刀。（b7febc9）
+  - **E18 / E19**：中缝 → `R6.lava_crack` + 两卡外错，「何」移到 E19；E19 入转场 → `R6.gold_leaf`。（8a5897b）
+  - **E28 / E27b**：取景放宽到马尾 + 腰带（去脸）、编织纹 + 逆光透红边；E27b 剪影满画高、轮廓光加倍。（10198fb）
+  - **P2**：「骨未凉」在 E14T 内出完；E10「它」改金；E05 whip 减弱留匾纹。（8a6b041）
+  - storyboard 记第六棒（c02d29a）。git log 里没有单独的 3/n、9/n 提交。
+- **联系表 / 关键帧**：`out/round4/E_contact_v6.jpg` + `E_contact_v6_p0.jpg`–`_p2.jpg`（38 镜中点，1920×≤1184）；`out/round4/E_keys_v6.jpg` + `E_keys_v6_p0.jpg`–`_p3.jpg`（转场中点/冲击帧 + 歌词关键帧）。
+- **积分**：本棒 4 张 × 3 = 12 点（emperor_cu、shoulder_low、blade_vert、scabbard_tassel，均 try1 采用，genlog 已记）；E 组累计 **54/80**。
+- **生图资产**：`assets/gen/E_r6/{emperor_cu,shoulder_low,blade_vert,blade_tip,scabbard_tassel}_{raw,cut}.png`（blade_tip 由 blade_vert 4K 原图裁出，E01 只用 blade_tip）；候选在仓库外 `gen_cands/E/E_r6/*_try1_0.png`。
+- **已知风险 / 未决**：
+  - E06 挂轴随机化未做（storyboard 明记）。
+  - 第六棒 storyboard 没有写「未决 / 自评弱点」小节；E_storyboard 前几棒遗留项（E07 纸扎近看灯笼感、E03 碑林程序方碑、副句漂移/E36 呼吸只验单帧）未见第六棒改动。
+  - 仍未出 mp4，碎切节奏与镜内运动只验单帧。
+- **下一步**：第四轮评审中（总导演派全新上下文评审，看 E_contact_v6_p* + E_keys_v6_p*）。
+- **接手要点**：
+  - 代码路径写死 `/workspace/work/mv`。超过 1 帧的渲染必须 `tools/cpu_slot.sh` 包一层。
+  - 单帧核查：`python3 tools/e_check.py /tmp/e.jpg 6080`（多帧：`tools/cpu_slot.sh python3 tools/e_check.py out.jpg f1 f2 …`，640 宽网格；`FULL=1` 另存全尺寸 `/tmp/e_<f>.png`）。
+  - 联系表：`tools/cpu_slot.sh python3 tools/e_contact.py contact out/round4/E_contact_v7.jpg`；关键帧：`tools/cpu_slot.sh python3 tools/e_contact.py keys out/round4/E_keys_v7.jpg`；分块：`python3 tools/e_contact.py split out/round4/E_contact_v7.jpg`；只看帧号：`python3 tools/e_contact.py list`。
+  - 提交只加自己的路径：`git add <文件> && git commit -m "[E组] …" -- <文件>`，shell 带 github 凭据。
