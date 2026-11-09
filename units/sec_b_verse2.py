@@ -784,7 +784,8 @@ class V06(Shot):
         x, y = K.grid()
         fl = 0.85 + 0.15 * math.sin(t * 19) * math.sin(t * 6.1)
         fr = self.bg + np.exp(-(((x - 960) / 600) ** 2 + ((y - 1100) / 400) ** 2))[..., None] * np.array([0.35, 0.16, 0.05], np.float32) * fl
-        fr, _ = put_at(fr, self.sp, t, (0.42, 0.30), (930, 400), 2100,
+        e6 = eio(u)                                                    # 第十一棒（critic_B_r4 P1-6 V06 近乎定格）：冷笑时下巴微抬、头侧转 + 慢推横移
+        fr, _ = put_at(fr, self.sp, t, (0.42, 0.30), (930 - 36 * e6, 400 - 22 * e6), 2100 * (1 + 0.03 * e6), rot=-2.2 * e6,
                        grade=dict(expo=0.78 * fl, sat=0.7, tint=(1.08, 0.94, 0.80), lift=0.0, gamma=1.15),
                        rim=dict(col=(1.0, 0.62, 0.30), amt=2.0, dir=(0.0, 1.0)), wind_amp=2, breathe=0.004,
                        shade=(1300, 1900, 0.35, 300, -0.15), wrap=0.25)
@@ -796,7 +797,10 @@ class V06(Shot):
             if pc <= 0: continue
             T.place(L, ch, 260, 330 + i * 110, 92, color='white', fname='serif_sb', alpha=min(1, pc * 2))     # 第十棒：去金「谁」
         fr = T.compose(fr, L, shadow=0.85, glow=0.0)
-        fr = cam(fr, 1.0 + 0.05 * eio(u), 0, 0)
+        # 烛焰在画外下方摇：底光的亮区左右晃（脸上的光真的在动）
+        sway = 90 * math.sin(t * 7.3) + 40 * math.sin(t * 13.1)
+        fr = fr * (1 + 0.22 * np.exp(-(((x - 930 - sway) / 380) ** 2 + ((y - 760) / 260) ** 2)))[..., None]
+        fr = cam(fr, 1.0 + 0.11 * eio(u), 30 * eio(u), 0)
         return fr, 0
 
 
@@ -826,7 +830,8 @@ class V07(Shot):
         x, y = K.grid()
         fr = self.bg.copy()
         k = eout(clamp01((t - self.t0) / 0.25), 3)                 # 攥紧：手从略松到紧（推进 + 微抖）
-        fr, Aw = put_at(fr, self.sp, t, (0.24, 0.30), (820, 560), 2700 * (1.0 + 0.04 * k),
+        tr = 1.6 * math.sin(t * 41) * k                                 # 第十一棒（P1-6）：攥紧后指节发颤 + 手腕一拧
+        fr, Aw = put_at(fr, self.sp, t, (0.24, 0.30), (820 + tr, 560 + 0.6 * tr), 2700 * (1.0 + 0.04 * k), rot=-2.5 * k,
                         grade=dict(expo=0.92, sat=0.75, tint=(1.04, 0.96, 0.86), lift=0.0, gamma=1.04),
                         rim=dict(col=(1.0, 0.66, 0.32), amt=1.6, dir=(0.9, -0.3)), wind_amp=0, shade=None, wrap=0.3)
         # 镂空窗棂投影：字形光斜投（sx 拉伸 + 倾斜），窗格木条把字切成几块
@@ -835,7 +840,8 @@ class V07(Shot):
         L = T.Layer(); T.place(L, '权', 1180, 540, 600, color='white', fname='serif_black', alpha=1.0, rot=8, sx=1.2, sy=1.0, texture=False)
         lat = ((np.abs(((x + 0.25 * y) % 330) - 165) < 7) | (np.abs((y % 300) - 150) < 6)).astype(np.float32)
         # 第十棒：字不再是发光金字——窗洞的光斑投在墙与手上，「权」是窗上镂刻的木花投下的**影**（光里一个黑字）
-        win = np.clip(1 - np.maximum(np.abs((x - 1180 - 0.14 * (y - 540)) / 430), np.abs((y - 540) / 400)) ** 8, 0, 1)
+        wdx = 50 * math.sin(t * 6.1) + 25 * math.sin(t * 15.7)                   # 第十一棒：烛焰摇 → 窗光斑在手背上来回扫
+        win = np.clip(1 - np.maximum(np.abs((x - 1180 - wdx - 0.14 * (y - 540)) / 430), np.abs((y - 540) / 400)) ** 8, 0, 1)
         Lm = np.clip(win * (1 - lat) * (1 - 0.92 * np.clip(L.A, 0, 1)), 0, 1)
         Lm = cv2.GaussianBlur(Lm, (0, 0), 5)
         light = Lm * pq * fl * (1 + 0.8 * pulse(t, V(self.T_QUAN), 0.15))
@@ -846,7 +852,7 @@ class V07(Shot):
         fr = fx2.heat_haze(fr, t, amt=2.5 * pq, scale=40, speed=1.4, seed=52)
         hk = hitp(t, self.T_QUAN, 0.1)
         dx, dy, dr = shake(t, 2 + 8 * hk, 11, 52)
-        fr = cam(fr, 1.0 + 0.10 * eio(u) + 0.03 * hk, dx, dy, dr)
+        fr = cam(fr, 1.0 + 0.16 * eio(u) + 0.03 * hk, dx - 40 * eio(u), dy, dr)
         return fr, (3 if hk > 0.5 else 0)
 
 
