@@ -1287,10 +1287,18 @@ class V15(Shot):
     def __init__(self):
         self.sp = spr('S055/walk_look_up')
         sk = night_sky(6001, top=(0.02, 0.022, 0.03), bot=(0.10, 0.105, 0.12), horizon=0.8)
-        wl, wm = city_wall_far(6002, 600, 820, tone=0.05, crenel=False)
-        wl = K.blur_ds(wl, 4); wm = K.blur_ds(wm, 4)
-        self.bg = sk * (1 - wm[..., None]) + wl * wm[..., None]
+        # 第十棒：去城墙（避开副歌一墙段）→ 旷野两层山脊（远淡近黑，雨雾大气透视）
         x, y = K.grid()
+        r = np.random.default_rng(6002)
+        self.bg = sk
+        for k, (base, amp, tone, bl) in enumerate(((640, 120, 0.075, 6), (760, 70, 0.035, 2))):
+            xs = np.linspace(0, 1, W)
+            ridge = base - amp * (0.55 * np.sin(xs * (3.1 + k) + r.random() * 6) + 0.30 * np.sin(xs * (9.0 + 3 * k) + r.random() * 6)
+                                  + 0.15 * np.sin(xs * (27.0 + 5 * k) + r.random() * 6))
+            m = np.clip((y - ridge[None, :]) / 3, 0, 1).astype(np.float32)
+            m = K.blur_ds(m, bl)
+            mist = np.clip(1 - (y - ridge[None, :]) / 160, 0, 1)[..., None] * 0.03
+            self.bg = self.bg * (1 - m[..., None]) + (np.float32(tone) + mist) * np.array([0.95, 0.98, 1.05], np.float32) * m[..., None]
         self.gm = sstep(820, 840, y)
         self.bg = self.bg * (1 - self.gm[..., None]) + self.gm[..., None] * 0.03
         self.bolt = fx2.Lightning(6003, p0=(1500, 120), p1=(1700, 700), branches=6)
