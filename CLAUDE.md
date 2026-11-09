@@ -36,3 +36,8 @@
 ### 已被用户否决的做法（别再犯）
 - 把整句诗塞进画内当道具（2026-11-09 19:0x 明确否决："排版不好看、没融入画面、很丑、抢注意力"）。
 - 在对称构图中间插字（例：把「定」压在「正」「邪」之间）。
+
+## 推送规则（2026-11-09 19:xx 用户明确指示，硬规则）
+- **永远不要 push 到 main**。所有改动提交到工作分支（当前 `feat/quality-pass`），通过 PR 合并：<https://github.com/sannian66/guitu-s3-mv/pull/1>
+- `./autosync.sh` 已改：只 `git push origin <当前分支>`；在 main 上会拒绝推送并提示。
+- 需要新开 PR 时用 `gh pr create --base main --head <分支>`（gh 已登录 sannian66）。
