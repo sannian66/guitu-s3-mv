@@ -23,6 +23,7 @@ import c_piying as PY
 from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark, fbm
 
 READY = True
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
 
 # 第九棒：c_kit.tex 的缓存键只认名字不认 seed —— 'c1'/'c2'/'gw' 三张云/水纹底图由「本进程第一个调用的镜头」决定，
 # 导致分块渲染 / 联系表分批时同一帧长得不一样（例：C15 批渲成一团白曝、整段顺渲则是清楚的落地闪电）。
@@ -2224,7 +2225,7 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 # [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
 #   P0 转场去重 4 处：C17 hard→ink_crack、C22 hard→luma、C30 flash_red→bolt_split、C36 flash_red(one_frame)→match_line
 #   P1 过渡长度 2 处：C02 match_line pre 0→0.08、C07 seam pre 0→0.08
-#   P0 二期 1 处：C30 bolt_split→freeze_glitch（原与 C37 隔 8 刀重名）
+#   P0 二期：C30 bolt_split→iris_moon（原与 C37 隔 8 刀重名；曾试 freeze_glitch，全幅撕裂 5 帧，已弃）
 CUTS = {
     'C02': ('match_line', 0.08, 0.12, {}),                                # [r4-P1] pre 0→0.08（原注释：朱笔竖笔 ↔ 红丝线（图形匹配））
     'C03': ('whip', 0.10, 0.12, dict(direction=1)),                      # 全段唯一甩镜：沿丝线甩到皮影幕
@@ -2254,7 +2255,7 @@ CUTS = {
     'C27': ('smoke_through', 0.08, 0.14, dict(direction=1, density=1.0, color=(0.62, 0.64, 0.68))),   # 第九棒 P2⑪：luma 中间帧碎片+天光糊团、露出 C27 方边 → 崩墙石尘冲过镜头
     'C28': ('ink_crack', 0.05, 0.12, dict(center=(960, 470), seed=28)),   # 第十二棒（critic_C_r6 P2⑦ 白闪同质化）：电光过曝 → 墨裂：崩墙的墨皮裂开、缝里透出伪天亮   # 第九棒 P2⑪：push 中间帧「亮」与人脸叠鬼影 → 伪天亮那道电光过曝切入
     'C29': ('hard', 0, 0, {}),                                           # 第四棒：luma 会在 C28 亮眼处开洞（像面具）→ 落拍硬切冲击
-    'C30': ('freeze_glitch', 0.06, 0.14, dict(seed=330)),   # [r4-P0] 原 flash_red → 定格故障（P0 二期：bolt_split 与 C37 隔 8 刀重名，改此招）
+    'C30': ('iris_moon', 0.10, 0.20, dict(center=(960, 480), radius=210, mode='open')),   # [r4-P0] 原 flash_red → 月形光圈绽开（圆外始终是上一镜＝无黑无白；曾试 freeze_glitch 全幅撕裂 5 帧、bolt_split 与 C37 重名，均弃）
     'C31': ('hard', 0, 0, {}),
     'C32': ('split_slide', 0.06, 0.12, dict(angle=90.0)),                # 掌风压下：画面上下错开
     'C33': ('whip_pan_blur', 0.04, 0.08, dict(direction='left')),       # 第七棒：十字斩的余势甩进刀身横扫（甩镜方向 = 挥刀方向）
@@ -2465,6 +2466,8 @@ class Sec:
         fr = fr + 0.014 * (1 - np.clip(fr, 0, 1))
         dx, dy, z = cm
         for s in SENTS:
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI: break
             if max(s.tin[0] - s.lead - 0.05, s.t_start) <= t < s.out + 0.32:
                 fr = draw_sent(fr, s, t, cam=(dx * 0.35, dy * 0.35, 1 + (z - 1) * 0.35))
         # 段尾：最后 4 帧切黑（接 Bridge 白纸虚空，由 D 组白闪入）

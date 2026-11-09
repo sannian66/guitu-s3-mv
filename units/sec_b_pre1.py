@@ -992,14 +992,14 @@ P01.t0 = 44.048
 # [round4-edit-audit 2026-11-09] 本轮只改 CUTS 表的 (name, pre, post, kw) 值，切点帧/字层/SHOTS 一律未动：
 #   P0 转场去重 3 处：P07 flash_white→shatter、P11 gold→occlusion、P13 flash_red→rain_curtain
 #   P1 过渡长度 1 处：P12 match_cut pre 0→0.08
-#   P0 二期 1 处：P07 shatter→freeze_glitch（原与 P15 隔 8 刀重名）
+#   P0 二期：P07 shatter→smoke_through（原与 P15 隔 8 刀重名；曾试 freeze_glitch，9 帧条全幅撕裂，已弃）
 CUTS = {
     'P02': ('flashr', 0, 0, {}),                                    # 落墨帧朱红闪（第三棒：去白闪）
     'P03': ('paper_tear', 0.06, 0.20, dict(seed=3, angle=10)),
     'P04': ('none', 0, 0, {}),                                      # 同一机位连续后拉（图形匹配）
     'P05': ('ink_bleed', 0.06, 0.16, dict(seed=5)),                 # 第三棒：去 whip，墨从指尖洇成宫门
     'P06': ('punch', 0, 0, {}),                                     # 第七棒：红闪 → 推近色散（闪类转场压到 4 处）
-    'P07': ('freeze_glitch', 0.06, 0.07, dict(seed=7)),                          # [r4-P0] 雷闪闪白 → 定格故障（P0 二期：shatter 与 P15 隔 8 刀重名，改此招；post 0.07 = 不压切后 0.09 的「潢」字头）
+    'P07': ('smoke_through', 0.06, 0.07, dict(seed=7, direction=1, density=0.55, color=(0.46, 0.48, 0.54))),  # [r4-P0] 雷闪闪白 → 雷云烟尘卷过（fix3：freeze_glitch 9 帧条显示 3 帧全幅横向撕裂，弃用；shatter 与 P15 隔 8 刀重名亦弃。post 0.07 = 不压切后 0.09 的「潢」字头）
     'P08': ('cloud_wipe', 0.10, 0.16, dict(seed=8)),                # 第四棒：灰雾 smoke → 云幕下压（b_kit，冷光云边，中点上天下人）
     'P09': ('glitch_cut', 0.03, 0.06, dict(seed=9)),                # 第五棒：缩短，让 52.84「命」干净砸进
     'P10': ('slash_wipe', 0.05, 0.14, dict(angle=-28)),

@@ -25,6 +25,7 @@ from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 READY = True
 FPS = 30
 W, H, BAR = 1920, 1080, 120
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
 F0, F1 = 0, 1321
 HMP = ROOT + '/crew/round4/A_hitmap.json'
 HM = json.load(open(HMP))
@@ -2281,7 +2282,8 @@ class Section:
             fr = TITLE.draw(fr, t, out=clamp01((t - V(13.35)) / 0.45), sheen=clamp01((t - V(11.52)) / 0.7) if t >= V(11.52) else None,
                             glow=0.5 * math.exp(-max(0, k) / 0.3) + 0.22 * sum(math.exp(-max(0.0, t - V(b)) / 0.15) * (t >= V(b)) for b in (8.75, 9.22, 9.68, 10.15, 10.61, 11.05, 11.98, 12.45, 12.89)))
         if t < 7.9: fr = credits(fr, t)
-        fr = lyrics(fr, t)
+        # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+        if not LYRIC_UNI: fr = lyrics(fr, t)
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         out = K.finish(fr, t, ca=ca, vig=0.45, red_keep=1.0)
         out = GU.apply(out, t, 'a_intro_verse1')          # 统一 grade 层（材质层归一）
