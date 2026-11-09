@@ -339,3 +339,12 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - **提交**：2879af3（1/n）、f6cc668（2/n）、8011b38（3/n）、61bdb1a（4/n）、70c87ea（5/n）、V11 灰底与 V10 字位改动被自动同步 94aab27 / 之后的自动同步卷走、38226ed（7/n）、6fd684c（8/n）、13632df（10/n 三张表），本节 + storyboard 为 11/n。
 - **风险**：V20 蓄势是代码摆出来的姿态；V16 入后半段仍块状；无 mp4。
 - **下一步**：总导演派第六轮评审（看 A_contact_v8_p* + A_keys_v7_p* + A_rhythm_v2_p*）。
+
+## B 组第八棒（2026-11-09 14:16–15:05 CST）· b_pre1 1321–1784 + b_verse2 2586–3534 · 40 镜
+- 对照 critic_B_r2（74）逐条单帧复核，P0 1–5、P1 6–11 全部到位；逐条表见 `crew/round4/B_storyboard.md` §10。
+- P0-2 结论：成片 2586 起归 b_verse2（`render_sprite_full.py` chorus1 只到 2585），副歌一 S047/S048 不出帧；B 的 V01 钟楼撞钟 / V02 宫城顶拍生效，f2586 只溶 S046 朱墨爆 1 帧。
+- 本棒改动：V21 字列屏幕空间旋转（不出画）、V20 字退场；V24 rim 被注释掉的 bug 修好，V24/V25 方向性轮廓光；V25 去城墙换远山；V12 地面倒影 + 光柱；P05 匾完整 0.25s；V03 去阵列；P09/P12/V17 束发结入画、V15 不顶头；V08 嚣张同框 + 手冷调；V22 字左移；12 镜补镜内运镜（`b_kit.Section.move`）。
+- 交付：`out/round4/B_contact_v6.jpg`（_p0–_p4）、`out/round4/B_keys_v6.jpg`（_p0–_p8）、`out/round4/B_rhythm_v1.jpg`（_p0–_p2）。
+- 积分 0，B 组累计 75/80。提交 1/n–10/n（6/n 的 V08 改动被 14:27 自动同步 f193591 卷走）。
+- 工具：`tools/cpu_slot.sh python3 tools/b_peek.py out.jpg f1 f2 …`（FULL=1 存全尺寸）；联系表 `B_CACHE=… tools/cpu_slot.sh python3 tools/b_contact.py render <contact|keys|rhythm> 0 200`（续跑）→ `sheet` / `pages` / `pages_rhythm`。
+- 仍弱：V25 远山太淡；红色轮廓光是程序描边、未出 mp4；V16 金字辉光仍近 V10；V03 前排偏大。下一步：总导演派第三轮评审。
