@@ -66,6 +66,36 @@ def cprog(li, ks, t, dur=0.22):
 def S(key, mode='cut', **kw): return A.src(key, mode, **kw)
 
 
+_PLATES = {}
+
+
+def plate_base(key, push=0.0, dy=0.0, dx=0.0):
+    """[r1-#8/#11/#3] 整帧底：`assets/gen/wt/<key>.png`（1672×941 RGB）→ 铺满 1920×1080。
+
+    用法 = 用它替掉镜头里的 `night(...)` 底色，**其余代码照旧**（推镜/摇镜走 cam、光效、雨、火星、
+    文字、字幕都保留）→ 这就是 B/E 组的 plate 思路：底图负责「美术」，代码负责「动」。
+    底图里烙进去的字：这四张出图时都要求过「不要文字」，接完逐张 1:1 核过（见 A_notes_r1.md）。
+    """
+    if os.environ.get('A_NO_PLATE') == '1':          # 调试开关：关掉整帧底（渲「改前」对拍用）
+        return None
+    if key not in _PLATES:
+        from PIL import Image as _I
+        fp = ROOT + '/assets/gen/wt/' + key + '.png'
+        if not os.path.exists(fp):
+            _PLATES[key] = None
+        else:
+            _PLATES[key] = np.asarray(_I.open(fp).convert('RGB').resize((W, H), _I.LANCZOS)).astype(np.float32) / 255
+    pl = _PLATES[key]
+    if pl is None:
+        return None
+    if abs(push) < 1e-4 and abs(dy) < 1e-3 and abs(dx) < 1e-3:
+        return pl.copy()
+    sc = 1.0 + push
+    M = cv2.getRotationMatrix2D((W / 2, H / 2), 0.0, sc)
+    M[0, 2] += dx; M[1, 2] += dy
+    return cv2.warpAffine(pl, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
+
+
 _BGF = {}
 def BG(ch, fname, size, p, seed=0, **kw):
     """第十一棒（critic_A_r7 P0-1 逐字错读）：笔序书写时半截笔画会读成别的字（「不」先出一横 → 「一」）。
@@ -819,7 +849,12 @@ class V06(Shot):
         T.warm('寒光', 'kai', 230)
     def render(self, t):
         u = self.u(t); ts = CT(1, 10); ts2 = V(21.86)                     # 第四棒：二次刀光斩字（寒光先完整可读 ≥0.55s）
-        fr = night((0.015, 0.017, 0.025), (0.06, 0.065, 0.08), y1=900)
+        # [r1-#3] 用户：22s 挥刀太丑。新图 `wt_v06_slash` 到了，但**这镜有真 22° 环绕**：
+        #   机位绕人转、军阵随视差滑、前景枪林反掠、人物随视角做透视压缩 —— 整帧底会把这些全抹平
+        #   （底图是一张平的画，绕视只会整张图转）。按 lead 的规则：**默认不接整帧底**，
+        #   只留 A_V06_PLATE=1 给「姿势行不行」预览用；正式接法需要绿幕单体人物（保 orbit）。
+        _pl6 = plate_base('wt_v06_slash') if os.environ.get('A_V06_PLATE') == '1' else None
+        fr = _pl6 if _pl6 is not None else night((0.015, 0.017, 0.025), (0.06, 0.065, 0.08), y1=900)
         # 第十一棒（critic_A_r7 P0-2）：真环绕 orbit —— 机位绕人物（距 8m）转 -11°→+11°（共 22°）：机位沿圆弧平移并转向始终对准人物，
         #   军阵（人后 7–30m）随机位同向滑、越远越多；前景枪林（人前）反向急掠；人物本身随视角做透视压缩 + 轮廓光方向转。
         th = math.radians(-11 + 22 * eio(u)); Zp = 8.0
@@ -1452,10 +1487,16 @@ class V13(Shot):
 class V14(Shot):
     def render(self, t):
         u = self.u(t)
-        fr = night((0.01, 0.01, 0.014), (0.03, 0.03, 0.035))
+        # [r1-#8] 用户：33s 角色图不好看 → 换新渠道整帧 `wt_v14_char`（构图锁住）。
+        #   plate 思路：底图铺满 → 本镜原有的推镜(u)/光晕/火星聚字/字幕全部照旧；
+        #   原手绘精灵改为 alpha=0 只用来取锚点 info（火星聚字从刀身起飞的起点要用 to_scr）。
+        fr = plate_base('wt_v14_char', push=0.06 * u)
+        if fr is None:
+            fr = night((0.01, 0.01, 0.014), (0.03, 0.03, 0.035))
         fr = A.glow(fr, (1500, 300), 450, 0.25, (1.0, 0.6, 0.3))
         fr, info = A.place(fr, t, S('S015/hand_draw'), (960 - 50 * u, 560), w=2350 * (1 + 0.06 * u), anc=(0.5, 0.5), rim=COLD, rim_amt=2.0,
-                           grade=dict(expo=0.88, sat=0.55), wind=4)
+                           grade=dict(expo=0.88, sat=0.55), wind=4,
+                           alpha=(0.0 if _PLATES.get('wt_v14_char') is not None else 1.0))
         P0 = info['to_scr']((0.335, 0.585)); P1 = info['to_scr']((0.585, 0.825))                    # 刀身（护手 → 刀尖方向）
         # 第六棒（critic_A_r3 P1-8：字平铺刃面撞副歌一 S046）：字不上刀 —— 刀出鞘时从鞘口「刮」出火星，火星聚成字，
         #   沿刀身上方一条平行线飞到位（小 → 大，带拖尾），落定后仍是火星质感（逐粒闪烁），朱金色
@@ -1809,7 +1850,19 @@ class V20(Shot):
         self.coil = a_r6.clean('A/slash_coil', lo=0.3, erode=4)                     # 第九棒：抠图灰边收 4px
     def render(self, t):
         u = self.u(t)
-        fr = night((0.04, 0.035, 0.03), (0.12, 0.10, 0.09), y1=800)
+        # [r1-#11] 用户：42s 角色姿势不好看 → 换整帧 `wt_v20_char`。
+        #   plate 思路：底图铺满（含人物），42.0 撩刀那一下的「人随刀上提 + 震屏」改成整张底图位移
+        #   （sx_/sy_ 抖动 + 上提 150px 的一部分），读作镜头震而不是丢拍子；弧光/火星/雨/云照旧。
+        _sh0 = 0.0
+        if t >= V(42.0):
+            _k0 = eout(clamp01((t - V(42.0)) / 0.12))
+            _sx0, _sy0 = R8.shake(t, V(42.0), amp=16, tau=0.10, seed=3)
+            _sh0 = -70 * _k0 + _sy0
+        else:
+            _sh0 = -10 * eio(clamp01((t - self.t0) / max(1e-3, V(42.0) - self.t0)))
+        fr = plate_base('wt_v20_char', dy=_sh0)
+        if fr is None:
+            fr = night((0.04, 0.035, 0.03), (0.12, 0.10, 0.09), y1=800)
         fr = A.glow(fr, (1300, 200), 500, 0.5, (1.0, 0.8, 0.5))
         fr = A.clouds(fr, t, 83, speed=(0, 60), y0=120, y1=520, amt=0.8, col=(0.12, 0.10, 0.09), light=(1300, 200), light_r=500,
                       light_col=(1.0, 0.8, 0.5), thr=0.44)

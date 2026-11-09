@@ -173,6 +173,8 @@ _KEY_FILES = {'raise': 'hero_pose_raise_cut.png',
               'slash': 'hero_pose_slash_cut.png',
               'draw': 'hero_pose_draw_cut.png'}
 _EXPR_FILES = {'angry': 'hero_expr_angry_cut.png', 'smirk': 'hero_expr_smirk_cut.png'}
+# 2026-11-09 22:5x 用户：expr 贴片表情"好奇怪"（脸亮身体暗、像戴面具）→ 默认关闭，禁止再用。
+EXPR_ENABLED = False
 _KEYS = ('idle', 'raise', 'slash', 'draw')
 _EXPRS = ('angry', 'smirk')
 _ANGLES = tuple(_ANGLE_FILES)

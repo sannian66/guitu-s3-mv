@@ -76,6 +76,13 @@ WHITE = (0xF2 / 255.0, 0xF0 / 255.0, 0xEC / 255.0)    # 4 暖白 #F2F0EC
 ACCENT = (0xB3 / 255.0, 0x26 / 255.0, 0x1A / 255.0)   # 4 朱红 #B3261A
 ACCENT_GLOW = 0.16            # 4 极轻朱晕（additive，占比很小）
 
+# ---- 2026-11-09 22:5x 用户改口径：**歌词改为底部横向居中**（取代右侧竖排）
+LAYOUT_H = True               # True = 底部横排居中；False = 回到右侧竖排
+H_BY = 858                    # 首行字心 y（下黑边上沿 960，再留 ~100px 呼吸）
+H_LEAD = 1.26                 # 横排行距
+H_MAX = 1656                  # 允许的最大行宽（1920 − 两侧各 132）
+H_TIERS = ((8, 84), (10, 76), (12, 66), (14, 58), (99, 50))   # (本行字数上限, 字号)
+H_PER_ROW = 14                # 每行最多 14 字，超出换第二行（仍居中）
 SCRIM_PAD_Y = 40              # 5 纵向：本列实际 y 区间 ±40px（不做通高暗带）
 SCRIM_FADE = 60               # 5 纵向两端各 60px 线性淡出
 SCRIM_PAD_L = 120             # 5 band 左端 = 最左列左缘 − 120px
@@ -143,6 +150,21 @@ SUPPRESS = {          # 整句删：(t0, t1, 理由) —— 时间窗来自 C �
     35: (144.56, 149.24, 'C 组整句删'),
     38: (155.90, 159.11, 'C 组整句删（原只剩「天不」2 字 → 不留孤字，组长改判）'),
     39: (159.14, 162.52, 'C 组整句删'),
+    # ---- B 段（2026-11-09 22:5x 组长）：第27句整句不出（画面由常驻「黑」「白」承担）
+    26: (110.18, 112.42, 'B 组：文字全去掉，改用画面里常驻的黑白'),
+    # ---- E 段（178.42–221.24s 整句删 12 句；221.24 之后没歌词，片尾署名不在此列）
+    44: (178.42, 181.86, 'E 段整句删（用户口径：2m42–2m58 之后只保留规矩/判/天理昭彰/鬼屠/天理）'),
+    45: (182.06, 184.60, 'E 段整句删'),
+    46: (185.26, 188.42, 'E 段整句删'),
+    47: (189.00, 192.06, 'E 段整句删'),
+    48: (193.24, 195.66, 'E 段整句删'),
+    49: (195.82, 199.18, 'E 段整句删（画面里「天理昭彰」「鬼屠」等保留字由镜头自己画，不受影响）'),
+    50: (199.96, 202.90, 'E 段整句删'),
+    51: (203.46, 207.28, 'E 段整句删'),
+    52: (207.30, 210.32, 'E 段整句删'),
+    53: (210.38, 213.96, 'E 段整句删'),
+    54: (214.58, 217.66, 'E 段整句删'),
+    55: (217.82, 221.24, 'E 段整句删（片尾 E30–E36 署名不在此窗口，见下）'),
 }
 CHAR_DEL = {}         # 部分删：句号0基 → {字序}（当前为空：C 段三处已按「不留孤字」规则改判为整句删）
 
@@ -161,13 +183,13 @@ IN_SCENE = {
     # 2026-11-09 21:5x 组长：B 组把画内那三个大字（刀/还/滚烫）与「我不信」散字整个删了 →
     #   这两条 IN_SCENE 撤掉，第 11/12 句字幕恢复完整出句（留空会变成「这三个字整片消失」）。
     ('sec_b_verse2.py', 1627): (24, '不问',   '书法散字（scatter_stack），镜内演出'),
+    ('sec_b_verse2.py (B 改构图后新增)', 0): (22, '分量', '刀身上方 3D「分量」巨字（f2975 实测框 1500,462,110x244），镜内演出'),
     ('sec_d_bridge.py', 914): (43, '陪葬',   '宣纸烧字（burn_in），镜内演出'),
     ('sec_d_bridge.py', 311): (40, '什么叫', '纸面墨洇巨字（2:43 用户点名保留的画内元素）'),
     ('sec_d_bridge.py', 282): (40, '忍',   '纸面「忍」宋体巨字砸下（墨洇，镜内演出）'),
     ('sec_d_bridge.py', 353): (40, '让',   '纸面「让」170px 墨字落定（镜内演出，落在字幕带里）'),
-    ('sec_e_final_outro.py', 284): (48, '刀不放', '拳上朱印（stamp_seal 118–132px），画内道具'),
     ('chorus1.py', 866):      (17, '是非对错', '朱印阵（seal_grid 540px），画内道具'),
-    ('sec_e_final_outro.py', 359): (49, '天理昭彰', '鎏金 3D 巨字（匾额，镜内演出）'),
+    # 句 48（刀不放朱印）/ 句 49（天理昭彰鎏金巨字）已整句删 → 留空项随之撤掉；画面里的字仍由镜头画，不受影响
     # ---- C 段：画内已有，字幕留空（C_notes_r1 表）
     ('c_pre2_chorus2 C01–C03', 0): (28, '谁写好剧本提纲', 'C01–C03 同一句在画内与字幕各一份；只留「纲」那个钢字在画内'),
     # C10「大局为上」/ 正邪朱印 / 「判」巨字 三条随句 31/34/39 改判为整句删，留空项一并撤掉（22:2x）
@@ -184,6 +206,7 @@ SCENE_OK = {
     1826: [(1504, 378, 53, 64, '斜光带'), (1501, 200, 42, 53, '斜光带')],
     2036: [(1542, 605, 30, 78, '砖缝高光'), (1613, 520, 33, 72, '砖块边缘高光')],
     4729: [(1816, 651, 104, 45, '雨丝/水花'), (1879, 814, 35, 33, '水花')],
+    1261: [(1602, 696, 74, 204, '刀光光晕/色散虹弧')],
 }
 
 # 画面内字在字幕带里的实测位置（这几处不走 typo.compose，审计抓不到，用实测框归因；只用于 dupcheck）
@@ -191,6 +214,7 @@ IN_SCENE_BOX = {
     5011: [(1592, 721, 113, 167, '让（D 纸面墨字，字幕已留空）')],
     5975: [(1500, 318, 205, 385, '天理昭彰（E 鎏金巨字，字幕已留空）')],
     5863: [(1500, 391, 118, 215, '刀不放（E 拳上朱印，字幕已留空）')],
+    2975: [(1500, 462, 110, 244, '分量（B 改构图后新增的刀上 3D 巨字，字幕已留空）')],
 }
 IN_SCENE_HIDE = set()          # 由 _maybe_out() 从 IN_SCENE 派生：(句号0基, 字序)
 
@@ -305,7 +329,14 @@ def glyph_ring(ch, size):
 
 
 def char_size(n):
-    """列内字数 → 字号（3 号规则）+ 几何夹紧 ≤ (可用高 / 字数) / 行距。"""
+    """字数 → 字号。横排按行宽夹紧；竖排按列高夹紧（旧口径保留）。"""
+    if LAYOUT_H:
+        px = H_TIERS[-1][1]
+        for lim, p_ in H_TIERS:
+            if n <= lim:
+                px = p_
+                break
+        return int(min(px, H_MAX / max(1, n)))
     px = TIERS[-1][1]
     for lim, p in TIERS:
         if n <= lim:
@@ -420,22 +451,27 @@ def _build():
             r['t_out'] = last + OUT_HOLD
         r['t_out'] = max(r['t_out'], last + 0.10)        # 末字至少完整露出 0.1s
         r['t_off'] = r['t_out'] + OUT_DUR
-        # 排版：每列最多 10 字，第 2 列在左，整体右对齐
+        # 排版（2026-11-09 22:5x 用户改口径：底部横向居中）
         pos, cols = [], []
-        for ci in range(0, r['n'], MAX_PER_COL):
-            chunk = r['chars'][ci:ci + MAX_PER_COL]
-            xc = COL_R - r['size'] / 2.0 - ci // MAX_PER_COL * (r['size'] + COL_GAP)
+        nrow = max(1, int(math.ceil(r['n'] / float(H_PER_ROW))))
+        for ri in range(nrow):
+            chunk = r['chars'][ri * H_PER_ROW:(ri + 1) * H_PER_ROW]
             cols.append(chunk)
+            wchunk = len(chunk) * r['size']
+            x0 = W / 2.0 - wchunk / 2.0 + r['size'] / 2.0
+            y = H_BY + (ri - (nrow - 1) / 2.0) * r['size'] * H_LEAD
             for j, c in enumerate(chunk):
-                pos.append(dict(k=c['k'], ch=c['ch'], t=c['t'], x=xc,
-                                y=COL_TOP + r['size'] / 2.0 + j * r['size'] * LEAD))
+                pos.append(dict(k=c['k'], ch=c['ch'], t=c['t'],
+                                x=x0 + j * r['size'], y=y))
         r['pos'] = pos
         r['cols'] = cols
         r['y_bot'] = max(p['y'] + r['size'] / 2.0 for p in pos)
+        r['top'] = min(p['y'] - r['size'] / 2.0 for p in pos)
         left = min(p['x'] for p in pos) - r['size'] / 2.0
-        r['left'] = left
-        r['band'] = (left - SCRIM_PAD_L, COL_R + SCRIM_PAD_R)     # 5：按本句实际列范围算
-        r['box'] = (int(left) - 34, int(COL_TOP), COL_R + SCRIM_PAD_R + 4, int(r['y_bot']) + 14)
+        right = max(p['x'] for p in pos) + r['size'] / 2.0
+        r['left'], r['right'] = left, right
+        r['band'] = (left - 90, right + 90)          # 5：横排的 band = 本句左右范围 ±90
+        r['box'] = (int(left) - 30, int(r['top']) - 12, int(right) + 30, int(r['y_bot']) + 12)
     return out
 
 
@@ -586,7 +622,7 @@ def _ssl(lo, hi, x):
 
 
 def _scrim(F, xf, y0, xt, y1, ox=0, oy=0):
-    """竖条渐变 scrim（5 号规则）。band = [xf, xt]（整帧坐标，xf = 最左列左缘 −120，xt = 1792+40）。
+    """衬底 scrim。竖排 = 自右向左淡出的竖条；横排（LAYOUT_H）= 自下向上淡出的横带。
 
     F 是整帧的子区（左上角 = (ox, oy)）。返回 (F, 亮底系数 k) —— k 拿去决定要不要上 1px 描边。
     """
@@ -603,15 +639,26 @@ def _scrim(F, xf, y0, xt, y1, ox=0, oy=0):
     kb = _ssl(lo2, hi2, L)                           # 0 = 非亮底, 1 = 亮底（0.45 落在中点）
     a = (SCRIM_A * (0.5 + 0.5 * kd)) * (1.0 - kb) + SCRIM_A_BRIGHT * kb
     xs = np.arange(xa, xb, dtype=np.float32)
-    ax = np.clip((xs - float(xf)) / max(1.0, float(xt) - float(xf)), 0.0, 1.0) * a
     ny = yb - ya
-    fy = np.ones(ny, np.float32)
-    fe = min(SCRIM_FADE, ny // 2)                  # 2：两端各 60px 线性淡出（只贴字，不做通高暗带）
-    if fe > 2:
-        r = np.linspace(0.0, 1.0, fe, dtype=np.float32)
-        e = 0.5 - 0.5 * np.cos(np.pi * r)
-        fy[:fe] = e
-        fy[ny - fe:] = e[::-1]
+    if LAYOUT_H:
+        # 横排：竖向渐变（字行处最强、往上淡出到 0），横向两端各留 240px 羽化
+        ys_ = np.arange(ya, yb, dtype=np.float32)
+        ay = np.clip((yb - ys_) / max(1.0, float(yb - y0) + 1e-6), 0.0, 1.0) * a
+        ax = np.ones(xb - xa, np.float32)
+        fe = min(240, (xb - xa) // 3)
+        if fe > 2:
+            e = 0.5 - 0.5 * np.cos(np.pi * np.linspace(0.0, 1.0, fe, dtype=np.float32))
+            ax[:fe] = e[::-1]; ax[-fe:] = e
+        fy = ay
+    else:
+        ax = np.clip((xs - float(xf)) / max(1.0, float(xt) - float(xf)), 0.0, 1.0) * a
+        fy = np.ones(ny, np.float32)
+        fe = min(SCRIM_FADE, ny // 2)
+        if fe > 2:
+            r_ = np.linspace(0.0, 1.0, fe, dtype=np.float32)
+            e = 0.5 - 0.5 * np.cos(np.pi * r_)
+            fy[:fe] = e
+            fy[ny - fe:] = e[::-1]
     M = fy[:, None] * ax[None, :]
     reg *= (1.0 - M)[..., None]
     return F, kb
@@ -713,21 +760,34 @@ def vis_layout(r, hide):
         return v
     vis = [c for c in r['chars'] if (r['line'], c['k']) not in hide]
     pos = []
-    for ci in range(0, max(1, len(vis)), MAX_PER_COL):
-        chunk = vis[ci:ci + MAX_PER_COL]
-        xc = COL_R - r['size'] / 2.0 - (ci // MAX_PER_COL) * (r['size'] + COL_GAP)
-        for j, c in enumerate(chunk):
-            pos.append(dict(k=c['k'], ch=c['ch'], t=c['t'], x=xc,
-                            y=COL_TOP + r['size'] / 2.0 + j * r['size'] * LEAD))
+    if LAYOUT_H:
+        nrow = max(1, int(math.ceil(len(vis) / float(H_PER_ROW))))
+        for ri in range(nrow):
+            chunk = vis[ri * H_PER_ROW:(ri + 1) * H_PER_ROW]
+            x0 = W / 2.0 - len(chunk) * r['size'] / 2.0 + r['size'] / 2.0
+            y = H_BY + (ri - (nrow - 1) / 2.0) * r['size'] * H_LEAD
+            for j, c in enumerate(chunk):
+                pos.append(dict(k=c['k'], ch=c['ch'], t=c['t'], x=x0 + j * r['size'], y=y))
+    else:
+        for ci in range(0, max(1, len(vis)), MAX_PER_COL):
+            chunk = vis[ci:ci + MAX_PER_COL]
+            xc = COL_R - r['size'] / 2.0 - (ci // MAX_PER_COL) * (r['size'] + COL_GAP)
+            for j, c in enumerate(chunk):
+                pos.append(dict(k=c['k'], ch=c['ch'], t=c['t'], x=xc,
+                                y=COL_TOP + r['size'] / 2.0 + j * r['size'] * LEAD))
     if pos:
         left = min(p['x'] for p in pos) - r['size'] / 2.0
         bot = max(p['y'] for p in pos) + r['size'] / 2.0
     else:                                          # 整句都被让位（理论上不该发生）
-        left, bot = COL_R - r['size'] / 2.0, COL_TOP + r['size']
-    v = dict(pos=pos, left=left,
-             band=(left - SCRIM_PAD_L, COL_R + SCRIM_PAD_R),
-             top=COL_TOP - SCRIM_PAD_Y, bot=bot + SCRIM_PAD_Y,
-             n=len(vis))
+        left, bot = (min(p['x'] for p in pos) - r['size'] / 2.0, max(p['y'] for p in pos) + r['size'] / 2.0) if LAYOUT_H else (COL_R - r['size'] / 2.0, COL_TOP + r['size'])
+    if LAYOUT_H and pos:
+        right = max(p_['x'] for p_ in pos) + r['size'] / 2.0
+        band = (left - 90, right + 90)
+        top = min(p_['y'] for p_ in pos) - r['size'] / 2.0 - SCRIM_PAD_Y
+    else:
+        band = (left - SCRIM_PAD_L, COL_R + SCRIM_PAD_R)
+        top = COL_TOP - SCRIM_PAD_Y
+    v = dict(pos=pos, left=left, band=band, top=top, bot=bot + SCRIM_PAD_Y, n=len(vis))
     _VLC[key] = v
     return v
 
