@@ -19,6 +19,9 @@ import d_r7 as R7
 from d_kit import V, cp, seal_p, INK, CINNABAR, GOLD, RED, W, H, BAR
 
 READY = True
+# [D r5] 用户第五轮意见开关（关掉即回滚到 r8 版）
+R5D_S18_NEW = True      # #45 3:00 主角重新出图（S18_Draw 换新生图 + 中景构图）
+R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S21) 与「判」(S26)，其余画内字去掉
 F0, F1 = 4839, 5797
 T0, T1 = F0 / 30, F1 / 30
 O = {i: D.onsets(i) for i in range(40, 48)}
@@ -985,9 +988,13 @@ class S18_Draw(Shot):
     """MS 雨夜：鬼屠横刀出鞘，寒光沿刃走过；脚下积水倒影 + 地雾（第三棒：去漩涡底，换雨夜地面空间）；宋体「只」+ 巨字「听」"""
     t0, t1 = 180.09, 181.0
     def __init__(self):
-        self.sp = D.spr('draw_side')       # [r4] 侧身半抽刀（替换正面 T 字横刀站姿）
+        if R5D_S18_NEW:
+            self.sp = D.spr('R5_D/s18_draw_wa')     # [D r5 #45] 新生图：中景正面半拔刀（绿幕），与 S16/S17/S19 同一张脸、同一写实暗调
+        else:
+            self.sp = D.spr('draw_side')       # [r4] 侧身半抽刀（替换正面 T 字横刀站姿）
 
     def render(self, t):
+        if R5D_S18_NEW: return self.render_r5(t)
         u = self.u(t)
         fr = D.night(t, 181, top=(0.05, 0.055, 0.07), bot=(0.015, 0.015, 0.02), glow=(1500, 160, 520, (0.45, 0.5, 0.65), 0.35), clouds=0.6)
         x, y = K.grid()
@@ -1013,6 +1020,30 @@ class S18_Draw(Shot):
         fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
                            sweep_x=lerp(-200, 900, eo(u, 2)))
         return K.cam(fr, 1.03, -20 + 40 * u, 0), 0.0
+
+    def render_r5(self, t):
+        """[D r5 #45] 中景（头顶到腰）：雨夜冷逆光，人物占画高 ~80%，刀身横在胸前；寒光沿刃从护手扫到鞘口。
+        精灵下缘（腰部裁切线）压在下黑边以下，不露切口；风网格吹发梢/马尾（wind 8）。"""
+        u = self.u(t)
+        sp = self.sp
+        cx = 1150 + 30 * u
+        anc = (sp.top[0], 1.0)
+        sc = 830 / sp.h * (1 + 0.035 * eo(u, 2))
+        fr = D.night(t, 181, top=(0.045, 0.05, 0.068), bot=(0.012, 0.012, 0.018), glow=(cx + 60, 260, 560, (0.45, 0.52, 0.72), 0.42), clouds=0.6)
+        fr = K.rain(fr, t, 181, n=380, amt=0.22, angle=6, length=(30, 80))            # 人后远雨（细、暗）
+        fr = K.fog(fr, t, 44, amt=0.32, speed=(60, 0), y0=0.55, y1=1.0, color=(0.2, 0.22, 0.28))
+        fr, Aw = D.real_figure(fr, sp, t, anc, (cx, 1005), sc, expo=1.02, sat=0.62, gamma=1.12, tint=(0.94, 0.97, 1.04),
+                               rim=COLD, rim_amt=4.0, rim_dir=(0.7, -0.7), wind=8)
+        fr = R7.rim_edge(fr, Aw, (0.7, -0.7), 3, 0.7, (0.75, 0.85, 1.0), glow=6, gamt=0.2)
+        # 刀身寒光：刃面像素（亮、低饱和）× 一道从左（护手）扫到右（鞘口）的光带
+        Fw, A2 = D.warp(sp, t, anc, (cx, 1005), sc, wind=0)
+        lum = Fw.mean(-1); sat = Fw.max(-1) - Fw.min(-1)
+        metal = A2 * np.clip((lum - 0.35) * 3, 0, 1) * (sat < 0.12)
+        fr = D.metal_sheen(fr, metal, np.ones_like(lum), t, (600, 0), 0, speed=lerp(500, 1500, eo(u, 2)), width=90, amt=2.0)
+        fr = K.rain(fr, t, 18, n=420, amt=0.3, angle=6)                                    # 人前近雨
+        fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
+                           sweep_x=lerp(-200, 900, eo(u, 2)))
+        return K.cam(fr, 1.03, -10 + 20 * u, 0), 0.0
 
 
 def stroke_head(ch, fname, x, y, s, p):
