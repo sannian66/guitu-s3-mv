@@ -14,6 +14,7 @@ import c1kit as K
 import typo as T
 import trans as TR
 import d_kit as D
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 import d_r5 as R5
 import d_r7 as R7
 from d_kit import V, cp, seal_p, INK, CINNABAR, GOLD, RED, W, H, BAR
@@ -1977,7 +1978,8 @@ class Bridge:
 
     def frame(self, t):
         fr, pm, ca = self.raw(t)
-        return D.d_finish(fr, t, ca=ca, vig=0.45 - 0.3 * pm, grain=0.04, paper_mode=pm)
+        return GU.apply(D.d_finish(fr, t, ca=ca, vig=0.45 - 0.3 * pm, grain=0.04, paper_mode=pm),
+                        t, 'd_bridge', None, hint={'pm': pm})   # 统一 grade 层（带 paper_mode）
 
 
 _B = [None]

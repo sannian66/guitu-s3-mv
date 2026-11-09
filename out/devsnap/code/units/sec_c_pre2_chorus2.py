@@ -11,6 +11,7 @@ for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
 import numpy as np, cv2
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import c_kit as K
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 from c_kit import (W, H, FPS, BAR, RED, GOLD, COLD, WARM, clamp, sm, eout, ein, eio, lerp, V, pulse, CT, camxf, handheld,
                    dirblur, radial, storm_sky, wet_ground, rain, fog, bolt, bolt_env, vol_light, put, Sent, draw_sent,
                    paste_glyph, glyph_layer, RED_T, GOLD_T, WHITE_T, CREAM)
@@ -2470,6 +2471,7 @@ class Sec:
         if f >= F1 - 4:
             fr = TR.freeze_glitch(fr, None, 0.6 + 0.1 * (f - (F1 - 4)), seed=f) * (0.3 if f >= F1 - 2 else 1.0)
         out = finish(fr, t, ca=ca, vig=0.40, bloom_amt=0.42, red_keep=1.0)
+        out = GU.apply(out, t, 'c_pre2_chorus2')          # 统一 grade 层
         return out
 
 

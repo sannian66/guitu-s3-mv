@@ -20,6 +20,7 @@ import e_r5 as R5
 import e_r6 as R6
 import e_r7 as R7
 import e_r8 as R8
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 from e_r3 import LyrO
 Sub = R5.SubD          # 第五棒：副句随画面漂移、去句首朱印、暗衬变淡（去卡拉 OK 条模板感）
 from e_kit import (W, H, BAR, GOLD, GOLDW, RED, REDT, WHITE_T, GOLD_T, INK, put, Lyr, row, sstep, c01, eio, eout, ein,
@@ -1945,6 +1946,7 @@ def frame(f, cache):
         out = np.clip(fr, 0, 1); out[:BAR] = 0; out[H - BAR:] = 0
         return K.to8(out)
     fr = K.finish(fr, t, ca=ca, grain=0.035, vig=0.38, bloom_amt=0.25, red_keep=1.0)
+    fr = GU.apply(fr, t, 'e_final_outro')                 # 统一 grade 层
     return K.to8(fr)
 
 

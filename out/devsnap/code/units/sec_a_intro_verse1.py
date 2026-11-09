@@ -2,7 +2,7 @@
 设计说明：crew/round4/A_storyboard.md（29 镜，平均 1.52s；主歌 21 镜平均 1.37s）。
 接口：READY / frame(f, cache) → uint8 (1080,1920,3) 成品帧（含黑边、颗粒、暗角）。
 结构仿 units/chorus1.py：每镜一个类 render(t)->(线性帧, ca)；CUTS 表驱动转场；VCam3 主运镜 + 卡点脉冲；屏幕层 = 署名 / 歌词竖排。"""
-import os, sys, math, json
+import os, sys, math, json, copy
 ROOT = '/Users/sannian/Downloads/鬼屠OP_new/out/devsnap/code'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
@@ -18,6 +18,7 @@ import vcam as VC
 import a_kit as A
 import a_r7 as R7
 import a_r8 as R8
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 import a_r9 as R9
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
@@ -1813,6 +1814,7 @@ for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
 #   P0 转场去重 4 处：V02 hard→zoom_through、V06 hard→ink_bleed、V14 hard→a_zoom2、V17 hard→paper_tear
 #   P1 过渡长度 3 处：A08 post 0.40→0.20、V16 post 0.34→0.20、V18 post 0.30→0.20
 #   P0 二期 1 处：V04 occlusion→luma（原与 A07a 隔 5 刀重名）
+#   P2b 1 处：A 段 +3 刀（V01/V13/V16 各拆两拍，帧 483/950/1115，均落在重拍；只加切点，原切点与字层未动）
 CUTS = {
     'A02': ('a_cloud', 0.20, 0.24, dict(seed=2)),                                     # 云墙横扫：A01 云海 → A02 山脊
     'A03': ('a_glint', 0.14, 0.18, dict(angle=-12, center=(960, 560))),             # 第五棒：冷光掠刃（山脊线 → 刀身线），替换蓝色闪电圈
@@ -1823,6 +1825,7 @@ CUTS = {
     'A07b': ('zoom_through', 0.16, 0.20, dict(center=(960, 620), variant='raindrop')),  # 穿过一滴雨：滴内倒映城墙
     'A08': ('smoke_through', 0.06, 0.20, dict(seed=8, direction=1, density=0.65)),    # [r4-P1] post 0.40→0.20，烟不再压 A08 首帧字（原注释：片名化灰成烟，烟后露出城门）
     'V01': ('a_seam', 0.10, 0.20, {}),                                               # 城门合缝，门缝里开出雨刃
+    'V01b': ('none', 0, 0, {}),   # [r4-P2b] 新增刀（帧 483 / 16.100s）：重拍无闪硬切
     'V02': ('zoom_through', 0.08, 0.14, dict(center=(960, 540))),   # [r4-P0] 原 hard（轻闪白）→ 穿镜
     'V03': ('shatter', 0.04, 0.20, dict(seed=3, center=(1060, 880), n=60)),
     'V04': ('luma', 0.06, 0.14, dict()),   # [r4-P0b] 原 occlusion(kind=spear)：与 A07a 隔 5 刀重名 → 火把亮处起笔的亮度擦除
@@ -1835,9 +1838,11 @@ CUTS = {
     'V11': ('flash_red', 0.03, 0.10, {}),
     'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
     'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
+    'V13b': ('none', 0, 0, {}),   # [r4-P2b] 新增刀（帧 950 / 31.667s）：重拍无闪硬切
     'V14': ('a_zoom2', 0.10, 0.16, dict(center=(960, 520), seed=14)),   # [r4-P0] 原 hard（轻闪白）→ 墨边圆窗推镜（不用 a_cleave：V12 刚用过，2 刀内重名）
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
     'V16': ('a_glyph', 0.08, 0.20, dict(ch='主', center=(750, 650), size=230)),   # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）｜[r4-P1] post 0.34→0.20
+    'V16b': ('none', 0, 0, {}),   # [r4-P2b] 新增刀（帧 1115 / 37.167s）：重拍无闪硬切
     'V17': ('paper_tear', 0.08, 0.16, dict(seed=217, angle=6)),   # [r4-P0] 原 hard（轻闪白）→ 撕纸
     'V18': ('smoke_through', 0.06, 0.20, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）｜[r4-P1] post 0.30→0.20
     'V19': ('hard', 0, 0, {}),
@@ -2153,6 +2158,60 @@ class _Lazy:
         return fr, ca
 
 
+# =====================================================================================
+# round4 P2b（2026-11-09，lead 批准）：A 段 +3 刀。**只加切点**，不动任何原切点、不动 BEAT_T、不动字层。
+#   三刀都落在重拍（kick/军鼓，括号里是段内强度分位），且离最近字头 ≥0.10s（不切开正在写的字）。
+#   做法：原镜拆成「前半 + 后半」，后半是本镜的子类 V*b：t0/t1 = 新窗口，但 u() 仍按原区间算
+#   → 镜内动画相位接着走，不从新窗口重头开始（这三个镜的 render 只依赖 self.u(t)，已逐镜核对：
+#   非 u() 的时间锚点 = 0 个；V08/V10 各有 1–2 个锚点，所以没选它们）。
+SPLITS = [
+    ('V01', 483,  'low p94 / onset p94'),   # 16.100s → 0.93 + 0.87s
+    ('V13', 950,  'low p98 / onset p98'),   # 31.667s → 0.93 + 0.90s
+    ('V16', 1115, 'low p99 / onset p97'),   # 37.167s → 0.93 + 0.90s
+]
+
+
+def _half(base, name):
+    """拆镜后半：动画相位接着原镜（u 用原区间 [F0,F1]）。"""
+    return type(name, (base,), {'u': lambda self, t: clamp01((t - self._F0) / (self._F1 - self._F0)),
+                                '_F0': 0.0, '_F1': 1.0})
+
+
+_HALVES = []
+for _k, _cf, _why in SPLITS:
+    _i = [s_.__name__ for s_ in SHOTS].index(_k)
+    _H = _half(SHOTS[_i], _k + 'b')
+    SHOTS.insert(_i + 1, _H)
+    CUT_F.insert(_i + 1, _cf)
+    _HALVES.append((SHOTS[_i], _H))
+for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
+    _S.t0, _S.t1 = _a / FPS, _b / FPS
+
+def _cont2(a, b):
+    """后半的运镜/推镜「接着前半的终点往回走同方向」，避免切点处出现反向回弹（zoom 突然拉回）。"""
+    return (b, b + (b - a) * 0.6)
+
+
+for _base, _H in _HALVES:
+    _H._F0, _H._F1 = _base.t0, _H.t1                       # 原镜区间（后半接着它算相位）
+    for _d in (FG, EXPO):                                  # 前景粒子 / 曝光：原样继承
+        if _base.__name__ in _d:
+            _d[_H.__name__] = _d[_base.__name__]
+    if _base.__name__ in INNER:                            # 镜内推：z/d/rot 接着原终点同向续推
+        _sp = dict(INNER[_base.__name__])
+        for _k in ('z', 'd', 'rot'):
+            if isinstance(_sp.get(_k), tuple) and len(_sp[_k]) == 2:
+                _sp[_k] = _cont2(*_sp[_k])
+        INNER[_H.__name__] = _sp
+    _mv = MOVES3.get(_base.__name__)                       # 基础运镜：必须给后半独立对象（VCam3.shot 会写 move.warp）
+    if _mv is not None:
+        _mv2 = copy.copy(_mv)
+        _mv2.ch = {_c: (_cont2(*_v) if isinstance(_v, tuple) and len(_v) == 2 else _v)
+                   for _c, _v in _mv.ch.items()}
+        _mv2.warp = None
+        MOVES3[_H.__name__] = _mv2
+
+
 def build_cam():
     cam = V3.VCam3(HMP, energy=energy)
     for S_ in SHOTS:
@@ -2225,6 +2284,7 @@ class Section:
         fr = lyrics(fr, t)
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         out = K.finish(fr, t, ca=ca, vig=0.45, red_keep=1.0)
+        out = GU.apply(out, t, 'a_intro_verse1')          # 统一 grade 层（材质层归一）
         return K.to8(out)
 
 

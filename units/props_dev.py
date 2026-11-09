@@ -122,6 +122,14 @@ def prop_layout(text, box, layout='v', cols=1, size=None, font='serif_b',
     return out
 
 
+def key_times(full_text, times, key):
+    """从整句逐字时间里切出关键词那几字的时间（关键词必须整句里连续出现，取第一次）。"""
+    i = full_text.find(key)
+    if i < 0:
+        return None
+    return list(times[i:i + len(key)])
+
+
 def _char_progs(text, n, prog=1.0, times=None, t=None, lead=0.05, dur=0.25):
     """逐字进度 [0,1]：由演唱字头时间（times + t）或整句标量 prog 得到。"""
     if times is not None and t is not None:
@@ -259,6 +267,153 @@ def _snap_brick(places, grid, ar=1.0):
     return out
 
 
+def grid_cells(quad, src_w, src_h, bw, bh, row_mod=37, src_y0=0.0):
+    """砖墙载面 → 屏幕上的「砖格」。
+
+    只对 `c1kit.brick_wall()` + `c1kit.warp_quad()` 这条链成立（S034/S041 等砖墙镜都是它）：
+      row  = y // bh；off = (row%2)*(bw//2) + (row*row_mod % 23)；col = (x + off) // bw
+    quad 顺序与 warp_quad 一致：[[0,0],[w,0],[w,h],[0,h]] → quad 的四个角。
+    src_y0 = 源图切片偏移（`wall[off:off+h]` 时传 -off），让砖行号与画面行号对齐。
+
+    返回 {(row, col): dict(cx, cy, w, h, rot)}，单位像素；rot 是该砖在画面里的横向倾角（度）。
+    """
+    if quad is None:
+        return {}
+    M = cv2.getPerspectiveTransform(
+        np.float32([[0, 0], [src_w, 0], [src_w, src_h], [0, src_h]]), np.float32(quad))
+
+    def P(xs, ys):
+        v = M @ np.array([xs, ys, 1.0], np.float64)
+        return v[:2] / (v[2] if abs(v[2]) > 1e-9 else 1e-9)
+
+    out = {}
+    nrow = int(math.ceil(src_h / bh)) + 3
+    ncol = int(math.ceil(src_w / bw)) + 3
+    for r in range(nrow):
+        roff = (r % 2) * (bw // 2) + (r * row_mod % 23)
+        ys = r * bh + bh / 2.0 + src_y0
+        for c in range(ncol):
+            xs = c * bw - roff + bw / 2.0
+            p = P(xs, ys)
+            if not (-300 <= p[0] <= W + 300 and -300 <= p[1] <= H + 300):
+                continue
+            a = P(xs - bw / 2, ys); b = P(xs + bw / 2, ys)
+            c_ = P(xs, ys - bh / 2); d_ = P(xs, ys + bh / 2)
+            w = float(np.hypot(*(b - a))); h = float(np.hypot(*(d_ - c_)))
+            if w < 6 or h < 4:
+                continue
+            rot = math.degrees(math.atan2(float(b[1] - a[1]), float(b[0] - a[0]) + 1e-9))
+            out[(r, c)] = dict(cx=float(p[0]), cy=float(p[1]), w=float(w), h=float(h), rot=float(rot))
+    return out
+
+
+def pick_cells(cells, targets, group=(1, 1), used=None):
+    """给一串目标屏幕坐标，各自挑最近的砖格（可 group=(2,2) 把 2×2 块砖并成一格）。
+    返回 [{cx,cy,w,h,rot}]（顺序同 targets）。挑不到时跳过该字。"""
+    used = set() if used is None else used
+    gw = max(1, int(group[0])); gh = max(1, int(group[1]))
+    keys = list(cells.keys())
+    out = []
+    for tx, ty in targets:
+        best, bd = None, 1e18
+        for (r, c) in keys:
+            if any((r + i, c + j) in used for i in range(gh) for j in range(gw)):
+                continue
+            acc = [cells[(r + i, c + j)] for i in range(gh) for j in range(gw)
+                   if (r + i, c + j) in cells]
+            if len(acc) < gw * gh:
+                continue
+            cx = sum(a['cx'] for a in acc) / len(acc); cy = sum(a['cy'] for a in acc) / len(acc)
+            w = sum(a['w'] for a in acc) / gw; h = sum(a['h'] for a in acc) / gh
+            d = (cx - tx) ** 2 + (cy - ty) ** 2
+            if d < bd:
+                bd, best = d, (r, c, cx, cy, w, h, acc[0]['rot'])
+        if best is None:
+            continue
+        r, c, cx, cy, w, h, rot = best
+        for i in range(gh):
+            for j in range(gw):
+                used.add((r + i, c + j))
+        out.append(dict(cx=cx, cy=cy, w=w, h=h, rot=rot))
+    return out
+
+
+def pick_block(cells, targets, cols=2, rows=4, group=(1, 1)):
+    """结构化选格：在砖格图上找「cols 列 × rows 行」的一块（允许列/行各自连续），
+    使 8 个字分别落在格心且总位移最小。返回 [{cx,cy,w,h,rot}]（顺序同 targets）。"""
+    gw = max(1, int(group[0])); gh = max(1, int(group[1]))
+    cel = {}
+    for (r, c) in cells:
+        acc = [cells.get((r + i, c + j)) for i in range(gh) for j in range(gw)]
+        if any(a is None for a in acc):
+            continue
+        cel[(r, c)] = dict(cx=sum(a['cx'] for a in acc) / len(acc),
+                           cy=sum(a['cy'] for a in acc) / len(acc),
+                           w=sum(a['w'] for a in acc) / gw,
+                           h=sum(a['h'] for a in acc) / gh,
+                           rot=acc[0]['rot'])
+    if not cel:
+        return []
+    n = len(targets)
+    per = int(math.ceil(n / float(cols)))
+    rs = [k[0] for k in cel]; cs = [k[1] for k in cel]
+    best, bcost = None, 1e18
+    for r0 in range(min(rs) - rows, max(rs) + 2):
+        for c0 in range(min(cs), max(cs) + 1):
+            picks = []
+            ok = True
+            k = 0
+            for j in range(cols):
+                for i in range(per):
+                    if k >= n:
+                        break
+                    key = (r0 + i, c0 - j)          # 竖排先右后左
+                    if key not in cel:
+                        ok = False; break
+                    picks.append((k, cel[key])); k += 1
+                if not ok or k >= n:
+                    break
+            if not ok or len(picks) < n:
+                continue
+            cost = sum((cel_w['cx'] - targets[i][0]) ** 2 + (cel_w['cy'] - targets[i][1]) ** 2
+                       for i, cel_w in picks)
+            if cost < bcost:
+                bcost, best = cost, picks
+    if best is None:
+        return []
+    out = [None] * n
+    for i, cw in best:
+        out[i] = cw
+    return [o for o in out if o]
+
+
+def _place_cells(places, cells, fit=0.80, ar=1.0, unify='cap'):
+    """把字位改成「一格一个字」：字心 = 格心，字号不越出自己那格。
+
+    unify=True   全部取最小的那格（最保守，透视墙会让字变小）
+    unify='cap'  各自按本格定，但封顶在「各格能力的中位数」（默认；近处砖大字大，透视自然）
+    unify=False  完全按各自那格（让透视线索最强）
+    """
+    if not cells:
+        return places
+    sizes = [min(c['w'] * 0.84 / max(1e-6, ar), c['h'] * fit) for c in cells]
+    cap = max(p['size'] for p in places)
+    if unify is True:
+        cap = min(min(sizes), cap)
+        sizes = [cap] * len(sizes)
+    elif unify == 'cap':
+        cap = min(float(np.median(sizes)), cap)
+        sizes = [min(z, cap) for z in sizes]
+    out = []
+    for pl, c, sz in zip(places, cells, sizes):
+        q = dict(pl)
+        q['x'] = c['cx']; q['y'] = c['cy']
+        q['size'] = float(min(sz, pl['size']) if unify is False else sz)
+        q['rot'] = float(np.clip(c['rot'] * 0.7, -7.0, 7.0))
+        out.append(q)
+    return out
+
+
 def _dir_light_corr(sub, light):
     """载面自身的方向光强度：亮度沿光向投影的相关系数 |r|。用来判断要不要补虚拟侧光。"""
     h, w = sub.shape[:2]
@@ -316,7 +471,8 @@ def _place_sub(places, pr, rect, alpha=1.0, ar=1.0, only=None):
         if p <= 0.004 or (only is not None and pl['ch'] not in only):
             continue
         T.place(L, pl['ch'], pl['x'] - x0, pl['y'] - y0, pl['size'], (1.0, 1.0, 1.0), pl['font'],
-                alpha=min(1.0, p * 3.0) * alpha, scale=1.0, texture=False, sx=1.0 / max(1e-6, ar))
+                alpha=min(1.0, p * 3.0) * alpha, scale=1.0, texture=False,
+                rot=float(pl.get('rot', 0.0)), sx=1.0 / max(1e-6, ar))
     return L.A
 
 
@@ -418,6 +574,7 @@ def etched_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1
                  font='serif_b', ar=1.0, depth=7.0, light=(-1.0, -1.0), dark=0.88,
                  hl=(0.86, 0.92, 1.0), hl_amt=0.95, groove=None, lip=0.8, lip_amt=1.0,
                  hot='', hot_col=(0.125, 0.012, 0.008), bite=1.0, chisel=0.5, dust=0.8,
+                 virt_light='auto', virt_amt=None, cells=None, cell_fit=0.80, cell_unify='cap',
                  seed=0, lead=0.05, dur=0.25, alpha=1.0):
     """「刻」：把一句歌词阴刻 / 镂空进 box 指定的画内载面（砖墙 / 石板 / 门板 / 笏板 / 刀身）。
 
@@ -439,6 +596,8 @@ def etched_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1
     n = len(places)
     if n == 0:
         return fr
+    if cells:
+        places = _place_cells(places, cells, fit=cell_fit, ar=ar, unify=cell_unify)
     pr = _char_progs(text, n, prog, times, t, lead, dur)
     if max(pr) <= 0.004:
         return fr
@@ -454,6 +613,14 @@ def etched_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1
         M = _bite(M, seed + 31, bite)
 
     sub = fr[y0:y1, x0:x1]
+    if virt_light == 'auto':                       # 规则③：镜内没有方向光就自己补一盏
+        corr = _dir_light_corr(sub, light)
+        va = 0.0 if corr > 0.25 else (0.30 if corr > 0.12 else 0.62)
+    else:
+        va = 0.0 if virt_light is None else float(virt_light)
+    if virt_amt is not None:
+        va = float(virt_amt)
+    sub = _virt_light(sub, light, va)
     out = _engrave(sub, M, light=light, depth=depth, dark=dark, hl=hl, hl_amt=hl_amt,
                    inner_col=groove)
     if hot:                       # 朱红关键字的凿槽渗朱（保留「每句至多一个朱红字」的规范，色在槽里）
@@ -470,6 +637,222 @@ def etched_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1
     fr = fr.copy()
     fr[y0:y1, x0:x1] = out
     return np.clip(fr, 0, 4)
+
+
+# ------------------------------------------------------------------ 烧
+def _sdf(A):
+    """字 alpha → 有符号距离场（<0 在字内），供 burn_hole 直接当洞的形状用。"""
+    ins = (A > 0.5).astype(np.uint8)
+    din = cv2.distanceTransform(ins, cv2.DIST_L2, 5)
+    dout = cv2.distanceTransform(1 - ins, cv2.DIST_L2, 5)
+    return (dout - din).astype(np.float32)
+
+
+def burning_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1, size=None,
+                  font='serif_b', ar=1.0, ink=(0.42, 0.035, 0.02), t_burn=None, seed=0,
+                  mode='glyph', void=None, hole_scale=1.0, cells=None, cell_fit=0.80,
+                  lead=0.05, dur=0.25, alpha=1.0):
+    """「烧」：字自燃（mode='glyph'）或烧穿载面（mode='hole'）。
+
+    mode='glyph'  复用 `e_r7.self_burn_glyph`：暗朱墨字身 + 笔画内侧碳化 + 缘上断续火线 + 火星上飘；
+                  过渡靠逐字进度（唱到哪个字，哪个字才烧起来 → 火沿读序走过去）。
+    mode='hole'   复用 `e_r7.burn_hole`：字当洞的形状（SDF），洞缘焦痕 20–40px + 纤维毛边 + 卷曲碳边，
+                  洞里露出 `void`（不给就用载面自身的模糊压暗值，读作「烧穿到后面」）。
+    t_burn        火烧的起点时间（默认 = 首字字头），逐字火势用它算 q。
+    """
+    import e_r7 as R7
+    places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
+    if not places:
+        return fr
+    if cells:
+        places = _place_cells(places, cells, fit=cell_fit, ar=ar)
+    n = len(places)
+    pr = _char_progs(text, n, prog, times, t, lead, dur)
+    if times is not None and t_burn is None:
+        t_burn = min(v for v in times if v is not None)
+    L = T.Layer()
+    for p, pl in zip(pr, places):
+        if p <= 0.004:
+            continue
+        T.place(L, pl['ch'], pl['x'], pl['y'], pl['size'], (1.0, 1.0, 1.0), pl['font'],
+                alpha=min(1.0, p * 3.0) * alpha, texture=False, rot=float(pl.get('rot', 0.0)))
+    A = L.A
+    if A.max() <= 0.01:
+        return fr
+    if mode == 'hole':
+        F = _sdf(A) * float(hole_scale)
+        if void is None:
+            bl = cv2.GaussianBlur(fr, (0, 0), 26)
+            void = np.clip(bl.mean(-1)[..., None].repeat(3, -1) * 0.35, 0, 1).astype(np.float32)
+        return np.clip(R7.burn_hole(fr, void, F, t, seed), 0, 4)
+    return np.clip(R7.self_burn_glyph(fr, A, t, float(t_burn if t_burn is not None else t), seed=seed,
+                                      ink=ink), 0, 4)
+
+
+# ------------------------------------------------------------------ 穿线
+def threaded_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1, size=None,
+                   font='serif_b', ar=1.0, thread=(0.62, 0.05, 0.05), top=None, sway=9.0,
+                   freq=0.9, length_pad=26.0, thread_w=1.6, hang=0.42, beads=0.0,
+                   shadow=0.62, glow=0.10, cells=None, cell_fit=0.80,
+                   lead=0.05, dur=0.25, alpha=1.0):
+    """「穿线」：字挂在朱红丝线上，随线摆。
+
+    每条线从 `top`（默认 = 字块上方 26px）垂到字顶；字的 x 由摆角决定：
+        ang_i = sway * sin(2π·freq·t + φ_i) * (i+1)/n * prog_i
+        x_i   = x0_i + L_i·sin(ang_i),  y_i = y0_i + L_i·(1-cos(ang_i))
+    相位 φ_i 逐字递增（越靠后的字越晚被带动），prog_i 让字「唱到才挂上去」。
+    `beads`>0 时线穿过字的上下各打一个红结（像提线木偶的系点）。
+    """
+    places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
+    if not places:
+        return fr
+    if cells:
+        places = _place_cells(places, cells, fit=cell_fit, ar=ar)
+    n = len(places)
+    pr = _char_progs(text, n, prog, times, t, lead, dur)
+    if top is None:
+        top = min(p['y'] - p['size'] * 0.5 for p in places) - length_pad
+
+    thr = np.zeros((H, W), np.float32)                     # 丝线 alpha
+    knots = np.zeros((H, W), np.float32)
+    L = T.Layer()
+    for i, (p, pl) in enumerate(zip(pr, places)):
+        if p <= 0.004:
+            continue
+        ph = 0.55 * i
+        ang = sway * math.sin(2 * math.pi * freq * t + ph) * (0.35 + 0.65 * (i + 1) / n) * p
+        Ln = max(40.0, pl['y'] - pl['size'] * 0.5 - top)
+        x = pl['x'] + Ln * math.sin(math.radians(ang))
+        y = pl['y'] + Ln * (1 - math.cos(math.radians(ang)))
+        rt = math.degrees(math.atan2(0, 1)) + ang * 0.55
+        T.place(L, pl['ch'], x, y, pl['size'], (1.0, 1.0, 1.0), pl['font'],
+                alpha=alpha, texture=False, rot=rt)
+        xt = pl['x'] + Ln * math.sin(math.radians(ang)) * 0.5
+        cv2.line(thr, (int(round(pl['x'] + Ln * math.sin(math.radians(ang)) * 0.1)), int(round(top))),
+                 (int(round(x)), int(round(y - pl['size'] * hang))), float(p), int(round(thread_w)), cv2.LINE_AA)
+        if beads > 0:                                       # 系点红结
+            cv2.circle(knots, (int(round(x)), int(round(y - pl['size'] * hang))),
+                       max(2, int(round(pl['size'] * 0.05 * beads))), float(p), -1, cv2.LINE_AA)
+    if L.bb[2] <= L.bb[0]:
+        return fr
+    out = T.compose(fr, L, shadow=shadow, shadow_sigma=18, glow=glow, glow_sigma=14)
+    TH = cv2.GaussianBlur(thr, (0, 0), 0.6)[..., None] * np.array(thread, np.float32)
+    out = out * (1 - TH * 0.9) + TH * np.array(thread, np.float32)
+    if knots.max() > 0:
+        KN = cv2.GaussianBlur(knots, (0, 0), 0.5)[..., None] * np.array(thread, np.float32) * 1.15
+        out = out * (1 - np.clip(KN, 0, 1)) + np.clip(KN, 0, 1.4)
+    return np.clip(out, 0, 4)
+
+
+# ------------------------------------------------------------------ 擦
+def wiped_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1, size=None,
+                font='serif_b', ar=1.0, ink=(0.055, 0.05, 0.052), wipe=None, wipe_dir=(1.0, -0.15),
+                keep=0.18, front=0.5, streak=1.0, seed=0, cells=None, cell_fit=0.80,
+                shadow=0.0, lead=0.05, dur=0.25, alpha=1.0):
+    """「擦」：字先被「写/刻」上去，再沿 `wipe_dir` 被擦掉（刮擦 / 雨水冲 / 手抹）。
+
+    keep    擦过之后留下的残墨比例（0 = 干净，0.25 = 留一道浅影）
+    front   擦除前沿的宽度（0.2–0.8：前沿越窄越像刀刮，越宽越像抹布）
+    streak  沿擦除方向的纤维拖痕强度（干笔/纸纤维；换向即为雨冲）
+    wipe    擦除进度 0–1；None 时用逐字进度里最后一个字的位置推（唱到哪擦到哪）
+    """
+    places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
+    if not places:
+        return fr
+    if cells:
+        places = _place_cells(places, cells, fit=cell_fit, ar=ar)
+    n = len(places)
+    pr = _char_progs(text, n, prog, times, t, lead, dur)
+    L = T.Layer()
+    for p, pl in zip(pr, places):
+        if p <= 0.004:
+            continue
+        T.place(L, pl['ch'], pl['x'], pl['y'], pl['size'], (1.0, 1.0, 1.0), pl['font'],
+                alpha=min(1.0, p * 2.6) * alpha, texture=True, rot=float(pl.get('rot', 0.0)))
+    A = L.A
+    if A.max() <= 0.01:
+        return fr
+    # 擦除方向 → 归一化进度场
+    ys, xs = np.nonzero(A > 0.02)
+    ext = np.array([xs.min(), ys.min(), xs.max(), ys.max()], np.float32)
+    dx, dy = wipe_dir
+    nn = math.hypot(dx, dy) or 1.0
+    dx, dy = dx / nn, dy / nn
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    proj = (xx - ext[0]) * dx + (yy - ext[1]) * dy
+    span = max(1.0, (ext[2] - ext[0]) * abs(dx) + (ext[3] - ext[1]) * abs(dy))
+    q = 0.0 if wipe is None else float(wipe)
+    if wipe is None:                                   # 默认：取「最靠后的已唱字」当擦除前沿
+        q = float(np.clip(max(pr) if pr else 0.0, 0, 1))
+    r = np.random.default_rng(seed)
+    fib = cv2.resize(r.random((max(2, H // 26), max(2, W // 6))).astype(np.float32), (W, H),
+                     interpolation=cv2.INTER_CUBIC)
+    front_px = np.clip(proj / span - (q - front * 0.5), 0, 1) / max(1e-3, front)
+    gone = np.clip(front_px * (0.75 + 0.5 * fib), 0, 1)          # 0 = 还在，1 = 已擦掉
+    keepm = keep * (0.35 + 0.9 * fib)                            # 残墨（跟着纤维走）
+    A2 = A * (1 - gone * (1 - keepm))
+    edge = np.clip(1 - np.abs(np.clip(front_px, 0, 1) * 2 - 1), 0, 1) * A * streak
+    out = fr.copy()
+    inkc = np.array(ink, np.float32)
+    out = out * (1 - A2[..., None]) + inkc * A2[..., None]
+    if shadow > 0:
+        sm = cv2.GaussianBlur(A2, (0, 0), 10)
+        out = out * (1 - shadow * sm[..., None] * 0.6)
+    out = out + edge[..., None] * np.array([0.72, 0.70, 0.66], np.float32) * 0.5   # 擦痕的冷白粉屑
+    return np.clip(out, 0, 4)
+
+
+# ------------------------------------------------------------------ 印
+def stamped_lyric(fr, text, box, prog=1.0, times=None, t=None, layout='v', cols=1, size=None,
+                  font='serif_b', ar=1.0, red=(0.72, 0.055, 0.045), press=1.0, wear=0.24,
+                  bleed=1.4, frame_box=True, rot=0.0, seed=0, cells=None, cell_fit=0.80,
+                  drop=0.35, lead=0.05, dur=0.25, alpha=1.0):
+    """「印」：朱印压上去（不是盖在屏幕上，是**压进**载面：印泥乘到底材上，纸/石纹透出来）。
+
+    合成用乘性 + 少量叠加而非盖上去，所以底材纹理始终在印下：
+        out = fr·(1 - A·press) + fr·tint·A·press + 印泥浮色
+    另外三件事让它像真印：① 边缘纸纤维洇开（`bleed`）② 印面残损（`wear`）③ 落印回弹（`drop`）。
+    `frame_box` 时给整句套一圈朱色边框（4 字以上自动走 `props.seal_face` 的印章布局感）。
+    """
+    places = prop_layout(text, box, layout=layout, cols=cols, size=size, font=font, ar=ar)
+    if not places:
+        return fr
+    if cells:
+        places = _place_cells(places, cells, fit=cell_fit, ar=ar)
+    n = len(places)
+    pr = _char_progs(text, n, prog, times, t, lead, dur)
+    L = T.Layer()
+    for p, pl in zip(pr, places):
+        if p <= 0.004:
+            continue
+        e = T.ease_out(min(1.0, p), 2.2)
+        T.place(L, pl['ch'], pl['x'], pl['y'], pl['size'], (1.0, 1.0, 1.0), pl['font'],
+                alpha=min(1.0, p * 3.0) * alpha, scale=1.0 + drop * (1 - e),
+                texture=False, rot=rot + float(pl.get('rot', 0.0)))
+    A = L.A
+    if A.max() <= 0.01:
+        return fr
+    r = np.random.default_rng(seed)
+    nz = cv2.resize(r.random((max(2, H // 14), max(2, W // 14))).astype(np.float32), (W, H),
+                    interpolation=cv2.INTER_CUBIC)
+    wear_m = np.clip((1 - wear) + wear * (nz * 2.4 - 0.35), 0.25, 1.0)
+    A = A * wear_m
+    soft = cv2.GaussianBlur(A, (0, 0), bleed)
+    A = np.maximum(A, soft * 0.55)                                # 边缘洇开
+    if frame_box and n >= 4:
+        bx = _mask_box(A, 0)
+        if bx is not None:
+            x0, y0, x1, y1 = bx
+            pad = int(max(10, 0.10 * max(x1 - x0, y1 - y0)))
+            cv2.rectangle(A, (max(0, x0 - pad), max(0, y0 - pad)),
+                          (min(W - 1, x1 + pad), min(H - 1, y1 + pad)), 1.0,
+                          max(2, int(round(min(W, H) * 0.0035))), cv2.LINE_AA)
+            A = cv2.GaussianBlur(A, (0, 0), 1.1)
+    c = np.array(red, np.float32)
+    k = (A * press)[..., None] * alpha
+    tint = np.minimum(1.6, c[None, None, :] / 0.55)
+    out = fr * (1 - k * 0.55) + fr * tint * k * 0.85 + c[None, None, :] * k * 0.30
+    return np.clip(out, 0, 4)
 
 
 # ------------------------------------------------------------------ 试点（副歌一 S034「若规则是铁壁铜墙」）
@@ -567,6 +950,210 @@ def pilot(frame=2071, out_dir=None, text='若规则是铁壁铜墙', line=14,
     return ms
 
 
+# =====================================================================================
+# 试点总调度：每一项 = 一帧「改造前」+ 一帧「净板 + 道具字」→ 对比图
+# =====================================================================================
+def _render(f):
+    import prun, random
+    st = _render.st = getattr(_render, 'st', None) or prun.load()
+    random.seed(int(f)); np.random.seed(int(f))
+    return prun.render_frame(int(f), {}, st)
+
+
+def plate(f, section):
+    """取「无字幕净板」——只改运行期开关/模块属性，不动任何源文件。
+
+    chorus1 : 副歌一自带 C1_LYR 开关（`chorus1.py:1577`），设 '0' 即无统一字幕层
+    c       : 运行期把 `sec_c_pre2_chorus2.SENTS` 置空（Sec.frame 逐帧读全局）
+    a       : 运行期把 `sec_a_intro_verse1.lyrics` 换成恒等函数
+    e       : 运行期把 `e_r3.Lyr / e_r3.LyrO / e_r3.Sub` 的 draw 换成恒等
+    b_pre1  : 该段字幕就写在镜头 render() 里、没有开关 —— 用 T.place 过滤掉指定字号的那几个字
+    """
+    import os
+    if section == 'chorus1':
+        old = os.environ.get('C1_LYR', '3')
+        os.environ['C1_LYR'] = '0'
+        try:
+            return _render(f)
+        finally:
+            os.environ['C1_LYR'] = old
+    if section == 'c':
+        import sec_c_pre2_chorus2 as M
+        old = M.SENTS; M.SENTS = []
+        try:
+            return _render(f)
+        finally:
+            M.SENTS = old
+    if section == 'a':
+        import sec_a_intro_verse1 as M
+        old = M.lyrics; M.lyrics = lambda fr, t: fr
+        try:
+            return _render(f)
+        finally:
+            M.lyrics = old
+    if section == 'e':
+        import e_r3 as M
+        olds = [(M.Lyr, 'draw'), (M.LyrO, 'draw'), (M.Sub, 'draw')]
+        keep = [(c, n, getattr(c, n)) for c, n in olds]
+        for c, n, _ in keep:
+            setattr(c, n, lambda self, fr, t, **kw: fr)
+        try:
+            return _render(f)
+        finally:
+            for c, n, fn in keep:
+                setattr(c, n, fn)
+    return _render(f)
+
+
+def s034_cells(t, picks=((13, 3), (14, 3), (13, 2), (14, 2))):
+    """S034「砖墙」的「一字一砖」格（示例：任何 `K.brick_wall()+K.warp_quad()` 的镜头都能照抄）。
+
+    S034 的砖几何是 `K.brick_wall(2400,1600,220,92,9,34)` → `wall[off:off+1300]` → `warp_quad(src, quad(t))`，
+    off = int(260*min(1.2,u))。这里把同一套参数喂给 `grid_cells()` 直接算出屏幕上的砖格，
+    再手挑 4 个「最大的砖」（透视近端）——这样每个字都能完整坐在一块砖上，笔画不被砖缝切断。
+    """
+    import chorus1
+    S = chorus1.S034
+    u = (t - S.t0) / (S.t1 - S.t0)
+    off = int(260 * min(1.2, max(0.0, u)))
+    try:
+        quad = S.quad(S(), t)
+    except Exception:
+        return None
+    cells = grid_cells(quad, 2400, 1300, 220.0, 92.0, src_y0=-off)
+    out = [cells.get(k) for k in picks]
+    return None if any(c is None for c in out) else out
+
+
+_ITEMS = [
+    # id, 句号, 段, 帧, 文本, box, 函数, 参数
+    dict(id='L15', sec='chorus1', f=2071, text='若规则是铁壁铜墙', key='铁壁铜墙', box=(140, 150, 560, 940), fn='刻',
+         hot='墙', cells=s034_cells,
+         kw=dict(depth=5.0, dark=0.90, cell_fit=0.86, hl=(0.76, 0.84, 1.0), hl_amt=0.70,
+                 groove=(0.008, 0.010, 0.016), lip=0.85, bite=0.85, chisel=0.50, seed=34)),
+    dict(id='L18', sec='chorus1', f=2385, text='是非对错我自己扛', key='自己扛', box=(1400, 210, 1860, 880), fn='刻'),
+    dict(id='L35', sec='c', f=4306, text='若规则是铁壁铜墙', key='铁壁', box=(1080, 180, 1820, 700), fn='刻',
+         kw=dict(depth=3.5, dark=0.62, hl=(0.55, 0.62, 0.80), hl_amt=0.75, bite=1.6, lip=0.95)),
+    dict(id='L54', sec='e', f=6392, text='对就是对错就是错何须伪装', key='何须伪装', box=(1180, 200, 1830, 880), fn='刻'),
+    dict(id='L08', sec='a', f=1281, text='那我宁愿做乱世的锋芒', key='锋芒', box=(980, 190, 1780, 640), fn='烧'),
+    dict(id='L17', sec='chorus1', f=2278, text='血未冷 骨未凉', key='骨未凉', box=(620, 280, 1320, 800), fn='烧'),
+    dict(id='L32', sec='c', f=3931, text='信这柄刀还在发烫', key='发烫', box=(300, 220, 1500, 780), fn='烧'),
+    dict(id='L51', sec='e', f=6065, text='若规则是谎言伪装', key='谎言', box=(620, 380, 1300, 820), fn='烧'),
+    dict(id='L01', sec='a', f=523, text='长夜压在我刀锋之上', key='长夜', box=(620, 240, 1420, 700), fn='穿线'),
+    dict(id='L13', sec='chorus1', f=1841, text='血未冷 刀不放', key='刀不放', box=(600, 200, 1400, 640), fn='穿线'),
+    dict(id='L19', sec='chorus1', f=2495, text='天不判 我来量', key='我来量', box=(480, 260, 1300, 720), fn='穿线'),
+    dict(id='L33', sec='c', f=4093, text='血未冷 刀不放', key='血未冷', box=(300, 200, 1500, 660), fn='穿线'),
+    dict(id='L02', sec='a', f=620, text='五百重甲拦不住一道寒光', key='寒光', box=(760, 190, 1780, 600), fn='擦'),
+    dict(id='L07', sec='a', f=1176, text='若正义由权势执掌', key='权势', box=(560, 320, 1240, 860), fn='擦'),
+    dict(id='L11', sec='b_pre1', f=1632, text='我不信天不信命不信谁的理所应当', key='理所应当', box=(160, 190, 720, 900), fn='擦'),
+    dict(id='L31', sec='c', f=3833, text='我不低头不认命不信什么大局为上', key='大局', box=(200, 200, 1500, 780), fn='擦'),
+    dict(id='L03', sec='a', f=735, text='谁在高处定对错罪状', key='罪状', box=(1000, 560, 1720, 950), fn='印'),
+    dict(id='L05', sec='a', f=954, text='我杀过恶徒也放过混账', key='混账', box=(200, 560, 1000, 950), fn='印'),
+    dict(id='L14', sec='chorus1', f=1945, text='谁人来定正邪一方', key='正邪', box=(760, 400, 1480, 900), fn='印'),
+    dict(id='L39', sec='c', f=4748, text='天不判 我来量', key='量', box=(700, 300, 1500, 860), fn='印'),
+]
+
+_CLS_DEFAULT = {
+    '刻': dict(font='serif_black', cols=1, depth=5.5, dark=0.88, hl=(0.76, 0.84, 1.0), hl_amt=0.62,
+               groove=(0.008, 0.010, 0.016), lip=0.78, bite=1.0, chisel=0.55, dust=0.85, seed=34),
+    '烧': dict(font='serif_black', cols=1, seed=41),
+    '穿线': dict(font='serif_black', cols=1, sway=10.0, freq=0.85, thread=(0.62, 0.05, 0.05), seed=7),
+    '擦': dict(font='serif_black', cols=1, wipe=0.55, keep=0.20, front=0.45, seed=13),
+    '印': dict(font='serif_black', cols=1, press=1.0, wear=0.22, bleed=1.5, seed=21),
+}
+
+
+def _draw(item, base, t):
+    """按手法派发；返回处理后的帧。"""
+    import json, os
+    fn = item['fn']
+    kw = dict(_CLS_DEFAULT[fn]); kw.update(item.get('kw') or {})
+    text, box = item.get('key') or item['text'], item['box']
+    if 'cols' not in (item.get('kw') or {}):                 # 多字自动分列：一句最多 4 字一列
+        nch = len([c for c in text if c != ' '])
+        kw['cols'] = 2 if nch >= 7 else 1
+        if nch >= 11:
+            kw['cols'] = 3
+    if item.get('hot'):
+        kw.setdefault('hot', item['hot'])
+    _full = T.load_lines()[int(item['id'][1:]) - 1]
+    times = key_times(_full['text'], _full['times'], text) or _full['times']
+    if fn == '刻':
+        cells = item.get('cells')
+        if callable(cells):
+            cells = cells(t)
+        return etched_lyric(base, text, box, times=times, t=t, cells=cells, **kw)
+    if fn == '烧':
+        return burning_lyric(base, text, box, times=times, t=t, **kw)
+    if fn == '穿线':
+        return threaded_lyric(base, text, box, times=times, t=t, **kw)
+    if fn == '擦':
+        return wiped_lyric(base, text, box, times=times, t=t, **kw)
+    if fn == '印':
+        return stamped_lyric(base, text, box, times=times, t=t, **kw)
+    raise ValueError(fn)
+
+
+def run_items(ids=None, out_dir=None, only=None):
+    """跑指定几项，出 before / plate / after + 一张该类对比图。返回 {id: dict(ms=..., paths=...)}"""
+    import os, time
+    from PIL import Image, ImageDraw, ImageFont
+    out_dir = out_dir or os.environ.get('PROPS_OUT') or os.path.abspath(os.path.join('out', 'props_dev'))
+    os.makedirs(out_dir, exist_ok=True)
+    sel = [it for it in _ITEMS if (ids is None or it['id'] in ids) and (only is None or it['fn'] in only)]
+    try:
+        F = ImageFont.truetype(os.path.join(T.ROOT, 'fonts', 'NotoSerifSC.otf'), 26)
+    except Exception:
+        F = ImageFont.load_default()
+    res = {}
+    for it in sel:
+        f = int(it['f']); t = f / 30.0
+        before = _render(f)
+        pt = plate(f, it['sec'])
+        t0 = time.monotonic()
+        after = _draw(it, pt.astype(np.float32) / 255.0, t)
+        ms = (time.monotonic() - t0) * 1000.0
+        # 再跑两次取中位（首次含字形缓存预热）
+        for _ in range(2):
+            t0 = time.monotonic(); _draw(it, pt.astype(np.float32) / 255.0, t)
+            ms = min(ms, (time.monotonic() - t0) * 1000.0)
+        after8 = (np.clip(after, 0, 1) * 255).astype(np.uint8)
+        p1 = os.path.join(out_dir, '%s_before.png' % it['id'])
+        p2 = os.path.join(out_dir, '%s_after.png' % it['id'])
+        Image.fromarray(before).save(p1)
+        Image.fromarray(after8).save(p2)
+        if it.get('tiles') != 'S034':                     # S034 已有专门的完整对比图集
+            pass
+        res[it['id']] = dict(ms=ms, before=p1, after=p2, fn=it['fn'], sec=it['sec'], f=f, t=t, item=it)
+        print('ITEM %s %s %s f=%d %5.0fms' % (it['id'], it['fn'], it['sec'], f, ms), flush=True)
+
+    for cls in sorted({r['fn'] for r in res.values()}):
+        rows = [r for r in res.values() if r['fn'] == cls]
+        if not rows:
+            continue
+        Wd, Hd = 760, 428
+        sheet = Image.new('RGB', (Wd * 2 + 36, (Hd + 40) * len(rows) + 56), (12, 12, 12))
+        d = ImageDraw.Draw(sheet)
+        d.text((14, 8), '「%s」类 · 左=改造前（屏幕层字幕）  右=改造后（画内道具字）' % cls,
+               font=F, fill=(255, 214, 110))
+        for i, r in enumerate(rows):
+            y = 66 + i * (Hd + 40)
+            sheet.paste(Image.open(r['before']).resize((Wd, Hd), Image.LANCZOS), (12, y))
+            sheet.paste(Image.open(r['after']).resize((Wd, Hd), Image.LANCZOS), (Wd + 24, y))
+            d.text((12, y - 26), '%s  %s  f=%d  %.0fms' % (r['item']['id'], r['item']['text'][:14], r['f'], r['ms']),
+                   font=F, fill=(235, 225, 190))
+        p = os.path.join(out_dir, 'class_%s.png' % cls)
+        sheet.save(p)
+        print('SHEET', p, flush=True)
+    return res
+
+
 if __name__ == '__main__':
     import sys
-    pilot(frame=int(sys.argv[1]) if len(sys.argv) > 1 else 2071)
+    args = sys.argv[1:]
+    if args and args[0] in ('刻', '烧', '穿线', '擦', '印'):
+        run_items(only=[args[0]])
+    elif args and args[0] == 'items':
+        run_items(ids=args[1:] or None)
+    else:
+        pilot(frame=int(args[0]) if args else 2071)
