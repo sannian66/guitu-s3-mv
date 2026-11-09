@@ -28,12 +28,12 @@ PAR = int(os.environ.get('PAR', '2'))          # 同时最多 2 个渲染进程
 # 7 个段落 → 行号区间（56 句的 align/lyrics 顺序）与「本段自己的字幕层是否已接线关掉」
 SECTIONS = [
     ('1_A_intro_verse1', 'A 段 sec_a_intro_verse1（0–44.0s）', range(0, 8), True),
-    ('2_B_pre1',         'B 组 sec_b_pre1（44.0–59.5s）',       range(8, 12), False),
+    ('2_B_pre1',         'B 组 sec_b_pre1（44.0–59.5s）',       range(8, 12), True),
     ('3_chorus1',        '副歌一 chorus1（59.5–86.2s）',        range(12, 20), True),
-    ('4_B_verse2',       'B 组 sec_b_verse2（86.2–117.8s）',    range(20, 28), False),
+    ('4_B_verse2',       'B 组 sec_b_verse2（86.2–117.8s）',    range(20, 28), True),
     ('5_C_pre2_chorus2', 'C 段 sec_c_pre2_chorus2（117.8–161.3s）', range(28, 40), True),
-    ('6_D_bridge',       'D 段 sec_d_bridge（161.3–193.2s）',   range(40, 48), False),
-    ('7_E_final_outro',  'E 段 sec_e_final_outro（193.2–241.3s）', range(48, 56), False),
+    ('6_D_bridge',       'D 段 sec_d_bridge（161.3–193.2s）',   range(40, 48), True),
+    ('7_E_final_outro',  'E 段 sec_e_final_outro（193.2–241.3s）', range(48, 56), True),
 ]
 
 
@@ -59,6 +59,9 @@ def cmd_frame(lu, fr, out):
         os.environ.pop(key, None)
     if str(lu) == '1':
         os.environ['LYRIC_UNI'] = '1'
+    if os.environ.get('LYRIC_UNI_AUDIT') == '1':
+        _audit_render(int(fr), out)
+        return
     sys.argv = [sys.argv[0], 'status']            # prun 顶层会读 argv
     import numpy as np
     import prun
@@ -67,6 +70,23 @@ def cmd_frame(lu, fr, out):
     img = prun.render_frame(int(fr), {}, st)
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
     Image.fromarray(img).save(out)
+
+
+def _audit_render(fr, out):
+    """LYRIC_UNI=1 渲一帧，同时记录「还有谁在画字」（file:line / 函数 / 文本）。"""
+    import json
+    import numpy as np
+    import prun
+    from PIL import Image
+    st = prun.load()                       # 先 load（它负责把快照的 units/lib 塞进 sys.path）
+    import lyric_uni as LU
+    LU.audit_start()
+    img = prun.render_frame(fr, {}, st)
+    rec = LU.audit_take()
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    Image.fromarray(img).save(out)
+    with open(out + '.audit.json', 'w', encoding='utf-8') as fh:
+        json.dump(rec, fh, ensure_ascii=False)
 
 
 def render(jobs):
@@ -156,8 +176,8 @@ def pairs():
         sheet = Image.new('RGB', (W, H), (14, 14, 15))
         d = ImageDraw.Draw(sheet)
         d.text((20, 12), title, fill=(236, 232, 224), font=f_ttl)
-        d.text((20, 46), '左右 = 改造前（本组原字幕） | 改造后（units/lyric_uni.py 统一层），右端 = 改造后字幕列全分辨率裁切'
-                        + ('' if wired else '　⚠ 本段字幕层尚未接线关掉：右图 = 原字幕 + 统一层同屏，只示意统一层位置/风格'),
+        d.text((20, 46), '左右 = 改造前（本组原字幕） | 改造后（统一层 + 本段字幕层已关），右端 = 改造后字幕列全分辨率裁切'
+                        + ('' if wired else '　⚠ 本段字幕层未接线'),
                fill=(140, 165, 150) if wired else (205, 160, 130), font=f_sml)
         for i, (r, f, pb, pa) in enumerate(rows):
             y = 78 + i * RH
@@ -207,8 +227,8 @@ def consist():
     f_ttl = ImageFont.truetype(FONT, 24)
     f_cap = ImageFont.truetype(FONT_L, 15)
     d.text((10, 10), '整片字幕位置一致性检查：20 帧缩略图（黄线 = 列右缘 x=1792，绿线 = 列左界）', fill=(236, 232, 224), font=f_ttl)
-    d.text((10, 40), '6/7 段未接线（B-pre1 / B-verse2 / D / E 仍带各自原字幕）→ 这些帧里除右侧竖列外还能看到各组旧字幕',
-           fill=(200, 160, 130), font=f_cap)
+    d.text((10, 40), '7 段字幕层全部已接线关掉 → 画面里除右侧竖列外，只剩「镜头自己画的画内大字」（等 props_dev 用 OUT_CHARS 接管，见 outchars_table.md）',
+           fill=(150, 200, 160), font=f_cap)
     for k, i in enumerate(idx):
         r = L[i]
         p = os.path.join(TMP, f'consist_{i}.png')
@@ -225,6 +245,328 @@ def consist():
     out = os.path.join(OUTDIR, 'consist.jpg')
     sheet.save(out, quality=90)
     print('sheet', out, flush=True)
+    return out
+
+
+# ---------------------------------------------------------------- ③ 「道具接管 vs 字幕出字」对照表
+def table():
+    """把 props 组抽走的字（hidden_slots.json）与统一层实际出字对齐成一张表。
+
+    - 每个槽位都过 out_chars(validate=True)：句号/字序/字/整句 必须和 lyrics.json+align 完全一致，
+      对不上直接抛错（防两套规则打架）。
+    - 同时给出 is_lyric 的判定口径（B 段守卫用的就是它）。
+    """
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    L = LU.lines()
+    slots = LU.out_chars(validate=True)              # {(行号0基, 字序)}
+    by = {}
+    for (ln, k) in sorted(slots):
+        by.setdefault(ln, []).append(k)
+    # is_lyric 自检：每句整句、每句的每个 2 字滑窗都必须是 lyric
+    bad = []
+    for r in L:
+        t = LU._clean(r['text'])
+        if not LU.is_lyric(t):
+            bad.append(('整句', r['line'], t))
+        for i in range(len(t) - 1):
+            if not LU.is_lyric(t[i:i + 2]):
+                bad.append(('二字窗', r['line'], t[i:i + 2]))
+    md = ['# 道具接管（OUT_CHARS）vs 统一层出字 对照表', '',
+          '> 生成：`python3 tools/lyric_uni_cmp.py table`｜来源 `out/props_dev/hidden_slots.json`'
+          '（45 槽）+ `lyrics.json` + `align.json`。槽位已逐条校验（句号/字序/字/整句全对得上）。', '',
+          '- **props 接管** = 已被抽成画内道具、字幕层留空不画（`OUT_CHARS`，`LYRIC_UNI_OUT=1` 才启用）',
+          '- **统一层出字** = 仍在右侧竖列里出的字', '',
+          '## 总账', '',
+          '| 项 | 数 |', '|---|---|',
+          '| 歌词句 | %d |' % len(L),
+          '| 总字数 | %d |' % sum(r['n'] for r in L),
+          '| props 接管槽位 | **%d**（分布在 %d 句） |' % (len(slots), len(by)),
+          '| 由统一层出字 | %d |' % (sum(r['n'] for r in L) - len(slots) - len(LU.in_scene_hide())),
+          '| 整句都被道具接管 | %s |' % ('、'.join('第%d句' % (ln + 1) for ln, ks in sorted(by.items()) if len(ks) == L[ln]['n']) or '无'),
+          '',
+          '## 逐句对照', '',
+          '| 句号 | 句 | 字数 | props 接管（字序:字） | 统一层出字 |', '|---|---|---|---|---|']
+    for r in L:
+        ks = by.get(r['line'], [])
+        take = '、'.join('%d:%s' % (k, r['chars'][k]['ch']) for k in ks) or '—'
+        hide = ks + [k for k in range(r['n']) if (r['line'], k) in LU.in_scene_hide()]
+        keep = ''.join(c['ch'] if k not in hide else '□' for k, c in enumerate(r['chars']))
+        md.append('| %d | %s | %d | %s | %s |' % (r['line'] + 1, r['text'].replace(' ', '·'), r['n'],
+                                                  take, keep or '（整句被接管）'))
+    ins = LU.in_scene_hide()
+    md += ['', '## 画面内已有字（IN_SCENE）→ 字幕留空（不删画面里的字）', '',
+           '> 分类口径：**in-scene** = 画面元素（刻/印/烧/散字/巨字），保留；**subtitle** = 字幕层，已加守卫关掉。', '',
+           '| 来源（file:line） | 句 | 画面里的词 | 分类 | 说明 | 字幕里留空的字 |', '|---|---|---|---|---|---|']
+    for (fn, line0), (li, w, why) in LU.IN_SCENE.items():
+        r = L[li]
+        blanks = [(k, c['ch']) for k, c in enumerate(r['chars']) if (li, k) in ins]
+        md.append('| `%s:%d` | %d | %s | in-scene（保留） | %s | %s |' % (
+            fn, line0, li + 1, w, why, '、'.join('%d:%s' % b for b in blanks)))
+    sub = [('sec_a_intro_verse1.py', 2297, 'lyrics(fr,t)：整段 LY2 表', 'subtitle'),
+           ('sec_c_pre2_chorus2.py', 2471, 'for s in SENTS: draw_sent(...)', 'subtitle'),
+           ('chorus1.py', 'harness', 'C1_LYR=0（render_sprite_full.py:18-19 设）', 'subtitle'),
+           ('sec_b_pre1.py', 133, "T.place(p['ch'])「写生死簿」整句", 'subtitle'),
+           ('sec_b_pre1.py', 424, '「用血来装潢」竖排副句', 'subtitle'),
+           ('sec_b_verse2.py', 811, '「可大局背后」竖排副句', 'subtitle'),
+           ('sec_b_verse2.py', 852, '「是谁的」竖排副句', 'subtitle'),
+           ('sec_b_verse2.py', 1541, '「不听天命」四字块', 'subtitle'),
+           ('sec_b_verse2.py', 1836, '「若这世」竖排副句', 'subtitle'),
+           ('sec_b_verse2.py', 1877, '「道黑白颠倒」竖排', 'subtitle'),
+           ('sec_b_verse2.py', 1929, '「那就用刀」横排', 'subtitle'),
+           ('sec_b_verse2.py', 1933, '「那就用」斩开版', 'subtitle'),
+           ('sec_b_verse2.py', 2040, '「锋重新划」横排', 'subtitle'),
+           ('sec_b_verse2.py', 1412, 'T.ink_bleed_in「可曾有机会」右列 104px ← 用户抓到的 f3050 双字幕', 'subtitle'),
+           ('d_kit.py', 201, 'column()：D 段竖排字幕', 'subtitle'),
+           ('d_kit.py', 464, 'song()：≤160px 字幕副句', 'subtitle'),
+           ('e_kit.py', 246, 'Lyr.draw：≤160px 字幕整句', 'subtitle'),
+           ('e_r5.py', 108, 'SubD.draw：副句暗衬 + 朱印', 'subtitle')]
+    md += ['', '## 字幕层（subtitle）守卫点位 —— 已全部关掉', '',
+           '| 来源（file:line） | 关掉的东西 | 分类 |', '|---|---|---|']
+    for fn, line0, what, cls in sub:
+        md.append('| `%s:%s` | %s | %s |' % (fn, line0, what, cls))
+    md += ['', '## is_lyric 自检（B 段守卫的判定口径）', '',
+           '- 判据：去空格/标点后，长度 ≥2 且是 56 句之一的子串 → True；单字 → 该字在歌词里出现过 → True',
+           '- 自检：56 句整句 + 全部二字滑窗共 %d 项 → **%s**' % (
+               len(L) + sum(r['n'] - 1 for r in L), '全通过' if not bad else '失败 %r' % bad[:5]),
+           '', '## 已知「同一句既出字幕、又出画内大字」的段落（等 props 接管，不是字幕层的 bug）', '',
+           '| 段 | 镜内大字（镜头自己画的，守卫管不到） | 与统一层重复的句 |', '|---|---|---|',
+           '| A 段 | 五百 / 重甲 / 寒光 / 罪状 / 称量 / 杀 / 放 / 主张 / 正 / 锋芒 | 第 2、3、4、5、6、8 句 |',
+           '| 副歌一 | 那就劈开它（`lyric3` 里 `skip=True` 的镜内版）、就是我的回答 | 第 15、19 句 |',
+           '| B 段 | 善恶框 / 门扇金箔「谁的规矩」/ 纸面「当」压印（判为画内设计，守卫故意不拦） | 第 8、9、10 句 |',
+           '| D 段 | 忍 / 让 / 判 / 陪葬（宣纸大字，走 `T.glyph` 直画，不过 `song()`） | 第 40、46、43 句 |',
+           '| E 段 | 定 / 错 / 刀 / 谎言 / 正道沧桑（`Lyr` 已关，但这些是镜内直画） | 第 50、51、53、55 句 |', '']
+    out = os.path.join(OUTDIR, 'outchars_table.md')
+    with open(out, 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(md))
+    print('table →', out, '| 槽位', len(slots), '| is_lyric 自检', 'PASS' if not bad else 'FAIL')
+    return out
+
+
+# ---------------------------------------------------------------- ⑤ 重复出字：审计 + 像素检测
+def _picks21():
+    """7 段 × 3 帧（每段取最长句 / 最短句 / 重音句中那帧）。"""
+    L = _lines()
+    out = []
+    for name, title, rng, wired in SECTIONS:
+        for r in pick_lines(L, rng):
+            out.append((name, r['line'], fnum(t_of(r))))
+    out.append(('EVIDENCE_f3050(用户证据帧)', 23, 3050))      # 用户抓到的双字幕帧，必须一直是 0 重复
+    return out
+
+
+def audit():
+    """审计：LYRIC_UNI=1 时，字幕区里「还有谁在画字」（file:line / 函数 / 文本 / 字号）。"""
+    import json
+    from collections import defaultdict
+    picks = _picks21()
+    os.environ['LYRIC_UNI_AUDIT'] = '1'
+    jobs = [(1, f, os.path.join(TMP, f'audit_{f}.png')) for _, _, f in picks]
+    render(jobs)
+    os.environ.pop('LYRIC_UNI_AUDIT', None)
+    agg = defaultdict(lambda: dict(txt=set(), frames=[], sizes=set()))
+    for _, ln, f in picks:
+        p = os.path.join(TMP, f'audit_{f}.png.audit.json')
+        if not os.path.exists(p):
+            print('MISSING audit', f)
+            continue
+        for rec in json.load(open(p, encoding='utf-8')):
+            k = (rec['f'], rec['line'], rec['fn'])
+            agg[k]['txt'].add(rec['txt'][:18])
+            agg[k]['frames'].append(f)
+            if rec['size']:
+                agg[k]['sizes'].add(int(rec['size']))
+    rows = sorted(agg.items(), key=lambda kv: (-len(kv[1]['frames']), kv[0]))
+    md = ['# 重复出字审计：LYRIC_UNI=1 时字幕区里还有谁在画字', '',
+          '> 生成：`python3 tools/lyric_uni_cmp.py audit`（21 帧 = 7 段 × 3 句）。'
+          '拦截口径：所有「第一个参数是帧（fr）」的 typo 绘制函数，记录调用者文件:行号 / 函数 / 文本 / 字号。', '',
+          '| # | 来源 | 函数 | 文本 | 字号 px | 命中帧数 |', '|---|---|---|---|---|---|']
+    for i, ((fn_, line, func), v) in enumerate(rows, 1):
+        txt = '·'.join(sorted(t for t in v['txt'] if t)) or '—'
+        md.append('| %d | `%s:%d` | %s | %s | %s | %d |' % (
+            i, fn_, line, func, txt[:40], ','.join(str(s) for s in sorted(v['sizes'])) or '—', len(v['frames'])))
+    out = os.path.join(OUTDIR, 'dup_audit_table.md')
+    with open(out, 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(md) + '\n')
+    print('audit →', out, '| 站点', len(rows), '| 帧', len(picks))
+    for (fn_, line, func), v in rows[:40]:
+        print('  %-22s:%-5d %-18s %s' % (fn_, line, func, '·'.join(sorted(t for t in v['txt'] if t))[:34]))
+    return out
+
+
+def _textmask(img, box):
+    """字幕区里「像字」的像素：局部对比高的暗/亮笔画。"""
+    import numpy as np
+    import cv2
+    x0, y0, x1, y1 = box
+    reg = img[y0:y1, x0:x1].astype(np.float32) / 255.0
+    L = reg[..., 0] * 0.299 + reg[..., 1] * 0.587 + reg[..., 2] * 0.114
+    lo = cv2.GaussianBlur(L, (0, 0), 12)
+    hp = np.abs(L - lo)
+    m = (hp > 0.11).astype(np.uint8)
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
+    return m
+
+
+def dupcheck():
+    """像素检测：21 帧字幕区（x>1500, 200<y<900）里除了「我的字形框」之外还有没有成句的字。"""
+    import numpy as np
+    import cv2
+    from PIL import Image
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    picks = _picks21()
+    jobs = [(1, f, os.path.join(TMP, f'dup_{f}.png')) for _, _, f in picks]
+    render(jobs)
+    rows, bad = [], []
+    for name, ln, f in picks:
+        p = os.path.join(TMP, f'dup_{f}.png')
+        if not os.path.exists(p):
+            continue
+        img = np.asarray(Image.open(p).convert('RGB'))
+        box = (1500, 200, 1920, 900)
+        m = _textmask(img, box)
+        # 挖掉我自己画的字形框（含 1px 描边与朱晕）
+        os.environ['LYRIC_UNI'] = '1'
+        for r in LU.active(f / 30.0):
+            for key in r['pos']:
+                cx, cy = key['x'] - box[0], key['y'] - box[1]
+                h = int(r['size'] * 0.78)
+                cv2.rectangle(m, (int(cx - h), int(cy - h)), (int(cx + h), int(cy + h)), 0, -1)
+        os.environ.pop('LYRIC_UNI', None)
+        n, lab, stats, _ = cv2.connectedComponentsWithStats(m, 8)
+        # 只留「像字」的块：高度/宽度都够、长宽比在汉字范围、面积够（排除雨丝/刀光/横向高光条）
+        big = []
+        for st in stats[1:]:
+            w_, h_, a_ = int(st[2]), int(st[3]), int(st[4])
+            if a_ < 220 or min(w_, h_) < 24:
+                continue
+            ar = w_ / float(max(1, h_))
+            if not (0.30 <= ar <= 3.0):
+                continue
+            big.append((a_, w_, h_, int(st[0]), int(st[1])))
+        # 归因：该帧还有哪些「画面内字」（来自 audit 记录 + IN_SCENE 分类表）
+        att = []
+        ap = os.path.join(TMP, f'audit_{f}.png.audit.json')
+        if os.path.exists(ap):
+            import json
+            for rec in json.load(open(ap, encoding='utf-8')):
+                ent = LU.IN_SCENE.get((rec['f'], rec['line']))
+                if ent and ent[1] and ent[1] in (rec['txt'] or ''):
+                    if ent[1] not in att:
+                        att.append(ent[1])
+        for (x, y, w_, h_, why) in LU.SCENE_OK.get(f, []):
+            att.append('%s(场景高光)' % why)
+        for (x, y, w_, h_, why) in LU.IN_SCENE_BOX.get(f, []):
+            att.append('画面内字 ' + why)
+        ok = (not big) or bool(att)
+        bb = sorted(big, reverse=True)[:3]
+        rows.append((name, ln, f, len(big), max([b[0] for b in big]) if big else 0, att, ok, bb))
+        if not ok:
+            bad.append((name, ln, f, len(big), max(b[0] for b in big), att))
+    print('== 逐帧像素检测（字幕区 x1500–1920 / y200–900，挖掉我的字形框后剩下的「成块笔画」）')
+    print('   判定：残留块 0 → 干净；有残留但能归到 IN_SCENE 画面内字（且字幕已留空）→ 干净；否则 ⚠ 重复')
+    for name, ln, f, n_, mx, att, ok, bb in rows:
+        print('   %-22s 第%2d句 f%5d  字形块 %2d  最大%5dpx  %s%s%s' % (
+            name, ln + 1, f, n_, mx, '✓' if ok else '⚠ 未归因',
+            ('  画面内字：' + '、'.join(att)) if att else '',
+            ('  位置 ' + ','.join('%d,%d %dx%d' % (x, y, w_, h_) for a_, w_, h_, x, y in bb)) if bb and not ok else ''))
+    with open(os.path.join(OUTDIR, 'dup_frames.md'), 'w', encoding='utf-8') as fh:
+        fh.write('# 22 帧重复出字复检（像素检测 + 归因）\n\n')
+        fh.write('| 段 | 句 | 帧 | 残留笔画块 | 最大面积 | 画面内字（已留空） | 判定 |\n|---|---|---|---|---|---|---|\n')
+        for name, ln, f, n_, mx, att, ok, bb in rows:
+            fh.write('| %s | %d | %d | %d | %d | %s | %s |\n' % (
+                name, ln + 1, f, n_, mx, '、'.join(att) or '—', '✓ 干净' if ok else '⚠ 未归因'))
+    print('== 判定：%d/%d 帧干净，重复 %d 处' % (len(rows) - len(bad), len(rows), len(bad)))
+    return bad
+
+
+# ---------------------------------------------------------------- ④ D 段三联图（亮底描边）
+def dsheet(frames=None):
+    """D 段三联图：左=纯字幕（黑底只画统一层）/ 中=改造前 / 右=改造后 + 亮底描边 3 帧条（带实测亮度）。
+
+    三句取 白纸底(第41句) / 朱红底(第47句) / 暗余烬底(第44句)，覆盖「亮底触发描边」与「暗底不描边」。
+    """
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    L = LU.lines()
+    frames = frames or [5011, 5647, 5341]
+    jobs = []
+    for f in frames:
+        jobs.append((0, f, os.path.join(TMP, f'dsheet_{f}_before.png')))
+        jobs.append((1, f, os.path.join(TMP, f'dsheet_{f}_after.png')))
+    render(jobs)
+    os.environ['LYRIC_UNI'] = '1'
+    pur = {}
+    for f in frames:
+        canvas = np.zeros((1080, 1920, 3), np.uint8)
+        pur[f] = LU.draw(canvas, f)
+    # 亮底描边 3 帧条：第 41 句白纸镜
+    strip_f = [frames[0] - 1, frames[0], frames[0] + 1]
+    info = []
+    for f in strip_f:
+        base = os.path.join(TMP, f'dsheet_strip_{f}.png')
+        jobs2 = [(0, f, base)]
+        render(jobs2)
+        im = np.asarray(Image.open(base).convert('RGB'))
+        info.append((f, LU.scrim_info(im, f)))
+    os.environ.pop('LYRIC_UNI', None)
+
+    f_ttl = ImageFont.truetype(FONT, 26)
+    f_cap = ImageFont.truetype(FONT, 19)
+    f_sml = ImageFont.truetype(FONT_L, 16)
+    TW, TH = 560, 315
+    SW = 344 + 142                            # 帧条一格宽（裁切 + 整帧）
+    W = 20 + 3 * (TW + 16)
+    H = 108 + 3 * (TH + 60) + 62 + 340
+    sheet = Image.new('RGB', (W, H), (14, 14, 15))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), 'D 段三联图：左=纯字幕（黑底只画统一层）｜中=改造前（D 组原字幕）｜右=改造后（统一层 + 亮底破例描边）',
+           fill=(236, 232, 224), font=f_ttl)
+    d.text((20, 46), '亮底（中位亮度 ≥0.45）→ scrim 峰值 0.62 + 1px 黑×0.35 描边；暗底不描边。三句分别是白纸底 / 朱红底 / 暗余烬底',
+           fill=(150, 165, 150), font=f_sml)
+    d.text((20, 70), '本段字幕层已接线（d_kit.song / d_kit.column 守卫），所以中图是「只有 D 组原字幕以外的画面」= 原字幕已被关掉，画内大字保留',
+           fill=(150, 165, 150), font=f_sml)
+    for i, f in enumerate(frames):
+        y = 108 + i * (TH + 60)
+        tiles = [(Image.fromarray(pur[f]), '纯字幕（黑底）'),
+                 (Image.open(os.path.join(TMP, f'dsheet_{f}_before.png')).convert('RGB'), '改造前'),
+                 (Image.open(os.path.join(TMP, f'dsheet_{f}_after.png')).convert('RGB'), '改造后')]
+        for j, (im, lab) in enumerate(tiles):
+            x = 20 + j * (TW + 16)
+            sheet.paste(_tile(im, TW, TH), (x, y))
+            d.text((x, y + TH + 3), lab, fill=(228, 224, 216), font=f_cap)
+        r0 = [r for r in L if r['t_on'] <= f / 30.0 < r['t_off']]
+        d.text((20, y + TH + 26), 'frame %d（%.2fs）· %s · %d 字 %d 列 %dpx' % (
+            f, f / 30.0, ('第 %d 句「%s」' % (r0[0]['line'] + 1, r0[0]['text'].replace(' ', '·'))) if r0 else '（无字幕）',
+            r0[0]['n'] if r0 else 0, r0[0]['ncol'] if r0 else 0, r0[0]['size'] if r0 else 0),
+            fill=(160, 156, 148), font=f_sml)
+    y2 = 108 + 3 * (TH + 60)
+    d.line([20, y2 - 12, W - 20, y2 - 12], fill=(70, 70, 78), width=1)
+    d.text((20, y2), '亮底描边 3 帧条（连续 3 帧，同一镜）：实测背后中位亮度 / scrim 峰值 / 描边不透明度 —— 都不跳变 = 不闪',
+           fill=(232, 200, 120), font=f_cap)
+    for k, (f, inf) in enumerate(info):
+        x = 20 + k * (SW + 16)
+        p = os.path.join(TMP, f'dsheet_strip_{f}.png')
+        if os.path.exists(p):
+            im = Image.open(p).convert('RGB')
+            sheet.paste(_tile(im.crop((1440, 150, 1832, 960)), 130, 290), (x, y2 + 30))
+            sheet.paste(_tile(im, 344, 194), (x + 142, y2 + 30))
+        if inf:
+            d.text((x, y2 + 28 + 254), 'f%d 亮度中位 %.3f' % (f, inf['L']), fill=(210, 205, 195), font=f_sml)
+            d.text((x, y2 + 28 + 274), '峰值 %.3f　描边 %.3f' % (inf['peak'], inf['outline']),
+                   fill=(120, 210, 160) if inf['outline'] > 0 else (190, 190, 190), font=f_sml)
+            d.text((x, y2 + 28 + 294), '最左列处 %.3f（%.0f%% 峰值）' % (inf['left_alpha'], 100 * inf['left_frac']),
+                   fill=(150, 165, 220), font=f_sml)
+    out = os.path.join(OUTDIR, 'd_three_panel.jpg')
+    sheet.save(out, quality=91)
+    print('sheet', out, flush=True)
+    for f, inf in info:
+        if inf:
+            print('  f%d  L=%.3f peak=%.3f outline=%.3f left_alpha=%.3f' % (
+                f, inf['L'], inf['peak'], inf['outline'], inf['left_alpha']))
     return out
 
 
@@ -397,6 +739,14 @@ if __name__ == '__main__':
         consist()
     elif c == 'strips':
         strips([int(x) for x in sys.argv[2:]] or None)
+    elif c == 'audit':
+        audit()
+    elif c == 'dupcheck':
+        dupcheck()
+    elif c == 'dsheet':
+        dsheet([int(x) for x in sys.argv[2:]] or None)
+    elif c == 'table':
+        table()
     elif c in ('geom', '--guard', 'guard'):
         rest = [x for x in sys.argv[2:] if not x.startswith('--')]
         raise SystemExit(0 if guard([int(x) for x in rest] if rest else None) else 1)

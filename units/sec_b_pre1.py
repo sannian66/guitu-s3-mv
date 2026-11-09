@@ -8,6 +8,8 @@ for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
 import numpy as np, cv2
 from b_kit import *
 import b_kit as BK
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
+from lyric_uni import is_lyric as _is_lyric                 # [lyric-uni] 只判「这段文本是否属于歌词」
 import c1kit as K
 import typo as T
 import trans as TR
@@ -128,6 +130,8 @@ class P02(Shot):
         L = T.Layer()
         for p, pc, c in zip(self.P, pr, cols):
             if pc <= 0: continue
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI and _is_lyric(p['ch']): continue
             e = eout(pc, 3)
             T.place(L, p['ch'], p['x'], p['y'], p['size'], color=c, fname='serif_black', alpha=min(1, pc * 2), scale=1 + 0.8 * (1 - e))
         fr = T.compose(fr, L, shadow=0.25)
@@ -416,6 +420,8 @@ class P06(Shot):
         L = T.Layer(); LB = T.Layer()
         for i, (ch, pc) in enumerate(zip('用血来装潢', pr)):
             if pc <= 0: continue
+            # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
+            if LYRIC_UNI and _is_lyric(ch): continue
             if ch == '血':
                 a = T.ink_bleed_glyph('血', 'kai', 150, max(0.02, pc), seed=6, bleed=1.2)
                 LB.paste(a, 1600, 290 + i * 118 + 6, (0.80, 0.07, 0.04))

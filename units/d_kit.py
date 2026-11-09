@@ -22,6 +22,7 @@ for _k, _f in (('serif_r', 'Regular'), ('serif_m', 'Medium'), ('serif_sb', 'Semi
     T.FONTS.setdefault(_k, ROOT + f'/fonts/NotoSerifSC-{_f}.otf')
 
 LINES = T.load_lines()
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层开关
 
 
 def onsets(li):
@@ -197,6 +198,7 @@ def light_text(fr, L, style=None):
 
 
 def column(text, x, y0, size, prog, adv=1.18, color='ink', emph=None, fname='serif_sb', drop=40, horiz=False):
+    if LYRIC_UNI: return []                    # [lyric-uni] LYRIC_UNI=1 时由 units/lyric_uni.py 统一出字幕
     """竖（横）排逐字：prog 每字 0..1，入场 下落+放大回弹+淡入"""
     out = []
     for i, ch in enumerate(text):
@@ -459,6 +461,7 @@ SONG_WHITE = (0.96, 0.93, 0.86)
 
 
 def song(fr, items, glow=0.15):
+    if LYRIC_UNI and items and max(i[3] for i in items) <= 160: return fr   # [lyric-uni] 只关 ≤160px 的字幕副句；>160px 是画内大字（第47句「判」等），保留等 props 接管
     """后半段歌词：宋体（serif_black，带墨迹毛边）大字砸落。items: (ch, x, y, size, p, color)；
     color: 'w' 暖白 / 'r' 朱红 / 'g' 金 / 'k' 墨。p 为 cp() 落字进度（0→1 时放大回弹 + 去虚焦）。"""
     groups = {}

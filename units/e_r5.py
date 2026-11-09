@@ -3,6 +3,8 @@ import math
 import numpy as np, cv2
 import c1kit as K
 from e_kit import W, H, sstep, c01, eio
+import os
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层开关
 
 _TEX = {}
 def _tex(seed, h, w, base):
@@ -103,6 +105,7 @@ class SubD(_R3.Sub):
     def draw(self, fr, t, dx=0.0, dy=0.0):
         v = self.vis(t)
         if v <= 0: return fr
+        if LYRIC_UNI: return fr               # [lyric-uni] 副句的暗衬 + 朱印一起关（否则留一个空底块）
         q = t - (self.t0 - 0.25)
         dx = dx + self.dv[0] * q + 4 * math.sin(q * 2.3); dy = dy + self.dv[1] * q
         x0, y0, x1, y1 = self.box
