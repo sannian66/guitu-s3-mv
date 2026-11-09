@@ -2,11 +2,13 @@
 设计说明：crew/round4/E_storyboard.md。36 镜：副歌终 26 镜（平均 1.08s）+ 尾奏 10 镜（含片名再现、6 条署名、收刀落印、收墨）。
 接口：READY=False；frame(f, cache) -> uint8 (1080,1920,3) 成品帧（含黑边/颗粒/暗角）。
 结构仿 units/chorus1.py：每镜一个类（render(t) 场景 + text(fr,t) 屏幕字层），SHOTS 表驱动切点，CUTS 表驱动转场，MOVE 表驱动运镜。"""
+# [r4-props] 终章 1 处：E07 末尾加 PD.play L51（烧穿挂轴）；L54 需 E19 交出精灵 alpha+bg，暂 skip。
 import math, os, sys, json
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+import props_dev as PD
 import c1kit as K
 import typo as T
 import trans as TR
@@ -457,6 +459,7 @@ class E07(Shot):   # S116 LS（第三棒重做）挂轴缝后，太上皇本人�
         side = np.clip(np.abs(np.arange(W, dtype=np.float32) - 960) / 160 - 3.6, 0, 1)[None, :]   # 第四棒：前景挂轴只在两侧画边、实体不透明，不再叠在纸扎身上
         C, A = R3.Scrolls.light(C, A, fr * 0.5, 0.5, blur=10)
         fr = R3.comp(fr, C * 0.35, A * side)
+        fr = PD.play(fr, 'L51', t)  # [r4-props]
         return bloom(fr, 0.85, 0.35)
 
     def text(self, fr, t): return self.l.draw(fr, t)

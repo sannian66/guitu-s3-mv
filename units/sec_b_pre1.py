@@ -1,11 +1,13 @@
 """units/sec_b_pre1.py — B 组 · 预副歌一「谁配」（帧 1321–1784，44.048–59.47s）
 分镜：crew/round4/B_storyboard.md 第 1 节。14 镜 + 副歌一 S028 开头 5 帧（直接调用 chorus1，接缝逐像素一致）。
 接口：READY / frame(f, cache) -> uint8 (1080,1920,3)"""
+# [r4-props] 预副歌一 1 处：P09 末尾加 PD.play L11（擦）。
 import sys, math, os
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+import props_dev as PD
 from b_kit import *
 import b_kit as BK
 LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层（units/lyric_uni.py）开关
@@ -581,6 +583,7 @@ class P09(Shot):
         if self.T_HIT <= t < self.T_HIT + 2 / 30 - 1e-3:                      # 撞击：色散错位（无整屏色闪）
             a_ = 14 if t < self.T_HIT + 1 / 30 else 6
             fr = np.stack([np.roll(fr[..., 0], a_, 1), fr[..., 1], np.roll(fr[..., 2], -a_, 1)], -1)
+        fr = PD.play(fr, 'L11', t)  # [r4-props]
         return fr, (4 if k2 > 0.5 else 0)
 
 

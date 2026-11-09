@@ -2,12 +2,14 @@
 设计说明：crew/round4/A_storyboard.md（29 镜，平均 1.52s；主歌 21 镜平均 1.37s）。
 接口：READY / frame(f, cache) → uint8 (1080,1920,3) 成品帧（含黑边、颗粒、暗角）。
 结构仿 units/chorus1.py：每镜一个类 render(t)->(线性帧, ca)；CUTS 表驱动转场；VCam3 主运镜 + 卡点脉冲；屏幕层 = 署名 / 歌词竖排。"""
+# [r4-props] 主歌一 6 处：V01/V04/V08/V13/V17/V19 的 render 末尾各加一层 PD.play（只加不删，字幕仍由 lyric_uni 出；留空见 hidden_slots.json）。
 import os, sys, math, json, copy
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 os.environ.setdefault('SPRITE_MODE', '1')
 import numpy as np, cv2
+import props_dev as PD
 import c1kit as K
 import typo as T
 import trans as TR
@@ -645,6 +647,7 @@ class V01(Shot):
         a = t - CT(0, 5)
         if a >= 0:
             fr = streak(fr, P0[1] - 40, P0[0], P1[0], a / 0.12, amt=1.3, ang=math.degrees(math.atan2(P1[1] - P0[1], P1[0] - P0[0])))
+        fr = PD.play(fr, 'L01', t)  # [r4-props]
         return fr, (4 if 0 <= a < 0.1 else 0)
 
 
@@ -754,6 +757,7 @@ class V04(Shot):
             cv2.fillConvexPoly(Lp, np.array([(int(x0 / 2) - 16, 0), (int(x0 / 2) + 16, 0), (int(x0 / 2), 70)], np.int32), 1.0)
         Lp = cv2.resize(cv2.GaussianBlur(Lp, (0, 0), 9), (W, H))[..., None]
         fr = fr * (1 - 0.93 * Lp)
+        fr = PD.play(fr, 'L02', t)  # [r4-props]
         return fr, 0
 
 
@@ -956,6 +960,7 @@ class V08(Shot):
         fr = fr * (1 - 0.55 * (1 - e) * sh)
         fr = K.sparks(fr, t, 83, (760, 540), n=24, life=0.6, speed=(40, 160), dirc=(0.4, -1), spread=2.0, grav=-40,
                       area=(180, 180), amt=0.35, t0=tsw - 0.02, burst=True, color=(0.95, 0.85, 0.65))      # 纸尘余烟
+        fr = PD.play(fr, 'L03', t)  # [r4-props]
         return fr, (2 if k < 0.06 else 0)
 
 
@@ -1384,6 +1389,7 @@ class V13(Shot):
         fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
                         rim_dir=(0.7, -0.6), grade=dict(expo=0.5 + 0.3 * (1 - fc), sat=0.4, gamma=1.3 - 0.2 * (1 - fc)), wind=3, rot=bow, defocus=0.3 + 5.5 * fc)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
+        fr = PD.play(fr, 'L05', t)  # [r4-props]
         return fr, 0
 
 
@@ -1627,6 +1633,7 @@ class V17(Shot):
             return fr, 0
         fr = self.top(t, a)
         if a < 0.15: fr = fr * (1 + 0.5 * (1 - a / 0.15))
+        fr = PD.play(fr, 'L07', t)  # [r4-props]
         return fr, 0
 
 
@@ -1712,6 +1719,7 @@ class V19(Shot):
         for p in ((0.514, 0.26), (0.441, 0.26)):
             fr = pupil_glint(fr, info['to_scr'](p), 0.45 * g, 0.7)
         fr = RAIN.draw(fr, t, 0.9, angle=4, light=(360, 160), layers=(1, 2))
+        fr = PD.play(fr, 'L08', t)  # [r4-props]
         return fr, (3 if g > 0.5 else 0)
 
 
