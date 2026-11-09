@@ -1675,9 +1675,25 @@ class E34(Credits):   # S136 ELS 日出全景，远处一粒走向太阳的人�
         fr = E.sun_disc(fr, sun, 130, amt=1.15)
         fr = fx2.god_rays(fr, sun, strength=0.8, length=1.1, t=t)
         fr = E.place_layer(fr, self.rd, self.ra, z=z)
-        bob = 3 * abs(math.sin(t * 6.0))                                   # 第六棒：远影向日走去（步伐起伏 + 越走越小）
-        fr, info = put(fr, t, 'S132/back_walk', (900 + 40 * u, 758 - 8 * u - bob), h=150 - 28 * u, rim=GOLDW, rim_amt=4.0, grade=G_SIL, look='sil', wind=4)
-        return bloom(fr, 0.85, 0.45)
+        bob = 1.5 * abs(math.sin(t * 6.0))                                 # 第六棒：远影向日走去（步伐起伏 + 越走越小）
+        fx, fy = 900 + 40 * u, 758 - 8 * u
+        # 第八棒：脚下拖一道向镜头的长影（逆光低日 → 影子朝观众铺开，透视下越近越宽、越远越实）
+        yy, xx = E.grid()
+        L = 280.0
+        dy = (yy - fy) / L
+        wv = 5 + 46 * np.clip(dy, 0, 1) ** 0.8
+        sh = np.exp(-((xx - fx + 14 * dy) / wv) ** 2) * np.clip((dy + 0.02) / 0.02, 0, 1) * np.clip(1 - dy, 0, 1) ** 2.2
+        sh = np.maximum(sh, np.exp(-(((xx - fx) / 11) ** 2 + ((yy - fy) / 3) ** 2)))     # 脚底接触影
+        sh = cv2.GaussianBlur(sh.astype(np.float32), (0, 0), 3.5)
+        fr = fr * (1 - 0.78 * sh[..., None])
+        fr, info = put(fr, t, 'S132/back_walk', (fx, fy - bob), h=80 - 14 * u, rim=GOLDW, rim_amt=4.0, grade=G_SIL, look='sil', wind=4)
+        fr = bloom(fr, 0.85, 0.45)
+        # 第八棒：辉光吃掉的人形压回去（核心实黑剪影 + 一圈细金边），远影在日面前可读
+        A = np.clip(info['A'], 0, 1)
+        core = cv2.erode(A, np.ones((3, 3), np.uint8))
+        fr = fr * (1 - 0.82 * core[..., None]) + core[..., None] * np.array([0.05, 0.035, 0.025], np.float32) * 0.82
+        rimL = np.clip(A - core, 0, 1)
+        return fr + rimL[..., None] * np.array([1.0, 0.82, 0.5], np.float32) * 0.35
 
 
 class E35(Shot):   # S137 ECU 刀完全入鞘「咔」，朱印「鬼屠」盖在画面中心
