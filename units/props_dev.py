@@ -1422,7 +1422,7 @@ _ITEMS = [
          kw=dict(wipe=0.72, keep=0.24, front=0.5, wipe_dir=(0, 1), seed=17)),
     dict(id='L08', sec='a', f=1196, text='那我宁愿做乱世的锋芒', key='芒', box=(1050, 405, 1230, 585), fn='烧',
          kw=dict(ink=(0.14, 0.09, 0.07), seed=48)),
-    dict(id='L11', sec='b_pre1', f=1632, text='我不信天不信命不信谁的理所应当', key='理所应当', box=(200, 220, 700, 880), fn='擦',
+    dict(id='L11', sec='b_pre1', f=1632, text='我不信天不信命不信谁的理所应当', key='应', box=(200, 220, 700, 880), fn='擦',
          kw=dict(wipe=0.78, keep=0.22, front=0.4, wipe_dir=(1, -0.4), seed=19)),
     dict(id='L13', sec='chorus1', f=1841, text='血未冷 刀不放', key='刀不放', box=(600, 200, 1400, 640), fn='穿线',
          kw=dict(sway=11.0, freq=0.9, thread=(0.62, 0.05, 0.05), beads=0.8, track_v=0.5, length_pad=50)),

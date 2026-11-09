@@ -18,7 +18,7 @@
 | A | V05 | 620–635 | 0.50 | `hard` | 硬切 | 是 | 轻闪白 |  | 1 | 改 |
 | A | V06 | 635–675 | 1.33 | `ink_bleed` | 墨/烟/烧 |  |  |  | 1 | 不改 |
 | A | V07 | 675–703 | 0.93 | `match_cut` | 图形匹配 |  |  |  | 1 | 不改 |
-| A | V08 | 703–758 | 1.83 | `paper_tear` | 撕裂/刀切 |  |  |  | 2 | 改 |
+| A | V08 | 703–758 | 1.83 | `zoom_through` | 甩/推/穿 |  |  |  | 2 | 改 |
 | A | V09 | 758–812 | 1.80 | `a_brush` | 墨/烟/烧 |  |  |  | 1 | 改 |
 | A | V10 | 812–867 | 1.83 | `hard` | 硬切 | 是 | 轻闪白 |  | 3 | 改 |
 | A | V11 | 867–895 | 0.93 | `flash_red` | 闪白/闪色 |  | 闪红 |  | 2 | 不改 |
@@ -116,7 +116,7 @@
 | C | C18 | 4095–4123 | 0.93 | `occlusion` | 前景遮挡 |  |  |  | 1 | 不改 |
 | C | C19 | 4123–4150 | 0.90 | `hard` | 硬切 | 是 | 提亮+径向糊 |  | 1 | 不改 |
 | C | C20 | 4150–4178 | 0.93 | `ink_bleed` | 墨/烟/烧 |  |  |  | 1 | 不改 |
-| C | C21 | 4178–4219 | 1.37 | `slash_wipe` | 撕裂/刀切 |  |  |  | 2 | 不改 |
+| C | C21 | 4178–4219 | 1.37 | `slash_wipe` | 撕裂/刀切 |  |  |  | 1 | 不改 |
 | C | C22 | 4219–4260 | 1.37 | `luma` | 图形匹配 |  |  |  | 1 | 不改 |
 | C | C23 | 4260–4301 | 1.37 | `push` | 甩/推/穿 |  |  |  | 1 | 不改 |
 | C | C24 | 4301–4343 | 1.40 | `occlusion` | 前景遮挡 |  |  |  | 1 | 不改 |
@@ -216,10 +216,10 @@
 |---|---|---|---|---|---|---|---|---|
 | 硬切 | 9 | 3 | 7 | 4 | 9 | 5 | 8 | 45 |
 | 闪白/闪色 | 1 | 1 | 2 | 0 | 1 | 1 | 5 | 11 |
-| 甩/推/穿 | 2 | 0 | 8 | 1 | 10 | 2 | 1 | 24 |
+| 甩/推/穿 | 3 | 0 | 8 | 1 | 10 | 2 | 1 | 25 |
 | 图形匹配 | 4 | 2 | 1 | 7 | 7 | 7 | 7 | 35 |
 | 前景遮挡 | 1 | 1 | 0 | 1 | 2 | 2 | 2 | 9 |
-| 撕裂/刀切 | 3 | 3 | 3 | 7 | 7 | 5 | 7 | 35 |
+| 撕裂/刀切 | 2 | 3 | 3 | 7 | 7 | 5 | 7 | 34 |
 | 墨/烟/烧 | 11 | 4 | 0 | 4 | 6 | 5 | 7 | 37 |
 | 金 | 0 | 0 | 0 | 0 | 0 | 2 | 1 | 3 |
 | 黑场 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -238,13 +238,13 @@
 | `slash_wipe` | 15 | B2×4, C×4, C1×2, D×2, E×2, B1×1 | B1:P10 C1:S032 C1:S045 B2:V10 B2:V11 B2:V17 B2:V23 C:C09 C:C11 C:C21 C:C40b D:S18_Draw D:S25_Leap E:E25 E:E27c |
 | `match_cut` | 13 | D×5, A×2, B2×2, E×2, B1×1, C×1 | A:V07 A:V15 B1:P12 B2:V06 B2:V09 C:C34 D:S02_Steles D:S06_Scale D:S11_Answer D:S17_Eye D:S26_Judge E:E22 E:E26 |
 | `impact_nf` | 9 | E×6, A×3 | A:V01b A:V13b A:V16b E:E14T E:E18 E:E24 E:E27b E:E30 E:E35 |
-| `paper_tear` | 9 | A×2, E×2, B1×1, C1×1, B2×1, C×1, D×1 | A:V08 A:V17 B1:P03 C1:S040 B2:V04 C:C04 D:S13_PaperCut E:E08 E:E09 |
 | `occlusion` | 8 | C×2, E×2, A×1, B1×1, B2×1, D×1 | A:A07a B1:P11 B2:V05 C:C18 C:C24 D:S20_Wall E:E06 E:E11 |
+| `paper_tear` | 8 | E×2, A×1, B1×1, C1×1, B2×1, C×1, D×1 | A:V17 B1:P03 C1:S040 B2:V04 C:C04 D:S13_PaperCut E:E08 E:E09 |
 | `ink_bleed` | 7 | A×2, C×2, B1×1, B2×1, E×1 | A:A04 A:V06 B1:P05 B2:V15 C:C20 C:C38 E:E31 |
 | `whip` | 7 | C1×6, C×1 | C1:S030 C1:S034 C1:S035 C1:S039 C1:S042 C1:S044 C:C03 |
 | `smoke_through` | 6 | A×2, C×2, B1×1, D×1 | A:A08 A:V18 B1:P07 C:C27 C:C35 D:S04_Snow |
+| `zoom_through` | 6 | A×2, C1×2, D×2 | A:V02 A:V08 C1:S037 C1:S048 D:S07_Heap D:S16_Closed |
 | `shatter` | 6 | B2×2, A×1, B1×1, C×1, D×1 | A:V03 B1:P15 B2:V12 B2:V19 C:C26 D:S23_Eye |
-| `zoom_through` | 5 | C1×2, D×2, A×1 | A:V02 C1:S037 C1:S048 D:S07_Heap D:S16_Closed |
 | `push` | 5 | C×5 | C:C05 C:C08 C:C12 C:C14 C:C23 |
 | `punch` | 4 | B1×2, B2×2 | B1:P06 B1:P14 B2:V13 B2:V22 |
 | `rain_curtain` | 4 | B2×3, B1×1 | B1:P13 B2:V08 B2:V16 B2:V24 |
@@ -290,7 +290,7 @@
 
 | 组 | 违规窗口数 | 最差窗口 | 时间 s | 闪 | 硬切 | 窗口内入转场序列 |
 |---|---|---|---|---|---|---|
-| A | 4 | A05…V10 | 7.3–28.9 | 4 | 5 | hard hard occlusion smoke_through a_seam impact_nf zoom_through shatter luma hard ink_bleed match_cut paper_tear a_brush hard |
+| A | 4 | A05…V10 | 7.3–28.9 | 4 | 5 | hard hard occlusion smoke_through a_seam impact_nf zoom_through shatter luma hard ink_bleed match_cut zoom_through a_brush hard |
 | B1 | 0 | — | — | — | — | — |
 | C1 | 8 | S033…S047 | 65.5–87.5 | 7 | 6 | hard whip whip hard zoom_through flash_red whip paper_tear hard whip hard whip slash_wipe hard cut |
 | B2 | 0 | — | — | — | — | — |
@@ -458,7 +458,7 @@
 | A | A03 | 1.90 | 150 | 0.97 / 0.93 | 1 | — | `a_glint` |
 | A | A08 | 1.87 | 428 | 0.97 / 0.90 | 3 | — | `smoke_through` |
 | A | V03 | 1.83 | 566 | 0.97 / 0.87 | 1 | 百@18.78、重@18.96、甲@19.16 | `shatter` |
-| A | V08 | 1.83 | 731 | 0.93 / 0.90 | 2 | 对@23.98、错@24.18、罪@24.48 | `paper_tear` |
+| A | V08 | 1.83 | 731 | 0.93 / 0.90 | 2 | 对@23.98、错@24.18、罪@24.48 | `zoom_through` |
 | A | V09 | 1.80 | 786 | 0.93 / 0.87 | 1 | 人@25.84、命@26.00、装@26.26、进@26.50 | `a_brush` |
 | A | V10 | 1.83 | 841 | 0.97 / 0.87 | 3 | 里@27.66、称@28.14 | `hard` |
 | A | V14 | 1.83 | 1005 | 0.93 / 0.90 | 1 | 每@33.22、一次@33.44、拔@33.78 | `a_zoom2` |
