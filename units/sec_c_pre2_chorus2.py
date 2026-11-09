@@ -875,7 +875,7 @@ class C13(Shot):
     雨线和碎云沿螺旋被吸进眼里（不再是平面径向速度线）；鼓点上闪电在云层里亮起并沿眼壁跑一段弧。"""
     def render(self, t):
         u = self.u(t)
-        hits = [V(x) for x in (131.42, 131.61, 131.96, 132.07)]
+        hits = [V(x) for x in (131.61, 131.96, 132.07)]
         fl = sum(0.6 * pulse(t, h, 0.07) for h in hits) + 0.25 * ein(u, 2)
         h4, w4 = H // 4, W // 4
         cx, cy, ell = 960, 520, 1.30
@@ -911,52 +911,88 @@ class C13(Shot):
         fr = fr * (1 - sh1[..., None] * 0.65)
         fr = fr * (1 - d1[..., None] * 0.8) + d1[..., None] * np.array([0.60, 0.66, 0.78], np.float32) * lit1[..., None] \
             + e1[..., None] * d1[..., None] * np.array([0.75, 0.82, 1.0], np.float32) * 0.15 * (0.4 + fl)
-        # 眼壁：陡峭云墙（R0..1.45R0 的亮墙）+ 不规则余烬红边
-        wn = cv2.remap(K.tex('c13w', seed=133, base=12), ((th / (2 * np.pi) * 512 * 3 + t * 40) % 512).astype(np.float32),
-                       (rr * 0.25 % 512).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
-        Rw = R0 * (1 + 0.10 * (wn - 0.5))
-        wall = np.clip((rr - Rw) / (0.45 * R0), 0, 1); wall = np.exp(-((wall - 0.25) / 0.35) ** 2) * (rr > Rw)
-        fr = fr + wall[..., None] * np.array([0.55, 0.60, 0.72], np.float32) * (0.18 + 0.45 * fl) * (0.6 + 0.6 * wn[..., None])
-        eye = np.clip((Rw - rr) / 30 + 0.35 + 0.3 * (wn - 0.5), 0, 1) ** 0.8    # 眼壁往里是渐暗的陡墙，不是剪出来的洞
-        fr = fr * (1 - eye[..., None] * 0.95) + eye[..., None] * np.array([0.006, 0.008, 0.016], np.float32)
-        ring = np.exp(-((rr - Rw) / (10 + 8 * u)) ** 2) * (0.55 + 0.7 * wn)
-        flick = 0.65 + 0.35 * np.sin(th * 9 + t * 14)
-        fr = fr + (ring * flick)[..., None] * np.array([1.0, 0.30, 0.08], np.float32) * (0.85 + 0.8 * fl)
+        # 第十二棒（critic_C_r6 P1①）：平面黑圆 → 有纵深的漩涡井。眼内用隧道映射（深度 = ln(Rm/r)）：
+        # 井壁是三层旋臂（内层快 / 中层 / 外层慢），越往里越暗越红、越小越密，井底透出暗红余烬（承接 C12 赤热刃口）。
+        Rm = R0 * 1.7
+        dep = np.log(np.maximum(Rm / rr, 1e-3))                 # 0 = 井口，越往里越大
+        inside = np.clip(dep / 0.35, 0, 1) ** 1.2
+        well = np.zeros_like(fr)
+        for li, (sd, tw_, om, flw, arms_, wcol) in enumerate((
+                (141, 0.9, 0.45, 40, 2, (0.42, 0.46, 0.56)),      # 外层：慢、冷灰、受电光
+                (142, 1.6, 1.10, 90, 3, (0.30, 0.20, 0.22)),      # 中层：暗、开始偏红
+                (143, 2.6, 2.20, 170, 4, (0.32, 0.07, 0.03)))):   # 内层：快、余烬红
+            n_ = K.tex('c13t%d' % li, seed=sd, base=6, octaves=5)
+            ang = th + tw_ * dep - om * t * (1 + 0.6 * li)
+            uu = ((ang / (2 * np.pi)) * 512 * (2 + li)) % 512
+            vv = (dep * (70 + 40 * li) - flw * t) % 512              # 沿深度向里流（被吸进去）
+            dn = cv2.remap(n_, uu.astype(np.float32), vv.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
+            band = 0.5 + 0.5 * np.cos(arms_ * ang + 3.0 * (dn - 0.5))
+            dens = np.clip((dn * 0.6 + band * 0.7 - 0.55) * 2.0, 0, 1)
+            zl, zh = ((0.0, 0.9), (0.5, 1.8), (1.1, 3.4))[li]
+            wz = np.clip((dep - zl) / 0.25, 0, 1) * np.clip((zh - dep) / 0.35, 0, 1)
+            shade = np.exp(-dep * 0.5) * (0.45 + 0.75 * dens) * (1 + 1.3 * fl * np.exp(-dep * 1.5))
+            gy_, gx_ = np.gradient(cv2.GaussianBlur(dens, (0, 0), 1.5))
+            rimw = np.clip(-(gx_ * np.cos(th + rot) + gy_ * np.sin(th + rot)) * 6, 0, 1)   # 朝井心一侧的受光边
+            a_ = (dens * wz)[..., None]
+            well = well * (1 - a_ * 0.85) + a_ * np.array(wcol, np.float32) * (shade * (0.7 + 0.8 * rimw))[..., None]
+        core = np.exp(-(rr / (0.42 * R0)) ** 2)                   # 井底：暗红透光（不是纯黑）
+        well = well + core[..., None] * np.array([0.42, 0.07, 0.02], np.float32) * (0.75 + 0.35 * math.sin(t * 9) + 0.6 * fl)
+        deep = np.clip((dep - 0.2) / 2.0, 0, 1)
+        well = well + (deep * (1 - core))[..., None] * np.array([0.05, 0.008, 0.004], np.float32)
+        fr = fr * (1 - inside[..., None]) + well * inside[..., None]
+        # 井口唇：云墙在井口卷边处被电光勾亮（软、不成圈）
+        lip = np.exp(-((dep - 0.06) / 0.12) ** 2) * (0.5 + 0.5 * cv2.resize(puff, (w4, h4)))
+        fr = fr + lip[..., None] * np.array([0.50, 0.55, 0.66], np.float32) * (0.10 + 0.35 * fl)
         # 近层：暗色碎云快速掠过（虚焦、只在外圈），带冷轮廓光 → 前景层
         d2, e2 = _spiral_layer(rr, th, t, 'c13c', 134, 1.2, 0.95, 60, 1.0 + 0.95 * ein(u, 2), 2, base=3, rep=2)
         d2 = cv2.GaussianBlur(d2 * (0.2 + 1.0 * puff[::-1, ::-1]) * np.clip((rr - R0 * 2.1) / 500, 0, 1), (0, 0), 2.2)
         e2 = cv2.GaussianBlur(e2, (0, 0), 1.5) * d2
         fr = fr * (1 - d2[..., None] * 0.88) + d2[..., None] * np.array([0.02, 0.022, 0.03], np.float32) \
             + e2[..., None] * COLD * 0.30 * (0.5 + fl)
-        fr = fr * (0.55 + 0.45 * np.exp(-np.clip(rr - R0 * 1.5, 0, None) / 700))[..., None]   # 外圈压暗：亮在眼壁，纵深往外沉
+        fr = fr * (0.55 + 0.45 * np.exp(-np.clip(rr - R0 * 1.5, 0, None) / 700))[..., None]   # 外圈压暗：亮在井口，纵深往外沉
         fr = cv2.resize(fr, (W, H), interpolation=cv2.INTER_LINEAR)
-        # 全分辨率云絮细节（顺着漩涡旋转，避免四分之一分辨率放大后的塑料感）
         fine = cv2.resize(K.tex('c13f', seed=136, base=28, octaves=3), (W, H))
         Mf = cv2.getRotationMatrix2D((cx, cy), -math.degrees(0.9 * t), 1.0 + 0.3 * u)
         fine = cv2.warpAffine(fine, Mf, (W, H), borderMode=cv2.BORDER_REFLECT)
         lum = np.clip(fr.mean(-1, keepdims=True) * 3, 0, 1)
         fr = fr * (1 + (fine[..., None] - 0.5) * 0.55 * lum)
-        # 鼓点：闪电沿眼壁跑一段弧
+        # 鼓点：闪电在井口云墙里沿螺旋跑一段弧
         for i, h in enumerate(hits):
             q = (t - h) / 0.12
             if 0 <= q < 1:
-                fr = arc_streak(fr, (cx, cy), R0 * 1.30, R0 * 1.30 / ell, i * 90, i * 90 + 200, min(1, q * 2), width=4,
-                                col=(0.85, 0.9, 1.0), amt=1.4)
-        # 被吸入的雨线：沿螺旋的弧形短线（外快内慢地卷进眼里）
+                fr = arc_streak(fr, (cx, cy), Rm * 1.05, Rm * 1.05 / ell, i * 110 + 20, i * 110 + 170, min(1, q * 2), width=3,
+                                col=(0.85, 0.9, 1.0), amt=1.2)
+        # 被吸入的雨线 + 碎云（取代速度线）：沿收紧的对数螺旋卷进井口，越近越细越淡，进井即消失
         r = np.random.default_rng(13)
-        Ls = np.zeros((H // 2, W // 2), np.float32)
-        for i in range(150):
-            a = r.uniform(0, 6.283); ph = r.random(); sp = r.uniform(0.7, 1.4)
-            k = (t * sp * 1.6 + ph) % 1.0
-            d0_ = R0 * 1.1 + 1250 * (1 - k) ** 1.6
+        Ls = np.zeros((H // 2, W // 2), np.float32); Cl = np.zeros((H // 2, W // 2), np.float32)
+        for i in range(70):
+            a = r.uniform(0, 6.283); ph = r.random(); sp = r.uniform(0.8, 1.3)
+            k = (t * sp * 1.3 + ph) % 1.0
+            d0_ = Rm * 0.95 + 1300 * (1 - k) ** 1.5
+            a0 = a + 2.4 * k * 6.283 * 0.35 - rot
             pts = []
-            for m in range(6):
-                dd = d0_ * (1 + 0.035 * m * (1 + u)); aa = a + 1.7 * math.log(dd) - rot - 0.04 * m * (1 + 1.5 * u)
+            for m in range(12):                                   # 每条沿螺旋扫过 ~0.5rad，读成弧，不是直线
+                aa = a0 - 0.045 * m; dd = d0_ * math.exp(0.03 * m)
                 pts.append((int((cx + math.cos(aa) * dd) / 2), int((cy + math.sin(aa) * dd / ell) / 2)))
-            cv2.polylines(Ls, [np.array(pts, np.int32)], False, float(0.25 + 0.6 * k), 1, cv2.LINE_AA)
-        fr = fr + cv2.resize(Ls, (W, H))[..., None] * COLD * (0.30 + 0.35 * u)
-        fr = sparks(fr, t, 131, (cx, cy), n=90, life=1.0, speed=(60, 260), dirc=(0, -1), spread=3.1, grav=0, amt=0.8,
-                    color=(1.0, 0.45, 0.15), area=(R0 * 2, R0 * 1.6))
+            fade = clamp((d0_ - Rm) / 300) * (0.25 + 0.45 * k)
+            cv2.polylines(Ls, [np.array(pts[:7], np.int32)], False, float(fade * 1.6), 1, cv2.LINE_AA)
+            cv2.polylines(Ls, [np.array(pts[6:], np.int32)], False, float(fade * 0.7), 1, cv2.LINE_AA)
+        for i in range(26):                                       # 碎云团：被拉长、顺切向，近大远小
+            a = r.uniform(0, 6.283); ph = r.random(); sp = r.uniform(0.5, 0.9)
+            k = (t * sp + ph) % 1.0
+            dd = Rm * 0.9 + 1100 * (1 - k) ** 1.3
+            aa = a + 3.0 * k - rot
+            px, py = (cx + math.cos(aa) * dd) / 2, (cy + math.sin(aa) * dd / ell) / 2
+            sz = 6 + 34 * (dd / 1400)
+            cv2.ellipse(Cl, (int(px), int(py)), (int(sz * 2.4), int(sz * 0.7)), math.degrees(aa) + 90, 0, 360,
+                        float(clamp((dd - Rm) / 250) * 0.8), -1, cv2.LINE_AA)
+        Cl = cv2.GaussianBlur(Cl, (0, 0), 6); Cl = Cl * (0.5 + cv2.resize(puff, (W // 2, H // 2)))
+        Cl = cv2.resize(np.clip(Cl, 0, 1), (W, H))[..., None]
+        fr = fr * (1 - Cl * 0.6) + Cl * np.array([0.34, 0.37, 0.44], np.float32) * (0.55 + 0.6 * fl)
+        Ls = cv2.GaussianBlur(Ls, (0, 0), 0.7)
+        fr = fr + cv2.resize(Ls, (W, H))[..., None] * COLD * (0.30 + 0.25 * u)
+        fr = sparks(fr, t, 131, (cx, cy), n=60, life=1.0, speed=(40, 200), dirc=(0, -1), spread=3.1, grav=0, amt=0.6,
+                    color=(1.0, 0.45, 0.15), area=(R0 * 1.6, R0 * 1.2))
         return fr
 
 
@@ -2132,10 +2168,11 @@ SHOTS = [C01, C02, C03, C04, C05, C06, C07, C08, C09, C10, C11, C12, C13, C14, C
 # 切点（声音时刻，秒）：拍 / 人声首字 / 起音；帧 = 视觉帧（最近帧再提前 1 帧）。首尾 = 段落边界。
 # 第三棒：按 librosa 起音复核，6 个偏离切点改到最近强起音（118.95→118.92、128.78→128.87、134.50→134.57、135.60→135.63、
 # 148.49→148.34、149.30→149.15）；C15 133.22→133.135；新增 C35b（154.545「扛」前）、C40b（159.93「是」）；C39 158.62→158.54。
-CUT_T = [117.80, 118.92, 120.53, 121.46, 122.83, 123.74, 124.88, 125.70, 126.27, 127.41, 128.87, 130.17, 131.08, 132.45, 133.38,
+CUT_T = [117.80, 118.92, 120.53, 121.46, 122.83, 123.74, 124.88, 125.70, 126.27, 127.41, 128.87, 130.17, 131.50, 132.45, 133.38,
          134.57, 135.63, 136.56, 137.49, 138.39, 139.32, 140.69, 142.06, 143.43, 144.82, 145.73, 146.63, 147.56, 148.34, 149.15,
          150.30, 151.70, 152.60, 153.07, 153.97, 154.70, 155.36, 156.27, 157.18, 158.54, 159.47, 159.93, 160.38]
 assert len(CUT_T) == len(SHOTS)
+# 第十二棒（critic_C_r6 P1①）：C13 起点 131.08 → 131.50（131.498 在拍强起音），镜长 1.37s → 0.97s；C12 顺延到 1.33s。段落边界不动。
 # 第五棒：评审 P1「整体比拍点晚 1–2 帧」→ 视觉帧再前移 1 帧（最近帧 -2，切在拍前）；间奏 C14/C15 改到拍点 132.45 / 133.38（评审 P0）
 CUT_F = [F0] + [round(x * FPS) - 2 for x in CUT_T[1:]] + [F1]
 for _S, _a, _b in zip(SHOTS, CUT_F, CUT_F[1:]):
@@ -2218,7 +2255,7 @@ KICKS = [h['t'] for h in K.HM['hits'] if h['t'] >= 134.4 and 'kick' in h['type']
 
 # 插入闪切（帧, 帧数, 类型）：副歌里鼓加花处
 INSERTS = {}
-for _t, _n, _k in ((131.42, 1, 'white'), (131.96, 1, 'neg'), (132.07, 1, 'white'), (133.79, 1, 'neg'),
+for _t, _n, _k in ((131.96, 1, 'neg'), (133.79, 1, 'neg'),
                    (140.205, 1, 'white'), (140.408, 2, 'neg'), (148.54, 1, 'white'), (155.385, 2, 'neg'),
                    (160.238, 1, 'white'), (160.679, 2, 'neg')):
     for _i in range(_n): INSERTS[round(_t * FPS) - 1 + _i] = _k
@@ -2235,7 +2272,7 @@ SENTS = [
     S(30, [4, 5, 6], 1640, 540, size=120, mode='fly', layout='v', red='不命', exit='cut', out=V(126.22), track=0.12, back=0.7, sizes=[110, 110, 150]),   # 第五棒：脸偏左、字竖排右侧鬓发暗区（不压脸），切点前才收
     S(30, [7, 8, 9, 10], 1560, 300, size=86, mode='fly', layout='v', red='不', exit='shatter', out=V(127.36), track=0.12),
     S(31, [0, 1, 2, 3], 960, 250, size=78, mode='fly', red='刀', exit='shatter', out=V(130.10)),
-    S(31, [4, 5, 6, 7], 960, 860, size=110, mode='fly', red='发烫', exit='shatter', out=V(131.50), back=0.5),
+    S(31, [4, 5, 6, 7], 960, 860, size=110, mode='fly', red='发烫', exit='cut', out=V(131.50), back=0.5),   # 第十二棒：碎裂残片拖进 C13 成了平面多边形贴片 → 切点前干净收
     # 副歌二：kinetic 飞入 + 碎裂
     S(32, [1, 2], 1500, 860, size=70, mode='fly', exit='shatter', out=V(135.55)),                                    # 未冷（C16）
     S(32, [3, 4, 5], 960, 260, size=120, mode='fly', red='刀', exit='shatter', out=V(137.40), track=0.25),           # 刀不放
