@@ -945,8 +945,8 @@ class S042(Shot):
         if a < 0:
             fr = self.bg.copy(); rk = 0.0
         else:
-            R = 30 + 700 * eout(clamp01(a / 0.22), 2)
-            m = np.clip((R - self.dline) / 60, 0, 1)[..., None]
+            R = 30 + 1400 * eout(clamp01(a / 0.22), 2)         # 洇到画角为止（不留斜向硬边）
+            m = sstep(R, R - 260, self.dline)[..., None]          # 宽羽化：红是洇开的，不是刀切的
             fr = self.bg * (1 - m) + self.bg_r * m
             rk = clamp01(a / 0.22)
             fl = math.exp(-a / 0.25)                         # 变色瞬间的血晕外扩
