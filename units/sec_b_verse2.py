@@ -609,7 +609,7 @@ class V07(Shot):
 # V08 94.48–96.10 ECU 下摇：沿权杖杖身由杖首向下摇（grip_scepter 局部，与 V07 景别/方向不同：V07 手+光，V08 杖身微距）。
 #   第七棒：去掉 RGB 故障字——「嚣」「张」是嵌在乌木杖身里的金字，镜头摇过时随字头一记记「炸金」：金箔崩起、裂纹沿木纹爬开；「柄在」白宋小字在左
 class V08(Shot):
-    SRC, ROT, WPX = None, -12, 5200
+    SRC, ROT, WPX = None, -12, 3800   # 第八棒：5200 → 3800，「嚣」「张」同框可读（原下摇时「嚣」在「张」落字前已出顶边）
     QI = [(0.200, 0.095), (0.208, 0.195)]
     def __init__(self):
         self.sp = spr('S051/grip_scepter')
@@ -620,11 +620,11 @@ class V08(Shot):
         u = self.u(t)
         e = eio(u)
         fr = self.bg.copy()
-        sy = 0.155 + 0.15 * e                                       # 杖首画布上沿始终在黑边外
+        sy = 0.115 + 0.10 * e                                       # 杖首画布上沿始终在黑边外（第八棒按新比例重算）
         src, dst = (0.20, sy), (1060, 540)
         fr, Aw = put_at(fr, self.sp, t, src, dst, self.WPX, rot=self.ROT,
-                        grade=dict(expo=0.85, sat=0.7, tint=(1.08, 0.95, 0.80), lift=0.0, gamma=1.1),
-                        rim=dict(col=(1.0, 0.7, 0.35), amt=2.6, dir=(-0.9, -0.2)), wind_amp=0, breathe=0.0, shade=None, wrap=0.2,
+                        grade=dict(expo=0.74, sat=0.42, tint=(0.95, 0.97, 1.04), lift=0.0, gamma=1.12),   # 第八棒 P1-6：手压成殿内冷灰，只留烛光暖轮廓
+                        rim=dict(col=(1.0, 0.62, 0.30), amt=2.8, dir=(-0.9, -0.2)), wind_amp=0, breathe=0.0, shade=None, wrap=0.2,
                         mblur=(0, 14 * math.sin(math.pi * u)))
         x, y = K.grid()
         fr += np.exp(-((x - 1060) / 220) ** 2)[..., None] * np.array([0.10, 0.06, 0.025], np.float32) * (0.6 + 0.4 * math.sin(t * 9))
@@ -636,7 +636,7 @@ class V08(Shot):
             if p <= 0: continue
             c = sp_pt(self.sp, src, dst, self.WPX, self.ROT, self.QI[i])
             hot = pulse(t, tk, 0.35) * (t >= tk)
-            A = BV.mask([(ch, c[0], c[1], 235 * (1 + 0.06 * hot), ang)], fname='serif_black')
+            A = BV.mask([(ch, c[0], c[1], 200 * (1 + 0.06 * hot), ang)], fname='serif_black')
             fr = BV.engrave(fr, A * min(1, p * 1.5), light=(-0.9, -0.2), depth=5, groove=0.6, fill=(0.95, 0.70, 0.30), fill_k=0.9,
                             hl=0.5, surface=np.clip(Aw * 1.2, 0, 1), glow=0.25 + 1.1 * hot, glow_col=(1.0, 0.6, 0.2))
             if t >= tk:                                              # 炸金：金箔屑崩起
