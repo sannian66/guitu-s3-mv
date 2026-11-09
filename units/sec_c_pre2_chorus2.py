@@ -22,6 +22,11 @@ import c_piying as PY
 from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark, fbm
 
 READY = True
+
+# 第九棒：c_kit.tex 的缓存键只认名字不认 seed —— 'c1'/'c2'/'gw' 三张云/水纹底图由「本进程第一个调用的镜头」决定，
+# 导致分块渲染 / 联系表分批时同一帧长得不一样（例：C15 批渲成一团白曝、整段顺渲则是清楚的落地闪电）。
+# 这里按整段顺渲的第一个调用者（C07 storm seed=7 → c1/c2；C09 storm seed=9 → gw）预热，任何起点渲出来都 = 顺渲结果。
+K.tex('c1', seed=7 + 1, base=3); K.tex('c2', seed=7 + 2, base=6); K.tex('gw', seed=9 + 7, base=10)
 F0, F1 = 3534, 4839
 T0, T1 = F0 / FPS, F1 / FPS
 
