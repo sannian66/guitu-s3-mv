@@ -658,9 +658,13 @@ class V02(Shot):
         yy = np.arange(H, dtype=np.float32)[:, None, None]
         ground = np.clip((yy - 760) / 30, 0, 1)
         fr = fr * (1 - ground * 0.85)
-        dy = -20 * math.sin(math.pi * clamp01((t - self.t0) / 0.5))
-        fr, info = A.place(fr, t, S('A/boots'), (960 + 140 * u, 830 + dy), h=900, anc=(0.5, 0.92), rim=COLD, rim_amt=3.0,
-                           grade=dict(expo=0.7, sat=0.6), wind=7)
+        # 第十一棒（critic_A_r7 P1-3「V02 近乎静止」）：人真的在走 —— 步伐起伏（每 0.47s 一步）+ 横移 260px + 走近放大 8% + 衣摆风摆加大；
+        #   落脚时靴面雨溅（17.46 主溅 + 每步小溅）
+        e2 = eio(u); ph2 = (t - self.t0) / 0.47
+        dy = -20 * math.sin(math.pi * clamp01((t - self.t0) / 0.5)) - 10 * abs(math.sin(math.pi * ph2))
+        bx = 880 + 260 * e2
+        fr, info = A.place(fr, t, S('A/boots'), (bx, 830 + dy), h=900 * (1 + 0.08 * e2), anc=(0.5, 0.92), rim=COLD, rim_amt=3.0,
+                           grade=dict(expo=0.7, sat=0.6), wind=18, rot=1.5 * math.sin(math.pi * ph2))
         refl = cv2.flip(fr[460:760], 0)                                                 # 水洼倒影（波纹扰动）
         ph = np.sin(np.arange(300, dtype=np.float32)[:, None] / 6 + t * 12) * 6
         mx = (np.arange(W, dtype=np.float32)[None] + ph).astype(np.float32); my = np.repeat(np.arange(300, dtype=np.float32)[:, None], W, 1)
@@ -669,9 +673,14 @@ class V02(Shot):
         fr[760:1060] = fr[760:1060] * (1 - m) + refl[:300] * m * np.array([0.8, 0.88, 1.0], np.float32)
         ts = V(17.46)
         if t >= ts:
-            fr = fx2.ripples(fr, t, [(960 + 140 * u, 900)], [ts], speed=520, amt=1.0, life=0.8)
-            fr = K.sparks(fr, t, 17, (960 + 140 * u, 900), n=40, life=0.5, speed=(200, 600), dirc=(0, -1), spread=1.2, grav=1400,
+            fr = fx2.ripples(fr, t, [(bx, 900)], [ts], speed=520, amt=1.0, life=0.8)
+            fr = K.sparks(fr, t, 17, (bx, 900), n=40, life=0.5, speed=(200, 600), dirc=(0, -1), spread=1.2, grav=1400,
                           area=(120, 10), amt=0.5, t0=ts, burst=True, color=(0.7, 0.8, 1.0))
+        for k_ in range(3):                                                             # 每步靴面小溅
+            ts_ = self.t0 + 0.47 * k_ + 0.42
+            if ts_ <= t < ts_ + 0.3:
+                fr = K.sparks(fr, t, 170 + k_, (bx + (-60 if k_ % 2 else 50), 880), n=18, life=0.3, speed=(120, 380), dirc=(0, -1), spread=1.3,
+                              grav=1500, area=(60, 6), amt=0.45, t0=ts_, burst=True, color=(0.7, 0.8, 1.0))
         fr = RAIN.draw(fr, t, 0.7, angle=8, layers=(2,))
         return fr, 0
 
@@ -1122,6 +1131,9 @@ class V10(Shot):
         Ak = ik['A']
         y_c = int(self.CY + 60 + bob)
         hgt = 150
+        # 第十一棒：人前铜面一抹顶光镜面亮带（倒影要有亮底才读得出：暗人影压在亮铜上）
+        shn = np.exp(-(((xx - (930 + sway)) / 430) ** 2 + ((yy - (y_c + 26)) / 26) ** 2)) * inner * np.clip((yy - y_c + 4) / 6, 0, 1)
+        fr = fr + shn[..., None] * np.array([0.60, 0.40, 0.17], np.float32) * (0.9 + 0.2 * self.tex2[..., None])
         if y_c - hgt > 0:
             refl = cv2.flip(Pk[y_c - hgt:y_c], 0); ra = cv2.flip(Ak[y_c - hgt:y_c], 0)[..., None]
             yend = min(H, y_c + hgt)
@@ -1505,8 +1517,19 @@ class V16(Shot):
                             grade=dict(expo=0.2, sat=0.3))
             fr = A.clouds(fr, t, 61, speed=(60, -20), y0=120, y1=520, amt=0.55, col=(0.16, 0.12, 0.08), dark=0.3, thr=0.52,
                           light=c, light_r=500, light_col=(1.0, 0.75, 0.4))
-        fr, info = A.place(fr, t, S('A/tsh_raise', 'dm'), (1250, 1040), h=860, look=None, rim=GOLD, rim_amt=4.0, rim_dir=(-0.6, -0.8),
-                           grade=dict(expo=0.55, sat=0.45, tint=(1.05, 0.97, 0.9)), wind=7)
+        # 第十一棒（critic_A_r7 P1-6 人物身份）：召印的是白发太上皇（权势一方），构图上点明 —— 站上丹陛高台（三级玉阶，阶沿金边），
+        #   低机位仰看、身形压暗成背光剪影（金轮廓），与 V07「丹陛顶端太上皇剪影」同一母题；鬼屠全段黑发、冷光、站在地面
+        st = np.zeros((H, W), np.float32); ed = np.zeros((H, W), np.float32)
+        for i_, (y0_, hw) in enumerate(((835, 330), (900, 420), (965, 520))):
+            cv2.rectangle(st, (1270 - hw, y0_), (1270 + hw, y0_ + 65), 1.0, -1)
+            cv2.line(ed, (1270 - hw, y0_), (1270 + hw, y0_), 1.0, 3, cv2.LINE_AA)
+        st = cv2.GaussianBlur(st, (0, 0), 1.2)[..., None]
+        yy_ = np.arange(H, dtype=np.float32)[:, None, None]
+        stone = (0.035 + 0.03 * np.clip((yy_ - 835) / 200, 0, 1)) * np.array([1.0, 0.92, 0.82], np.float32)
+        fr = fr * (1 - st) + stone * st
+        fr = fr + (cv2.GaussianBlur(ed, (0, 0), 1.0) * 0.9 + cv2.GaussianBlur(ed, (0, 0), 8) * 0.35)[..., None] * np.array([1.0, 0.72, 0.36], np.float32) * 0.55
+        fr, info = A.place(fr, t, S('A/tsh_raise', 'dm'), (1270, 845), h=740, look=None, rim=GOLD, rim_amt=6.0, rim_dir=(-0.6, -0.8),
+                           grade=dict(expo=0.36, sat=0.35, tint=(1.05, 0.97, 0.9)), wind=7)
         fr = fog(fr, t, 1, 820, 1000, 0.5, (0.25, 0.22, 0.2), speed=(40, 0))
         return fr, 0
 
@@ -1664,19 +1687,20 @@ class V19(Shot):
         u = self.u(t)
         # 第九棒（critic_A_r6 P1-5 不重复）：与 V14 拉开 —— 脸换朝左（镜像）、改金色逆光剪影（巨印的光从右上背后压来），
         #   脸只剩一线金轮廓 + 眼中一点寒光；冷灰正面光的「同光特写」去掉；机位 crane up 仰起
+        # 第十一棒（critic_A_r7 P1-4）：整镜镜像 —— 人在左、巨印金光自左上背后压来，歌词整句移到右上；与 V14（脸中/字右）、V11（竖刀正脸）方向彻底拉开
         fr = night((0.015, 0.013, 0.012), (0.05, 0.045, 0.04))
-        fr = A.glow(fr, (1560, 160), 760, 0.95, (1.0, 0.70, 0.36))
-        fr = A.glow(fr, (1560, 160), 260, 0.45 + 0.1 * math.sin(t * 9), (1.0, 0.85, 0.6))
-        fr = fx2.god_rays(fr, (1560, 140), strength=0.35, length=1.0, color=(1.0, 0.75, 0.42), t=t, src_r=220)
-        fr = RAIN.draw(fr, t, 0.8, angle=4, light=(1560, 160), layers=(0, 1))
+        fr = A.glow(fr, (360, 160), 760, 0.95, (1.0, 0.70, 0.36))
+        fr = A.glow(fr, (360, 160), 260, 0.45 + 0.1 * math.sin(t * 9), (1.0, 0.85, 0.6))
+        fr = fx2.god_rays(fr, (360, 140), strength=0.35, length=1.0, color=(1.0, 0.75, 0.42), t=t, src_r=220)
+        fr = RAIN.draw(fr, t, 0.8, angle=4, light=(360, 160), layers=(0, 1))
         hh = 1010 * (1 + 0.05 * eio(u))
-        fr, info = A.place(fr, t, self.spr, (1300 - 40 * eio(u), 1125 + 20 * u), h=hh, anc=(0.5, 1.0), rim=GOLD, rim_amt=9.0, flip=True,
-                           rim_dir=(-0.75, -0.65), wind=10, grade=dict(expo=0.20, sat=0.25, gamma=1.35, tint=(1.04, 0.98, 0.92)),
+        fr, info = A.place(fr, t, self.spr, (450 + 40 * eio(u), 1125 + 20 * u), h=hh, anc=(0.5, 1.0), rim=GOLD, rim_amt=9.0, flip=False,
+                           rim_dir=(0.75, -0.65), wind=10, grade=dict(expo=0.20, sat=0.25, gamma=1.35, tint=(1.04, 0.98, 0.92)),
                            mblur=(0, 10 * eio(u)))
         g = math.exp(-max(0, t - V(41.40)) / 0.12) * (t >= V(41.40))
         for p in ((0.514, 0.26), (0.441, 0.26)):
             fr = pupil_glint(fr, info['to_scr'](p), 0.45 * g, 0.7)
-        fr = RAIN.draw(fr, t, 0.9, angle=4, light=(1560, 160), layers=(1, 2))
+        fr = RAIN.draw(fr, t, 0.9, angle=4, light=(360, 160), layers=(1, 2))
         return fr, (3 if g > 0.5 else 0)
 
 
@@ -1884,7 +1908,7 @@ def credits(fr, t):
                 rows = np.nonzero(a_.max(1) > 0.05)[0]; r0, r1 = (int(rows[0]), int(rows[-1]) + 1) if len(rows) else (30, 50)
                 a_ = a_[r0:r1]
                 L.paste(a_, x, yc + (r1 - r0) / 2, (0.95, 0.94, 0.92), eout(clamp01(p * 1.6 - 0.4 - 0.12 * j)))
-                yc += (r1 - r0) + 14
+                yc += (r1 - r0) + 10                     # 第十一棒（P2，第三次提）：字间 14→10px（再小「i」的点会贴到「a」上读成「Ca·it」）
             g = T.compose(g, L, shadow=0.7, glow=0.1)
         else:
             g = T.credit_block(fr, role, names, x, y, p, role_size=30, name_size=62, seal_text=seal, seed=len(role))
@@ -1912,8 +1936,8 @@ LY2 = [
     (4, [(k, 80, _Wt) for k in range(5, 10)], 640, 880, 32.55, False),                              # 也放过混账
     (6, [(0, 120, _Wt), (1, 220, _R), (2, 220, _R)], 600, 905, 37.90, False),   # 第七棒：38.30 前退净，不与「由权势」叠成残字   # 第六棒：挨着金光里的巨印剪影                       # 若「正义」
     (6, [(3, 80, _Wt), (4, 140, _G), (5, 140, _G), (6, 80, _Wt), (7, 80, _Wt)], 960, 925, 39.85, False),  # 由「权势」执掌（第六棒：离开印面，放到下三分之一）
-    (7, [(0, 160, _Wt), (1, 160, _Wt), (2, 180, _G), (3, 180, _G), (4, 96, _Wt), (5, 180, _R), (6, 180, _R), (7, 96, _Wt)],
-     730, 300, 42.48, True),   # 第十一棒：42.40→42.48 + 0.15s 等量淡出，「的」(42.36) 完整露出后 42.63 切点前退净   # 第七棒：中心 640→730，首字「那」不出左边画                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
+    (7, [(0, 145, _Wt), (1, 145, _Wt), (2, 165, _G), (3, 165, _G), (4, 90, _Wt), (5, 165, _R), (6, 165, _R), (7, 90, _Wt)],
+     1250, 300, 42.48, True),  # 第十一棒：整句移到右上（V19 镜像后人在左；V18 人头上方、V20 刀弧右侧都是空天幕）   # 第十一棒：42.40→42.48 + 0.15s 等量淡出，「的」(42.36) 完整露出后 42.63 切点前退净   # 第七棒：中心 640→730，首字「那」不出左边画                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
 ]
 
 
@@ -2097,8 +2121,9 @@ INNER = {
     'V09': dict(z=(1.0, 1.09), c=(960, 400), d=(0, 10)),
     'V10': dict(z=(1.0, 1.12), c=(930, 880), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
     'V13': dict(z=(1.0, 1.07), c=(1250, 560), d=(-50, 0)),
-    'V19': dict(z=(1.0, 1.07), c=(1420, 380), d=(0, 25)),
-    'V04': dict(z=(1.0, 1.10), c=(1180, 560), d=(0, -12)),                           # 第十一棒：低机位前推 dolly-in（配合场景层侧移 truck）
+    'V19': dict(z=(1.0, 1.07), c=(500, 380), d=(0, 25)),
+    'V04': dict(z=(1.0, 1.10), c=(1180, 560), d=(0, -12)),
+    'V02': dict(z=(1.0, 1.06), c=(1000, 760), d=(-30, 0)),                           # 第十一棒：低机位跟步轻推                           # 第十一棒：低机位前推 dolly-in（配合场景层侧移 truck）
     'V14': dict(z=(1.09, 1.13), c=(960, 500), rot=(-9.0, -2.0)),                      # 第十棒：荷兰角回正（-9°→-2°，拔刀时机位随刀「扶正」），与 V11/V19 的正机位脸拉开
     'V20': dict(z=(1.10, 1.0), c=(900, 600), ease='out'),
 }
