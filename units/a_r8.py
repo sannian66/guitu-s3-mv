@@ -10,7 +10,7 @@ from PIL import Image
 import a_kit as A
 import a_r6
 import a_r7
-import sk as K
+import c1kit as K
 
 W, H = 1920, 1080
 
@@ -31,8 +31,10 @@ class Crater8(a_r7.Crater):
         n = np.sqrt(gx ** 2 + gy ** 2) + 1e-4
         self.nx, self.ny = gx / n, gy / n                                    # 坑壁法线（指向坑内 = 坑壁面朝向）
         # 层理纹：沿等深线的横纹（坑壁是岩层被压断的断面）
-        st = cv2.resize(A.tex(seed + 7, 256, 60, 4), (W, H))
-        self.strata = 0.7 + 0.6 * (np.sin(dist * 0.9 + st * 6) * 0.5 + 0.5) * st
+        st = cv2.resize(A.tex(seed + 7, 256, 60, 4), (W, H)); st2 = cv2.resize(A.tex(seed + 8, 512, 120, 3), (W, H))
+        # 第八棒核帧：等深线横纹读成「等高线/胶带」→ 改粗糙断口石质（高频噪声 + 少量断续台阶）
+        ledge = (np.sin(dist * 0.35 + st * 9) > 0.93).astype(np.float32) * (st2 > 0.5)
+        self.strata = (0.65 + 0.55 * st2 * st) * (1 - 0.35 * cv2.GaussianBlur(ledge, (0, 0), 1.0))
         # 唇口：坑外 0–14px 一圈倒角；用低频噪声把它打断（崩口处没有高光）
         out_d = cv2.distanceTransform((1 - mb).astype(np.uint8), cv2.DIST_L2, 5).astype(np.float32)
         self.lip = np.clip(1 - out_d / 14, 0, 1) * (out_d > 0)
@@ -67,9 +69,18 @@ class Crater8(a_r7.Crater):
         lam = np.clip(self.nx * lx + self.ny * ly, 0, 1)                 # 面朝光的程度
         band = (1 - self.floor) * m
         prof = (1 - wall) ** 1.6
-        lit = band * lam * prof * self.strata * st
-        fr = fr + (lit[..., None] * np.array([0.20, 0.19, 0.185], np.float32))
+        lit = band * lam * (0.45 + 0.55 * prof) * self.strata * st
+        fr = fr * (1 - 0.5 * (band * lam)[..., None]) + (lit[..., None] * np.array([0.30, 0.29, 0.285], np.float32))
         fr = fr * (1 - (band * (1 - lam) * 0.35)[..., None])
+        # 上亮下暗：迎光坑壁顶端崩口一线亮边（断续），坑壁脚与坑底交界一线暗缝
+        crest = np.clip(1 - wall / 0.10, 0, 1) * m * lam * self.lipbreak
+        fr = fr + cv2.GaussianBlur(crest, (0, 0), 1.2)[..., None] * np.array([0.45, 0.45, 0.48], np.float32)
+        foot = np.clip(1 - np.abs(wall - 0.93) / 0.08, 0, 1) * m
+        fr = fr * (1 - 0.55 * cv2.GaussianBlur(foot, (0, 0), 2.0)[..., None])
+        # 坑底：去暖褐偏色（往石灰收），叠石面噪声
+        fl3 = self.floor[..., None]
+        g_ = fr.mean(-1, keepdims=True)
+        fr = fr * (1 - 0.9 * fl3) + (g_ * np.array([0.96, 1.0, 1.06], np.float32) * (0.7 + 0.5 * self.tex_s[..., None])) * 0.75 * fl3
         # 3) 坑底投影：左上坑沿挡光，投在坑底（软边）
         sh_off = cv2.warpAffine(m, np.float32([[1, 0, -lx * 70], [0, 1, -ly * 70]]), (W, H))
         shadow = cv2.GaussianBlur(np.clip(m - sh_off, 0, 1) * self.floor, (0, 0), 6)
@@ -114,9 +125,10 @@ class Crater8(a_r7.Crater):
             hi = np.clip(sub - np.roll(np.roll(sub, 2, 0), 2, 1), 0, 1)
             gr = np.linspace(1.15, 0.7, sub.shape[0], dtype=np.float32)[:, None]
             reg = fr[y0:y1, x0:x1] * (1 - 0.55 * shd[..., None])
-            col = np.array([0.10 + hue, 0.097, 0.092 - hue], np.float32) * sc
-            reg = reg * (1 - sub[..., None]) + (sub * gr)[..., None] * col
-            reg = reg + hi[..., None] * np.array([0.16, 0.16, 0.18], np.float32) * sc
+            col = np.array([0.16 + hue, 0.155, 0.15 - hue], np.float32) * sc
+            sub_lo = np.clip(sub - np.roll(np.roll(sub, -3, 0), -3, 1), 0, 1)                   # 背光面（右下）
+            reg = reg * (1 - sub[..., None]) + (sub * gr)[..., None] * col * (1 - 0.5 * sub_lo[..., None])
+            reg = reg + hi[..., None] * np.array([0.20, 0.20, 0.22], np.float32) * sc
             fr[y0:y1, x0:x1] = reg
         return fr
 

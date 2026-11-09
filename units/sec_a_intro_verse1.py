@@ -1475,7 +1475,7 @@ class V17(Shot):
         # 「正」只在坑底凹刻、靠左上侧光的阴影读出（不着金红、无框）；去砖墙、去橙色闪电、去白色碎屑
         import a_r7
         if not hasattr(self, 'cr'):
-            self.cr = a_r7.Crater(c=(960, 585), size=(560, 470), rot=-4.0, seed=17, zheng=True, zsize=300)
+            self.cr = R8.Crater8(c=(960, 585), size=(560, 470), rot=-4.0, seed=17, zheng=True, zsize=300)   # 第八棒：受光崩口 + 坑壁厚度 + 投影 + 暖光裂缝
             self.fs, self.wet = a_r7.flagstones(7, n=55)
             yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
             self.lit = (0.55 + 0.75 * np.exp(-(((xx - 520) / 1300) ** 2 + ((yy + 100) / 900) ** 2)))[..., None]
@@ -1527,11 +1527,22 @@ class V18(Shot):
         import a_r7
         u = self.u(t)
         if not hasattr(self, 'cr7'):
-            self.cr7 = a_r7.Crater(c=(150, 60), size=(1250, 1000), rot=-8.0, seed=18, zheng=False)
+            # 第八棒（critic_A_r5 P1-6/P0-2）：左侧横贯的浅灰坑壁带读不出是什么 → 坑整体移出画外（左上），画内只留坑里放射出来的暖光裂缝作引导线 + 坑方向的压暗
+            self.cr7 = R8.Crater8(c=(-560, -470), size=(1250, 1000), rot=-8.0, seed=18, zheng=False)
+            yy_, xx_ = np.mgrid[0:H, 0:W].astype(np.float32)
+            self.pitdark = (1 - 0.55 * np.exp(-(((xx_ + 100) / 900) ** 2 + ((yy_ + 120) / 650) ** 2)))[..., None]
             self.fs7, self.wet7 = a_r7.flagstones(9, n=40)
         fr = self.fs7 * 1.6
         fr = a_r7.wet_sheen(fr, self.wet7, light=(1500, 100), amt=0.35, t=t)
-        fr = self.cr7.draw(fr, 0.8 + (t - self.t0), light=(0.6, -0.8), heat=0.9, t=t)
+        fr = self.cr7.draw(fr, 0.8 + (t - self.t0), light=(0.6, -0.8), heat=1.3, t=t) * self.pitdark
+        if not hasattr(self, 'lead'):                                                              # 自画外印坑裂到人物脚下的三道暖光裂缝（引导线）
+            self.lead = [K.crack_path(a_, b_, 280 + i, jag=0.03) for i, (a_, b_) in enumerate((((-40, 260), (1150, 870)), ((150, -20), (1120, 850)),
+                                                                                                 ((-60, 620), (1100, 890))))]
+        pr = clamp01(0.55 + (t - self.t0) / 0.8)
+        for i, cp in enumerate(self.lead):
+            cm = K.draw_crack((H, W), cp, 3.0, branches=2, seed=8 + i, prog=pr)
+            core = cv2.GaussianBlur(cm, (0, 0), 0.8)
+            fr = fr * (1 - 0.85 * cm[..., None]) + (core * 0.8 + cv2.GaussianBlur(core, (0, 0), 5) * 0.45)[..., None] * np.array([1.0, 0.45, 0.15], np.float32) * (0.50 + 0.10 * math.sin(t * 8 + i))
         fr = A.glow(fr, (1500, 200), 600, 0.25, (0.9, 0.7, 0.5))
         at = (1180 + 40 * u, 880)
         sh = np.zeros((H // 2, W // 2), np.float32)                                              # 长影
