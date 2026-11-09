@@ -1665,7 +1665,7 @@ CUTS = {
     'S11_Answer': ('match_cut', 0, 0.2, dict(shape='line', center=(1300, 760), angle=-35, mode='cut')),
     'S12_Pierce': ('hard_cut_x', 0, 0.07, dict(impact=0.1, tint=(0.07, 0.10, 0.17), amt=0.5, ca=9, jolt=(0, -22))),   # [r6] 冷墨压暗（不白闪）+ 色散 + 上顶（刀从下刺上）
     'S13_PaperCut': ('paper_tear', 0.1, 0.3, dict(seed=12, angle=6)),
-    'S14_Burn': ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.3)),
+    'S14_Burn': ('burn_wipe', 0.12, 0.12, dict(seed=14)),   # [r7b] 火线自下烧过剪纸 → 露出火烧近景（替换两帧闪白）
     'S15_Hole': ('flash_red', 0.04, 0.1, dict(one_frame=True)),
     'S16_Closed': ('zoom_through', 0.08, 0.14, dict(center=(960, 700))),
     'S17_Eye': ('match_cut', 0, 0.3, dict(shape='circle', center=(int(0.29 * W), int(0.555 * H)), radius=8, glow=EMBER)),
@@ -1675,7 +1675,7 @@ CUTS = {
     'S21_Charge': ('hard_cut_x', 0, 0.07, dict(impact=0.08, tint=(1.0, 0.72, 0.38), amt=0.3, ca=7, jolt=(-18, 0))),
     'S22_Chuang': ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.2)),
     'S23_Eye': ('shatter', 0.04, 0.14, dict(center=(1060, 560), seed=23, n=60)),
-    'S24_Defy': ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.25)),
+    'S24_Defy': ('bolt_cut', 0, 0.14, dict(seed=24)),   # [r7b] 闪电劈过切点 + 冷偏色散（替换两帧闪白）
     'S25_Leap': ('slash_wipe', 0.05, 0.2, dict(angle=-40)),
     'S26_Judge': ('match_cut', 0, 0.25, dict(shape='line', center=(1080, 420), angle=-37, mode='grow', glow=np.array([1.0, 0.3, 0.2], np.float32))),
     'S27_Bullet': ('hard_cut_x', 0, 0.07, dict(impact=0.1, tint=(0.62, 0.76, 1.0), amt=0.65, ca=8, jolt=(0, 18))),   # [r6] 冷白雨光闪 + 色散 + 下顿
@@ -1728,6 +1728,41 @@ def hard_cut_x(A, B, dt, impact=0.08, tint=(1, 1, 1), amt=0.3, ca=6, jolt=(0, 0)
     if d:
         out = out.copy()
         out[..., 0] = np.roll(out[..., 0], d, 1); out[..., 2] = np.roll(out[..., 2], -d, 1)
+    return out
+
+
+def burn_wipe(A, B, p, seed=0):
+    """[r7b] 火烧边缘擦除（critic_D_r4 P1-10：S14 去掉同款两帧闪白）：一条参差火线自下而上烧过 S13，
+    火线下方露出 S14，火线上方纸面先焦黄、再焦黑卷边；火线本身白热→橙红，带上飘火星。"""
+    x, y = K.grid()
+    key = ('burn', seed)
+    if key not in _TOPSEAL:
+        _TOPSEAL[key] = (cv2.resize(D._tile(seed + 701)[:H // 8, :W // 8], (W, H), interpolation=cv2.INTER_CUBIC) - 0.5,
+                         cv2.resize(D._tile(seed + 702)[:H // 3, :W // 3], (W, H), interpolation=cv2.INTER_CUBIC) - 0.5)
+    n1, n2 = _TOPSEAL[key]
+    yl = (H + 260) * (1 - eo(p, 2)) - 130 + n1 * 260 + n2 * 50    # 火线高度（越往上 p 越大）
+    d = y - yl                                                     # >0：已烧穿
+    m = np.clip(d / 3, 0, 1)
+    out = A * (1 - m[..., None]) + B * m[..., None]
+    scorch = np.clip(1 + d / 90, 0, 1) * (d < 0)                   # 火线上方 90px 焦黄 → 焦黑
+    char = np.clip(1 + d / 26, 0, 1) * (d < 0)
+    out = out * (1 - scorch[..., None] * 0.45 * np.array([0.2, 0.45, 0.8], np.float32))
+    out = out * (1 - char[..., None] * 0.85)
+    line = np.exp(-(d / 5) ** 2)
+    glow = np.exp(-(d / 38) ** 2) * 0.55
+    out = out + line[..., None] * np.array([1.6, 1.0, 0.5], np.float32) + glow[..., None] * EMBER
+    ya = int(min(H - BAR - 80, max(BAR, np.median(yl) - 300)))
+    out = D.embers(out, p * 2.0, 1400 + seed, n=90, area=(0, ya, W, int(max(ya + 80, min(H - BAR, np.median(yl) + 60)))),
+                   rise=(120, 320), amt=1.2)
+    return out
+
+
+def bolt_cut(A, B, dt, seed=24, p0=(1400, 90), p1=(820, 1000)):
+    """[r7b] 闪电切（critic_D_r4 P1-10：S24 去掉同款两帧闪白）：切点一道闪电劈过 S24 画面（冷白芯 + 两级辉光 + 频闪），
+    叠 hard_cut_x 的冷色偏 + 色散 + 机位下顿；闪电在切后 4 帧内消散。"""
+    out = hard_cut_x(A, B, dt, impact=0.06, tint=(0.62, 0.74, 1.0), amt=0.35, ca=10, jolt=(0, 14))
+    if dt >= 0:
+        out = D.lightning(out, dt, 0.0, p0, p1, seed=seed, life=0.14, amt=1.3, branches=5, width=4)
     return out
 
 
@@ -1817,6 +1852,10 @@ class Bridge:
                 if p < 0.8: out = S27.text_only(out, t)
             elif name == 'hard_cut_x':
                 out = hard_cut_x(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), t - c, **kw2)
+            elif name == 'burn_wipe':
+                out = burn_wipe(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
+            elif name == 'bolt_cut':
+                out = bolt_cut(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), t - c, **kw2)
             elif name == 'gold_tip':
                 out = gold_tip(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             else:
