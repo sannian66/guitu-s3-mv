@@ -1129,8 +1129,16 @@ class S20_Wall(Shot):
         M[0, 2] += fd[0] - fa[0] * self.sp.w; M[1, 2] += fd[1] - fa[1] * self.sp.h
         shw = cv2.GaussianBlur(cv2.warpAffine(self.shadow, M, (W, H)), (0, 0), 5)
         fr = fr * (1 - 0.62 * shw[..., None])                    # 投影落在湿竹简上（压暗，不是灰片）
-        fr, Aw = D.real_figure(fr, self.sp, t, fa, fd, sc, expo=1.0 + 0.3 * flash, sat=0.55,
-                               rim=COLD, rim_amt=4.0 + 3 * flash, rim_dir=(0.6, -0.8), wind=10)
+        # [r8] P1-1：人物身后一圈湿竹简冷反光（把暗剪影从地面托出来）
+        hy = fd[1] - 0.55 * h
+        halo = np.exp(-(((x - fd[0] - 60) / 330) ** 2 + ((y - hy) / 420) ** 2))
+        fr = fr + (halo * (0.10 + 0.12 * flash))[..., None] * np.array(COLD, np.float32)
+        fr, Aw = D.real_figure(fr, self.sp, t, fa, fd, sc, expo=1.18 + 0.3 * flash, sat=0.55, gamma=1.05,
+                               rim=COLD, rim_amt=6.0 + 3 * flash, rim_dir=(0.75, -0.65), wind=10)
+        # [r8] 右上雷光冷轮廓：一线亮边勾出头、肩、前伸的手臂与刀，躯干再提亮 ~13%，读成「冲」而不是「爬」
+        fr = fr * (1 + 0.13 * Aw[..., None])
+        fr = R7.rim_edge(fr, Aw, (0.75, -0.65), 4, 0.95 + 0.8 * flash, (0.72, 0.84, 1.0), glow=8, gamt=0.35)
+        fr = R7.rim_edge(fr, Aw, (-0.8, 0.4), 3, 0.35, (0.55, 0.62, 0.8), glow=4, gamt=0.1)
         fr = D.song(fr, its)
         fr = K.rain(fr, t, 20, n=500, amt=0.28, angle=4)
         fr = K.fog(fr, t, 45, amt=0.3, speed=(70, -10), y0=0.0, y1=0.35, color=(0.2, 0.21, 0.25))
