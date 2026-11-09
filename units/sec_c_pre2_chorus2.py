@@ -1015,7 +1015,7 @@ class C14(Shot):
         u = self.u(t)
         tb = V(132.45)
         fl = bolt_env(t, tb) + 0.5 * bolt_env(t, V(132.87))
-        fr = storm_sky(t * 2, 14, 2000, flash=0.5 + fl * 1.2, flash_c=(1100, 300), speed=(20, -30), cloud=1.3)
+        fr = storm_sky(t * 2, 14, 2000, flash=0.45 + fl * 0.22, flash_c=(1100, 300), speed=(20, -30), cloud=1.3)   # 第十二棒（白闪同质化）：落雷不再把整片天冲白 → 只亮雷路与云底
         yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32) * 2
         dx, dy = xx - 1100, yy - 330; rr = np.sqrt(dx * dx + dy * dy) + 1
         tw = (2.2 + 0.6 * u) * np.exp(-rr / 650)
@@ -1023,7 +1023,7 @@ class C14(Shot):
         mx = (1100 + dx * ca_ - dy * sa_).astype(np.float32); my = (330 + dx * sa_ + dy * ca_).astype(np.float32)
         fr = cv2.remap(fr, cv2.resize(mx, (W, H)), cv2.resize(my, (W, H)), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
         fr = K.vol_light(fr, (1100, 330), 200, (1.0, 0.4, 0.15), 0.35)          # 风眼余烬（承接 C13）
-        fr = bolt(fr, t, tb, 141, (1100, 330), (1500, 1000), inten=1.3, width=4)
+        fr = bolt(fr, t, tb, 141, (1100, 330), (1500, 1000), inten=1.6, width=5)
         fr = rain(fr, t, 141, inten=0.8, angle=12, layers=(0, 1), light=(1100, 330))
         fr, _ = put(fr, t, 'C5/c14_ots', 720 + 25 * u, 1100, 760 * (1 + 0.03 * u), anchor='src', src=(0.53, 1.0), rim=(0.92, 0.95, 1.0),
                     rim_amt=3.6, rim_dir=(0.35, -1), flash=fl, expo=0.42, sat=0.4, wrap=0.5, wind=5, breathe=0.0)
