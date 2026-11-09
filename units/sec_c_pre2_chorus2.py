@@ -2038,18 +2038,22 @@ CUTS = {
     'C30': ('flash_red', 0.0, 0.14, {}),
     'C31': ('hard', 0, 0, {}),
     'C32': ('split_slide', 0.06, 0.12, dict(angle=90.0)),                # 掌风压下：画面上下错开
-    'C33': ('hard', 0, 0, {}),
-    'C34': ('hard', 0, 0, {}),                                           # 第五棒：slash_wipe 去重 → 硬切冲击，镜内自己斩
-    'C35': ('hard', 0, 0, {}),
+    'C33': ('whip_pan_blur', 0.04, 0.08, dict(direction='left')),       # 第七棒：十字斩的余势甩进刀身横扫（甩镜方向 = 挥刀方向）
+    'C34': ('match_cut', 0.04, 0.10, dict(shape='line', center=(800, 570), angle=-31, feather=40, glow=(0.85, 0.92, 1.0))),   # 第七棒：刀线 → 刀线（C34 斜劈沿这条线裂开长出）
+    'C35': ('smoke_through', 0.06, 0.12, dict(direction=-1, density=1.1, color=(0.40, 0.38, 0.36))),   # 第七棒：巨印压下扬起泥尘冲过镜头
     'C35b': ('hard', 0, 0, {}),                                          # 同轴跳切：全身硬扛 → 中近景咬牙（「扛」）
     'C36': ('flash_red', 0.0, 0.12, dict(one_frame=True)),               # 扛印 → 1 帧朱闪 → 全景
-    'C37': ('hard', 0, 0, {}),
+    'C37': ('flash_white', 0.0, 0.10, dict(peak=0.42, width=0.5, color=(0.9, 0.95, 1.0))),   # 第七棒：「天」那道闪电过曝 → 雷光照出御匾
     'C38': ('ink_bleed', 0.05, 0.12, {}),                                # 第五棒：斩开的匾缝墨渗 → 握刀手（去掉擦除边缘亮线）
     'C39': ('hard', 0, 0, {}),
-    'C40': ('hard', 0, 0, {}),
-    'C40b': ('hard', 0, 0, {}),                                          # 斩断天平 → 回头面部特写（「我」）
-    'C41': ('hard', 0, 0, {}),
+    'C40': ('whip_pan_blur', 0.05, 0.10, dict(direction='right')),     # 第七棒：蓄力 → 甩出去的那一刀（甩镜 = 出刀）
+    'C40b': ('slash_wipe', 0.04, 0.12, dict(angle=-3, center=(960, 330))),   # 第七棒：沿 C40 横断天平的刀线斩开 → 回头面部特写（「是我」）
+    'C41': ('zoom_through', 0.06, 0.12, dict(center=(1450, 875), variant='glint')),   # 第七棒：钻进刃口那道冷光 → 收刀定格（「的回答」）
 }
+# 第七棒（critic_C_r3 转场：硬切只靠同一种推近提亮，花样单一）：硬切冲击分 4 种，按镜头内容选——
+# flash 电白闪（雷/光）、slam 下砸（重物落下：竖向震 + 赤热色偏）、zoom 冲推（径向模糊）、ink 墨眨（落拍那帧压黑再弹亮）
+HARD_FX = {'C06': 'slam', 'C10': 'flash', 'C15': 'flash', 'C17': 'slam', 'C19': 'zoom', 'C22': 'ink', 'C25': 'zoom',
+           'C29': 'ink', 'C31': 'slam', 'C35b': 'slam', 'C39': 'ink'}
 BREATH = {'C16': 3, 'C07': 2}      # 进副歌 / 进「我不低头」前压暗吸气（帧）
 
 # 每镜运镜（叠加在镜头内运动上）：z 推拉、x/y 平移、rot 滚转、hh 手持幅度、ease
@@ -2200,8 +2204,17 @@ class Sec:
             k = int((t - s.t0) * FPS + 1e-6)
             if k < 3:
                 a = (1.0, 0.5, 0.2)[k]
+                st = HARD_FX.get(self.ids[i], 'flash')
                 r_ = np.random.default_rng(i * 7 + k).uniform(-1, 1, 2) * 8 * a
-                fr = camxf(fr, 1 + 0.035 * a, r_[0], r_[1]) * (1 + 0.55 * a) + 0.07 * a * np.array([0.92, 0.96, 1.0], np.float32)
+                if st == 'slam':
+                    dy = (22, -9, 3)[k]
+                    fr = camxf(fr, 1 + 0.045 * a, r_[0] * 0.4, dy) * (1 + 0.35 * a) + 0.09 * a * np.array([1.0, 0.38, 0.18], np.float32)
+                elif st == 'zoom':
+                    fr = TR._radial_blur(camxf(fr, 1 + 0.07 * a, 0, 0), (W / 2, H / 2), 0.05 * a) * (1 + 0.3 * a)
+                elif st == 'ink':
+                    fr = ink_vignette(fr, 0.85) * 0.75 if k == 0 else camxf(fr, 1 + 0.03 * a, r_[0], r_[1]) * (1 + 0.6 * a)
+                else:
+                    fr = camxf(fr, 1 + 0.035 * a, r_[0], r_[1]) * (1 + 0.55 * a) + 0.07 * a * np.array([0.92, 0.96, 1.0], np.float32)
                 ca = max(ca, (7, 4, 2)[k])
         return fr, ca, cm
 

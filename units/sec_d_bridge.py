@@ -691,6 +691,12 @@ class S11_Answer(Shot):
         # 仰拍缓推 + 人物微升：脚底锚在画框下沿
         fr, Aw = D.ink_figure(fr, self.sp, t, (0.45, 1.0), (760, H - BAR + 30 - 24 * u), 0.66 + 0.04 * u, wind=6, k=1.05,
                               gamma=1.0, dens=0.95, bleed=0.12)
+        # [r7b] P1-7：与白纸段同一套光——左上暖主光 + 人物朝光一侧暖轮廓、背光一侧冷反光，纸纹浮雕
+        fr = R7.rim_edge(fr, Aw, (-0.75, -0.6), 4, 0.75, (1.0, 0.93, 0.8), glow=8, gamt=0.3)
+        fr = R7.rim_edge(fr, Aw, (0.85, -0.3), 3, 0.30, (0.7, 0.8, 1.0), glow=5, gamt=0.15)
+        fr = R7.paper_relief(fr, 111, amt=0.07)
+        fr = R7.key_light(fr, (300, 60), 1500, amt=0.12, dark=0.32)
+        fr = R7.light_shaft(fr, t, (120, -40), 40, 200, 0.10, seed=111, motes=35, length=1500)
         items = []
         for i, (ch, on) in enumerate(zip('谁来定义你的', O[42][7:13])):
             p = cp(t, on, 0.22)
@@ -1139,6 +1145,8 @@ class S21_Charge(Shot):
     TC = 183.06
     def __init__(self):
         self.P = R5.Plaques(seed=21, n_far=13, n_mid=7, n_near=3, ytop=40, cut=(self.TC, (-100, 780), (2000, 330)), gold_chars=())     # [r7] 木牌不再有金字抢「矩」「我」
+        for it in self.P.items:                                 # [r7b] P1-9：中/近景木牌去刻字（只留远景虚焦小字），不和「我」抢视线
+            if it['z'] >= 0.5: it['ch'] = ' '
 
     def render(self, t):
         u = self.u(t)
@@ -1183,7 +1191,7 @@ class S22_Chuang(Shot):
     def __init__(self):
         self.sp = D.spr('S105/charge_front')
         self.P = R5.Plaques(seed=22, n_far=12, n_mid=7, n_near=0, ytop=-40, cut=(183.45, (-100, 520), (2000, 420)))
-        self.P2 = [dict(ch='闯', x=1160, y=640, size=520, rot=0.0, font='serif_black', idx=0, emph=True)]
+        self.P2 = [dict(ch='闯', x=1530, y=600, size=500, rot=-4.0, font='serif_black', idx=0, emph=True)]   # [r7b] P1-9：挪到人物右侧，露出冲刺
 
     def render(self, t):
         u = self.u(t)
@@ -1198,10 +1206,10 @@ class S22_Chuang(Shot):
         fr = K.radial_blur(fr, (1060, 520), 0.015 + 0.03 * q)
         if t < th:
             p_in = cp(t, O[45][7], 0.25)
-            L = D.text_layer([('闯', 1160, 750 - 110 * ei(q, 2), 400 + 120 * ei(q, 2), min(1, p_in * 2), 1.0, 0.0, RED)], fname='serif_black')
+            L = D.text_layer([('闯', 1530 + 40 * (1 - ei(q, 2)), 700 - 100 * ei(q, 2), 380 + 120 * ei(q, 2), min(1, p_in * 2), 1.0, -4.0 * ei(q, 2), RED)], fname='serif_black')
             fr = T.compose(fr, L, **T.auto_style('red'))
         else:
-            fr = T.shatter_out(fr, '闯', cl((t - th) / 0.5), places=self.P2, fname='serif_black', color='red', impact=(1100, 560), power=1.6, seed=7)
+            fr = T.shatter_out(fr, '闯', cl((t - th) / 0.5), places=self.P2, fname='serif_black', color='red', impact=(1330, 560), power=1.6, seed=7)
         its = [('我', 250, 280, 120, 1.0, 'w'), ('偏', 250, 420, 120, 1.0, 'w'), ('要', 250, 600, 190, cp(t, O[45][7], 0.14), 'w')]
         fr = D.song(fr, its)
         fr = fr + impact(t, th, 0.08) * 0.8
