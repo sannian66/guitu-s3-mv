@@ -81,6 +81,7 @@ TRANS = {
     'fade_black': ('fade', '黑场'),
     # —— 各组模块内自带的 CUSTOM / BTRANS / c_trans 转场（在 sec_*.py 里注册，不在 lib/trans.py）
     'punch': ('hard', '硬切+推近色散(无白闪)'),          # b_kit：无白闪冲击
+    'impact_nf': ('hard', '硬切+无闪顿挫'),               # sec_a 本地：3 帧 8→4→1px 抖 + 1.02 推近，不闪不提亮
     'cloud_wipe': ('ink', '云幕下压'), 'rain_curtain': ('ink', '雨帘落幕'),
     'warm_veil': ('ink', '暖雾封顶'), 'fog_wall': ('ink', '雾墙'),
     'zoom_dark': ('graphic', '推镜圆开门'), 'zoom_iris': ('graphic', '圆开门(无叠化)'),

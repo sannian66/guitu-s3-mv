@@ -228,6 +228,165 @@ def consist():
     return out
 
 
+# ---------------------------------------------------------------- ① 逐字墨显 3（+2）帧条
+def reveal(t, r):
+    """该时刻已经「出字」的个数（字头 −0.06s 起笔，0.10s 内淡入）。"""
+    return sum(1 for c in r['chars'] if t >= c['t'] - 0.06)
+
+
+def strips(lines_=None):
+    """每句给「字头前 1 帧 / 首字+2 帧 / 1/4 处 / 句中 / 末字后 2 帧」5 格帧条，证明逐字墨显。"""
+    from PIL import Image, ImageDraw, ImageFont
+    L = _lines()
+    lines_ = lines_ or [15, 13, 17]
+    os.makedirs(OUTDIR, exist_ok=True)
+    jobs, rows = [], []
+    for ln in lines_:
+        r = L[ln]
+        h0, h1 = r['chars'][0]['t'], r['chars'][-1]['t']
+        span = h1 - h0
+        ts = [h0 - 1 / 30.0, h0 + 2 / 30.0, h0 + 0.25 * span, h0 + 0.5 * span, h1 + 2 / 30.0]
+        row = []
+        for t in ts:
+            f = fnum(t)
+            p = os.path.join(TMP, f'strip_{ln}_{f}.png')
+            jobs.append((1, f, p))
+            row.append((f, t, p))
+        rows.append((r, row))
+    render(jobs)
+
+    f_ttl = ImageFont.truetype(FONT, 26)
+    f_cap = ImageFont.truetype(FONT, 19)
+    f_sml = ImageFont.truetype(FONT_L, 16)
+    TW, TH = 372, 209                       # 整帧缩略
+    CW, CH = 372, 380                       # 字幕列裁切（x 1440–1920 缩放）
+    RH = 30 + TH + 34 + CH + 16
+    W = 20 + 5 * (TW + 14)
+    H = 116 + len(rows) * RH
+    sheet = Image.new('RGB', (W, H), (14, 14, 15))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), '逐字墨显实测：每句 5 帧（首字前 1 帧 → 首字+2 帧 → 1/4 → 句中 → 末字后 2 帧）', fill=(236, 232, 224), font=f_ttl)
+    d.text((20, 46), '「已出 k/n 字」= 该帧真正画出来的字数（字头 −0.06s 起笔，0.10s 淡入）；下排是该帧字幕列( x1440–1920 )裁切',
+           fill=(150, 165, 150), font=f_sml)
+    d.text((20, 72), '第 1 格必须几乎是空的、第 5 格必须满 —— 证明不是「整句提前全出」。同帧对比：旧层在副歌一是「半句一条」，统一层是「整句一条」',
+           fill=(150, 165, 150), font=f_sml)
+    for i, (r, row) in enumerate(rows):
+        y = 116 + i * RH
+        d.text((20, y), '第 %d 句「%s」 %d 字 · %d 列 · %dpx' % (r['line'], r['text'].replace(' ', '·'), r['n'], r['ncol'], r['size']),
+               fill=(232, 200, 120), font=f_cap)
+        for j, (f, t, p) in enumerate(row):
+            x = 20 + j * (TW + 14)
+            if os.path.exists(p):
+                im = Image.open(p).convert('RGB')
+                sheet.paste(_tile(im, TW, TH), (x, y + 28))
+                sheet.paste(_tile(im.crop((1440, 120, 1920, 960)), CW, CH), (x, y + 28 + TH + 34))
+            k = reveal(t, r)
+            d.text((x, y + TH + 30), '%.3fs  f%d　已出 %d/%d 字' % (t, f, k, r['n']),
+                   fill=(120, 210, 160) if 0 < k < r['n'] else (220, 170, 130), font=f_cap)
+    out = os.path.join(OUTDIR, 'reveal_strips.jpg')
+    sheet.save(out, quality=91)
+    print('sheet', out, flush=True)
+    return out
+
+
+# ---------------------------------------------------------------- ② 几何硬测试（--guard）
+def guard(real_frames=None):
+    """56 句 × 3 帧（字头 / 中 / 末字后 2 帧）画在黑底上，断言上下 120px 黑边全黑。
+
+    这是常驻回归测试：以后改 COL_TOP / TIERS / LEAD / 换列规则，跑一遍就知道有没有长出画面。
+    """
+    import numpy as np
+    sys.path.insert(0, os.path.join(ROOT, 'units'))
+    import lyric_uni as LU
+    os.environ['LYRIC_UNI'] = '1'
+    L = LU.lines()
+    bad, rows = [], []
+    for r in L:
+        h0, h1 = r['chars'][0]['t'], r['chars'][-1]['t']
+        worst = (0, 0.0)
+        for t in (h0, (h0 + h1) / 2.0, h1 + 2 / 30.0):
+            f = fnum(t)
+            for dtype in ('u8', 'f32'):
+                if dtype == 'u8':
+                    canvas = np.zeros((1080, 1920, 3), np.uint8)
+                    out = LU.draw(canvas, f)
+                    mx_t = int(out[0:LU.BAR].max()) / 255.0
+                    mx_b = int(out[1080 - LU.BAR:].max()) / 255.0
+                else:
+                    canvas = np.zeros((1080, 1920, 3), np.float32)
+                    out = LU.draw(canvas, f)
+                    mx_t = float(out[0:LU.BAR].max())
+                    mx_b = float(out[1080 - LU.BAR:].max())
+                worst = max(worst, (t, max(mx_t, mx_b)))
+        ok = worst[1] < 0.02
+        rows.append((r, worst, ok))
+        if not ok:
+            bad.append((r['line'], round(worst[1], 4), round(worst[0], 2)))
+    os.environ.pop('LYRIC_UNI', None)
+    print('== A 合成底硬测试：%d 句 × 3 帧（字头 / 句中 / 末字后 2 帧）× uint8+float32' % len(L))
+    print('   断言行：rows[0:120].max() < 0.02 且 rows[960:1080].max() < 0.02')
+    print('   列顶 y=%d，可用高 %dpx，行距 %.2f' % (LU.COL_TOP, 960 - LU.COL_TOP, LU.LEAD))
+    print('   最靠下：第 %d 句列底 %.0fpx（离下黑边 %.0fpx）｜最靠上：第 %d 句墨迹 %.0fpx（离上黑边 %.0fpx）' % (
+        max(L, key=lambda r: r['y_bot'])['line'], max(r['y_bot'] for r in L), 960 - max(r['y_bot'] for r in L),
+        L[0]['line'], min(r['pos'][0]['y'] - r['size'] * 0.72 for r in L),
+        min(r['pos'][0]['y'] - r['size'] * 0.72 for r in L) - 120))
+    if bad:
+        print('   ✗ FAIL %d 句撞黑边：' % len(bad))
+        for ln, mx, t in bad:
+            r = L[ln]
+            fit = int((960 - LU.COL_TOP) / max(1, max(len(c) for c in r['cols'])) / LU.LEAD)
+            print('     句号 %2d ｜字数 %2d ｜实际列底 y=%.0f（越界 %.0fpx）｜当前字号 %d ｜建议字号 ≤%d' % (
+                ln, r['n'], r['y_bot'], r['y_bot'] - 960, r['size'], fit))
+    else:
+        print('   ✓ PASS  56/56 句（3 帧 × 2 dtype = 336 次断言）上下黑边全黑，max=%.4f' % max(w[1] for _, w, _ in rows))
+
+    with open(os.path.join(OUTDIR, 'geom_report.txt'), 'w', encoding='utf-8') as fh:
+        fh.write('句号\t字数\t列数\t字号\t列顶\t列底\t下黑边余量\t3帧越界亮度max\t结果\n')
+        for r, w, ok in rows:
+            fh.write('%d\t%d\t%d\t%d\t%d\t%.0f\t%.0f\t%.4f\t%s\n' % (
+                r['line'], r['n'], r['ncol'], r['size'], LU.COL_TOP, r['y_bot'], 960 - r['y_bot'], w[1],
+                'PASS' if ok else 'FAIL'))
+
+    # ---- B 实拍帧（含组长抓到的 3050）：底帧黑边 + 叠字后黑边分别量，出问题能分清是谁的
+    rf = real_frames if real_frames is not None else [3050]
+    if rf:
+        import numpy as np
+        from PIL import Image
+        print('== B 实拍帧核对（先渲 LYRIC_UNI=0 底帧，量黑边；再叠统一层，量黑边）')
+        jobs = []
+        for f in rf:
+            jobs.append((0, f, os.path.join(TMP, f'real_{f}_base.png')))
+            jobs.append((1, f, os.path.join(TMP, f'real_{f}_lu.png')))
+        render(jobs)
+        allok = True
+        for f in rf:
+            pb = os.path.join(TMP, f'real_{f}_base.png')
+            pa = os.path.join(TMP, f'real_{f}_lu.png')
+            if not (os.path.exists(pb) and os.path.exists(pa)):
+                print('   frame %d 渲染失败' % f); allok = False; continue
+            A = np.asarray(Image.open(pb).convert('RGB'), np.float32) / 255.0
+            B = np.asarray(Image.open(pa).convert('RGB'), np.float32) / 255.0
+            m = lambda X: (float(X[0:120].max()), float(X[960:1080].max()))
+            (t0, b0), (t1, b1) = m(A), m(B)
+            ok = t1 < 0.02 and b1 < 0.02
+            allok &= ok
+            print('   frame %5d  底帧 上%.4f/下%.4f → 叠字后 上%.4f/下%.4f  %s' % (
+                f, t0, b0, t1, b1, '✓' if ok else '✗ 撞黑边'))
+            if not ok:
+                # 只输出越界那一块的范围
+                for nm, sl in (('上', slice(0, 120)), ('下', slice(960, 1080))):
+                    reg = B[sl]
+                    ys, xs = np.where(reg.max(-1) > 0.02)
+                    if len(ys):
+                        print('       %s黑边异常像素：y %d–%d，x %d–%d，max=%.3f' % (
+                            nm, ys.min() + sl.start, ys.max() + sl.start, xs.min(), xs.max(), reg.max()))
+        if not allok:
+            print('   ✗ 实拍帧有撞黑边')
+            raise SystemExit(1)
+    print('== 明细 → out/lyric_uni/geom_report.txt')
+    return not bad
+
+
 if __name__ == '__main__':
     c = sys.argv[1]
     if c == 'frame':
@@ -236,6 +395,12 @@ if __name__ == '__main__':
         pairs()
     elif c == 'consist':
         consist()
+    elif c == 'strips':
+        strips([int(x) for x in sys.argv[2:]] or None)
+    elif c in ('geom', '--guard', 'guard'):
+        rest = [x for x in sys.argv[2:] if not x.startswith('--')]
+        raise SystemExit(0 if guard([int(x) for x in rest] if rest else None) else 1)
     elif c == 'all':
         pairs()
         consist()
+        strips()
