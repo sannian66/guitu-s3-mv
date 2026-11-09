@@ -2082,10 +2082,13 @@ class C41(Shot):
             fr = fr + cv2.GaussianBlur(ember, (0, 0), 6)[..., None] * np.array([1.0, 0.35, 0.08], np.float32) * 0.6 * (1 - 0.7 * thru)
             if thru > 0:
                 core = np.clip((sd - 4.0) / 3.0, 0, 1) * lit
-                hot = np.array([1.0, 0.86, 0.6], np.float32) * (1.4 + 0.6 * pulse(t, ta, 0.12))
+                # 第十棒（critic_C_r5 P2④）：字芯不再过曝白黄 → 压回暖红熔芯（越往笔画中心越偏橙），笔画轮廓靠焦黑环读出
+                dep = np.clip((sd - 4.0) / 14.0, 0, 1)[..., None]
+                hot = (np.array([0.80, 0.16, 0.05], np.float32) * (1 - dep) + np.array([1.0, 0.42, 0.14], np.float32) * dep) \
+                    * (1.05 + 0.35 * pulse(t, ta, 0.12)) * (0.85 + 0.3 * self.var[..., None])
                 fr = fr * (1 - core[..., None] * thru) + core[..., None] * hot * thru
-                fr = fr + cv2.GaussianBlur(core, (0, 0), 40)[..., None] * np.array([1.0, 0.6, 0.25], np.float32) * 0.6 * thru
-                fr = K.vol_light(fr, (1330, 545), 700, (1.0, 0.7, 0.35), 0.35 * thru)
+                fr = fr + cv2.GaussianBlur(core, (0, 0), 40)[..., None] * np.array([1.0, 0.35, 0.12], np.float32) * 0.32 * thru
+                fr = K.vol_light(fr, (1330, 545), 700, (1.0, 0.5, 0.25), 0.20 * thru)
             # 向上飘的少量火星（从烧边升起，循环发射）
             fr = sparks(fr, t, 415, (1330, 600), n=36, life=1.1, speed=(40, 140), dirc=(0, -1), spread=0.5, grav=-60,
                         area=(240, 220), color=(1.0, 0.55, 0.2), amt=0.7 * float(lit.max()))
