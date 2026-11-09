@@ -848,52 +848,109 @@ class C12(Shot):
         return fr
 
 
+_C13G = {}
+def _spiral_layer(rr, th, t, key, seed, twist, omega, flow, z, arms, base=4, rep=4):
+    """对数螺旋采样一层体积云：θ' = θ + twist·ln r − ω t（内快外慢），径向坐标 ln r 向内流（被吸进眼里）。返回 (密度, 亮边)。"""
+    n = K.tex(key, seed=seed, base=base, octaves=5)
+    lr = np.log(np.maximum(rr / z, 1.0))
+    thp = th + twist * lr - omega * t * (1.0 + 2.2 / (1 + lr * 0.4))
+    u = (thp / (2 * np.pi)) * 512 * rep
+    v = (lr * 16 + flow * t * 0.25) % 512                         # 沿旋臂方向慢变 → 纹理被拉成顺着螺旋的长条
+    d = cv2.remap(n, (u % 512).astype(np.float32), v.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
+    band = 0.5 + 0.5 * np.cos(arms * thp + 2.4 * (d - 0.5))          # 旋臂
+    den = np.clip((d * 0.55 + band * 0.80 - 0.66) * 2.4, 0, 1)
+    edge = np.clip(den - cv2.GaussianBlur(den, (0, 0), 2.0), 0, 1) * 2.5
+    return den, edge
+
+
 class C13(Shot):
-    """riser（第三棒重做，去白色爆点）：镜头冲进雷暴之眼——四周云墙绕成漩涡、被环形闪电照亮，正中是风眼：一块黑而静的天，
-    眼壁一圈被刀上带来的赤热余烬烧成红边（承接 C12 烧红的刃口）；雨丝化作迎面的光速线；鼓点上闪电沿眼壁跑一圈。"""
+    """riser（第十棒重做，critic_C_r5 P1③）：镜头冲进雷暴之眼。
+    三层体积云旋臂（远层冷灰慢转 / 中层主旋臂被电光照亮 / 近层暗色碎云快速掠过、虚焦）做纵深视差，各层推近速度不同；
+    正中风眼黑而静，眼壁是陡峭云墙、内缘被刀上带来的赤热余烬烧成不规则红边（承接 C12）；
+    雨线和碎云沿螺旋被吸进眼里（不再是平面径向速度线）；鼓点上闪电在云层里亮起并沿眼壁跑一段弧。"""
     def render(self, t):
         u = self.u(t)
         hits = [V(x) for x in (131.42, 131.61, 131.96, 132.07)]
-        fl = sum(0.6 * pulse(t, h, 0.07) for h in hits) + 0.3 * ein(u, 2)
-        fr = storm_sky(t * 3, 13, 2000, flash=0.35 + fl, flash_c=(960, 520), speed=(30, -40), cloud=1.6)
-        fr = fr * 1.15
-        yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32) * 2
-        dx, dy = xx - 960, (yy - 520) * 1.25; rr = np.sqrt(dx * dx + dy * dy) + 1
-        tw = (1.6 + 2.8 * ein(u, 2)) * np.exp(-rr / 750)
-        ca_, sa_ = np.cos(tw), np.sin(tw)
-        mx = (960 + dx * ca_ - dy * sa_).astype(np.float32); my = (520 + (dx * sa_ + dy * ca_) / 1.25).astype(np.float32)
-        fr = cv2.remap(fr, cv2.resize(mx, (W, H)), cv2.resize(my, (W, H)), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-        z = 1.0 + 0.45 * ein(u, 2.5)
-        fr = camxf(fr, z, rot=14 * ein(u, 2))
-        # 风眼：黑而静的圆 + 眼壁红边（余烬）+ 眼壁冷光
-        R0 = 150 + 200 * ein(u, 2)
-        rf = cv2.resize(rr, (W, H))
-        eye = np.clip((R0 - rf) / 30 + 0.5, 0, 1)
-        fr = fr * (1 - eye[..., None] * 0.92)
-        ring = np.exp(-((rf - R0) / (18 + 10 * u)) ** 2)
-        nz = cv2.resize(K.tex('c13r', seed=13, base=24), (W, H))
-        ang = np.arctan2(cv2.resize(dy, (W, H)), cv2.resize(dx, (W, H)))
-        flick = 0.6 + 0.4 * np.sin(ang * 9 + t * 14) * nz
-        fr = fr + ring[..., None] * np.array([1.0, 0.32, 0.10], np.float32) * (0.9 + 0.8 * fl) * flick[..., None]
-        ring2 = np.exp(-((rf - R0 * 1.5) / 60) ** 2)
-        fr = fr + ring2[..., None] * COLD * 0.25 * (0.4 + fl)
+        fl = sum(0.6 * pulse(t, h, 0.07) for h in hits) + 0.25 * ein(u, 2)
+        h4, w4 = H // 4, W // 4
+        cx, cy, ell = 960, 520, 1.30
+        if 'g' not in _C13G:
+            yy, xx = np.mgrid[0:h4, 0:w4].astype(np.float32) * 4
+            dx, dy = xx - cx, (yy - cy) * ell
+            _C13G['g'] = (np.sqrt(dx * dx + dy * dy) + 1, np.arctan2(dy, dx))
+        rr, th = _C13G['g']
+        rot = 0.25 * ein(u, 2)                                   # 机位滚转（整体）
+        th = th - rot
+        R0 = 150 + 190 * ein(u, 2)
+        # 远层：原雷暴云底（被漩涡扭转，推近少、虚一点 = 景深最远）
+        sk = storm_sky(t * 3, 13, 2000, flash=0.35 + fl, flash_c=(960, 520), speed=(30, -40), cloud=1.6) * 0.95
+        sk = cv2.resize(sk, (w4, h4), interpolation=cv2.INTER_AREA)
+        tw = (1.4 + 2.2 * ein(u, 2)) * np.exp(-rr / 750)
+        ddx, ddy = rr * np.cos(th + rot), rr * np.sin(th + rot)
+        z0 = 1.0 + 0.18 * ein(u, 2)
+        mx = ((cx + (ddx * np.cos(tw) - ddy * np.sin(tw)) / z0) / 4).astype(np.float32)
+        my = ((cy + (ddx * np.sin(tw) + ddy * np.cos(tw)) / ell / z0) / 4).astype(np.float32)
+        fr = cv2.remap(sk, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        fr = cv2.GaussianBlur(fr, (0, 0), 1.2)
+        # 体积感：从眼壁方向来的光，用密度梯度 · 指向眼的方向做受光面
+        ux_, uy_ = -np.cos(th + rot), -np.sin(th + rot)
+        puff = cv2.resize(K.tex('c13p', seed=135, base=10, octaves=4), (w4, h4))
+        # 中层：主旋臂（团块化：顺螺旋的长条 × 各向同性的云团噪声），被眼壁电光照亮、受光面朝眼
+        d1, e1 = _spiral_layer(rr, th, t, 'c13b', 132, 0.85, 0.55, 30, 1.0 + 0.42 * ein(u, 2), 2, base=4)
+        d1 = np.clip(d1 * (0.15 + 1.5 * puff ** 1.6), 0, 1)
+        d1b = cv2.GaussianBlur(d1, (0, 0), 2.5); gy1, gx1 = np.gradient(d1b)
+        face = np.clip(-(gx1 * ux_ + gy1 * uy_) * 9, 0, 1)            # 朝眼一侧（密度向外增加）受光
+        near_eye = np.exp(-np.clip(rr - R0, 0, None) / 450)
+        lit1 = (0.10 + 0.55 * face + 0.35 * near_eye) * (0.6 + 0.9 * fl * near_eye + 0.3)
+        sh1 = cv2.GaussianBlur(d1, (0, 0), 4) * 0.6                 # 中层投在远层上的暗
+        fr = fr * (1 - sh1[..., None] * 0.65)
+        fr = fr * (1 - d1[..., None] * 0.8) + d1[..., None] * np.array([0.60, 0.66, 0.78], np.float32) * lit1[..., None] \
+            + e1[..., None] * d1[..., None] * np.array([0.75, 0.82, 1.0], np.float32) * 0.15 * (0.4 + fl)
+        # 眼壁：陡峭云墙（R0..1.45R0 的亮墙）+ 不规则余烬红边
+        wn = cv2.remap(K.tex('c13w', seed=133, base=12), ((th / (2 * np.pi) * 512 * 3 + t * 40) % 512).astype(np.float32),
+                       (rr * 0.25 % 512).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
+        Rw = R0 * (1 + 0.10 * (wn - 0.5))
+        wall = np.clip((rr - Rw) / (0.45 * R0), 0, 1); wall = np.exp(-((wall - 0.25) / 0.35) ** 2) * (rr > Rw)
+        fr = fr + wall[..., None] * np.array([0.55, 0.60, 0.72], np.float32) * (0.18 + 0.45 * fl) * (0.6 + 0.6 * wn[..., None])
+        eye = np.clip((Rw - rr) / 30 + 0.35 + 0.3 * (wn - 0.5), 0, 1) ** 0.8    # 眼壁往里是渐暗的陡墙，不是剪出来的洞
+        fr = fr * (1 - eye[..., None] * 0.95) + eye[..., None] * np.array([0.006, 0.008, 0.016], np.float32)
+        ring = np.exp(-((rr - Rw) / (10 + 8 * u)) ** 2) * (0.55 + 0.7 * wn)
+        flick = 0.65 + 0.35 * np.sin(th * 9 + t * 14)
+        fr = fr + (ring * flick)[..., None] * np.array([1.0, 0.30, 0.08], np.float32) * (0.85 + 0.8 * fl)
+        # 近层：暗色碎云快速掠过（虚焦、只在外圈），带冷轮廓光 → 前景层
+        d2, e2 = _spiral_layer(rr, th, t, 'c13c', 134, 1.2, 0.95, 60, 1.0 + 0.95 * ein(u, 2), 2, base=3, rep=2)
+        d2 = cv2.GaussianBlur(d2 * (0.2 + 1.0 * puff[::-1, ::-1]) * np.clip((rr - R0 * 2.1) / 500, 0, 1), (0, 0), 2.2)
+        e2 = cv2.GaussianBlur(e2, (0, 0), 1.5) * d2
+        fr = fr * (1 - d2[..., None] * 0.88) + d2[..., None] * np.array([0.02, 0.022, 0.03], np.float32) \
+            + e2[..., None] * COLD * 0.30 * (0.5 + fl)
+        fr = fr * (0.55 + 0.45 * np.exp(-np.clip(rr - R0 * 1.5, 0, None) / 700))[..., None]   # 外圈压暗：亮在眼壁，纵深往外沉
+        fr = cv2.resize(fr, (W, H), interpolation=cv2.INTER_LINEAR)
+        # 全分辨率云絮细节（顺着漩涡旋转，避免四分之一分辨率放大后的塑料感）
+        fine = cv2.resize(K.tex('c13f', seed=136, base=28, octaves=3), (W, H))
+        Mf = cv2.getRotationMatrix2D((cx, cy), -math.degrees(0.9 * t), 1.0 + 0.3 * u)
+        fine = cv2.warpAffine(fine, Mf, (W, H), borderMode=cv2.BORDER_REFLECT)
+        lum = np.clip(fr.mean(-1, keepdims=True) * 3, 0, 1)
+        fr = fr * (1 + (fine[..., None] - 0.5) * 0.55 * lum)
         # 鼓点：闪电沿眼壁跑一段弧
         for i, h in enumerate(hits):
             q = (t - h) / 0.12
             if 0 <= q < 1:
-                fr = arc_streak(fr, (960, 520), R0 * 1.35, R0 * 1.35 / 1.25, i * 90, i * 90 + 200, min(1, q * 2), width=4,
+                fr = arc_streak(fr, (cx, cy), R0 * 1.30, R0 * 1.30 / ell, i * 90, i * 90 + 200, min(1, q * 2), width=4,
                                 col=(0.85, 0.9, 1.0), amt=1.4)
-        # 迎面光速线（雨丝径向拉长）
+        # 被吸入的雨线：沿螺旋的弧形短线（外快内慢地卷进眼里）
         r = np.random.default_rng(13)
         Ls = np.zeros((H // 2, W // 2), np.float32)
-        for i in range(160):
-            a = r.uniform(0, 6.283); ph = r.random(); sp = r.uniform(0.8, 1.6)
-            k = (t * sp * 2.2 + ph) % 1.0
-            d0 = R0 * 1.2 + 1100 * k ** 2; d1 = d0 * (1.10 + 0.5 * k * (0.5 + u))
-            p0 = (480 + math.cos(a) * d0 / 2, 260 + math.sin(a) * d0 / 2 * 0.62); p1 = (480 + math.cos(a) * d1 / 2, 260 + math.sin(a) * d1 / 2 * 0.62)
-            cv2.line(Ls, (int(p0[0]), int(p0[1])), (int(p1[0]), int(p1[1])), float(0.25 + 0.75 * k), 1, cv2.LINE_AA)
-        fr = fr + cv2.resize(Ls, (W, H))[..., None] * COLD * (0.4 + 0.6 * u)
-        fr = sparks(fr, t, 131, (960, 520), n=90, life=1.0, speed=(60, 260), dirc=(0, -1), spread=3.1, grav=0, amt=0.8,
+        for i in range(150):
+            a = r.uniform(0, 6.283); ph = r.random(); sp = r.uniform(0.7, 1.4)
+            k = (t * sp * 1.6 + ph) % 1.0
+            d0_ = R0 * 1.1 + 1250 * (1 - k) ** 1.6
+            pts = []
+            for m in range(6):
+                dd = d0_ * (1 + 0.035 * m * (1 + u)); aa = a + 1.7 * math.log(dd) - rot - 0.04 * m * (1 + 1.5 * u)
+                pts.append((int((cx + math.cos(aa) * dd) / 2), int((cy + math.sin(aa) * dd / ell) / 2)))
+            cv2.polylines(Ls, [np.array(pts, np.int32)], False, float(0.25 + 0.6 * k), 1, cv2.LINE_AA)
+        fr = fr + cv2.resize(Ls, (W, H))[..., None] * COLD * (0.30 + 0.35 * u)
+        fr = sparks(fr, t, 131, (cx, cy), n=90, life=1.0, speed=(60, 260), dirc=(0, -1), spread=3.1, grav=0, amt=0.8,
                     color=(1.0, 0.45, 0.15), area=(R0 * 2, R0 * 1.6))
         return fr
 
