@@ -12,6 +12,39 @@ os.chdir(ROOT)
 sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib'); sys.path.insert(0, ROOT)
 import numpy as np, cv2
 cv2.setNumThreads(1)
+
+
+def _gcut_install():
+    """第五轮：GCUT=1（默认）时，读 <名>_cut.png / <名>_cutd.png 自动换成同目录的 <名>_gcut.png
+    （tools/gcut_batch.py 绿幕重抠，已对齐旧画布并匹配旧色调，发丝更干净）；没有 gcut 的照旧。
+    抠图派生的磁盘缓存换目录，A 组灰底色差抠像（diff_matte / bg_matte）有 gcut 时直接用 gcut。"""
+    from PIL import Image
+    def sub(p):
+        if isinstance(p, (str, os.PathLike)):
+            s = os.fspath(p)
+            for suf in ('_cut.png', '_cutd.png'):
+                if s.endswith(suf):
+                    g = s[:-len(suf)] + '_gcut.png'
+                    if os.path.exists(g): return g
+        return p
+    _open, _imread = Image.open, cv2.imread
+    Image.open = lambda fp, *a, **k: _open(sub(fp), *a, **k)
+    cv2.imread = lambda fp, *a, **k: _imread(sub(fp), *a, **k)
+    try:
+        import a_kit as AK, a_r6, rest_sprites as RSP
+        AK.CACHE = a_r6.CACHE = '/tmp/a_spr_g'; RSP.CACHE = '/tmp/spr_cache_g'
+        for fn in ('diff_matte', 'bg_matte'):
+            orig = getattr(AK, fn)
+            def wrap(key, *a, _o=orig, **k):
+                g = AK.GEN + key + '_gcut.png'
+                return g if (not k.get('crop') and os.path.exists(g)) else _o(key, *a, **k)
+            setattr(AK, fn, wrap)
+    except Exception as e:
+        print('GCUT: 缓存/抠像重定向未生效', e, file=sys.stderr)
+
+
+if os.environ.get('GCUT', '0') == '1':
+    _gcut_install()
 import scenes as S
 from fx import finish, to8, W, H
 FPS = 30
