@@ -3,7 +3,7 @@
 import os
 
 ON = dict(
-    credits_off=True,     # 1  开头署名全部去掉（片尾已有）
+    credits_off=False,    # 1  开头署名：2026-11-10 用户改口「这里文字要保留」→ 片头署名保留（原 #1 去掉作废）
     walkout=True,         # 2  A08 主角走出城门，城门在身后合上
     slash_keys=True,      # 3  V06 关键帧插帧挥刀（蓄势 → 横斩 → 送出）
     zoom=True,            # 4  V07→V08 撕纸转场 → 推镜穿越
