@@ -800,6 +800,8 @@ class V06(Shot):
             cv2.line(Lf, (int(xs / 4), -5), (int((xs + sl * H) / 4), H // 4 + 5), 1.0, wd, cv2.LINE_AA)
         Lf = cv2.resize(cv2.GaussianBlur(Lf, (0, 0), 3.0), (W, H))[..., None]
         fr = fr * (1 - 0.9 * Lf) + Lf * 0.012
+        Lr = np.clip(Lf[..., 0] - cv2.GaussianBlur(Lf[..., 0], (0, 0), 6), 0, None)[..., None]   # 枪杆冷月边光，让前景层在暗底上读得出反向视差
+        fr = fr + Lr * COLDV * 0.35
         if a >= 0:
             fr = streak(fr, 600, -100, 2100, a / 0.08, w=5, amt=1.6, ang=-0.6)
         # 第九棒（critic_A_r6 P0-1）：寒光沿刀身两次扫过（护手 → 刀尖），每次扫到刀尖，「寒光」被点亮一次
@@ -830,7 +832,7 @@ class V06(Shot):
             if a2 < 0:
                 fr = T.compose(fr, L, shadow=0.7, glow=0.2 + 0.9 * lit, glow_color=(0.7, 0.85, 1.0))
             else:
-                fr = T.slash_layer(fr, L, clamp01(a2 / 0.66), (940, 760), -4, slide=0.06, sz=230, length=900, sparks=50,   # 第十一棒：0.25→0.06，斩开错位不超过笔画宽，「寒光」两半不再读成「宙冬/业儿」
+                fr = T.slash_layer(fr, L, clamp01(a2 / 0.66), (940, 760), -4, slide=0.25, sz=70, length=900, sparks=50,   # 第十一棒：sz 230→70（断口分离 27→8px、错位 ≤ 笔画宽），「寒光」两半不再读成「宙冬/业儿」
                                    style_kw=dict(shadow=0.7, glow=0.3))
                 fr = streak(fr, 760, 300, 1700, a2 / 0.08, w=4, amt=1.2, ang=-4)
         return fr, (5 if 0 <= a < 0.1 else 0)
@@ -2095,6 +2097,7 @@ INNER = {
     'V10': dict(z=(1.0, 1.12), c=(930, 880), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
     'V13': dict(z=(1.0, 1.07), c=(1250, 560), d=(-50, 0)),
     'V19': dict(z=(1.0, 1.07), c=(1420, 380), d=(0, 25)),
+    'V04': dict(z=(1.0, 1.10), c=(1180, 560), d=(0, -12)),                           # 第十一棒：低机位前推 dolly-in（配合场景层侧移 truck）
     'V14': dict(z=(1.09, 1.13), c=(960, 500), rot=(-9.0, -2.0)),                      # 第十棒：荷兰角回正（-9°→-2°，拔刀时机位随刀「扶正」），与 V11/V19 的正机位脸拉开
     'V20': dict(z=(1.10, 1.0), c=(900, 600), ease='out'),
 }
