@@ -1369,6 +1369,13 @@ class E28(Shot):   # S132b ECU 暗红腰带与马尾在逆光里翻飞（红绳�
         z, info = put(np.zeros((H, W, 3), np.float32), t, 'S121/wind_sash|crop=0,0.22,0.45,1', (1000 - 70 * u, 600), w=2000, anc=(0.5, 0.5), rot=-6,
                       rim=GOLDW, rim_amt=3.5, wind=22, grade=G_DAWN)
         A = info['A']                                                     # 第六棒：取景放宽到马尾 + 腰带；腰带给编织纹 + 逆光透红边
+        # 第七棒：马尾发丝在焦外（浅景深，焦点在腰带）→ 强虚化 + 横向风动模糊 + 逆光透金，不再读成黑枯枝
+        dof = np.clip((560 - np.arange(H, dtype=np.float32)) / 160, 0, 1)[:, None] * (1 - cv2.GaussianBlur((z[..., 0] - 1.6 * z[..., 1] > 0.02).astype(np.float32), (0, 0), 6))
+        kz = np.ones((1, 21), np.float32) / 21
+        zb = cv2.GaussianBlur(cv2.filter2D(z, -1, kz), (0, 0), 5); Ab = cv2.GaussianBlur(cv2.filter2D(A, -1, kz), (0, 0), 5)
+        z = z * (1 - dof[..., None]) + zb * dof[..., None]; A = A * (1 - dof) + Ab * dof
+        edge_ = np.clip(Ab - cv2.GaussianBlur(Ab, (0, 0), 8), 0, 1) * dof
+        z = z * (1 - 0.3 * dof[..., None]) + (edge_ * 1.6 + Ab * (1 - Ab) * dof * 0.8)[..., None] * np.array([1.0, 0.68, 0.36], np.float32)
         C = z / np.maximum(A, 1e-3)[..., None]
         red = np.clip((C[..., 0] - 1.6 * C[..., 1]) * 12, 0, 1) * (A > 0.3)
         red = cv2.GaussianBlur(red.astype(np.float32), (0, 0), 1.5)
