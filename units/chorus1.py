@@ -1337,7 +1337,7 @@ CUTS = {
     'S042': ('whip', 0, 0, dict(dir=(0, -1), L=460)),             # 背影 → 天：上甩
     'S043': ('hard', 0, 0, {}),
     'S044': ('whip', 0, 0, dict(dir=(0, 1), L=380)),              # 转头 → 手按刀：下甩
-    'S045': ('slash_wipe', 0.05, 0.18, dict(circle=True, center=(960, 560), radius=330)),
+    'S045': ('hard', 0, 0, {}),                                   # r5 #27：去圆环旋斩 → 硬切进蓄势（剑光留给命中拍）
     'S046': ('hard', 0, 0, {}),
     'S047': ('cut', 0, 0, {}),                                    # 朱墨爆 → 墨退
     'S048': ('zoom_through', 0.08, 0.16, dict(center=(960, 470))),
@@ -1397,7 +1397,7 @@ MOVES3 = {
     'S042': M3('sine_io', 'beat', z=(1.0, 1.16), y=(20, -10), rot=(0, 2), note='推轨 dolly in，重拍上加速'),
     'S043': M3('sine_io', 'beat', z=(1.0, 1.05), yaw=(9, -6), x=(40, -30), note='环绕 orbit 向左，随转头（match on action）'),
     'S044': M3('sine_io', 'beat', z=(1.0, 1.13), x=(-50, 40), pitch=(3, 0), note='推 + 沿刀身横移（吸气）'),
-    'S045': M3('sine_io', 'beat', z=(1.06, 1.0), yaw=(-10, 8), rot=(-3, 3), x=(-30, 30), note='急速环绕 orbit + 荷兰角翻转（随旋身斩）'),
+    'S045': M3('sine_io', 'beat', z=(1.0, 1.05), yaw=(-3, 3), x=(-20, 20), note='r5 #27：蓄势慢推 → 剑光闪白（去环绕翻转）'),
     'S046': M3('sine_io', None, z=(1.0, 1.12), vtg=(0.0, 0.32), note='变焦推拉 dolly zoom ②（鼓停憋住，背景被拉远）'),
     'S047': M3('sine_io', 'beat', keys=[(0.0, dict(focus=0.0, y=60, pitch=-5, z=1.05)),
                                        (0.40, dict(focus=1.0, y=30, pitch=-2, z=1.03)),

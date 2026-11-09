@@ -340,41 +340,79 @@ def install(G):
 
     # ---------------------------------------------------------------- S045 LS 蓄势 → 旋斩（命中）→ 收势；环形刀光代码
     class S045Sprite(S045):
-        T_SPIN = V(84.30)
+        """r5 #27：去掉转一圈旋斩 + 圆环 → 蓄势（刀尖星芒）→ 一道横贯全画面的剑光 + 闪白 → 收刀定格（生图 s45_follow_a）"""
+        T_GO = V(84.40)                                  # 光头起划（命中前 2 帧）
+        P0, P1, BUL = (1880.0, 670.0), (40.0, 390.0), 50.0    # 剑光：右下 → 左上，略上拱，末端贴着收刀的刀身
         def __init__(self):
-            super().__init__(); self.w1, self.w2, self.w3 = L('S045/windup'), L('S045/spin'), L('S045/finish')
+            super().__init__(); self.w1, self.w3 = L('S045/windup'), L('R5_F/s45_follow_a')
+            x, y = K.grid(); (x0, y0), (x1, y1) = self.P0, self.P1
+            d = np.array([x1 - x0, y1 - y0]); d /= np.linalg.norm(d); self.dirv = d
+            self.dist = ((x - x0) * d[1] - (y - y0) * d[0]).astype(np.float32)     # 到剑光线的有符号距离
+        def _pt(self, s):
+            (x0, y0), (x1, y1) = self.P0, self.P1
+            nx, ny = -self.dirv[1], self.dirv[0]
+            b = self.BUL * 4 * s * (1 - s)
+            return x0 + (x1 - x0) * s + nx * b, y0 + (y1 - y0) * s + ny * b
+        def streak(self, fr, head, tail, fade, wmax=16.0):
+            """刀形剑光：两端尖、中段宽；白芯 + 冷蓝辉光 + 朱红细缘"""
+            if fade <= 0.01 or head <= tail: return fr
+            n = 48; ss = np.linspace(tail, head, n)
+            up, dn = [], []
+            for s_ in ss:
+                px, py = self._pt(s_)
+                w = wmax * math.sin(math.pi * clamp01((s_ - tail) / max(head - tail, 1e-3))) ** 0.7 + 1.0
+                up.append((px / 2 - self.dirv[1] * w / 2, py / 2 + self.dirv[0] * w / 2))
+                dn.append((px / 2 + self.dirv[1] * w / 2, py / 2 - self.dirv[0] * w / 2))
+            poly = np.array(up + dn[::-1], np.float32)
+            Lb = np.zeros((H // 2, W // 2), np.float32)
+            cv2.fillPoly(Lb, [np.round(poly * 4).astype(np.int32)], 1.0, cv2.LINE_AA, shift=2)
+            core = cv2.GaussianBlur(Lb, (0, 0), 0.7)
+            glow = cv2.GaussianBlur(Lb, (0, 0), 6) * 2.2 + cv2.GaussianBlur(Lb, (0, 0), 26) * 3.0
+            edge = np.clip(cv2.GaussianBlur(Lb, (0, 0), 2.5) - core, 0, 1)
+            add = (core[..., None] * np.array([1.4, 1.38, 1.34], np.float32) + glow[..., None] * np.array([0.55, 0.68, 0.95], np.float32)
+                   + edge[..., None] * np.array([0.9, 0.08, 0.05], np.float32) * 0.6)
+            return fr + cv2.resize(add, (W, H)) * fade
         def render(self, t):
-            u = self.u(t)
             fr = self.bg * (1 - self.gm[..., None] * 0.75)
-            cx, fy = 960, 960
-            ring_y = 600
             rim = dict(col=(0.75, 0.84, 1.0), amt=1.8, dir=(0.5, -0.8))
             gr = dict(expo=0.70, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.2)
-            if t < self.T_SPIN:
-                k = clamp01((t - self.t0) / (self.T_SPIN - self.t0))
-                fr, _ = put(fr, self.w1, t, 660, (cx - 20, fy), rim=rim, grade=gr, shade=None, rot=-2 * k)
-            elif t < self.T_HIT:
-                k = clamp01((t - self.T_SPIN) / (self.T_HIT - self.T_SPIN))
-                fr, _ = put(fr, self.w2, t, 660, (cx, fy), rim=dict(col=(0.8, 0.88, 1.0), amt=2.6, dir=(0.5, -0.8)), grade=gr, shade=None, mblur=(-10 * (1 - k), 0))   # 11-09 重抽：清楚的背身转体，不靠模糊
-                fr = arc_trail(fr, (cx, ring_y), 560, 130, 200, 200 + 300 * k, 1.0, 1.0, w=12)
+            fy = 925
+            if t < self.T_HIT:
+                k = clamp01((t - self.t0) / (self.T_HIT - self.t0))
+                kk = clamp01((t - self.T_GO) / (self.T_HIT - self.T_GO))          # 最后 2 帧：拧身发力
+                fr, _ = put(fr, self.w1, t, 640 + 30 * eio(k), (930 + 20 * k, fy), rim=rim, grade=gr, shade=None,
+                            rot=-2 * k - 3 * kk, mblur=(-26 * kk, 0), wind_amp=6)
+                # 刀尖星芒：蓄势
+                g = clamp01((t - V(84.22)) / 0.2) * (1 - 0.6 * kk)
+                if g > 0:
+                    st = np.zeros((H // 2, W // 2), np.float32); c = self.TIP
+                    cv2.line(st, (c[0] - 70, c[1]), (c[0] + 70, c[1]), 1.0, 1, cv2.LINE_AA)
+                    cv2.line(st, (c[0], c[1] - 26), (c[0], c[1] + 26), 0.7, 1, cv2.LINE_AA)
+                    st = cv2.GaussianBlur(st, (0, 0), 1.2) * 1.6 + cv2.GaussianBlur(st, (0, 0), 6) * 2.0
+                    fr = fr + cv2.resize(st, (W, H))[..., None] * np.array([1.0, 0.97, 0.9], np.float32) * g * (0.6 + 0.4 * math.sin(40 * t))
             else:
                 a = t - self.T_HIT
-                k = eout(clamp01(a / 0.1), 2)
-                fr, _ = put(fr, self.w3, t, 640 + 20 * k, (cx + 30, fy), rim=rim, grade=gr, shade=None, mblur=(-30 * (1 - k), 0))
-                fr = arc_trail(fr, (cx, ring_y), 560, 130, 200, 560, 1.0, math.exp(-a / 0.25), w=12)
-                R = 520 + 900 * eout(a / 0.6, 2)
-                ring = np.zeros((H // 2, W // 2), np.float32)
-                cv2.ellipse(ring, (cx // 2, int(ring_y / 2)), (int(R / 2), int(R * 0.22 / 2)), 0, 0, 360, 1.0, 2, cv2.LINE_AA)
-                ring = cv2.GaussianBlur(ring, (0, 0), 1.5) * 2 + cv2.GaussianBlur(ring, (0, 0), 8) * 3
-                fr += cv2.resize(ring, (W, H))[..., None] * np.array([1.0, 0.95, 0.9], np.float32) * math.exp(-a / 0.35)
-            fr = fr + white(t, self.T_HIT, 0.04) * 0.6
-            x, y = K.grid()
-            band = 1 - np.exp(-((y - ring_y) / 18) ** 2) * (t >= self.T_HIT)
+                k = eout(clamp01(a / 0.12), 2)
+                fr, _ = put(fr, self.w3, t, 600 + 14 * k, (1000 - 30 * (1 - k), fy), rim=dict(col=(0.85, 0.9, 1.0), amt=2.4, dir=(-0.6, -0.8)),
+                            grade=gr, shade=None, mblur=(-48 * (1 - k), 0), wind_amp=7)
+            # 剑光：命中前 1 帧光头从右下划出，命中帧贯穿全画面，之后收尾余辉
+            if t >= self.T_GO:
+                q = (t - self.T_GO) / (self.T_HIT - self.T_GO)
+                head = clamp01(0.08 + 0.92 * q); tail = clamp01((t - self.T_HIT) / 0.22) ** 0.6
+                fade = 1.0 if t < self.T_HIT else math.exp(-(t - self.T_HIT) / 0.20)
+                fr = self.streak(fr, head, min(tail, head - 1e-3), fade, 18 if t >= self.T_HIT else 12)
+            # 闪白（命中帧满白，随后约 2 帧收）
+            wv = white(t, self.T_HIT, 0.05)
+            fr = fr * (1 - 0.55 * wv) + wv * 1.15
+            band = 1 - np.exp(-(self.dist / 20) ** 2) * (t >= self.T_HIT)                  # 雨丝沿剑光被斩开
             fr = K.rain(fr, t, 451, n=320, amt=0.4, speed=2000 if t > 84.36 else 600, angle=6, region=band)
             if t >= self.T_HIT:
-                fr = K.sparks(fr, t, 4520, (cx, ring_y), n=120, life=0.6, speed=(300, 900), dirc=(1, 0), spread=3.0, grav=900,
-                              burst=True, t0=self.T_HIT, area=(500, 20), color=(0.75, 0.82, 0.95), amt=0.9)
-            return cam(fr, 1.02, 0, 0), 0
+                for i, s_ in enumerate((0.3, 0.55, 0.8)):
+                    fr = K.sparks(fr, t, 4520 + i, self._pt(s_), n=22, life=0.45, speed=(300, 800), dirc=tuple(self.dirv), spread=1.0,
+                                  grav=900, burst=True, t0=self.T_HIT, area=(120, 8), color=(0.78, 0.84, 0.96), amt=0.7)
+            sh = 10 * pulse(t, self.T_HIT, 0.08)
+            return cam(fr, 1.02, sh * math.sin(97 * t), sh * math.cos(71 * t)), 0
+        TIP = (1428 // 2, 540 // 2)                       # windup 刀尖（半分辨率）
 
     # ---------------------------------------------------------------- S046 MCU 刀在镜前（代码刀身 + 刻字），人物精灵在后虚焦
     class S046Sprite(S046):
