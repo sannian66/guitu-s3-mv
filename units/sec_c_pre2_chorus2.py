@@ -331,14 +331,7 @@ class C01(Shot):
         light = np.exp(-(((xx - 1500) ** 2 + (yy - 150) ** 2) / 1100 ** 2)) * (1.0 + 0.06 * math.sin(t * 21)) + 0.12
         light = cv2.resize(light.astype(np.float32), (W, H))[..., None]
         fr = fr * (1 - A[..., None]) + pw_ * A[..., None] * light * np.array([1.0, 0.93, 0.80], np.float32)
-        # 朱笔手：笔尖对准 tip（纸面坐标 → 画面）
-        tp = cv2.perspectiveTransform(np.float32([[tip]]).reshape(1, 1, 2), Mh)[0, 0]
-        # 手的投影
-        sh = np.zeros((H // 4, W // 4), np.float32)
-        cv2.ellipse(sh, (int((tp[0] + 160) / 4), int((tp[1] + 150) / 4)), (110, 60), -30, 0, 360, 1.0, -1)
-        fr = fr * (1 - cv2.resize(cv2.GaussianBlur(sh, (0, 0), 12), (W, H))[..., None] * 0.55)
-        fr, _ = put(fr, t, 'C/tsh_brush', tp[0], tp[1], 900, anchor='src', src=(0.635, 0.83), rot=-8, rim=WARM, rim_amt=1.4,
-                    rim_dir=(0.8, -0.6), expo=0.95, sat=0.55, tint=(1.05, 0.96, 0.86), gamma=1.05, wind=0, breathe=0.0)
+        # 第五轮 #34（用户：上面移动的图层盖住了内容 → 去掉）：太上皇执笔手精灵 C/tsh_brush 及其投影删除；朱笔圈「规则」仍自己画出。
         fr = sparks(fr, t, 11, (1500, 200), n=30, life=2.5, speed=(10, 40), dirc=(0, -1), spread=1.2, grav=-10, amt=0.25, area=(500, 200))
         return fr
 
