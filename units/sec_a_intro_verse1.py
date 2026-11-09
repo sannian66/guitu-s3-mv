@@ -872,9 +872,12 @@ class V06(Shot):
             fr = fr + (cv2.GaussianBlur(L, (0, 0), 2) * 1.5 + cv2.GaussianBlur(L, (0, 0), 14))[..., None] * RED * 1.5 * math.exp(-a / 0.8)
         fr = fog(fr, t, 0, 640, 960, 0.5, (0.28, 0.3, 0.36), speed=(80, 0))
         ax = 900 + 60 * eout(u)                                                       # 第九棒：收势跟进（人随刀前送 60px、身体由 -2.5° 回正）
-        fr, info = A.place(fr, t, S('S010/slash_h'), (ax, 1000), h=720, rim=COLD, rim_amt=3.0, wind=10, grade=dict(expo=0.9, sat=0.55),
-                           mblur=(30 * math.exp(-max(0, a) / 0.08), 0) if a >= 0 else (0, 0), rot=-2.5 * (1 - eout(u)),
-                           rim_dir=(-2.2 * math.sin(th), -1.0))                       # 第十一棒：环绕中轮廓光随视角从人物右侧转到左侧
+        if R5.ON['slash_keys']:
+            fr, (g0, g1) = self.r5_keys(fr, t, ts, ts2, th)
+        else:
+            fr, info = A.place(fr, t, S('S010/slash_h'), (ax, 1000), h=720, rim=COLD, rim_amt=3.0, wind=10, grade=dict(expo=0.9, sat=0.55),
+                               mblur=(30 * math.exp(-max(0, a) / 0.08), 0) if a >= 0 else (0, 0), rot=-2.5 * (1 - eout(u)),
+                               rim_dir=(-2.2 * math.sin(th), -1.0))                   # 第十一棒：环绕中轮廓光随视角从人物右侧转到左侧
         # 第十一棒：人前 3–4m 的前景枪林（虚焦暗剪影），环绕中与军阵反向急掠（视差 ≈ −f·tanθ·(Zp/Z−1)）
         Lf = np.zeros((H // 4, W // 4), np.float32)
         for (x0, zf, sl, wd) in ((300, 3.0, 0.10, 9), (1500, 3.6, -0.06, 7), (2500, 3.2, 0.08, 8), (-700, 3.4, -0.05, 8)):
@@ -887,7 +890,7 @@ class V06(Shot):
         if a >= 0:
             fr = streak(fr, 600, -100, 2100, a / 0.08, w=5, amt=1.6, ang=-0.6)
         # 第九棒（critic_A_r6 P0-1）：寒光沿刀身两次扫过（护手 → 刀尖），每次扫到刀尖，「寒光」被点亮一次
-        g0, g1 = (ax + 33, 447), (ax + 480, 424)
+        if not R5.ON['slash_keys']: g0, g1 = (ax + 33, 447), (ax + 480, 424)
         lit = 0.0
         for sa, sd in ((V(21.24), 0.30), (ts2 - 0.26, 0.24)):
             q = (t - sa) / sd
@@ -918,6 +921,40 @@ class V06(Shot):
                                    style_kw=dict(shadow=0.7, glow=0.3))
                 fr = streak(fr, 760, 300, 1700, a2 / 0.08, w=4, amt=1.2, ang=-4)
         return fr, (5 if 0 <= a < 0.1 else 0)
+
+    RC = 21.47                                                                       # 第五轮 3：第一刀后收刀回身后蓄势的时刻
+    def r5_keys(self, fr, t, ts, ts2, th):
+        """第五轮 3（用户：0:22 挥刀动作难看）：五张同人物关键姿态逐帧切换 —— 第一刀送出 → 收刀到身后蓄势 → 第二刀
+        横斩（起刀 / 过身前 / 平出 / 送出），每档 1 帧，配水平动态模糊 + 代码刀弧拖影；脚底中点钉在同一点，比例按原图像素一致。"""
+        u = self.u(t)
+        cur, prv, mb = R5.sk_schedule(t, ts, V(self.RC), ts2)
+        F = int(round(t * 30)); b = int(round(ts2 * 30)); r = int(round(V(self.RC) * 30))
+        # 位置：第一刀后与第二刀后各向前送 30px（收势跟进）；蓄势时略后坐 + 微沉
+        fw = 30 * eout(clamp01((t - ts) / 0.4)) + 30 * eout(clamp01((t - ts2) / 0.5))
+        back = -14 * eio(clamp01((t - V(self.RC)) / 0.25)) * (F < b - 2)
+        ax = 880 + fw + back
+        ay = 1000 + 4 * eio(clamp01((t - V(self.RC)) / 0.3)) * (F < b - 2)
+        s_raw = 0.744 * (0.93 if 'k3' in cur else 1.0)
+        at = (ax, ay)
+        path = R5.sk_path(cur)
+        gm = R5.sk_geom(cur)
+        import a_r6
+        anc = a_r6.anc_for(path, gm['feet'])
+        hh = (A.sprite(path, 640).bbox[3] - A.sprite(path, 640).bbox[1]) * gm['size'][1] / gm['k'] * s_raw
+        fr, info = A.place(fr, t, path, at, h=hh, anc=anc, rim=COLD, rim_amt=3.0, wind=6, grade=dict(expo=0.9, sat=0.55),
+                           mblur=(mb, 0), rim_dir=(-2.2 * math.sin(th), -1.0))
+        xf = R5.sk_xf(cur, at, s_raw)
+        if prv is not None:                                                            # 刀弧：上一档刀尖 → 本档刀尖，绕护手扫过身前
+            gp = R5.sk_geom(prv); xp = R5.sk_xf(prv, at, 0.744 * (0.93 if 'k3' in prv else 1.0))
+            C = tuple((np.array(xp(gp['hilt'])) + np.array(xf(gm['hilt']))) / 2)
+            old = F in (b, int(round(ts * 30)) + 1)                                    # 已送出的那一帧：刀弧只剩余辉
+            fr = R5.blade_arc(fr, C, xp(gp['tip']), xf(gm['tip']), amt=0.7 if old else 1.4)
+        if F in (b + 1, b + 2, int(round(ts * 30)) + 2):                                 # 送出后残留的一道淡弧
+            g1_ = R5.sk_geom('slash_k1_windup_v1'); x1_ = R5.sk_xf('slash_k1_windup_v1', at, 0.744)
+            C = tuple(xf(gm['hilt']))
+            fr = R5.blade_arc(fr, C, x1_(g1_['tip']), xf(gm['tip']), amt=0.45 if F != b + 2 else 0.22)
+        h0, tp = np.array(xf(gm['hilt'])), np.array(xf(gm['tip']))
+        return fr, (tuple(h0 + (tp - h0) * 0.06), tuple(h0 + (tp - h0) * 0.80))
 
 
 # V07 22.52–23.45 LS 仰拍宫阶（第四棒：去月 → 宫灯逆光）：殿檐压顶、两列红宫灯摇晃，太上皇立于丹陛顶端的背光剪影；
