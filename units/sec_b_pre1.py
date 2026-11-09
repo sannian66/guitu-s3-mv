@@ -7,6 +7,7 @@ ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2
+from PIL import Image
 import props_dev as PD
 from b_kit import *
 import b_kit as BK
@@ -800,31 +801,75 @@ class P11(Shot):
 
 # =====================================================================================
 # P12 MCU：鬼屠竖刀当面，刀身一分为二的脸（blade_face）；「只信这柄」马善政竖排，逐字光洇
+# [r4-#18] 剑被裁切：**救不了**。`B_r4/blade_face2_pt_cut.png` 的 alpha 内容 y 从 0 就开始 ——
+# 刀尖在生图时就被画布切掉了，资产里根本没有刀尖，缩放/重定位补不出来。
+# 改用用户已提交的整帧生图 `assets/gen/r1/p12_char.png`（3840×2160，刀尖完整，不再花积分）当底。
+# 这张图右上带了烤进去的「只信这」三字（与字幕层重复，违反「字幕层唯一」）→ 这里做一次性的
+# 「掩膜 + inpaint + 颗粒回填」把字去掉；只在构建时算一次并缓存，逐帧零成本。
+_P12_PLATE = [None]
+
+
+def p12_plate():
+    if _P12_PLATE[0] is not None:
+        return _P12_PLATE[0]
+    src = ROOT + '/assets/gen/r1/p12_char.png'
+    if not os.path.exists(src):
+        _P12_PLATE[0] = False
+        return False
+    a = np.asarray(Image.open(src).convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+    lum = a.mean(-1)
+    bgl = cv2.medianBlur((lum * 255).astype(np.uint8), 51).astype(np.float32) / 255
+    reg = np.zeros_like(lum, np.uint8)
+    reg[22:540, 1075:1613] = 1                                      # 烤字的范围（实测 bbox 再放宽一圈）
+    # 用「残差的高斯平滑」当判据：平掉颗粒、留住字和字的辉光
+    rm = cv2.GaussianBlur(lum - bgl, (0, 0), 2.5)
+    m = ((rm > 0.030) & (reg > 0)).astype(np.uint8)
+    m = cv2.dilate(cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8)), np.ones((11, 11), np.uint8))
+    fix = cv2.inpaint((a * 255).astype(np.uint8), m, 18, cv2.INPAINT_TELEA).astype(np.float32) / 255
+    # 颗粒回填：inpaint 出来是光电平，直接贴会露「一块干净补丁」；按邻近干净区的 σ 补同频颗粒
+    clean = lum[700:1000, 1300:1700]
+    sig = float(np.std(clean - cv2.GaussianBlur(clean, (0, 0), 6)))
+    rng = np.random.default_rng(11)
+    n = cv2.GaussianBlur(rng.standard_normal((H, W)).astype(np.float32), (0, 0), 0.75)
+    n = n / (n.std() + 1e-6) * sig
+    kk = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 4)[..., None]
+    _P12_PLATE[0] = np.clip(fix + n[..., None] * kk, 0, 1).astype(np.float32)
+    return _P12_PLATE[0]
+
+
 class P12(Shot):
     def __init__(self):
-        self.sp = spr('B_r4/blade_face2_pt')                       # 第七棒：束发版（全片造型统一）
+        self.plate = p12_plate()
+        self.sp = None if self.plate is not False else spr('B_r4/blade_face2_pt')   # 兜底：图不在就回到原精灵
         self.bg = BK.dark_bg(912, 0.015, 0.05)
         T.warm('只信这柄', 'kai', 96)
 
     def render(self, t):
         u = self.u(t)
-        fr = self.bg.copy()
         x, y = K.grid()
-        fr += np.exp(-(((x - 960) / 500) ** 2 + ((y - 380) / 300) ** 2))[..., None] * np.array([0.10, 0.11, 0.14], np.float32)
-        fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 614), 1900,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
-                       grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
-                       rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4))
-        # 刀刃上一线寒光自上而下
+        if self.plate is not False:
+            fr = self.plate.copy()
+            # 冷调 + 刀身位置补一点中心光（图本身已很暗，靠这层把脸从黑里提出来）
+            fr = fr * (0.90 + 0.22 * np.exp(-(((x - 960) / 560) ** 2 + ((y - 470) / 560) ** 2)))[..., None] \
+                 * np.array([0.96, 0.99, 1.05], np.float32)
+            fr += np.exp(-(((x - 960) / 420) ** 2 + ((y - 300) / 900) ** 2))[..., None] * np.array([0.02, 0.025, 0.035], np.float32)
+        else:
+            fr = self.bg.copy()
+            fr += np.exp(-(((x - 960) / 500) ** 2 + ((y - 380) / 300) ** 2))[..., None] * np.array([0.10, 0.11, 0.14], np.float32)
+            fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 614), 1900,   # 第八棒：拉开让头顶束发结入画
+                           grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
+                           rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4))
+        # 刀刃上一线寒光自上而下（时序与原版一致）
         q = clamp01((t - self.t0 - 0.1) / 0.6)
-        yy = 120 + 600 * eio(q)
-        g = np.exp(-(((x - 960) / 26) ** 2 + ((y - yy) / 60) ** 2))
-        fr += g[..., None] * np.array([0.9, 0.95, 1.0], np.float32) * 0.8 * (1 - q * 0.5)
-        fr = K.sparks(fr, t, 1212, (960, 980), n=30, life=1.2, speed=(60, 200), dirc=(0, -1), spread=0.8, grav=-60, area=(900, 40), amt=0.6)
+        yy = 60 + 700 * eio(q)
+        g = np.exp(-(((x - 960) / 30) ** 2 + ((y - yy) / 64) ** 2))
+        fr += g[..., None] * np.array([0.9, 0.95, 1.0], np.float32) * 0.75 * (1 - q * 0.5)
+        fr = K.sparks(fr, t, 1212, (960, 940), n=30, life=1.2, speed=(60, 200), dirc=(0, -1), spread=0.8, grav=-60, area=(900, 40), amt=0.6)
         pr = tp(11, [0, 1, 2, 3], t, 0.2)
         fr = T.ink_bleed_in(fr, '只信这柄', pr, places=[dict(ch=c, x=1420, y=300 + i * 130, size=104, rot=0, font='kai', idx=i, emph=False)
                                                         for i, c in enumerate('只信这柄')],
                             color='white', style_kw=dict(shadow=0.85, glow=0.12))
-        fr = cam(fr, 1.0 + 0.08 * eio(u), 0, 0)
+        fr = cam(fr, 1.0 + 0.06 * eio(u), 0, 0)
         return fr, 0
 
 
