@@ -70,7 +70,7 @@ if __name__ == '__main__' and sys.argv[1] in ('part', 'assemble'):
             Image.fromarray(M.frame(int(round(t * FPS)), cache)).resize((480, 270), Image.LANCZOS).save('/tmp/acon/%s_%03d.jpg' % (kind, i), quality=90)
             print(i, lab, flush=True)
     else:
-        out = sys.argv[3]; cols, tw, th = 4, 480, 270; per = int(sys.argv[4]) if len(sys.argv) > 4 else 4
+        out = sys.argv[3]; cols, tw, th = (3 if kind == 'triple' else 4), 480, 270; per = int(sys.argv[4]) if len(sys.argv) > 4 else 4
         rows = (len(its) + cols - 1) // cols
         sh = Image.new('RGB', (cols * tw, rows * (th + 30)), (12, 12, 12)); d = ImageDraw.Draw(sh)
         for i, (lab, t) in enumerate(its):
