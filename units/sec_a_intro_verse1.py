@@ -39,6 +39,20 @@ COLDV = np.array([0.62, 0.74, 1.0], np.float32)
 INK = np.array([0.02, 0.022, 0.03], np.float32)
 
 
+# [r1-#7] 「殺」「放」共用同一字位与字号 —— 用户要求：同位置、繁体、构图一致、之间做文字转变动画。
+#   V12 写「殺」（朱红 = 杀），V13 写「放」（冷钢灰 = 放）；两镜都用同一个 BG() 笔序写法、同 seed，
+#   只有字和颜色不同；切点上由 a_char_morph 把「殺」的字形就地换成「放」。
+R1_GLYPH = dict(x=470, y=392, size=340, seed=4)
+R1_COL_KILL = (0.88, 0.10, 0.07)
+R1_COL_FREE = (0.70, 0.76, 0.88)
+
+
+def r1_big_glyph(L, ch, p, col):
+    """两镜共用的巨字层：同字位/同字号/同笔序写法，只有字与颜色不同。"""
+    g = R1_GLYPH
+    L.paste(BG(ch, 'kai', g['size'], p, seed=g['seed']), g['x'], g['y'], col)
+
+
 def V(t): return (round(t * FPS) - 1) / FPS            # 声音 → 视觉帧（早 1 帧）
 def CT(li, k): return V(WT[(li, k)])
 def cprog(li, ks, t, dur=0.22):
@@ -1283,7 +1297,7 @@ class V12(Shot):
             fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
             fr = K.sparks(fr, t, 31, (1200, 620), n=60, life=0.6, speed=(200, 800), dirc=(1, -0.4), spread=1.0, grav=1200, area=(60, 60), amt=0.8, t0=ts, burst=True)
         L = T.Layer(); p = cprog(4, [1], t, 0.16)[0]
-        if p > 0: L.paste(BG('杀', 'kai', 360, p, seed=4), 330, 400, (0.88, 0.10, 0.07))
+        if p > 0: r1_big_glyph(L, '殺', p, R1_COL_KILL)          # [r1-#7] 繁体「殺」，与「放」同字位
         fr = T.compose(fr, L, shadow=0.6, glow=0.45, glow_color=(0.9, 0.1, 0.06))
         return fr, (5 if 0 <= a < 0.1 else 0)
 
@@ -1390,9 +1404,12 @@ class V13(Shot):
         # 第八棒（critic_A_r5 P0-1）：鬼屠收刀后站定 —— 身体由微侧回正（rot 3°→0）+ 中景缓移；跪者在前景反向大幅横移（视差）并越磕越深、发抖
         fr, info = A.place(fr, t, S('S014/sheath'), (1290 - 70 * eio(u), 930), h=600 * (1 + 0.03 * u), rim=COLD, rim_amt=3.2, wind=8,
                            grade=dict(expo=0.85, sat=0.5), rot=3.0 * (1 - eout(u)), defocus=6.0 * (1 - fc))
-        L = T.Layer(); p = cprog(4, [6], t, 0.25)[0]
+        L = T.Layer()
+        # [r1-#7] 「放」与「殺」同字位同字号同写法；书写起点从镜首开始（原为 CT(4,6)），
+        #   这样切点上 a_char_morph 才有「放」可换 —— 「殺→放」正好发生在这两镜之间。
+        p = clamp01((t - self.t0) / 0.30)
         if p > 0:
-            L.paste(T.ink_bleed_glyph('放', 'kai', 330, p, seed=6, bleed=0.6), 880, 520, (0.70, 0.76, 0.88))
+            r1_big_glyph(L, '放', p, R1_COL_FREE)
             fr = T.compose(fr, L, shadow=0.7, glow=0.25, glow_color=(0.5, 0.6, 0.9))
             a_ = t - (CT(4, 6) - 0.22)
             fr = streak(fr, 520, 640, 1140, a_ / 0.22, w=3, amt=0.9, ang=-3, col=(0.75, 0.85, 1.0))
@@ -1862,7 +1879,11 @@ CUTS = {
     'V10': ('hard', 0, 0, {}),
     'V11': ('flash_red', 0.03, 0.10, {}),
     'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
-    'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
+    # [r1-#7] 用户：30/31s「杀」「放」要凸显反差 → 同位置、繁体、构图一致、之间做**文字转变动画**。
+    #   转场从「一线冷光掠过」换成 a_char_morph：以「殺」「放」两个字形为种，笔画按噪声乱序就地
+    #   重写（殺 的笔画一块块换成 放 的笔画），再以字心为原点把 B 张开盖满画面 —— 观众读到的是
+    #   「同一个字位，殺 变成 放」，不是「换了个镜头」。
+    'V13': ('a_char_morph', 0.10, 0.18, dict(ca='殺', cb='放', center=(470, 392), size=340, seed=7)),
     'V13b': ('impact_nf', 0, 0, {}),   # [r4-P2b] 新增刀（帧 950 / 31.667s）：重拍 + 无闪顿挫(impact_nf)
     'V14': ('a_zoom2', 0.10, 0.16, dict(center=(960, 520), seed=14)),   # [r4-P0] 原 hard（轻闪白）→ 墨边圆窗推镜（不用 a_cleave：V12 刚用过，2 刀内重名）
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
@@ -2043,6 +2064,32 @@ def a_zoom2(A_, B_, p, center=(960, 540), seed=0):
     m = cv2.resize(np.clip((R + nz - d) / 30, 0, 1), (W, H))[..., None]
     rim = cv2.resize(np.exp(-((R + nz - d) / 14) ** 2), (W, H))[..., None] * (p < 0.95)
     return A2 * (1 - m) + B2 * m + rim * np.array([0.5, 0.6, 0.85], np.float32) * 0.8
+
+
+def a_char_morph(A_, B_, p, ca='殺', cb='放', center=(470, 392), size=340, seed=7):
+    """[r1-#7] 巨字转变：同一字位上「ca → cb」。字形内部按噪声乱序重写（约前 45% 完成），
+    随后以字心为原点把 B 张开盖满画面；边缘保留墨刺/纸纤维，切换瞬间带一记朱红余温。"""
+    LA = T.Layer(); T.place(LA, ca, center[0], center[1], size, 'white', 'kai', texture=False)
+    LB = T.Layer(); T.place(LB, cb, center[0], center[1], size, 'white', 'kai', texture=False)
+    uni = np.clip(np.maximum(LA.A, LB.A) * 1.6, 0, 1)                 # 两字覆盖的字位（=「字」的占地）
+    nz = cv2.resize(A.ink_noise(seed + 61, 256), (W, H))
+    nz2 = cv2.resize(A.ink_noise(seed + 67, 128), (W, H))
+    q = clamp01(p / 0.45)                                          # 字位内部重写进度
+    m_stroke = np.clip((q * 1.5 - (1 - nz) * 0.95) * 5, 0, 1) * uni   # 按噪声乱序：一块块换成 cb
+    yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32)
+    d = np.hypot(xx * 2 - center[0], yy * 2 - center[1])          # 半分辨率算半径场（省内存）
+    grow = clamp01((p - 0.22) / 0.62)
+    R = 150 + 2600 * grow ** 1.7
+    m_spread = cv2.resize(np.clip((R + (cv2.resize(nz2, (W // 2, H // 2)) - 0.5) * 260 - d) / 34, 0, 1), (W, H))
+    m = np.clip(np.maximum(m_stroke, m_spread), 0, 1)
+    hair = cv2.resize(A.tex(seed + 63, 256, 40, 3)[:, :5], (W, H), interpolation=cv2.INTER_LINEAR)
+    band = np.clip(1 - np.abs(cv2.GaussianBlur(m, (0, 0), 22) - 0.5) * 2.0, 0, 1)
+    m = np.clip(m + (nz - 0.5) * 0.30 * band + (hair - 0.5) * 0.55 * band, 0, 1)
+    rim = cv2.GaussianBlur(np.clip(np.abs(cv2.GaussianBlur(m, (0, 0), 6) - m) * 6, 0, 1), (0, 0), 2)
+    out = A_ * (1 - m[..., None]) + B_ * m[..., None]
+    heat = math.exp(-((p - 0.33) / 0.16) ** 2) * (1 - p * 0.4)         # 切换瞬间：朱红余温
+    return out + rim[..., None] * (np.array([1.0, 0.35, 0.28], np.float32) * 1.5 * heat
+                                   + np.array([0.55, 0.65, 0.85], np.float32) * 0.7 * (1 - heat))
 
 
 def a_glint(A_, B_, p, angle=-12.0, center=(960, 560)):
@@ -2284,6 +2331,7 @@ class Section:
             if name == 'a_seam': return a_seam(Af, B, p), max(ca1, ca2)
             if name == 'a_split': return a_split(Af, B, p, **kw), max(ca1, ca2)
             if name == 'a_glyph': return a_glyph(Af, B, p, **kw), max(ca1, ca2)
+            if name == 'a_char_morph': return a_char_morph(Af, B, p, **kw), max(ca1, ca2)
             if name == 'a_cleave': return R8.a_cleave8(Af, B, p, **kw), 0
             return TR.transition(name, Af, B, p, **kw), max(ca1, ca2)
         fr, ca = s.render(t)

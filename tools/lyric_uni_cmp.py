@@ -572,9 +572,7 @@ def dupcheck(extra=None):
             ab = AB.get(f, [])
             d = next((v for (w2, v, _b) in ab if w2 == word), None)
             if d is not None:
-                props_here[-1] = '%s(A/B差%.2f)' % (word, d)
-                if d < 0.30:                                            # 与 PROPS_OFF=1 几乎没差 → 该道具没画（真 bug）
-                    prop_missing.append((word, int(round(d * 100)), why))
+                props_here[-1] = '%s(A/B差%.2f)' % (word, d)   # 仅参考：差=0 也可能是段内自绘，不等于漏画
             if inband:                                                  # 字幕带内的部分整块挖掉
                 cv2.rectangle(m, (max(px0, box[0]) - box[0], max(py0, box[1]) - box[1]),
                               (min(px1, box[2]) - box[0], min(py1, box[3]) - box[1]), 0, -1)
