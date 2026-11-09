@@ -265,6 +265,23 @@ def install(G):
             fr = self.bg * (1 - self.gm[..., None] * 0.75)
             cx, fy = 960, 960
             ring_y = 600
+            # [r1-#27] 用户：1m24 主角转圈挥刀很丑 → 改成「剑光 + 闪白」，不画旋身人物
+            if True:
+                q = clamp01((t - (self.t0 + 0.10)) / 0.34)
+                if 0.0 < q < 1.4:
+                    G = np.zeros((H // 2, W // 2), np.float32)
+                    x0, y0 = 220, 900
+                    x1 = x0 + int(1520 * eout(min(1.0, q)))
+                    cv2.line(G, (x0 // 2, y0 // 2), (max(0, x1) // 2, int((y0 - 540 * min(1.0, q)) / 2)), 1.0, 3, cv2.LINE_AA)
+                    G = cv2.GaussianBlur(G, (0, 0), 1.2) * 3.0 + cv2.GaussianBlur(G, (0, 0), 9) * 5.0
+                    g8 = cv2.resize(G, (W, H))
+                    fr = fr + g8[..., None] * np.array([1.0, 0.97, 0.92], np.float32) * (1.0 - clamp01((q - 1.0) / 0.4))
+                    fr = fr + g8[..., None] * np.array([0.92, 0.16, 0.09], np.float32) * 0.30 * math.exp(-max(0.0, q - 0.5) * 6)
+                fa = t - self.T_HIT
+                if 0 <= fa < 0.16:
+                    e = math.exp(-fa / 0.05)
+                    fr = fr * (1 - 0.55 * e) + 0.55 * e * np.array([0.97, 0.97, 1.0], np.float32)
+                return fr, 0
             rim = dict(col=(0.75, 0.84, 1.0), amt=1.8, dir=(0.5, -0.8))
             gr = dict(expo=0.70, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.2)
             if t < self.T_SPIN:

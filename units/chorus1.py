@@ -1103,15 +1103,34 @@ class S045(Shot):
         ph = self.phase(t)
         self.sw.pose('spin_slash', ph, t, wind=-200)
         cx, fy, sc = 960, 940, 560
+        # [r1-#27] 用户：1m24 转一圈挥刀很丑 → 改成「剑光 + 闪白」（不再画人物旋身）
         hist = trail_hist(self.sw, lambda tt: rig.sample_action('spin_slash', self.phase(tt)), t, lambda tt: cx, lambda tt: fy, sc,
                           n=10, step=1 / 120)
         ring_y = fy - 59 * sc / 100 - 8 * sc / 100
         # 文字绕环（后半圈在人后）
         prog = tprog(19, [0, 1, 2], t, 0.16)
         front = None   # v3 字幕统一：「这一刀」移到 lyric3 统一字幕层（右侧竖排）
-        fr, info = self.sw.draw(fr, cx, fy, sc, rim_color=(0.85, 0.9, 1.0), rim_dir=(-0.5, -0.8), rim=1.3)
-        if 84.3 < t < 85.0:
-            fr = rig.blade_trail(fr, hist, intensity=1.5, glow=1.4, edge_color=RED)
+        NO_SPIN_RIG = True
+        if not NO_SPIN_RIG:
+            fr, info = self.sw.draw(fr, cx, fy, sc, rim_color=(0.85, 0.9, 1.0), rim_dir=(-0.5, -0.8), rim=1.3)
+            if 84.3 < t < 85.0:
+                fr = rig.blade_trail(fr, hist, intensity=1.5, glow=1.4, edge_color=RED)
+        else:
+            # 剑光：一道极亮的弧线自左下扫到右上（0.34s），刃口白热 + 朱红余温
+            q = clamp01((t - (self.t0 + 0.10)) / 0.34)
+            if 0.0 < q < 1.4:
+                G = np.zeros((H // 2, W // 2), np.float32)
+                x0, y0 = 240, 900
+                x1 = x0 + int(1500 * eout(min(1.0, q)))
+                cv2.line(G, (x0 // 2, y0 // 2), (max(0, x1) // 2, int((y0 - 520 * min(1.0, q)) / 2)), 1.0, 3, cv2.LINE_AA)
+                G = cv2.GaussianBlur(G, (0, 0), 1.2) * 3.0 + cv2.GaussianBlur(G, (0, 0), 9) * 5.0
+                g8 = cv2.resize(G, (W, H))
+                fr = fr + g8[..., None] * np.array([1.0, 0.97, 0.92], np.float32) * (1.0 - clamp01((q - 1.0) / 0.4))
+                fr = fr + g8[..., None] * np.array([0.9, 0.18, 0.10], np.float32) * 0.35 * math.exp(-max(0.0, q - 0.5) * 6)
+            # 闪白：命中拍一记很短的白闪（4 帧衰减，不提亮整段）
+            fa = t - self.T_HIT
+            if 0 <= fa < 0.14:
+                fr = fr * (1 - 0.62 * math.exp(-fa / 0.045)) + 0.62 * math.exp(-fa / 0.045) * np.array([0.97, 0.97, 1.0], np.float32)
         # 圆形刀光环（命中拍扩散）
         if t >= self.T_HIT:
             a = t - self.T_HIT
