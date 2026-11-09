@@ -155,7 +155,11 @@ def main():
         outdir.mkdir(parents=True, exist_ok=True)
         raw = outdir / f"{j['name']}_raw.png"
         urllib.request.urlretrieve(urls[0], raw)
-        cut(raw, outdir / f"{j['name']}_cut.png")
+        if j.get('nocut'):
+            raw.replace(outdir / f"{j['name']}.png")
+            raw = outdir / f"{j['name']}.png"
+        else:
+            cut(raw, outdir / f"{j['name']}_cut.png")
         tid = ids.get(j['name'], '')
         log.append(f"- ✔ `{j['name']}` 3 点（task {tid[:8]}）→ `{raw.relative_to(ROOT)}` + `_cut.png`")
         print(f"  ✔ {j['name']} → {raw.name}")
