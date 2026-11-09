@@ -1565,11 +1565,11 @@ class V21(Shot):
         self.face = PR.seal_face('正', 760, style='bai', wear=0.35, seed=4)
     def render(self, t):
         u = self.u(t); ts = V(43.30)
-        fr = night((0.03, 0.025, 0.025), (0.06, 0.05, 0.05))
+        # 第七棒：去掉印面方块（读作灰平板 + 又一个方印母题）→ 墨渍体积底 + 冷雨 + 火星
+        fr = R7.ink_bg(t) * (1 + 0.04 * u)
+        fr = RAIN.draw(fr, t, 0.35, angle=-6, layers=(0, 1))
         a = t - ts
-        L = T.Layer()                                                                   # 印面
-        # 第五棒：去红方印（全段红印 ≤2：V08 罪状、V17 正）；印面改墨色石刻暗纹作底，「锋」「芒」同号成对压满屏
-        L.paste_rgba(self.face[..., :3] * 0 + 0.10, self.face[..., 3] * 0.55, 960 - 380, 540 - 380)
+        L = T.Layer()
         p = cprog(7, [8], t, 0.12)[0]
         if p > 0: T.place(L, '锋', 690, 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=eout(p), scale=1 + 0.3 * (1 - eout(p)))
         p2 = cprog(7, [9], t, 0.12)[0]
@@ -1628,7 +1628,7 @@ CUTS = {
     'V10': ('hard', 0, 0, {}),
     'V11': ('flash_red', 0.03, 0.10, {}),
     'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
-    'V13': ('a_cleave', 0.08, 0.16, dict(angle=32, center=(960, 600), mode='shear', col=(0.55, 0.7, 1.0))),   # 第七棒：沿 V12 斩线两块反向错滑出画（两块，冷光；原三条带、人物无头）                                   # 第六棒：沿 V12 斩线一刀两分（两块）滑开露出 V13（原三块错位读成渲染错误）
+    'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
     'V14': ('hard', 0, 0, {}),
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
     'V16': ('a_glyph', 0.08, 0.24, dict(ch='主', center=(750, 650), size=230)),          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
@@ -1636,7 +1636,7 @@ CUTS = {
     'V18': ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）
     'V19': ('hard', 0, 0, {}),
     'V20': ('hard', 0, 0, {}),
-    'V21': ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(960, 540), mode='open', col=(1.0, 0.85, 0.6))),   # 第七棒：V20 撩刀弧光一线斩开画面，露出「锋」（原灰平板 + 半截「锋」重复）
+    'V21': ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(1320, 540), mode='open', col=(1.0, 0.85, 0.6))),   # 第七棒：V20 撩刀弧光一线斩开画面，露出「锋」（原灰平板 + 半截「锋」重复）
 }
 
 M3 = V3.Move3

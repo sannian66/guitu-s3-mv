@@ -208,10 +208,20 @@ def candle_screen(t, seed=3):
     return fr
 
 
+_VALID = None
+def _valid():
+    global _VALID
+    v = np.ones((H, W), np.float32)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    e = np.minimum(np.minimum(xx, W - 1 - xx), np.minimum(yy - 120, 960 - yy))      # 有效画面（2.39 黑边内）边缘 160px 羽化
+    _VALID = np.clip(e / 160, 0, 1)
+
+
 def a_cleave(A_, B_, p, angle=32.0, center=(960, 540), mode='open', col=(1.0, 0.35, 0.15)):
     """一刀两分：0–0.3 一道斩光沿斩线自一端划到另一端（A 上）；0.3 起 A 沿这条线断成两块，
     mode='open' 两块垂直斩线向外飞开（缝里露出 B），mode='shear' 两块沿斩线反向错滑出画。
     A、B 各只出现一次；两块的空出区一律是 B，不复制、不倒置。"""
+    if _VALID is None: _valid()
     th = math.radians(angle); dv = (math.cos(th), math.sin(th)); nv = (-dv[1], dv[0])
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     sd = (xx - center[0]) * nv[0] + (yy - center[1]) * nv[1]
@@ -233,7 +243,8 @@ def a_cleave(A_, B_, p, angle=32.0, center=(960, 540), mode='open', col=(1.0, 0.
         tx = sgn * (nv[0] * sep + dv[0] * sl); ty = sgn * (nv[1] * sep + dv[1] * sl)
         M = np.float32([[1, 0, tx], [0, 1, ty]])
         half = cv2.warpAffine(A_, M, (W, H), borderMode=cv2.BORDER_CONSTANT)
-        mk = cv2.warpAffine(((sd > 0) if sgn > 0 else (sd <= 0)).astype(np.float32), M, (W, H))
+        mk = cv2.warpAffine(((sd > 0) if sgn > 0 else (sd <= 0)).astype(np.float32) * _VALID, M, (W, H))
+        mk = mk * (1 - max(0.0, (q - 0.65) / 0.35))                                  # 尾段两块淡出，不留画框边
         edge = np.exp(-((sd - sgn * sep) / 3.0) ** 2) * mk                           # 断口一线红热
         out = out * (1 - mk[..., None]) + half * mk[..., None]
         out = out + edge[..., None] * np.array(col, np.float32) * 1.6 * (1 - q)
