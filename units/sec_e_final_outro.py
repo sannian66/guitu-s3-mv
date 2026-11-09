@@ -19,6 +19,7 @@ import e_r3 as R3
 import e_r5 as R5
 import e_r6 as R6
 import e_r7 as R7
+import e_r8 as R8
 from e_r3 import LyrO
 Sub = R5.SubD          # 第五棒：副句随画面漂移、去句首朱印、暗衬变淡（去卡拉 OK 条模板感）
 from e_kit import (W, H, BAR, GOLD, GOLDW, RED, REDT, WHITE_T, GOLD_T, INK, put, Lyr, row, sstep, c01, eio, eout, ein,
@@ -61,7 +62,7 @@ def bloom(fr, thr=0.8, amt=0.5, sig=30): return K.bloom(fr, thr, amt, sig)
 
 
 # =========================================================================================== 副歌终「定」
-class E01(Shot):   # S111 ECU（第七棒重做刀身）竖刀刀尖朝天、纵贯画面偏右，逆光晨日在左下画外。
+class E01_r7(Shot):   # 第七棒代码刀（第八棒弃用，留作回退）S111 ECU竖刀刀尖朝天、纵贯画面偏右，逆光晨日在左下画外。
     #  刀身按截面着色：镐筋把刀身分成两面 —— 刃面（朝左下日）暖亮、平地（朝右上天）冷暗；刃口一条细亮线、刃文白雾；
     #  冷暖环境反射（刃面映地平线暖晕、平地映天空冷云条纹）；锋利斜尖（刃线直线斜收到背线尖点 + 横手线）；
     #  底部刀镡 + 缠柄入画（离镜最近，浅景深虚化）；碑拓「血」占刃宽 80%，日光自下而上扫过时字面反光；副句「未冷」右上
@@ -195,6 +196,46 @@ class E01(Shot):   # S111 ECU（第七棒重做刀身）竖刀刀尖朝天、纵
                 out = out + (m * sh * 0.9)[..., None] * np.array([1.0, 0.55, 0.35], np.float32)
                 fr = fr * (1 - Ab[..., None]) + out * Ab[..., None]
         return self.l2.draw(fr, t)
+
+
+class E01(Shot):   # S111 ECU（第八棒重做）：生图真刃身 E_r6/blade_vert 翻转迎日、拉成 1:6 窄长刃（R8.BladeECU），切先朝天、刃口朝左下画外晨日；
+    #  冷暖环境反射重新着色 + 原图锻纹/划痕 + 刃文 + 连续刃口亮线；日光自下而上扫刃；「血」阴刻入刃面（自下而上刻出，槽底残血，扫光时字口反光）
+    TIP = (1080, 150)
+    ANG = -8.0
+
+    def __init__(self):
+        self.sky = E.dawn_sky(111, horizon=0.86, sun=(260, 900), mid=(0.40, 0.27, 0.15), cloud=0.55)
+        self.l2 = Sub('未冷', cts(48, [1, 2]), 1560, CT(48, 2) + 0.15, seed=2, y=330)
+        self.B = R8.BladeECU(self.sky)
+
+    def _pose(self, u):
+        return (self.TIP[0] + 18 * u, self.TIP[1] + 6 * (1 - u)), self.ANG + 1.5 * u
+
+    def render(self, t):
+        u = self.u(t)
+        fr = self.sky.copy()
+        fr = fx2.god_rays(fr, (260, 900), strength=0.55, length=0.9, t=t, src_r=160)
+        (tx, ty), ang = self._pose(u)
+        sy_scr = 1000 - 1050 * eio(c01(u * 1.15))
+        sy_loc = (sy_scr - ty) / math.cos(math.radians(ang)) + self.B.top
+        col, sh = self.B.layer(t, u, sy_loc)
+        p = c01((t - (CT(48, 0) - 0.1)) / 0.22)
+        ly = (560 - ty) / math.cos(math.radians(ang)) + self.B.top
+        col = self.B.engrave(col, '血', 200, ly, p, sh, sy_loc, font='kai', xc=0.5)
+        fr, Aw, _ = self.B.place(fr, col, tx, ty, ang)
+        # 刃根往下离镜更近 → 轻微虚化（浅景深）
+        bl = cv2.GaussianBlur(fr, (0, 0), 2.2)
+        yy = np.arange(H, dtype=np.float32)[:, None, None]
+        k = np.clip((yy - 780) / 180, 0, 1) * Aw[..., None]
+        fr = fr * (1 - k) + bl * k
+        # 刃身贴近日侧的暖色溢光（halation）
+        fr = fr + cv2.GaussianBlur(Aw, (0, 0), 14)[..., None] * np.array([0.10, 0.06, 0.03], np.float32) * (1 - 0.6 * Aw[..., None])
+        self.tip = (tx, ty)
+        if u > 0.75: fr = E.flare_streak(fr, (tx, ty + 4), amt=1.4 * c01((u - 0.75) / 0.1) * (1 - c01((u - 0.9) / 0.1)), angle=0)
+        fr = E.dust_motes(fr, t, 111, n=70, amt=0.5, drift=(60, -20), depth=True)
+        return bloom(fr, 0.85, 0.5)
+
+    def text(self, fr, t): return self.l2.draw(fr, t)
 
 
 class E02(Shot):   # S112（第六棒重做，去和副歌一 S030「背影举刀指月」撞构图）：正面极低机位 3/4，刀扛在右肩、刀身向后；

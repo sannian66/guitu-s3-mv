@@ -18,6 +18,7 @@ import typo as T, trans as TR, fx2
 import props as PR
 import c_props as CP
 import c_trans as CX
+import c_piying as PY
 from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark, fbm
 
 READY = True
@@ -445,12 +446,12 @@ class C03(Shot):
         lift = 70 * pulse(t, tj, 0.22) + 40 * pulse(t, tj2, 0.18)
         r = np.random.default_rng(3)
         for i in range(9):
-            x = xs[i] + r.uniform(-20, 20); hgt = 300 + r.uniform(-20, 20)
+            x = xs[i] + r.uniform(-20, 20); hgt = 345 + r.uniform(-20, 20)   # 第八棒：皮影廓形更窄，放大 15%
             top = 560 - lift * (1 + 0.2 * math.sin(i)) + 10 * math.sin(t * 3 + i)
             ang = 6 * math.sin(t * 2.5 + i) + 10 * pulse(t, tj, 0.3) * (1 if i % 2 else -1)
-            A, fib2 = puppet_sprite(i, int(hgt))
+            # 第八棒（critic_C_r4 P1③）：扁平纸人 → 真皮影（半透明染色皮料、镂空纹、关节铆钉，幕后光透射）
             fr = red_line(fr, ends[i], (x, top + 4), w=2, amt=0.85)
-            fr = draw_puppet(fr, A, fib2, x, top, ang, back=1.1 - 0.4 * abs(i - 4) / 4)
+            fr, _ = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.1 - 0.3 * abs(i - 4) / 4, flip=(i >= 5))
         if t >= tj:
             fr = paste_glyph(fr, '纲', 960, 330, 260, (0.95, 0.85, 0.62), font='serif_b', glow=0.35, glow_c=(1, 0.6, 0.3),
                              scale=1 + 0.12 * pulse(t, tj, 0.06))
@@ -472,11 +473,11 @@ def fill_people(n, seed, h, scatter=0.0, t=0.0):
         for i in range(n):
             ox = r.uniform(-0.75, 0.75) * rx; oy = r.uniform(-0.5, 0.3) * ry
             hh = int(h * r.uniform(0.8, 1.15))
-            A, fib = puppet_sprite(60 + i % 8, hh)
             k = scatter * r.uniform(0.6, 1.3)
             x = c[0] + ox + r.uniform(-1, 1) * 260 * k; y = c[1] + oy - hh * 0.95 - (900 * k - 1100 * k * k * 0.6)
             ang = r.uniform(-12, 12) + r.uniform(-200, 200) * k
-            fr = draw_puppet(fr, A, fib, x, y, ang, back=0.8 + 0.3 * r.random())
+            # 第八棒：秤盘里的人也换成 C03 同款皮影（暗房里无幕光透射 → 用暖光衬底提亮）
+            fr = PY.draw_piying(fr, PY.piying_sprite(60 + i % 8, hh), x, y, ang, light=1.0, flip=bool(i % 2), base=(0.95, 0.72, 0.45))[0]
         return fr
     return f
 
@@ -556,8 +557,8 @@ class C05(Shot):
                 cv2.ellipse(fr, (int(x), int(y)), (sz, ry_), i * 23, 200, 320, tuple(float(v) for v in GOLD * 1.5), 2, cv2.LINE_AA)
                 cv2.rectangle(fr, (int(x - sz * 0.2), int(y - ry_ * 0.2)), (int(x + sz * 0.2), int(y + ry_ * 0.2)), (0.02, 0.015, 0.01), -1)
             else:
-                A, fib = puppet_sprite(40 + i % 6, int(70 * z))
-                fr = draw_puppet(fr, A, fib, x, y - 35 * z, (t * 220 + i * 50) % 360, back=0.8)
+                fr = PY.draw_piying(fr, PY.piying_sprite(40 + i % 6, int(70 * z)), x, y - 35 * z, (t * 220 + i * 50) % 360,
+                                    light=0.9, base=(0.95, 0.72, 0.45))[0]   # 第八棒：皮影
         fr = sparks(fr, t, 51, (960, rim_y - 40), n=50, life=1.2, speed=(30, 120), dirc=(0, -1), spread=1.2, grav=-30, amt=0.5,
                     area=(400, 30), color=(1.0, 0.7, 0.3))
         return fr
