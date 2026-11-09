@@ -1824,7 +1824,7 @@ def gold_beam(A, B, p, x0=960, seed=0):
     return out
 
 
-def ink_press(A, B, p, seed=0, band=150):
+def ink_press(A, B, p, seed=0, band=260):
     """[r8] 巨笔墨压（critic_D_r5 P1-4：S10 入点替换 hard_cut_x）：一整幅浓墨像巨笔横扫的笔肚从画面上沿压下来，
     墨块前沿是参差的干笔毛锋（逐列噪声 + 细丝飞白），前沿之上露出下一镜（巨像），前沿之下是上一镜（被压暗、微下沉）；
     墨带本身浓淡不匀、带竖向笔丝。切点 = 墨压过画面中线，下一镜的巨像正好「随墨压下」。"""
@@ -1839,8 +1839,10 @@ def ink_press(A, B, p, seed=0, band=150):
     yf = lerp(-band - 160, H + 160, eo(p, 1.4)) + off[None, :]
     d = yf - y                                                          # >0：已被墨压过
     mB = np.clip((d - band) / 10, 0, 1)
-    ink = np.clip(d / 18, 0, 1) * (1 - mB)
-    ink = ink * (0.78 + 0.22 * fib) * np.clip(1.15 - 0.35 * np.clip((d - 20) / band, 0, 1) * (1 - fib), 0, 1)
+    ink = np.clip(d / 12, 0, 1) * (1 - mB) * 0.97
+    dry = np.clip((d - band * 0.5) / (band * 0.5), 0, 1)                 # 笔肚尾部飞白：丝缝里先露出下一镜
+    ink = ink * (1 - dry * (1 - fib) * 0.95)
+    mB = np.maximum(mB, dry * (1 - fib) * 0.95)
     As = cv2.warpAffine(A, np.float32([[1, 0, 0], [0, 1, 26 * p]]), (W, H), borderMode=cv2.BORDER_REFLECT)
     shade = 1 - 0.35 * np.exp(-np.clip(-d, 0, None) / 120) * (d < 0)  # 墨前沿下方的投影
     out = As * shade[..., None] * (1 - mB[..., None]) + B * mB[..., None]
@@ -1872,9 +1874,8 @@ def plaque_sweep(A, B, p, seed=0, pw=980, tilt=-6.0):
     gr = grain[gy, gx]
     wood = np.stack([0.20 + 0.16 * gr, 0.12 + 0.10 * gr, 0.07 + 0.06 * gr], -1).astype(np.float32)
     lx = (xr - xl) / pw
-    groove = (np.abs(lx - 0.5) < 0.18) * (np.abs(((y - 60) % 260) - 130) < 70) * 0.0   # 中间刻字槽位：只留暗槽边
-    edge_v = np.exp(-((lx - 0.5) / 0.012) ** 2) * 0.0 + np.exp(-((np.abs(lx - 0.5) - 0.2) / 0.006) ** 2) * 0.5
-    wood = wood * (1 - 0.45 * edge_v[..., None]) * (1 - groove)
+    edge_v = np.exp(-((np.abs(lx - 0.5) - 0.2) / 0.006) ** 2) * 0.5     # 中间刻字框的两道凹槽
+    wood = wood * (1 - 0.45 * edge_v[..., None])
     rimL = np.exp(-((xr - xl) / 10) ** 2) * 1.2 + np.exp(-((xr - xl) / 50) ** 2) * 0.25
     rimR = np.exp(-((xt - xr) / 14) ** 2) * 0.5
     wood = wood + (rimL + rimR)[..., None] * np.array([1.0, 0.72, 0.42], np.float32) * 0.6
