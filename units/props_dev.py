@@ -250,7 +250,8 @@ def caption_hide(sec, keyword, floor=0.0):
 
 def silhouette_void_lyric(fr, A, text, box, face=None, rim=(0.55,0.68,1.0), rise=0.6, phase=0.0,
                           press=1.0, seed=0, feather=11.0, bore_edge=3.5, bore_out=12.0, hole_damp=0.18,
-                          dur_breath=3.4, gold=(1.0, 0.86, 0.62), bg=None):
+                          dur_breath=3.4, gold=(1.0, 0.86, 0.62), bg=None, hole_style='auto',
+                          fog=(0.14, 0.055, 0.030)):
     """「人是空的、伪装的是壳」。
 
     1) 整个人填成纯黑剪影（保留 alpha 轮廓）；
@@ -286,14 +287,21 @@ def silhouette_void_lyric(fr, A, text, box, face=None, rim=(0.55,0.68,1.0), rise
         rx, ry = (xs.max() - xs.min()) * 0.20, (ys.max() - ys.min()) * 0.145
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         sk = np.clip(1.0 - (((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2), 0, 1)
+    # 先闭运算（把眼/眉/阴影造成的碎片连成一张脸），再 erode 收进脸内 —— 否则 erode 12px 只剩一小块
+    kc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(round(bore_out * 1.6)) + 1,) * 2)
+    sk = cv2.morphologyEx((sk > 0.35).astype(np.float32), cv2.MORPH_CLOSE, kc)
+    sk = cv2.dilate(sk, kc) * 0.0 + sk
     kk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(round(bore_out)) + 1, 2 * int(round(bore_out)) + 1))
-    sk = cv2.erode((sk > 0.4).astype(np.float32), kk)
+    sk = cv2.erode(sk, kk)
     hole = cv2.GaussianBlur(sk, (0, 0), max(1.0, feather))
     hole_soft = hole
     # 把剪影挖穿：孔内 alpha 归零，露出背景（out 里已经是背景色，这里直接把孔内还原成原帧）
     # 孔内填「人物背后的背景」才是真孔：bg 传进来就用它（`put()` 之前的帧），
     # 没有 bg 时退化为「原帧模糊外推」，绝不用灰填充。
-    if bg is not None:
+    if hole_style == 'black' or bg is None:
+        # lead 认可的退路：孔内不做照片填充 → 纯黑 + 14% 暖雾（不出灰、不出矩形）
+        bgf = np.float32(0.012) + np.array(fog, np.float32)
+    elif bg is not None:
         bgf = bg.astype(np.float32) / (255.0 if bg.max() > 1.5 else 1.0)
     else:
         bgb = cv2.GaussianBlur(fr * (1 - body)[..., None], (0, 0), 46)
@@ -308,6 +316,12 @@ def silhouette_void_lyric(fr, A, text, box, face=None, rim=(0.55,0.68,1.0), rise
     inner = np.clip(hole_out - (hole > 0.35).astype(np.float32), 0, 1)
     inner = cv2.GaussianBlur(inner, (0, 0), 1.2) * body
     out = out * (1 - 0.62 * inner[..., None])
+    # 孔内缘一道 1px 暖亮线（比冷光边低一档）：只勾出"这是空的"，不把孔提亮成暖块
+    hb = (hole > 0.5).astype(np.float32)
+    ke = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    warm_ring = np.clip(hb - cv2.erode(hb, ke), 0, 1)
+    warm_ring = cv2.GaussianBlur(warm_ring, (0, 0), 0.7)
+    out = out + warm_ring[..., None] * np.array((0.46, 0.31, 0.19), np.float32) * 0.38
     # 5) 关键词：极暗压印 + 迎光侧一线淡金（无屑末、无朱红）
     dy = rise * math.sin(2 * math.pi * phase / max(0.5, dur_breath))
     L = T.Layer()

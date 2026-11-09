@@ -7,14 +7,18 @@
     衬底/动效只有一套参数，不分段落。各组字幕层用 LYRIC_UNI=1 关掉（各文件只加一行守卫）。
 
 规格（2026-11-09 用户定稿，实现即照此，不许自己另设计）
-    1 位置     竖排单列、右对齐；列右缘 x=1792（距右边 128px），列顶 y=300；不横排、不居中。
-               上下 120px 黑边不许碰（见下方「已知越界」）。
+    1 位置     竖排单列、右对齐；列右缘 x=1792（距右边 128px），列顶 y=160；不横排、不居中。
+               可用高 = 960−160 = 800px，上下 120px 黑边一个字都不许碰（2026-11-09 19:2x 组长改：列顶 300→160）。
     2 换列     每列最多 10 字；超过 10 字拆两列，第二列在**左**，列间距 96px，整体右对齐。
     3 字号     思源宋 Bold；列内字数 ≤6 → 84px，7–8 → 76px，9–10 → 68px；行距 1.08。
+               再夹一道几何上限：字号 ≤ (800 / 列内字数) / 1.08（保证列高 ≤ 800px，长句不会长出画面）。
     4 颜色     暖白 #F2F0EC；重音字（每句至多一个）朱红 #B3261A + 极轻朱晕。
                无描边、无朱印、无手写笔触 —— 它是字幕，不是道具。
-    5 衬底     竖条渐变 scrim：x=1792 往左 260px 线性淡出，峰值 alpha 0.42；
-               按画面亮度自适应（背后已经很暗则减半）；不压死暗部、不超出黑边。
+    5 衬底     竖条渐变 scrim，band 按**本句实际占用的列范围**算（2026-11-09 19:3x 组长改）：
+                 x_from = 最左列左缘 − 120px，x_to = 1792 + 40px，区间内线性渐变，峰值 alpha 0.42；
+               按画面亮度自适应（背后中位亮度 ≤0.10 则减半到 0.21，防压死暗部）；
+               亮底破例（组长批准，可读性优先）：背后中位亮度 ≥0.45 → 峰值 0.62 + 1px 极暗半透明描边
+               （黑 ×0.35，只在亮底触发，用中位亮度平滑过渡，不逐帧抖）。不超出黑边。
     6 动效     逐字墨显（每字 0.10s，起点 = 字头 −0.06s）；整句在末字后 0.55s 淡出（0.28s）；
                句与句衔接不留空档；无 fly / 碎裂 / glitch。
     7 让位     已被抽成画内道具的字，字幕里留空占位不画（OUT_CHARS，默认空）。
@@ -31,9 +35,10 @@
     render_sprite_full.frame() 与 out/devsnap/prun.render_frame() 各一行：
         fr = LU.draw(fr, f)
 
-已知越界（照规格实现，报告里提出，未擅改）
-    9–10 字列（68px）从 y=300 起排到底边 = 1029px，越过下方 120px 黑边（960）69px。
-    6 字 84px 到 754，7–8 字 76px 到 951（贴线），只有 9–10 字会进黑边。
+几何自检
+    tools/lyric_uni_cmp.py geom —— 56 句 × 3 帧（字头 / 中 / 末字后 2 帧）画在黑底上，
+    断言 rows[0:120] 与 rows[960:1080] 全黑（max < 0.02），任何一句撞黑边就报错。
+    实测：56 句全部通过（最靠下的一句列底 894px，离黑边还有 66px；最靠上 148px，离上黑边 28px）。
 """
 import os
 import json
@@ -60,7 +65,8 @@ def enabled():
 
 # ---------------------------------------------------------------- 规格常量
 COL_R = 1792                  # 1 列右缘（1920-128）
-COL_TOP = 300                 # 1 列顶
+COL_TOP = 160                 # 1 列顶（2026-11-09 19:2x 组长改：300 → 160）
+COL_BOT = H - BAR             # 1 可排到 960（下黑边上沿）
 MAX_PER_COL = 10              # 2 每列最多 10 字
 COL_GAP = 96                  # 2 第二列往左的列间距
 LEAD = 1.08                   # 3 行距
@@ -70,18 +76,121 @@ WHITE = (0xF2 / 255.0, 0xF0 / 255.0, 0xEC / 255.0)    # 4 暖白 #F2F0EC
 ACCENT = (0xB3 / 255.0, 0x26 / 255.0, 0x1A / 255.0)   # 4 朱红 #B3261A
 ACCENT_GLOW = 0.16            # 4 极轻朱晕（additive，占比很小）
 
-SCRIM_W = 260                 # 5 竖条宽（往左淡出 260px）
-SCRIM_A = 0.42                # 5 峰值 alpha
-SCRIM_DARK = (0.10, 0.22)     # 5 亮度自适应区间：背后亮度 ≤0.10 → 减半（0.21），≥0.22 → 全量
+SCRIM_PAD_L = 120             # 5 band 左端 = 最左列左缘 − 120px
+SCRIM_PAD_R = 40              # 5 band 右端 = 1792 + 40px
+SCRIM_A = 0.42                # 5 峰值 alpha（暗底/中性底）
+SCRIM_A_BRIGHT = 0.62         # 5 亮底峰值（组长批准破例）
+SCRIM_DARK = (0.10, 0.22)     # 5 暗底：背后中位亮度 ≤0.10 → 峰值减半，≥0.22 → 全量
+SCRIM_BRIGHT = (0.40, 0.50)   # 5 亮底：中位亮度 0.40→0.50 平滑升到 0.62（0.45 在中点，避免逐帧跳变）
+OUTLINE_A = 0.35              # 5 亮底 1px 极暗描边（黑 ×0.35），只在亮底出现
 
 IN_DUR, IN_LEAD = 0.10, 0.06  # 6 逐字墨显：0.10s，起点 = 字头 −0.06s
 OUT_HOLD, OUT_DUR = 0.55, 0.28  # 6 末字后 0.55s 起淡出，0.28s 时长
 GAP_HOLD = 2.0                # 6 「衔接不留空档」的适用范围：与下一句的间隔 ≤2.0s 时保持到下一句起；
                               #   超长器乐空档（86.2→89.4 = 3.5s 等）按 0.55s 正常退场
 
-# 7 关键词让位：要把字让给画内道具的用 (行号, 字序)，默认空。
+# 7 关键词让位：要把字让给画内道具的用 (行号0基, 字序)，默认空。
+#   默认空 = 全画；LYRIC_UNI_OUT=1 时自动吃 out/props_dev/hidden_slots.json（props 组已抽走的 45 个字），
+#   并在打开时校验每个槽位与 lyrics.json 逐字对得上（对不上就报错，避免两套规则打架）。
 OUT_CHARS = set()
-#   OUT_CHARS = {(13, 3), (13, 4)}      # 例：第 13 句「谁人来定正邪一方」的「正」「邪」让给道具
+HIDDEN_SLOTS = None
+
+
+def hidden_slots():
+    """props 组抽走的字：out/props_dev/hidden_slots.json（line 是 1 基句号，idx 是 0 基字序）。"""
+    global HIDDEN_SLOTS
+    if HIDDEN_SLOTS is None:
+        path = os.path.join(ROOT, 'out', 'props_dev', 'hidden_slots.json')
+        try:
+            with open(path, encoding='utf-8') as fh:
+                HIDDEN_SLOTS = json.load(fh)
+        except OSError:
+            HIDDEN_SLOTS = []
+    return HIDDEN_SLOTS
+
+
+def out_chars(validate=True):
+    """(行号0基, 字序) 集合：由 hidden_slots.json 生成；validate 时逐条核对字与句。"""
+    L = lines()
+    out = set()
+    bad = []
+    for it in hidden_slots():
+        line0 = int(it['line']) - 1          # 文件里是 1 基句号
+        k = int(it['idx'])
+        r = L[line0] if 0 <= line0 < len(L) else None
+        if r is None or k >= r['n'] or r['chars'][k]['ch'] != it['ch'] or r['text'].replace(' ', '') != it['text'].replace(' ', ''):
+            bad.append(it)
+            continue
+        out.add((line0, k))
+    if validate and bad:
+        raise ValueError('hidden_slots.json 与 lyrics.json/align 对不上: %r' % bad[:3])
+    return out
+
+
+# 画面内（in-scene）已经有字的词：字幕层要把这些字**留空**（不删画面里的字）。
+# 来源 = tools/lyric_uni_cmp.py audit 查出来的「LYRIC_UNI=1 时仍在画字」的站点，逐站点人工分类：
+#   键 = (文件, 行号)；值 = (句号0基, 画面里已有的词, 分类说明)
+# 分类口径：这类字是**画面元素**（刻/印/烧/散字/巨字），不是字幕层 —— 用户 2026-11-09 明确「2:43 那个巨大的
+# 「什么」是画面元素、做得很好、不要删」。所以不关它，改由字幕留空，避免同一个词出现两次。
+# hidden_slots.json 里已登记的字不在这里重复（那批由 props 组负责）。
+IN_SCENE = {
+    ('sec_b_pre1.py', 471):   (10, '我不信', '书法散字压在右上天幕（志莽/毛草，190/150/170px），镜内演出'),
+    ('sec_b_pre1.py', 943):   (11, '滚烫',   '刀身烧字（burn_in 120px），用户点名的「滚烫既是歌词又是刻字」'),
+    ('sec_b_verse2.py', 1627): (24, '不问',   '书法散字（scatter_stack），镜内演出'),
+    ('sec_d_bridge.py', 914): (43, '陪葬',   '宣纸烧字（burn_in），镜内演出'),
+    ('sec_d_bridge.py', 311): (40, '什么叫', '纸面墨洇巨字（2:43 用户点名保留的画内元素）'),
+    ('sec_d_bridge.py', 282): (40, '忍',   '纸面「忍」宋体巨字砸下（墨洇，镜内演出）'),
+    ('sec_d_bridge.py', 353): (40, '让',   '纸面「让」170px 墨字落定（镜内演出，落在字幕带里）'),
+    ('sec_e_final_outro.py', 284): (48, '刀不放', '拳上朱印（stamp_seal 118–132px），画内道具'),
+    ('chorus1.py', 866):      (17, '是非对错', '朱印阵（seal_grid 540px），画内道具'),
+    ('sec_e_final_outro.py', 359): (49, '天理昭彰', '鎏金 3D 巨字（匾额，镜内演出）'),
+}
+
+# 场景高光（枪尖/盔缨/刀身高光）在字幕带里也会被「像字」检测抓到 —— 人工核对过的白名单，
+# 只用于 dupcheck 归因，不参与留空。键 = 帧号，值 = [(x, y, w, h, 说明)]
+SCENE_OK = {
+    646:  [(1533, 397, 32, 47, '军阵枪尖高光'), (1750, 405, 29, 29, '枪尖高光')],
+    4108: [(1608, 422, 63, 107, '戟刃/盔缨'), (1518, 329, 31, 83, '盔缨'), (1567, 470, 36, 35, '枪尖')],
+}
+
+# 画面内字在字幕带里的实测位置（这几处不走 typo.compose，审计抓不到，用实测框归因；只用于 dupcheck）
+IN_SCENE_BOX = {
+    5011: [(1592, 721, 113, 167, '让（D 纸面墨字，字幕已留空）')],
+    5975: [(1500, 318, 205, 385, '天理昭彰（E 鎏金巨字，字幕已留空）')],
+    5863: [(1500, 391, 118, 215, '刀不放（E 拳上朱印，字幕已留空）')],
+}
+IN_SCENE_HIDE = set()          # 由 _maybe_out() 从 IN_SCENE 派生：(句号0基, 字序)
+
+
+def in_scene_hide(validate=True):
+    """IN_SCENE → 要留空的 (行号0基, 字序) 集合；并核对每个词确实是该句的连续子串。"""
+    L = lines()
+    out, bad = set(), []
+    for (fn, line0), (li, w, why) in IN_SCENE.items():
+        r = L[li]
+        t = ''.join(c['ch'] for c in r['chars'])
+        k = t.find(w)
+        if k < 0:
+            bad.append((fn, line0, li, w, t))
+            continue
+        out |= {(li, k + i) for i in range(len(w))}
+    if validate and bad:
+        raise ValueError('IN_SCENE 与歌词对不上: %r' % bad[:3])
+    return out
+
+
+def _maybe_out():
+    """留空两档：
+    1) IN_SCENE（画面内已经有这个字）→ LYRIC_UNI=1 就留空，否则同一个词会出现两次；
+    2) hidden_slots.json（props 组抽走、但还没接进画面）→ 只有 LYRIC_UNI_OUT=1 才留空，
+       否则会露出纯空位。
+    """
+    global OUT_CHARS, IN_SCENE_HIDE
+    if not IN_SCENE_HIDE:
+        IN_SCENE_HIDE = in_scene_hide()
+    if os.environ.get('LYRIC_UNI_OUT') == '1' and not OUT_CHARS:
+        OUT_CHARS = out_chars()
+    return OUT_CHARS | IN_SCENE_HIDE
 
 STOPWORDS = set('的了是在我你他她它也就都还又很把被而这那些个不没要有和与')
 
@@ -145,12 +254,32 @@ def glyph(ch, size):
     return a
 
 
+_RC = {}
+
+
+def glyph_ring(ch, size):
+    """字形外侧 1px 环（描边用）：dilate(二值) − 二值，8 邻域 3×3。"""
+    key = (ch, int(size))
+    g = _RC.get(key)
+    if g is not None:
+        return g
+    a = glyph(ch, size)
+    b = (a > 0.35).astype(np.uint8)
+    d = cv2.dilate(b, np.ones((3, 3), np.uint8))
+    g = np.clip(d.astype(np.float32) - b.astype(np.float32), 0.0, 1.0)
+    _RC[key] = g
+    return g
+
+
 def char_size(n):
-    """列内字数 → 字号（3 号规则）。"""
-    for lim, px in TIERS:
+    """列内字数 → 字号（3 号规则）+ 几何夹紧 ≤ (可用高 / 字数) / 行距。"""
+    px = TIERS[-1][1]
+    for lim, p in TIERS:
         if n <= lim:
-            return px
-    return TIERS[-1][1]
+            px = p
+            break
+    avail = (COL_BOT - COL_TOP) / float(LEAD)          # 800 / 1.08
+    return int(min(px, avail / max(1, n) + 1e-6))
 
 
 # ---------------------------------------------------------------- 时间轴 / 排版
@@ -254,8 +383,10 @@ def _build():
         r['pos'] = pos
         r['cols'] = cols
         r['y_bot'] = max(p['y'] + r['size'] / 2.0 for p in pos)
-        r['box'] = (int(min(p['x'] for p in pos) - r['size'] / 2.0) - 34, int(COL_TOP),
-                    COL_R + 6, int(r['y_bot']) + 14)
+        left = min(p['x'] for p in pos) - r['size'] / 2.0
+        r['left'] = left
+        r['band'] = (left - SCRIM_PAD_L, COL_R + SCRIM_PAD_R)     # 5：按本句实际列范围算
+        r['box'] = (int(left) - 34, int(COL_TOP), COL_R + SCRIM_PAD_R + 4, int(r['y_bot']) + 14)
     return out
 
 
@@ -270,23 +401,139 @@ def active(t):
     return [r for r in lines() if r['t_on'] <= t < r['t_off']]
 
 
+# ---------------------------------------------------------------- 重复出字审计（LYRIC_UNI_AUDIT=1）
+# 为什么需要：守卫是「按站点」加的，容易漏 —— B 段的歌词不走 T.place，还走 T.ink_bleed_in / T.warm /
+# T.vertical_column / T.compose 等十几条路径。审计模式把所有「吃 fr 的 typo 绘制函数」包一层，
+# 记录 (调用者文件:行号, 函数, 文本)，于是「LYRIC_UNI=1 时还有谁在画字」是查出来的、不是想出来的。
+_AUDIT = []
+
+
+def audit_start():
+    global _AUDIT
+    if _AUDIT:
+        return _AUDIT
+    import inspect
+    import traceback
+    import typo as _T
+    names = []
+    for nm in dir(_T):
+        fn = getattr(_T, nm)
+        if not callable(fn) or nm.startswith('_'):
+            continue
+        try:
+            ps = list(inspect.signature(fn).parameters)
+        except (TypeError, ValueError):
+            continue
+        if ps and ps[0] in ('fr', 'A', 'B'):
+            names.append(nm)
+    for nm in names:
+        fn = getattr(_T, nm)
+
+        def make(nm, fn):
+            def wrap(*a, **kw):
+                try:
+                    st = traceback.extract_stack(limit=8)[-2]
+                    for cand in reversed(traceback.extract_stack(limit=8)[:-1]):
+                        if os.path.basename(cand.filename) not in ('typo.py', 'lyric_uni.py'):
+                            st = cand
+                            break
+                    txt = ''
+                    for v in list(a[1:4]) + list(kw.values()):
+                        if isinstance(v, str):
+                            txt = v
+                            break
+                    size = next((v for v in list(a[2:6]) + list(kw.values())
+                                 if isinstance(v, (int, float)) and 8 <= v <= 900), None)
+                    _AUDIT.append(dict(f=os.path.basename(st.filename), line=st.lineno, fn=nm,
+                                       txt=txt, size=size))
+                except Exception:
+                    pass
+                return fn(*a, **kw)
+            wrap.__name__ = nm
+            wrap.__doc__ = fn.__doc__
+            return wrap
+        setattr(_T, nm, make(nm, fn))
+    return _AUDIT
+
+
+def audit_take():
+    out, _AUDIT[:] = list(_AUDIT), []
+    return out
+
+
+# ---------------------------------------------------------------- 歌词判定（B 组守卫用）
+_PUNCT = set('，。、！？；：,.!?;:·…—「」『』“”‘’（）()《》 \t')
+
+
+def _clean(text):
+    return ''.join(c for c in str(text) if c not in _PUNCT)
+
+
+_LYRIC_CHARS = None
+_LYRIC_SUB = None
+
+
+def _lyric_sets():
+    global _LYRIC_CHARS, _LYRIC_SUB
+    if _LYRIC_CHARS is None:
+        _LYRIC_CHARS = set()
+        _LYRIC_SUB = set()
+        for r in lines():
+            t = _clean(r['text'])
+            _LYRIC_CHARS |= set(t)
+            _LYRIC_SUB.add(t)
+            for i in range(len(t)):
+                for j in range(i + 2, min(len(t), i + 16) + 1):
+                    _LYRIC_SUB.add(t[i:j])
+    return _LYRIC_CHARS, _LYRIC_SUB
+
+
+def is_lyric(text):
+    """这段文本是否属于歌词（B 组散在各镜头里的 T.place 守卫用）。
+
+    - 去空格/标点后长度 ≥2：是 56 句之一的子串 → True
+    - 长度 1：该字在歌词里出现过 → True（★ 单字最模糊：既可能是字幕也可能是画内刻字/压印，
+      接线的 7 处逐点判过、有争议的在 out/lyric_uni/outchars_table.md 里列了人工确认清单）
+    - 空/None → False
+    """
+    t = _clean(text)
+    if not t:
+        return False
+    ch, sub = _lyric_sets()
+    if len(t) == 1:
+        return t in ch
+    return t in sub or t in ch
+
+
 # ---------------------------------------------------------------- 衬底
-def _scrim(F, x0, y0, x1, y1, ox=0, oy=0):
-    """竖条渐变 scrim（5 号规则）：x=1792 往左 260px 线性淡出，峰值 0.42，亮度自适应。
-    F 是整帧的子区（左上角 = (ox, oy)），入参用整帧坐标。"""
+def _ssl(lo, hi, x):
+    if x <= lo:
+        return 0.0
+    if x >= hi:
+        return 1.0
+    t = (x - lo) / (hi - lo)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _scrim(F, xf, y0, xt, y1, ox=0, oy=0):
+    """竖条渐变 scrim（5 号规则）。band = [xf, xt]（整帧坐标，xf = 最左列左缘 −120，xt = 1792+40）。
+
+    F 是整帧的子区（左上角 = (ox, oy)）。返回 (F, 亮底系数 k) —— k 拿去决定要不要上 1px 描边。
+    """
     h, w = F.shape[:2]
-    xa, xb = max(ox, int(x0)), min(ox + w, int(x1))
+    xa, xb = max(ox, int(xf)), min(ox + w, int(xt))
     ya, yb = max(oy, int(y0), BAR), min(oy + h, int(y1), H - BAR)
     if xb <= xa or yb <= ya:
-        return F
+        return F, 0.0
     reg = F[ya - oy:yb - oy, xa - ox:xb - ox]
-    L = float(reg[..., 0].mean() * 0.299 + reg[..., 1].mean() * 0.587 + reg[..., 2].mean() * 0.114)
+    L = float(np.median(reg[..., 0] * 0.299 + reg[..., 1] * 0.587 + reg[..., 2] * 0.114))
     lo, hi = SCRIM_DARK
-    k = 0.0 if L <= lo else (1.0 if L >= hi else (L - lo) / (hi - lo))
-    a = SCRIM_A * (0.5 + 0.5 * k)                    # 背后已经很暗 → 减半，绝不压死
+    kd = _ssl(lo, hi, L)                             # 0 = 很暗（减半）, 1 = 非暗底（全量）
+    lo2, hi2 = SCRIM_BRIGHT
+    kb = _ssl(lo2, hi2, L)                           # 0 = 非亮底, 1 = 亮底（0.45 落在中点）
+    a = (SCRIM_A * (0.5 + 0.5 * kd)) * (1.0 - kb) + SCRIM_A_BRIGHT * kb
     xs = np.arange(xa, xb, dtype=np.float32)
-    # 1792 是峰值，往左 260px 线性淡出到 0；1792 右侧到画右边缘保持峰值（不留硬竖缝）
-    ax = np.clip((xs - (COL_R - SCRIM_W)) / float(SCRIM_W), 0.0, 1.0) * a
+    ax = np.clip((xs - float(xf)) / max(1.0, float(xt) - float(xf)), 0.0, 1.0) * a
     ny = yb - ya
     fy = np.ones(ny, np.float32)
     fe = min(26, ny // 2)
@@ -297,7 +544,7 @@ def _scrim(F, x0, y0, x1, y1, ox=0, oy=0):
         fy[ny - fe:] = e[::-1]
     M = fy[:, None] * ax[None, :]
     reg *= (1.0 - M)[..., None]
-    return F
+    return F, kb
 
 
 # ---------------------------------------------------------------- 绘制
@@ -327,9 +574,12 @@ def _sentence(F, r, t, ox=0, oy=0):
     if v <= 0.0:
         return F
     x0, y0, x1, y1 = r['box']
-    F = _scrim(F, COL_R - SCRIM_W, y0 - 48, W, y1 + 40, ox, oy)
+    _hide = OUT_CHARS | IN_SCENE_HIDE              # 7：留空集合（画面内已有的字 + props 抽走的字）
+    xf, xt = r['band']                             # 5：band = 本句列范围 −120 / +40
+    F, kb = _scrim(F, xf, y0 - 48, xt, y1 + 40, ox, oy)
+    out_a = OUTLINE_A * kb                         # 亮底才有描边，且随中位亮度平滑淡入
     for key in r['pos']:
-        if (r['line'], key['k']) in OUT_CHARS:     # 7 让位：留空占位，不画
+        if (r['line'], key['k']) in _hide:         # 7 让位：留空占位，不画（IN_SCENE + props 两档）
             continue
         p = (t - (key['t'] - IN_LEAD)) / IN_DUR   # 6 逐字墨显
         if p <= 0.0:
@@ -342,16 +592,43 @@ def _sentence(F, r, t, ox=0, oy=0):
                 a = cv2.GaussianBlur(a, (0, 0), sig)
             a = a * p
         acc = key['k'] == r['accent']
-        _paste(F, a,
-               key['x'] - a.shape[1] / 2.0, key['y'] - a.shape[0] / 2.0,
+        gx = key['x'] - a.shape[1] / 2.0
+        gy = key['y'] - a.shape[0] / 2.0
+        if out_a > 0.0:                            # 5：1px 极暗半透明描边（只在字形外侧）
+            ring = glyph_ring(key['ch'], r['size'])
+            _paste(F, ring, gx, gy, (0.0, 0.0, 0.0), v * out_a, 0.0, ox, oy)
+        _paste(F, a, gx, gy,
                ACCENT if acc else WHITE, v, ACCENT_GLOW if acc else 0.0, ox, oy)
     return F
 
 
+def scrim_info(fr, f):
+    """调试用：量该帧字幕区的（背后中位亮度, scrim 峰值, 描边不透明度）—— 验证亮底描边不闪。
+    fr 传 uint8/float 成品帧（叠字幕之前的底帧）。"""
+    t = float(f) / FPS
+    act = active(t)
+    if not act:
+        return None
+    r = act[0]
+    F = (fr.astype(np.float32) / 255.0) if fr.dtype == np.uint8 else np.asarray(fr, np.float32)
+    xf, xt = r['band']
+    x0, x1 = max(0, int(xf)), min(W, int(xt))
+    y0, y1 = max(BAR, int(r['box'][1]) - 48), min(H - BAR, int(r['box'][3]) + 40)
+    reg = F[y0:y1, x0:x1]
+    L = float(np.median(reg[..., 0] * 0.299 + reg[..., 1] * 0.587 + reg[..., 2] * 0.114))
+    lo, hi = SCRIM_DARK
+    kb_ = _ssl(*SCRIM_BRIGHT, L)
+    a = (SCRIM_A * (0.5 + 0.5 * _ssl(lo, hi, L))) * (1.0 - kb_) + SCRIM_A_BRIGHT * kb_
+    left_edge = int(r['left'])
+    frac = (left_edge - xf) / max(1.0, xt - xf)   # 最左列左缘落在 band 的比例（=scrim 峰值占比）
+    return dict(line=r['line'], band=(int(xf), int(xt)), L=L, peak=a,
+                outline=OUTLINE_A * kb_, left_frac=frac, left_alpha=a * frac)
+
+
 def roi(act):
     """当前同屏句子的绘制区（整帧坐标）：列 + scrim，只在这一块里做浮点运算。"""
-    xa = min(min(r['box'][0] for r in act), COL_R - SCRIM_W - 2)   # 含整条 scrim 的起点
-    xb = W                                          # scrim 一路铺到画右边缘（1792 右侧保持峰值）
+    xa = min(r['band'][0] for r in act) - 2         # 含整条 scrim 的起点
+    xb = max(r['band'][1] for r in act) + 2         # 含 scrim 的右端（1792+40）
     ya = min(r['box'][1] for r in act) - 48
     yb = max(r['box'][3] for r in act) + 40
     return max(0, int(xa)), max(0, int(ya)), min(W, int(xb)), min(H, int(yb))
@@ -365,6 +642,7 @@ def draw(fr, f):
     act = active(t)
     if not act:
         return fr
+    _maybe_out()
     u8 = fr.dtype == np.uint8
     if u8:                                          # 只把字幕区转成浮点（约 1/6 画面），整帧不搬
         ox, oy, ex, ey = roi(act)

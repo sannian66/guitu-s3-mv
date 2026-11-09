@@ -12,6 +12,7 @@ import rest_sprites as RS
 import fx2
 
 W, H, BAR = 1920, 1080, 120
+LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一字幕层开关
 GOLD = np.array([1.0, 0.76, 0.40], np.float32)
 GOLDW = np.array([1.0, 0.88, 0.66], np.float32)
 RED = np.array([0.80, 0.08, 0.05], np.float32)
@@ -242,6 +243,7 @@ class Lyr:
         for (ch, x, y, s, f, col, ti) in chars: T.glyph(ch, f, s, False)
 
     def draw(self, fr, t, alpha=1.0, dx=0.0, dy=0.0):
+        if LYRIC_UNI and max(c[3] for c in self.c) <= 160: return fr   # [lyric-uni] 只关 ≤160px 的字幕整句；>160px 是镜内大字（定/错/谎言/正道沧桑），保留等 props 接管
         L = T.Layer(); E = T.Layer(); any_ = False
         for i, (ch, x, y, s, f, col, ti) in enumerate(self.c):
             e = (t - (ti - IN_D)) / IN_D
