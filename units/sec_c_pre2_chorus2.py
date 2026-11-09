@@ -421,6 +421,35 @@ def hand_shadow_mask(cx, cy, sc, t, tw=0.0, seed=0):
     return m, tips
 
 
+_PCG = {}
+def paper_cut_glyph(fr, ch, cx, cy, size, scale=1.0):
+    """第十棒（critic_C_r5 P1②）：「纲」= 贴在皮影幕上的朱砂纸刻字：刀刻毛口（噪声蚀边）+ 刻刀深边 + 纸纤维，幕光从背后透过 → 暗红透色。"""
+    k = (ch, size)
+    if k not in _PCG:
+        a = T.glyph(ch, 'serif_black', size, False)
+        r = np.random.default_rng(77)
+        n = cv2.GaussianBlur(r.random(a.shape).astype(np.float32), (0, 0), 1.6)
+        n2 = cv2.resize(r.random((a.shape[0] // 10 + 2, a.shape[1] // 10 + 2)).astype(np.float32), a.shape[::-1], interpolation=cv2.INTER_CUBIC)
+        a2 = np.clip((cv2.GaussianBlur(a, (0, 0), 2.2) - 0.5 + 0.55 * (n - 0.5) + 0.15 * (n2 - 0.5)) * 6 + 0.5, 0, 1)
+        e = cv2.GaussianBlur(np.clip(a2 - cv2.erode(a2, np.ones((8, 8), np.uint8)), 0, 1), (0, 0), 0.8)
+        fib = (0.70 + 0.55 * cv2.GaussianBlur(r.random(a.shape).astype(np.float32), (0, 0), 0.9)) * (0.72 + 0.5 * n2)   # 纤维 + 染色不匀（纸厚薄）
+        _PCG[k] = (a2, e, fib)
+    a2, e, fib = _PCG[k]
+    if scale != 1.0:
+        sz = (int(a2.shape[1] * scale), int(a2.shape[0] * scale))
+        a2, e, fib = (cv2.resize(m, sz) for m in (a2, e, fib))
+    h, w = a2.shape
+    x0, y0 = int(cx - w / 2), int(cy - h / 2)
+    xs, ys = max(0, x0), max(0, y0); xe, ye = min(W, x0 + w), min(H, y0 + h)
+    A_ = a2[ys - y0:ye - y0, xs - x0:xe - x0][..., None]; E_ = e[ys - y0:ye - y0, xs - x0:xe - x0][..., None]
+    F_ = fib[ys - y0:ye - y0, xs - x0:xe - x0][..., None]
+    sub = fr[ys:ye, xs:xe]
+    paper = sub * np.array([0.95, 0.16, 0.07], np.float32) * 1.15 * F_          # 朱砂纸被幕光透过
+    paper = paper * (1 - 0.85 * E_) + np.array([0.05, 0.015, 0.01], np.float32) * 0.85 * E_   # 刻刀深边
+    fr[ys:ye, xs:xe] = sub * (1 - A_) + paper * A_
+    return fr
+
+
 class C03(Shot):
     """LS 皮影幕：一排纸人木偶被红线吊着，在「纲」字上同时被拽起；幕上是巨手的影子（纯代码手影，指节拽线时抽动）。"""
     def render(self, t):
@@ -431,6 +460,8 @@ class C03(Shot):
         scr = np.exp(-(((xx - 980) / 1000) ** 2 + ((yy - 400) / 430) ** 2)) * (0.62 + 0.04 * math.sin(t * 19))
         fib = cv2.resize(K.tex('scrn', seed=33, base=40, octaves=3), (W // 4, H // 4))
         scr = scr * (0.85 + 0.3 * fib)
+        # 第十棒（critic_C_r5 P1②）：人偶那一排背后加一盏幕后灯（暖白热区）→ 皮影是被背光透过的，不是正面受光的贴纸
+        scr = scr + np.exp(-(((xx - 960) / 980) ** 2 + ((yy - 690) / 250) ** 2)) * 0.42 * (0.85 + 0.3 * fib)
         fr = fr + cv2.resize(scr.astype(np.float32), (W, H))[..., None] * np.array([1.0, 0.70, 0.40], np.float32)
         for xb in (150, 1770):
             fr[:, xb - 9:xb + 9] *= 0.35
@@ -448,18 +479,22 @@ class C03(Shot):
         core = cv2.GaussianBlur(m, (0, 0), 2.5); pen = cv2.GaussianBlur(m, (0, 0), 12)
         sh = cv2.resize(core * 0.65 + pen * 0.35, (W, H))
         fr = fr * (1 - sh[..., None] * 0.86)
-        lift = 70 * pulse(t, tj, 0.22) + 40 * pulse(t, tj2, 0.18)
         r = np.random.default_rng(3)
+        FLIP = (False, True, False, False, True, False, True, True, False)    # 第十棒：朝向交错（有的相对、有的背对），不再左半/右半一刀切
         for i in range(9):
-            x = xs[i] + r.uniform(-20, 20); hgt = 345 + r.uniform(-20, 20)   # 第八棒：皮影廓形更窄，放大 15%
-            top = 560 - lift * (1 + 0.2 * math.sin(i)) + 10 * math.sin(t * 3 + i)
-            ang = 6 * math.sin(t * 2.5 + i) + 10 * pulse(t, tj, 0.3) * (1 if i % 2 else -1)
-            # 第八棒（critic_C_r4 P1③）：扁平纸人 → 真皮影（半透明染色皮料、镂空纹、关节铆钉，幕后光透射）
+            # 第十棒（critic_C_r5 P1②）：每个人偶的身高、挂点偏移（提线斜拉）、摆动频率/相位/幅度、被拽起的延迟/幅度都错开
+            dxo = r.uniform(-70, 70); hgt = r.uniform(300, 385); y0_ = r.uniform(520, 600)
+            fq = r.uniform(1.5, 3.4); ph = r.uniform(0, 6.3); am = r.uniform(4, 12)
+            dl = abs(i - 4) * 0.035 + r.uniform(0, 0.03); la = r.uniform(0.6, 1.35)
+            x = min(1660, max(260, xs[i] + dxo))     # 不压竹框
+            lift = la * (70 * pulse(t, tj + dl, 0.22) + 40 * pulse(t, tj2 + dl, 0.18))
+            top = y0_ - lift + 9 * math.sin(t * fq * 1.2 + ph)
+            ang = am * math.sin(t * fq + ph) + 12 * la * pulse(t, tj + dl, 0.3) * (1 if r.random() < 0.5 else -1)
             fr = red_line(fr, ends[i], (x, top + 4), w=2, amt=0.85)
-            fr, _ = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.1 - 0.3 * abs(i - 4) / 4, flip=(i >= 5))
+            fr, hp = PY.draw_piying(fr, PY.piying_sprite(i, int(hgt)), x, top, ang, light=1.15 - 0.25 * abs(i - 4) / 4, flip=FLIP[i], glass=0.85)
+            fr = red_line(fr, (ends[i][0] + (60 if not FLIP[i] else -60), ends[i][1] + 6), hp, w=1, amt=0.6)   # 手线（第二根提线）
         if t >= tj:
-            fr = paste_glyph(fr, '纲', 960, 330, 260, (0.95, 0.85, 0.62), font='serif_b', glow=0.35, glow_c=(1, 0.6, 0.3),
-                             scale=1 + 0.12 * pulse(t, tj, 0.06))
+            fr = paper_cut_glyph(fr, '纲', 960, 330, 270, scale=1 + 0.12 * pulse(t, tj, 0.06))
         fr = fog(fr, t, 4, density=0.4, y0=750, y1=980, color=(0.25, 0.17, 0.10), speed=(30, 0))
         fr = sparks(fr, t, 31, (960, 600), n=40, life=3.0, speed=(8, 30), dirc=(0, -1), spread=1.4, grav=-6, amt=0.25, area=(800, 300))
         return fr

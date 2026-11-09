@@ -6,6 +6,7 @@ import math
 import numpy as np, cv2
 
 _CACHE = {}
+def clamp01(v): return min(1.0, max(0.0, v))
 PALETTES = [
     # (冠, 上衣, 下摆, 腰带)：透射率（0..1，越大越透）
     ((0.85, 0.22, 0.12), (0.30, 0.62, 0.55), (0.88, 0.28, 0.14), (0.95, 0.78, 0.30)),
@@ -24,7 +25,14 @@ def piying_sprite(seed, h=300):
     hh = h * S; w = int(h * 0.62) * S; cx = w * 0.46
     A = np.zeros((hh, w), np.float32)
     Tr = np.zeros((hh, w, 3), np.float32)
-    pal = PALETTES[seed % len(PALETTES)]
+    # 第十棒（critic_C_r5 P1②）：不再一个模板换色 → 每个 seed 冠式 / 袍宽 / 前倾 / 手持物 / 配色都不同
+    rv_ = np.random.default_rng(seed * 7919 + 11)
+    p4 = [PALETTES[(seed + k) % len(PALETTES)] for k in range(4)]
+    pal = (p4[0][0], p4[rv_.integers(0, 4)][1], p4[rv_.integers(0, 4)][2], p4[0][3])
+    ws = float(rv_.uniform(0.82, 1.22))          # 袍宽
+    hat = int(seed % 3)                          # 0 官帽翅 / 1 盔 + 翎 / 2 发髻簪
+    prop = int((seed // 3) % 3)                  # 0 无 / 1 折扇 / 2 笏板
+    lean = float(rv_.uniform(-0.10, 0.12))       # 整身前倾（剪切）
     def P(x, y): return [int(cx + x * hh), int(y * hh)]
     def poly(pts, col, a=1.0):
         m = np.zeros((hh, w), np.uint8); cv2.fillPoly(m, [np.array([P(*p) for p in pts], np.int32)], 255, cv2.LINE_AA)
@@ -33,9 +41,10 @@ def piying_sprite(seed, h=300):
         A[:] = np.maximum(A, m)
         return m
     # 下摆（宽袍，后摆略拖）
-    lower = poly([(-0.07, 0.43), (0.06, 0.43), (0.10, 0.62), (0.17, 0.90), (0.04, 0.92), (-0.12, 0.92), (-0.19, 0.89), (-0.11, 0.62)], pal[2])
+    def X(pts): return [(x * (1 + (ws - 1) * clamp01((y - 0.45) / 0.45)), y) for x, y in pts]   # 下摆越往下越宽/窄
+    lower = poly(X([(-0.07, 0.43), (0.06, 0.43), (0.10, 0.62), (0.17, 0.90), (0.04, 0.92), (-0.12, 0.92), (-0.19, 0.89), (-0.11, 0.62)]), pal[2])
     # 下摆缘边（藤黄宽边，上刻一排菱纹）
-    hem = poly([(-0.175, 0.84), (0.155, 0.845), (0.17, 0.90), (0.04, 0.92), (-0.12, 0.92), (-0.19, 0.89)], pal[3])
+    hem = poly(X([(-0.175, 0.84), (0.155, 0.845), (0.17, 0.90), (0.04, 0.92), (-0.12, 0.92), (-0.19, 0.89)]), pal[3])
     # 靴
     poly([(-0.07, 0.90), (-0.01, 0.90), (-0.01, 0.955), (0.07, 0.96), (0.07, 0.975), (-0.07, 0.975)], (0.18, 0.14, 0.12))
     # 上衣（躯干，微前倾）
@@ -48,9 +57,18 @@ def piying_sprite(seed, h=300):
     # 头：侧脸（额-鼻-唇-下巴轮廓）
     face = poly([(-0.045, 0.085), (0.035, 0.085), (0.05, 0.115), (0.062, 0.135), (0.048, 0.142), (0.052, 0.158), (0.040, 0.165),
                  (0.034, 0.185), (-0.01, 0.19), (-0.05, 0.16), (-0.058, 0.12)], (0.97, 0.86, 0.66))
-    # 高冠（帽翅后飘）
-    poly([(-0.06, 0.095), (-0.05, 0.035), (0.0, 0.0), (0.045, 0.03), (0.048, 0.092)], pal[0])
-    poly([(-0.05, 0.05), (-0.16, 0.025), (-0.17, 0.045), (-0.055, 0.075)], pal[0])
+    if hat == 0:     # 高冠（帽翅后飘）
+        poly([(-0.06, 0.095), (-0.05, 0.035), (0.0, 0.0), (0.045, 0.03), (0.048, 0.092)], pal[0])
+        poly([(-0.05, 0.05), (-0.16, 0.025), (-0.17, 0.045), (-0.055, 0.075)], pal[0])
+    elif hat == 1:   # 盔 + 后弯翎羽
+        poly([(-0.062, 0.10), (-0.058, 0.05), (-0.02, 0.02), (0.03, 0.025), (0.055, 0.06), (0.05, 0.10)], (0.32, 0.30, 0.28))
+        poly([(-0.01, 0.03), (-0.04, -0.0), (-0.11, -0.01), (-0.17, 0.03), (-0.20, 0.08), (-0.17, 0.06), (-0.11, 0.025), (-0.04, 0.03)], pal[0])
+        poly([(0.05, 0.09), (0.075, 0.12), (0.06, 0.125), (0.045, 0.10)], (0.32, 0.30, 0.28))
+    else:            # 发髻 + 簪
+        poly([(-0.05, 0.095), (-0.06, 0.06), (-0.03, 0.03), (0.01, 0.03), (0.03, 0.06), (0.04, 0.092)], (0.16, 0.13, 0.12))
+        cv2.circle(A, tuple(P(-0.02, 0.03)), int(0.024 * hh), 1.0, -1, cv2.LINE_AA)
+        cv2.circle(Tr, tuple(P(-0.02, 0.03)), int(0.024 * hh), (0.16, 0.13, 0.12), -1, cv2.LINE_AA)
+        poly([(-0.08, 0.04), (0.05, 0.015), (0.052, 0.024), (-0.078, 0.05)], pal[3])
     # 发髻后垂
     poly([(-0.058, 0.10), (-0.085, 0.13), (-0.10, 0.24), (-0.07, 0.22), (-0.05, 0.15)], (0.16, 0.13, 0.12))
     # 手臂：肩 → 肘 → 手（两段，宽袖），角度随 seed
@@ -64,6 +82,14 @@ def piying_sprite(seed, h=300):
                      (p1[0] - nx * w1, p1[1] - ny * w1), (p0[0] - nx * w0, p0[1] - ny * w0)], col)
     limb(sh, el, 0.032, 0.03, pal[1])
     limb(el, hd, 0.03, 0.04, pal[1])                         # 宽袖口
+    if prop == 1:    # 折扇（扇面 + 镂空扇骨）
+        fa = math.atan2(hd[1] - el[1], hd[0] - el[0])
+        pts = [hd] + [(hd[0] + 0.11 * math.cos(fa + d), hd[1] + 0.11 * math.sin(fa + d)) for d in np.linspace(-0.7, 0.7, 9)]
+        poly(pts, (0.92, 0.72, 0.30))
+    elif prop == 2:  # 笏板
+        fa = math.atan2(hd[1] - el[1], hd[0] - el[0]) - 1.2
+        dx_, dy_ = math.cos(fa) * 0.085, math.sin(fa) * 0.085
+        limb((hd[0] - dx_ * 0.4, hd[1] - dy_ * 0.4), (hd[0] + dx_, hd[1] + dy_), 0.011, 0.013, (0.90, 0.84, 0.66))
     cv2.circle(A, tuple(P(*hd)), int(0.016 * hh), 1.0, -1, cv2.LINE_AA)
     cv2.circle(Tr, tuple(P(*hd)), int(0.016 * hh), (0.95, 0.82, 0.62), -1, cv2.LINE_AA)
     # 后臂（较暗，被身体挡一部分）
@@ -87,11 +113,11 @@ def piying_sprite(seed, h=300):
             inside = (upper[c[1], c[0]] > 0.5 and y < 0.40) or (lower[c[1], c[0]] > 0.5 and y > 0.47)
             if not inside: continue
             if y < 0.80 or (int(gx / sp) % 2 == 0):                 # 圆钱纹：环形镂空 + 中心方孔留皮
-                cv2.circle(cut, c, int(0.013 * hh), 1.0, -1, cv2.LINE_AA)
-                cv2.circle(keep, c, int(0.0075 * hh), 1.0, -1, cv2.LINE_AA)
+                cv2.circle(cut, c, int(0.017 * hh), 1.0, -1, cv2.LINE_AA)
+                cv2.circle(keep, c, int(0.0095 * hh), 1.0, -1, cv2.LINE_AA)
                 q = int(0.003 * hh); cv2.rectangle(cut, (c[0] - q, c[1] - q), (c[0] + q, c[1] + q), 1.0, -1)
             else:                                                       # 菱纹
-                d = 0.010 * hh
+                d = 0.014 * hh
                 pts = np.array([[c[0], c[1] - d], [c[0] + d * 0.7, c[1]], [c[0], c[1] + d], [c[0] - d * 0.7, c[1]]], np.int32)
                 cv2.fillPoly(cut, [pts], 1.0, cv2.LINE_AA)
     for k in range(4):
@@ -107,17 +133,22 @@ def piying_sprite(seed, h=300):
     fib = cv2.GaussianBlur(r.random((hh, w)).astype(np.float32), (0, 0), 1.2)
     thick = cv2.resize(r.random((hh // 24 + 2, w // 24 + 2)).astype(np.float32), (w, hh), interpolation=cv2.INTER_CUBIC)
     Tr = Tr * (0.78 + 0.22 * fib[..., None]) * (0.85 + 0.25 * thick[..., None])
+    # 前倾剪切（以腰为轴：头往前 / 往后）
+    Ms = np.float32([[1, lean, -lean * hh * 0.45], [0, 1, 0]])
+    A = cv2.warpAffine(A, Ms, (w, hh)); Tr = cv2.warpAffine(Tr, Ms, (w, hh))
+    def shx(p): return (p[0] + lean * (p[1] * hh - hh * 0.45) / hh, p[1])
+    sh = shx(sh); el = shx(el); hd = shx(hd)
     # 缩回
     A = cv2.resize(A, (w // S, h), interpolation=cv2.INTER_AREA)
     Tr = cv2.resize(Tr, (w // S, h), interpolation=cv2.INTER_AREA)
-    rv = [(P(*sh)[0] / S, P(*sh)[1] / S), (P(*el)[0] / S, P(*el)[1] / S), (P(-0.04, 0.235)[0] / S, P(-0.04, 0.235)[1] / S),
-          (P(0.0, 0.43)[0] / S, P(0.0, 0.43)[1] / S)]
+    rv = [(P(*sh)[0] / S, P(*sh)[1] / S), (P(*el)[0] / S, P(*el)[1] / S), (P(*shx((-0.04, 0.235)))[0] / S, P(*shx((-0.04, 0.235)))[1] / S),
+          (P(*shx((0.0, 0.43)))[0] / S, P(*shx((0.0, 0.43)))[1] / S)]
     hand = (P(*hd)[0] / S, P(*hd)[1] / S)
     _CACHE[key] = (Tr.astype(np.float32), A.astype(np.float32), rv, hand)
     return _CACHE[key]
 
 
-def draw_piying(fr, sp, cx, top, ang, light=1.0, flip=False, base=None):
+def draw_piying(fr, sp, cx, top, ang, light=1.0, flip=False, base=None, glass=0.0):
     """把皮影贴在幕上：fr 在人偶处被染色透射（背光），关节铆钉为不透光的小铜钉（带一点高光）。
     (cx, top) = 头顶挂线点；ang 绕头顶旋转（度）。返回 (fr, 手的画面坐标)。"""
     Tr, A, rv, hand = sp
@@ -135,7 +166,11 @@ def draw_piying(fr, sp, cx, top, ang, light=1.0, flip=False, base=None):
     sub = fr[y0:y1, x0:x1]
     src = sub if base is None else np.maximum(sub, np.asarray(base, np.float32))   # base：无幕处用固定暖光（被烛光照亮的皮料）
     lit = src * tr * (1.25 * light)                       # 透射：幕光穿过染色皮料
-    fr[y0:y1, x0:x1] = sub * (1 - a[..., None]) + lit * a[..., None]
+    if glass > 0:                                         # 第十棒：背光透色（彩玻璃式：染色更饱和、更亮，厚处稍暗）+ 皮料内散射的柔辉
+        g_ = src * np.power(np.clip(tr, 0, 1), 1.7) * (1.65 * light)
+        lit = lit * (1 - glass) + g_ * glass
+        bl = cv2.GaussianBlur(lit * a[..., None], (0, 0), 7) * 0.22 * glass
+    fr[y0:y1, x0:x1] = sub * (1 - a[..., None]) + lit * a[..., None] + (bl if glass > 0 else 0)
     def tp(p): return (M[0, 0] * p[0] + M[0, 1] * p[1] + M[0, 2], M[1, 0] * p[0] + M[1, 1] * p[1] + M[1, 2])
     rad = max(2, int(h * 0.011))
     for p in rv:
