@@ -1196,6 +1196,8 @@ class V10(Shot):
         u = self.u(t); tl = CT(3, 8); td = V(28.10)
         sway = -34 + 68 * eio(u) + 10 * math.sin(t * 3.4)                              # 第八棒：盘在链上从左摆到右（起止差 ~70px）
         bob = 14 * math.sin(t * 3.4 + 0.9) - 52                                        # 人随盘起伏；第十一棒：人退到盘心（−52px），前面空出一片铜面给倒影
+        heap = R5.ON['paper_bowl']                                                     # 第五轮 6：盘里仍是 V09 那堆纸人（不再换成主角）
+        if heap: bob = 6 * math.sin(t * 3.4 + 0.9) - 20
         fr = night((0.035, 0.026, 0.016), (0.012, 0.012, 0.016))
         fr = A.glow(fr, (960, -60), 760, 0.55, (1.0, 0.74, 0.40))                      # 顶上天平金光（主光）
         fr = fx2.god_rays(fr, (960, -40), strength=0.45, length=1.0, color=(1.0, 0.78, 0.45), t=t, src_r=200)
@@ -1231,15 +1233,20 @@ class V10(Shot):
         fr = fr + (rimB * 0.7 + cv2.GaussianBlur(rimB, (0, 0), 4) * 0.25)[..., None] * np.array([0.85, 0.60, 0.30], np.float32) * 0.8
         # 第八棒（critic_A_r5 P0-3）：人与盘面的接触 —— 顶光正下方的软接触阴影 + 膝/靴下的暗核；盘面上一抹人影倒影（金面镜反）
         cs = np.zeros((H // 2, W // 2), np.float32)
-        cv2.ellipse(cs, (int((930 + sway) / 2), int((self.CY + 70 + bob) / 2)), (150, 26), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+        cv2.ellipse(cs, (int((930 + sway) / 2), int((self.CY + 70 + bob) / 2)), (300 if heap else 150, 34 if heap else 26), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
         cs2 = np.zeros_like(cs)
-        cv2.ellipse(cs2, (int((900 + sway) / 2), int((self.CY + 78 + bob) / 2)), (80, 10), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+        cv2.ellipse(cs2, (int((900 + sway) / 2), int((self.CY + 78 + bob) / 2)), (240 if heap else 80, 10), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
         cs = cv2.resize(cv2.GaussianBlur(cs, (0, 0), 14) * 0.75 + cv2.GaussianBlur(cs2, (0, 0), 4) * 0.6, (W, H)) * inner
         fr = fr * (1 - np.clip(cs, 0, 0.92)[..., None])
         # 人：单膝跪在盘中，盘沿以下被盘壁挡住（kneel_pan_fix：臂/刀/腿间封闭灰底洞清掉）
         z0 = np.zeros_like(fr)
-        Pk, ik = A.place(z0, t, R8.kneel_pan_fix(), (930 + sway, 1030 + bob), h=820 * (1 + 0.02 * u), rim=COLD,
-                         rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
+        if heap:   # 纸人堆：去黄（低饱和、偏冷白纸色），底部 ~40px 被盘面裁线吃掉 → 读作「堆在盘里」；纸人边缘随风轻颤
+            Pk, ik = A.place(z0, t, os.path.join(R5._R5A, 'paper_heap_v1_cut.png'), (930 + sway, self.CY + 100 + bob),
+                             w=800 * (1 + 0.02 * u), anc=(0.5, 1.0), rim=COLD, rim_amt=2.2, rim_dir=(0.5, -0.85), wind=5,
+                             grade=dict(expo=0.66, sat=0.36, gamma=1.16, tint=(1.0, 0.98, 0.96)))
+        else:
+            Pk, ik = A.place(z0, t, R8.kneel_pan_fix(), (930 + sway, 1030 + bob), h=820 * (1 + 0.02 * u), rim=COLD,
+                             rim_amt=3.2, rim_dir=(0.5, -0.85), wind=9, grade=dict(expo=0.80, sat=0.5, gamma=1.12, tint=(1.03, 1.0, 0.96)))
         Ak = ik['A']
         y_c = int(self.CY + 60 + bob)
         hgt = 150
