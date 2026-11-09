@@ -1542,39 +1542,67 @@ class V16(Shot):
 
 # =====================================================================================
 # V17 105.88–107.55 MCU：张开的手掌承接雨水（palm_open，掌在左前景、脸在中），掌心积水倒映朱红「命」；「谁的」马善政，「都」小字
-class V17(Shot):
-    PALM = (620, 870)   # 第八棒：760→870，整人下移，发顶束发入画
+class V17_r10(Shot):
+    """（第十棒版，第十一棒弃用：critic_B_r4 P0-2 掌心「命」平涂剪影读不出）"""
+    PALM = (620, 870)
     def __init__(self):
-        self.sp = spr('B_r4/palm_open2')          # 第七棒：束发版（造型统一）
+        self.sp = spr('B_r4/palm_open2')
         self.bg = BK.dark_bg(6201, 0.01, 0.035)
-        self.rain = fx2.RainSheet(6202, density=0.9)
-        T.warm('谁的', 'kai', 120); T.warm('命', 'serif_black', 150); T.warm('都', 'kai', 90)
+
+
+class V17(Shot):
+    """第十一棒重做（critic_B_r4 P0-2）：摊掌 ECU——写实湿手（生图 palm_ecu，与 V18 fist3 同一只手、同一机位 → 掌 → 拳 匹配）。
+    手给焦点占满画面；「命」用马善政楷（端正可读）、340px 不压扁，像血一样从掌纹里渗出来：
+      106.6 起朱红先沿掌心纹路（生命线 / 感情线）渗开 → 107.03 字头「命」从纹路里洇满成字；
+      朱红按皮肤明暗相乘（掌纹、皮肤纹理透出来，不是平涂贴片），积水高光留在字上面，雨点打下去字面起涟漪。
+    慢推 1.00 → 1.09 压向掌心。「谁的」「都」白楷在右上暗处。"""
+    PC = (965, 600)                      # 掌心（屏幕坐标，推近前）
+    def __init__(self):
+        from PIL import Image
+        P = np.asarray(Image.open(GEN_B + 'palm_ecu_raw.png').convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+        lum = P.mean(-1, keepdims=True)
+        P = (lum + (P - lum) * 0.62) * np.array([0.97, 0.98, 1.02], np.float32)          # 压回全段冷灰，肤色留一点暖
+        self.P = np.clip(P * 1.12 - cv2.GaussianBlur(P, (0, 0), 2.0) * 0.12, 0, 1) * 0.74   # 压一档，和场景同影调（V18 拳同样处理）
+        l = self.P.mean(-1)
+        x, y = K.grid()
+        palm = np.exp(-(((x - self.PC[0]) / 330) ** 2 + ((y - self.PC[1]) / 230) ** 2) ** 1.5)
+        crease = np.clip((cv2.GaussianBlur(l, (0, 0), 6) - l - 0.008) * 26, 0, 1) * palm   # 掌纹 = 比周围暗的细线
+        self.crease = cv2.GaussianBlur(crease.astype(np.float32), (0, 0), 1.0)
+        self.spec = np.clip((l - 0.62) * 3.0, 0, 1)[..., None]                            # 积水高光
+        self.nz = cv2.resize(K.fbm(H // 6, W // 6, 6211, 4, 4), (W, H)).astype(np.float32)
+        self.nz2 = cv2.resize(K.fbm(H // 3, W // 3, 6212, 4, 4), (W, H)).astype(np.float32)
+        L = T.Layer(); T.place(L, '命', self.PC[0] + 10, self.PC[1] - 5, 340, color='red', fname='kai', rot=-8)
+        self.G = L.A.astype(np.float32)
+        self.Gd = cv2.GaussianBlur(self.G, (0, 0), 45); self.Gd = self.Gd / max(1e-3, self.Gd.max())
+        self.rain = fx2.RainSheet(6202, density=0.7)
+        T.warm('谁的', 'kai', 130); T.warm('都', 'kai', 100)
 
     def render(self, t):
-        u = self.u(t)
+        u = self.u(t); e = eio(u)
         x, y = K.grid()
-        fr = self.bg + np.exp(-(((x - 1000) / 700) ** 2 + ((y - 300) / 500) ** 2))[..., None] * COLDC * 0.08
-        fr, _ = put_at(fr, self.sp, t, (0.19, 0.835), self.PALM, 1600,   # 第八棒：1750→1600，发顶入画
-                        rim=dict(col=(0.72, 0.80, 1.0), amt=2.2, dir=(-0.6, -0.8)),
-                       wind_amp=4, shade=(900, 1900, 0.3, 700, 0.2))
-        # 掌心积水 + 倒影「命」（随涟漪抖动），107.08 字头亮起
-        cx, cy = self.PALM[0] + 10, self.PALM[1] - 20
-        pool = np.exp(-(((x - cx) / 150) ** 2 + ((y - cy) / 60) ** 2) ** 2)
-        pm = prs(25, [2], t, 0.3)[0]
-        if pm > 0:
-            L = T.Layer(); T.place(L, '命', cx, cy, 190, color='red', fname='serif_black', alpha=min(1, pm * 1.5), sy=0.45)
-            wob = np.sin((x - cx) * 0.08 + t * 14) * 3 + np.sin((y - cy) * 0.3 + t * 9) * 2
-            A = cv2.remap(L.A, x + wob.astype(np.float32), y, cv2.INTER_LINEAR) * pool
-            fr = fr * (1 - A[..., None] * 0.7) + A[..., None] * np.array([0.95, 0.10, 0.06], np.float32)
-            fr += K.blur_ds(A, 16)[..., None] * RED * 0.6
-        fr += pool[..., None] * COLDC * 0.10
-        fr = fx2.ripples(fr, t, [(cx - 30, cy), (cx + 40, cy + 6), (cx, cy - 4)], [106.0, 106.5, 107.0], amt=0.6, flat=0.35, speed=90, life=0.9)
-        fr = self.rain.draw(fr, t, intensity=0.9, angle=6)
+        tm = V(CT(25, 2))
+        s0 = clamp01((t - (tm - 0.45)) / 0.45)                       # 掌纹渗红
+        s1 = clamp01((t - (tm - 0.16)) / 0.20)                       # 字洇满（字头帧 ≈ 0.8）
+        fr = self.P.copy()
+        lum = fr.mean(-1, keepdims=True)
+        blood = lum * np.array([1.12, 0.08, 0.065], np.float32) + np.array([0.06, 0.002, 0.002], np.float32)    # 深朱（血），不发荧光
+        kc = cv2.GaussianBlur(self.crease, (0, 0), 1.6) * 1.6 * np.clip(self.Gd * 1.6 + 0.25, 0, 1) * np.clip(s0 * 1.4 - self.nz * 0.5 + 0.1, 0, 1)
+        thr = s1 * 1.35 - 0.35 * self.nz2
+        kg = self.G * np.clip((thr - (1 - self.Gd) * 0.5) * 4, 0, 1)
+        wob = (np.sin((x - self.PC[0]) * 0.05 + t * 11) * 2.0 + np.sin((y - self.PC[1]) * 0.07 + t * 7) * 1.5).astype(np.float32)
+        kg = cv2.remap(kg, x + wob, y + wob * 0.5, cv2.INTER_LINEAR)
+        k = np.clip(kc * 0.9 + kg * 0.92, 0, 1)[..., None]
+        fr = fr * (1 - k) + blood * k
+        fr = fr + K.blur_ds(kg, 10)[..., None] * RED * 0.18 * s1                       # 字缘微微洇出
+        fr = fr + self.spec * self.P * 0.35 * k                                          # 积水高光留在字面上
+        fr = fx2.ripples(fr, t, [(self.PC[0] - 60, self.PC[1] + 10), (self.PC[0] + 70, self.PC[1] - 30), (self.PC[0], self.PC[1] + 40)],
+                         [106.1, 106.7, 107.1], amt=0.45, flat=0.4, speed=90, life=0.8)
+        fr = self.rain.draw(fr, t, intensity=0.6, angle=6)
         pr = prs(25, [0, 1, 3], t)
-        P = [dict(ch='谁', x=1460, y=330, size=130, rot=0, font='kai', idx=0, emph=False), dict(ch='的', x=1460, y=470, size=110, rot=0, font='kai', idx=1, emph=False),
-             dict(ch='都', x=1600, y=640, size=96, rot=0, font='kai', idx=2, emph=False)]
-        fr = T.ink_bleed_in(fr, '谁的都', pr, places=P, color='white', style_kw=dict(shadow=0.85, glow=0.12))
-        fr = cam(fr, 1.0 + 0.12 * eio(u), 0, 0, center=(cx, cy))
+        Pl = [dict(ch='谁', x=1610, y=280, size=130, rot=0, font='kai', idx=0, emph=False), dict(ch='的', x=1610, y=420, size=110, rot=0, font='kai', idx=1, emph=False),
+              dict(ch='都', x=1730, y=580, size=100, rot=0, font='kai', idx=2, emph=False)]
+        fr = T.ink_bleed_in(fr, '谁的都', pr, places=Pl, color='white', style_kw=dict(shadow=0.85, glow=0.10))
+        fr = cam(fr, 1.0 + 0.09 * e, 0, 0, center=self.PC)
         return fr, 0
 
 
