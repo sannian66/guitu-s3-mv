@@ -1611,7 +1611,8 @@ class Chorus1:
         fr = fr * (EXPO_ALL * EXPO.get(sid, 1.0))
         fr = fr + 0.012 * (1 - np.clip(fr, 0, 1))        # 抬一点黑位（避免死黑）
         if os.environ.get('C1_LYR', '3') == '3':
-            fr = self.lyr.draw(fr, t)                       # 统一字幕层（屏幕层，不随镜头）
+            if os.environ.get('LYRIC_UNI') != '1':          # [r1] 统一字幕层接管时，副歌一旧字幕层整段关掉
+                fr = self.lyr.draw(fr, t)                   # 统一字幕层（屏幕层，不随镜头）
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         return GU.apply(finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), t, 'chorus1'), 0   # 统一 grade 层
 
