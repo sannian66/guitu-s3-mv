@@ -55,6 +55,20 @@ def items_for(cmd):
                   ('若正义', 37.9), ('V17 落前', 38.63), ('V17 落地', 38.72), ('V17 凹坑', 38.85), ('V17 凹坑', 39.20),
                   ('那我 V18', 40.18), ('宁愿', 41.5), ('锋', 43.55), ('出口', 44.0)]
         return items
+    if cmd == 'lyr':                                      # 第十一棒：critic_A_r7 点名错读时刻的逐帧核对（每帧一格）
+        out = []
+        for (nm, a, b) in (('V01止/V02起', 16.70, 17.20), ('V02止/V03起', 17.60, 18.20), ('V03止', 19.45, 19.80), ('V20止/V21起', 42.30, 42.85)):
+            f = round(a * FPS)
+            while f <= round(b * FPS):
+                out.append((nm + ' f%d' % f, f / FPS)); f += 1
+        return out
+    if cmd == 'rhythm':
+        return items_for('triple') + items_for('lyr')
+    if cmd == 'keys9':                                    # 第十一棒 keys v9：v8 全部 + 本棒改动点
+        return items_for('keys') + [('V02 走 起', 17.05), ('V02 走 止', 17.85), ('V04 truck 起', 19.70), ('V04 truck 中', 20.20), ('V04 truck 止', 20.62),
+                                    ('V06 orbit 起', 21.22), ('V06 寒 扫亮', 21.50), ('V06 光 扫亮', 21.72), ('V06 orbit 止', 22.45),
+                                    ('V10 倒影', 27.60), ('V16 丹陛 起', 36.80), ('V16 丹陛 止', 37.60), ('V17 起 印身', 38.27), ('V17 下落', 38.55),
+                                    ('V19 镜像 起', 40.95), ('V19 镜像 止', 41.65), ('V20 止 的', 42.45), ('V21 入 锋', 42.74)]
     items = []
     for S in M.SHOTS[1:]:
         c = M.CUTS.get(S.__name__)
@@ -77,7 +91,7 @@ if __name__ == '__main__' and sys.argv[1] in ('part', 'assemble'):
             Image.fromarray(M.frame(int(round(t * FPS)), cache)).resize((480, 270), Image.LANCZOS).save(ACON + '/%s_%03d.jpg' % (kind, i), quality=90)
             print(i, lab, flush=True)
     else:
-        out = sys.argv[3]; cols, tw, th = (3 if kind == 'triple' else 4), 480, 270; per = int(sys.argv[4]) if len(sys.argv) > 4 else 4
+        out = sys.argv[3]; cols, tw, th = (3 if kind in ('triple', 'rhythm') else 4), 480, 270; per = int(sys.argv[4]) if len(sys.argv) > 4 else 4
         rows = (len(its) + cols - 1) // cols
         sh = Image.new('RGB', (cols * tw, rows * (th + 30)), (12, 12, 12)); d = ImageDraw.Draw(sh)
         for i, (lab, t) in enumerate(its):
