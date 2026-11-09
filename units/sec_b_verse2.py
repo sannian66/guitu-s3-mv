@@ -987,6 +987,10 @@ class V08(Shot):
             if t < tk: continue
             p = eout(clamp01((t - tk) / 0.16), 2)
             g, lines = BSF.crack_mask(G, (fpt[0], fpt[1]), p, seed=5410 + i)
+            if R5:                                                    # 第五轮 #30：1:34 只留「权」——地上不再裂出「嚣/张」字形，只留杖镦放射裂纹
+                g = g * 0.0
+                _, lines2 = BSF.crack_mask(G, (fpt[0], fpt[1]), p, seed=5480 + i, n=7, reach=200)
+                lines = np.maximum(lines, lines2)
             fr = BV.engrave(fr, g, light=(-0.3, -1.0), depth=4, groove=0.75, fill=(0.42, 0.48, 0.58), fill_k=0.75 * p,
                             hl_col=(0.70, 0.78, 0.92), hl=0.45, glow=0.0)
             fr = fr * (1 - lines[..., None] * 0.7) + np.roll(lines, -2, 0)[..., None] * COLDC * 0.12
@@ -1008,6 +1012,7 @@ class V08(Shot):
         fr = fr + rim[..., None] * np.array([0.9, 0.55, 0.25], np.float32) * 0.5
         # 「柄在」阴刻在杖身（随杖走）
         pr = prs(21, [9, 10], t)
+        if R5: pr = [0, 0]                                            # 第五轮 #30：去「柄在」
         if max(pr) > 0:
             a = math.radians(ang); up = (math.sin(a), -math.cos(a))
             pl = []
