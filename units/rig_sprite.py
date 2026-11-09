@@ -77,13 +77,45 @@ _GEOM = {}
 _WT = {}
 
 
+def _fill_holes(F, A, preA):
+    """蒙皮把某块（手臂/刀/旧头）挪走后露出背景的地方，用 inpaint 补成「原来被挡住的东西」。
+
+    二维贴图蒙皮的固有缺陷：手臂底下没有像素（原图里被手臂挡着）。
+    洞 = 原轮廓内、变形后 alpha 掉了的区域；用 TELEA inpaint 填色 + 恢复 alpha，
+    相当于「补画被手臂遮住的躯干」。洞很小时（<40px）跳过。
+    """
+    hole = (preA > 0.6) & (A < 0.45)
+    if int(hole.sum()) < 40:
+        return F, A
+    m = cv2.dilate(hole.astype(np.uint8) * 255, np.ones((3, 3), np.uint8))
+    f8 = np.clip(F * 255.0, 0, 255).astype(np.uint8)
+    F2 = cv2.inpaint(f8, m, 4, cv2.INPAINT_TELEA).astype(np.float32) / 255.0
+    soft = cv2.erode((preA > 0.5).astype(np.float32), np.ones((5, 5), np.uint8))
+    soft = cv2.GaussianBlur(soft, (0, 0), 1.2)
+    w = hole.astype(np.float32)
+    w = cv2.GaussianBlur(w, (0, 0), 1.0)
+    F2 = F + (F2 - F) * w[..., None]
+    A2 = np.maximum(A, soft * w)
+    return F2, A2
+
+
 def _sstep(a, b, x):
     x = np.clip((x - a) / (b - a), 0, 1)
     return x * x * (3 - 2 * x)
 
 
+MIR = 'mirror:'          # 虚拟路径前缀：水平镜像（左 3/4 / 左侧脸用；成本 0，不落盘）
+
+
+def _mirrored(path):
+    return str(path).startswith(MIR)
+
+
 def _load(path, width=1024):
     """解码 + 缩放 mip（缓存）：返回 (F float32 hxwx3, A float32 hxw)。"""
+    if _mirrored(path):
+        F, A = _load(str(path)[len(MIR):], width)
+        return np.ascontiguousarray(F[:, ::-1]), np.ascontiguousarray(A[:, ::-1])
     key = (os.path.abspath(str(path)), int(width))
     got = _RAW.get(key)
     if got is not None:
@@ -106,6 +138,22 @@ def _skin_mask(F, A):
 
 def _geom(path, width=1024):
     """实测一张立绘的骨架单位空间参数（缓存）。"""
+    if _mirrored(path):
+        b = _geom(str(path)[len(MIR):], width)
+        w = b['w']
+        mx = lambda x: w - 1 - x                      # noqa: E731
+        m = dict(b)
+        m['cx'] = mx(b['cx'])
+        m['eye'] = (mx(b['eye'][0]), b['eye'][1])
+        m['head'] = (mx(b['head'][2]), b['head'][1], mx(b['head'][0]), b['head'][3])
+        m['bbox'] = (mx(b['bbox'][2] - 1), b['bbox'][1], mx(b['bbox'][0] - 1) + 1, b['bbox'][3])
+        m['hands'] = {'r': (mx(b['hands']['l'][0]), b['hands']['l'][1]),
+                      'l': (mx(b['hands']['r'][0]), b['hands']['r'][1])}
+        if b.get('sword'):
+            m['sword'] = ((mx(b['sword'][0][0]), b['sword'][0][1]),
+                          (mx(b['sword'][1][0]), b['sword'][1][1]))
+        m['mirror_of'] = str(path)[len(MIR):]
+        return m
     key = (os.path.abspath(str(path)), int(width))
     got = _GEOM.get(key)
     if got is not None:
@@ -131,6 +179,9 @@ def _geom(path, width=1024):
         if ar > 0.20 * span * ww:                       # 半身特写：整幅都是人
             bust = True
         face = (float(cen[i0][0]), float(y), float(w_), float(h_))   # (fx, 脸框顶, 脸宽, 脸框高)
+        # 半身/胸像：alpha 三边以上顶到画布边缘（人物被画框裁掉）→ 没有脚底，改用脸宽定尺度
+        if xs.min() <= 2 and ys.min() <= 2 and (xs.max() >= ww - 3 or ys.max() >= hh - 3):
+            bust = True
     else:
         face = (cx, top + 0.06 * span, 0.06 * span, 0.08 * span)
     fx, ftop, fw, fh = face
@@ -176,13 +227,23 @@ def _geom(path, width=1024):
 
 
 # ---------------------------------------------------------------- 权重场（单位空间粗网格）
-def _capsule(gu, gv, p0, p1, r, sharp=2.0):
+def _capsule(gu, gv, p0, p1, r, pw=4.0):
+    """到线段 p0-p1 的距离 → 平顶软边界成员度 exp(-(d/r)^pw)。
+
+    pw=4 让「肢体内部 ≈1、边界外迅速掉到 0」，这样归一化后肢体在自己那块地上压倒躯干
+    （pw=2 的高斯太平缓，手臂权重只有 0.5，抬手只抬一半 —— 这是第一版的实际 bug）。
+    """
     ax, ay = p0
     dx, dy = p1[0] - ax, p1[1] - ay
     L2 = dx * dx + dy * dy + 1e-9
     t = np.clip(((gu - ax) * dx + (gv - ay) * dy) / L2, 0, 1)
     d = np.sqrt((gu - (ax + t * dx)) ** 2 + (gv - (ay + t * dy)) ** 2)
-    return np.exp(-(d / r) ** 2 * sharp), d
+    return np.exp(-((d / r) ** pw)), d
+
+
+def _blob(gu, gv, c, a, b, pw=4.0):
+    """各向异性平顶软椭圆成员度（头/颈用）。"""
+    return np.exp(-(((gu - c[0]) / a) ** 2 + ((gv - c[1]) / b) ** 2) ** (pw / 2))
 
 
 def _weights(path, width=1024):
@@ -212,29 +273,39 @@ def _weights(path, width=1024):
     el_r = (0.5 * (sh_r[0] + wr[0]) - 0.014, 0.5 * (sh_r[1] + wr[1]))
     el_l = (0.5 * (sh_l[0] + wl[0]) + 0.014, 0.5 * (sh_l[1] + wl[1]))
     w = {}
-    # 头/颈：头心各向异性高斯 + 头发细丝（发髻、披发跟着头）
-    w['head'] = (np.exp(-((gu - 0.0) / 0.086) ** 2 - ((gv - HEAD_C_U) / 0.115) ** 2) +
+    # 头/颈：头心平顶椭圆 + 头发细丝（发髻、披发跟着头走）
+    w['head'] = (_blob(gu, gv, (0.0, HEAD_C_U), 0.098, 0.135) +
                  0.9 * thin * _sstep(0.78, 0.88, gv)).astype(np.float32)
-    w['spine'] = (_sstep(HIP_U - 0.05, HIP_U + 0.05, gv) * _sstep(1.00, 0.93, gv)).astype(np.float32)
+    # 躯干 / 衣摆 / 腿：按高度分层，但让出「手臂自己那块地」（外侧 |x| 大处归手臂）
+    core = (1.0 - 0.85 * np.clip((np.abs(gu) - 0.055) / 0.045, 0, 1) *
+            _sstep(0.62, 0.72, gv) * _sstep(0.98, 0.86, gv))
+    w['spine'] = (core * _sstep(HIP_U - 0.05, HIP_U + 0.05, gv) * _sstep(1.00, 0.93, gv)).astype(np.float32)
     w['skirt'] = (_sstep(HIP_U + 0.03, HIP_U - 0.09, gv) * _sstep(-0.02, 0.07, gv) * 0.85).astype(np.float32)
     w['leg'] = (_sstep(HIP_U + 0.03, HIP_U - 0.05, gv) * _sstep(-0.05, 0.04, gv)).astype(np.float32)
-    w['sh_r'] = (_capsule(gu, gv, sh_r, el_r, 0.055)[0] * _sstep(0.98, 0.90, gv)).astype(np.float32)
-    w['el_r'] = (_capsule(gu, gv, el_r, wr, 0.048)[0] * _sstep(0.98, 0.90, gv)).astype(np.float32)
-    w['sh_l'] = (_capsule(gu, gv, sh_l, el_l, 0.055)[0] * _sstep(0.98, 0.90, gv)).astype(np.float32)
-    w['el_l'] = (_capsule(gu, gv, el_l, wl, 0.048)[0] * _sstep(0.98, 0.90, gv)).astype(np.float32)
-    w['ha_r'] = _capsule(gu, gv, wr, wr, 0.045)[0].astype(np.float32)
-    w['ha_l'] = _capsule(gu, gv, wl, wl, 0.045)[0].astype(np.float32)
+    gate_r = _sstep(0.048, 0.090, -gu)          # 右臂 = 画面左：只在左外侧
+    gate_l = _sstep(0.048, 0.090, gu)
+    w['sh_r'] = (_capsule(gu, gv, sh_r, el_r, 0.052)[0] * gate_r).astype(np.float32)
+    w['el_r'] = (_capsule(gu, gv, el_r, wr, 0.045)[0] * gate_r).astype(np.float32)
+    w['sh_l'] = (_capsule(gu, gv, sh_l, el_l, 0.052)[0] * gate_l).astype(np.float32)
+    w['el_l'] = (_capsule(gu, gv, el_l, wl, 0.045)[0] * gate_l).astype(np.float32)
+    w['ha_r'] = _capsule(gu, gv, wr, wr, 0.042)[0].astype(np.float32)
+    w['ha_l'] = _capsule(gu, gv, wl, wl, 0.042)[0].astype(np.float32)
     sw = np.zeros_like(gu, np.float32)
     if g['sword'] is not None:
         t0, t1 = g['sword']
         p0 = ((t0[0] - cx) / H, (feet - t0[1]) / H)
         p1 = ((t1[0] - cx) / H, (feet - t1[1]) / H)
         _, d = _capsule(gu, gv, p0, p1, 0.03)
-        sw = (np.exp(-(d / 0.026) ** 2) * np.clip(thin * 2.2 + 0.15, 0, 1)).astype(np.float32)
-        sw = np.maximum(sw, _capsule(gu, gv, p0, p0, 0.05)[0] * 0.9)     # 刀柄跟手
+        # 只要「窄带 ∩ 细结构」：刀身很细，衣摆/腰带是厚的，用 thin 硬门槛挡住它们（否则会挖洞）
+        sw = (np.exp(-(d / 0.024) ** 4) * _sstep(0.30, 0.55, thin)).astype(np.float32)
+        sw = np.maximum(sw, _capsule(gu, gv, p0, p0, 0.045)[0] * 0.9)    # 刀柄跟手
     w['sword'] = sw
     w['root'] = np.full_like(gu, 0.05, np.float32)                       # 兜底权重（防归一化除零）
-    out = dict(gx=gu, gy=gv, w=w, thin=thin, mask=mask_g,
+    # 实测的「头部区域」遮罩（含发，用于转头时擦掉旧头；矩形窗会啃到肩膀）
+    headmask = (np.clip((w['head'] - 0.18) / 0.25, 0, 1) * mask_g).astype(np.float32)
+    headmask = cv2.GaussianBlur(headmask, (0, 0), 6.0)
+    headmask = np.maximum(headmask, cv2.GaussianBlur(headmask, (0, 0), 18.0) * 0.9)
+    out = dict(gx=gu, gy=gv, w=w, thin=thin, mask=mask_g, headmask=headmask,
                joints=dict(sh_r=sh_r, sh_l=sh_l, el_r=el_r, el_l=el_l, wr=wr, wl=wl,
                            hip=(0.0, HIP_U), neck=(0.0, NECK_U)),
                H=H, cx=cx, feet=feet)
@@ -302,10 +373,11 @@ def bone_affines(joints, pose):
 
 # ---------------------------------------------------------------- 主体
 _ANGLE_FILES = [('front', 'hero_front_cut.png', 0.00),
-                ('tq_r', 'hero_tq_r_cut.png', 0.55),
+                ('tq_r', 'hero_tq_r_cut.png', 0.30),      # 实测 tq_r 只转了约 20°（不是 45°）
                 ('side_r', 'hero_side_r_cut.png', 1.00),
-                ('tq_l', 'hero_view_tq_l_cut.png', -0.55),
-                ('back', 'hero_back_cut.png', 1.60)]
+                ('tq_l', 'hero_view_tq_l_cut.png', -0.45),  # view_tq_l 转了约 40°
+                ('side_l', MIR + 'hero_side_r_cut.png', -1.00),
+                ('back', 'hero_back_cut.png', 1.70)]
 _EXPR_FILES = {'calm': 'hero_expr_calm_cut.png', 'angry': 'hero_expr_angry_cut.png',
                'smirk': 'hero_expr_smirk_cut.png', 'look': 'hero_expr_look_cut.png'}
 _KEY_FILES = {'raise': 'hero_pose_raise_cut.png', 'slash': 'hero_pose_slash_cut.png',
@@ -320,8 +392,10 @@ class PoseRig:
         self.work_w = int(min(int(work_w), 1280))     # 解码 mip 宽度上限（1024 已足够，2048 只更慢）
         self.angles = []
         for name, fn, yaw in _ANGLE_FILES:
-            p = os.path.join(self.base, fn)
-            if os.path.exists(p):
+            p = (MIR + os.path.join(self.base, fn[len(MIR):])) if fn.startswith(MIR) \
+                else os.path.join(self.base, fn)
+            chk = str(p)[len(MIR):] if _mirrored(p) else str(p)
+            if os.path.exists(chk):
                 self.angles.append((name, p, yaw))
         if not self.angles:
             raise FileNotFoundError(f'{self.base} 下没有 hero_*_cut.png')
@@ -335,7 +409,7 @@ class PoseRig:
         for v in w.values():
             tot += v
         self._wn = {k: (v / np.maximum(tot, 1e-4)).astype(np.float32) for k, v in w.items()}
-        self.head_box_u = (-0.125, 0.760, 0.125, 1.26)          # 头部补丁范围（单位空间）
+        self.head_box_u = (-0.132, 0.830, 0.132, 1.28)          # 头部补丁取图范围（单位空间）
 
     # ------------------------------------------------------------ 布局仿射：图片像素 → 画面
     def _affine(self, path, dst, h, mode='body'):
@@ -380,8 +454,8 @@ class PoseRig:
         if sx1 <= sx0 or sy1 <= sy0:
             return np.zeros((bh, bw, 3), np.float32), np.zeros((bh, bw), np.float32)
         M2 = M.copy()
-        M2[0, 2] -= x0 + M[0, 0] * sx0
-        M2[1, 2] -= y0 + M[1, 1] * sy0
+        M2[0, 2] += M[0, 0] * sx0 - x0          # 裁切原点补偿（M 是 src→dst，故是加）
+        M2[1, 2] += M[1, 1] * sy0 - y0
         f = cv2.warpAffine(F[sy0:sy1, sx0:sx1], M2, (bw, bh), flags=cv2.INTER_LINEAR,
                            borderMode=cv2.BORDER_CONSTANT)
         a = cv2.warpAffine(A[sy0:sy1, sx0:sx1], M2, (bw, bh), flags=cv2.INTER_LINEAR,
@@ -467,8 +541,7 @@ class PoseRig:
         if 'body_turn' in pose:
             bturn = float(np.clip(pose['body_turn'], -1.2, 1.6))
         else:
-            at = abs(turn)
-            bturn = 0.0 if at < 0.85 else math.copysign((at - 0.85) * 2.2, turn)
+            bturn = 0.0
         hh = h * (1.0 + 0.004 * math.sin(2 * math.pi * t / 3.4))          # 呼吸
         # ---- 选层
         body_layers = self._angle_plan(bturn)
@@ -516,32 +589,46 @@ class PoseRig:
             accA += a * w
         accA = np.clip(accA, 0, 1)
         accF = accF / np.maximum(accA, 1e-4)[..., None]
-        # ---- 头部层（多角度替换 + 头框软擦除）
-        erase = np.zeros((bh, bw), np.float32)
+        # ---- 头部层（多角度替换）：先按「头框软窗」把旧头擦掉，再把新头叠上去
+        #      顺序很重要：先 erase 再加补丁，否则擦除会把刚贴上去的新头也擦掉。
         hx0, hy0, hx1, hy1 = self.head_box_u
+        fb = None
+        if head_layers or head_patch is not None:
+            # 擦除窗 = 实测头 mask（网格级，含头发）重采样到画布；再乘一个温和的头框窗
+            ghm = self.W['headmask']
+            dgx = (GX1 - GX0) / (GW - 1)
+            dgy = (GY1 - GY0) / (GH - 1)
+            uu = ((np.arange(X0, X1, dtype=np.float32) - dst[0]) / hu - GX0) / dgx
+            vv = ((dst[1] - np.arange(Y0, Y1, dtype=np.float32)) / hu - GY0) / dgy
+            hm = cv2.remap(ghm, np.ascontiguousarray(np.repeat(uu[None, :], bh, 0), np.float32),
+                           np.ascontiguousarray(np.repeat(vv[:, None], bw, 1), np.float32),
+                           cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+            fb = np.clip(hm, 0, 1).astype(np.float32)
+            accF = accF * (1 - fb[..., None])
+            accA = np.clip(accA * (1 - fb), 0, 1)
         if head_layers:
-            uu = ((np.arange(X0, X1, dtype=np.float32) - dst[0]) / hu)[None, :]
-            vv = ((dst[1] - np.arange(Y0, Y1, dtype=np.float32)) / hu)[:, None]
-            fb = (_sstep(hx0, hx0 + 0.040, uu) * _sstep(hx1, hx1 - 0.040, uu) *
-                  _sstep(hy0, hy0 + 0.090, vv) * _sstep(hy1, hy1 - 0.020, vv))
             for path, w in head_layers:
                 M, _s, _hu = self._affine(path, dst, hh, 'head')
-                # 头框 → 源像素
                 sx0 = (dst[0] + hx0 * hu - M[0, 2]) / M[0, 0]
                 sx1 = (dst[0] + hx1 * hu - M[0, 2]) / M[0, 0]
                 sy0 = ((dst[1] - hy1 * hu) - M[1, 2]) / M[1, 1]
                 sy1 = ((dst[1] - hy0 * hu) - M[1, 2]) / M[1, 1]
                 f, a = self._warp(path, M, box, (sx0, sy0, sx1, sy1))
-                k = w * fb
-                accF = accF * (1 - k[..., None]) + (f * a[..., None]) * w
-                accA = np.clip(accA * (1 - k) + a * w, 0, 1)
-            erase = fb
+                # 补丁边缘羽化：按**单位空间**坐标做（底边在颈下 0.855→0.945 之间溶进衣领，
+                # 侧边略收），这样不同角度的头都以同一套解剖位置收边，不会出现「双衣领」。
+                uu2 = ((np.arange(X0, X1, dtype=np.float32) - dst[0]) / hu)[None, :]
+                vv2 = ((dst[1] - np.arange(Y0, Y1, dtype=np.float32)) / hu)[:, None]
+                fw = (_sstep(0.855, 0.948, vv2) *
+                      (1.0 - 0.55 * np.clip((np.abs(uu2) - 0.100) / 0.032, 0, 1)) *
+                      (1.0 - 0.30 * np.clip((vv2 - 1.235) / 0.045, 0, 1))).astype(np.float32)
+                pa = a * fw * w
+                accF = accF + (f * pa[..., None])
+                accA = np.clip(accA + pa, 0, 1)
         elif head_patch is not None:
             f, a, pbox, feather = head_patch
             px0, py0 = pbox[0] - X0, pbox[1] - Y0
             fx0, fy0 = max(0, -px0), max(0, -py0)
-            fx1 = min(f.shape[1], bw - px0)
-            fy1 = min(f.shape[0], bh - py0)
+            fx1, fy1 = min(f.shape[1], bw - px0), min(f.shape[0], bh - py0)
             if fx1 > fx0 and fy1 > fy0:
                 sub = (slice(py0 + fy0, py0 + fy1), slice(px0 + fx0, px0 + fx1))
                 fa = a[fy0:fy1, fx0:fx1]
@@ -550,11 +637,8 @@ class PoseRig:
                 if m.sum() > 120:                        # 与原脸的均值差修正
                     d = accF[sub][m].mean(0) - ff[m].mean(0)
                     ff = np.clip(ff + np.clip(d, -0.12, 0.12) * feather[fy0:fy1, fx0:fx1][..., None], 0, 1)
-                accF[sub] = accF[sub] * (1 - fa[..., None]) + ff * fa[..., None]
-                accA[sub] = np.clip(accA[sub] * (1 - fa) + fa, 0, 1)
-        if erase.any():
-            accF = accF * (1 - erase[..., None])
-            accA = np.clip(accA * (1 - erase), 0, 1)
+                accF[sub] = accF[sub] + ff * fa[..., None]
+                accA[sub] = np.clip(accA[sub] + fa, 0, 1)
         # ---- 整姿势键帧
         if keyw > 1e-3:
             gk = _geom(kp, self.work_w)
@@ -571,8 +655,10 @@ class PoseRig:
                 ys = np.arange(Y0, Y1, dtype=np.float32)[:, None]
                 mx = xs + (mx - xs) * dscale
                 my = ys + (my - ys) * dscale
+            preA = accA.copy()
             accF = cv2.remap(accF, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
             accA = cv2.remap(accA, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+            accF, accA = _fill_holes(accF, accA, preA)
         # ---- 调色（与 sprite.py._front 同一套公式）+ rim + look
         lum = (accF * np.array([0.3, 0.59, 0.11], np.float32)).sum(-1, keepdims=True)
         _lk, red_fn = _look_import()

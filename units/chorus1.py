@@ -18,6 +18,7 @@ from c1kit import *
 import c1kit as K
 import json
 import vcam as VC
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 import vcam3 as V3
 import fx2
 import props as PR
@@ -1577,7 +1578,7 @@ class Chorus1:
         if os.environ.get('C1_LYR', '3') == '3':
             fr = self.lyr.draw(fr, t)                       # 统一字幕层（屏幕层，不随镜头）
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
-        return finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), 0
+        return GU.apply(finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), t, 'chorus1'), 0   # 统一 grade 层
 
 
 X = Chorus1

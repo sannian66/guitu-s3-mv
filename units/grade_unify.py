@@ -79,12 +79,25 @@ SEC = {
     'e_final_outro':  dict(vig=0.38, bloom=0.25, thr=0.72, grain=0.035, gs=0.96,
                            black=0.0048, white_clean=0.8536, cast_rb=-0.0445, red_pur=0.8992),
 }
+# 帧区间（= units/sections.py 的 SECTIONS，左闭右开），供 key_for_t 用
+_RANGES = [(0, 1321, 'a_intro_verse1'), (1321, 1784, 'b_pre1'), (1784, 2586, 'chorus1'),
+           (2586, 3534, 'b_verse2'), (3534, 4839, 'c_pre2_chorus2'), (4839, 5797, 'd_bridge'),
+           (5797, 7241, 'e_final_outro')]
+
+def key_for_t(t):
+    """按全局时间取段落键。接线时可以直接 apply(fr, t, key_for_t(t), cache)。"""
+    f = int(round(t * 30))
+    for a, b, k in _RANGES:
+        if a <= f < b:
+            return k
+    return 'a_intro_verse1' if f < 1321 else 'e_final_outro'
+
 _ALIAS = {'a': 'a_intro_verse1', 'b_pre1': 'b_pre1', 'pre1': 'b_pre1', 'chorus1': 'chorus1',
           'b_verse2': 'b_verse2', 'c': 'c_pre2_chorus2', 'd': 'd_bridge', 'e': 'e_final_outro'}
 
 # ---------------------------------------------------------------- 接点局部匹配表（±2 s 斜坡）
 # 由 tools/grade_unify_cmp.py --fit 从实拍帧统计拟合，再固化成常量（渲染时零成本、可复算）。
-# 每项：(gain, contrast, tint_rb, red_gain)；左=接点前的段，右=接点后的段。
+# 每项：(段落键, 曝光增益, 反差增益, 色温 tint[相对 R/B 增益], 红纯度增益)；左=接点前，右=接点后。
 JOINT = {
     44.0333: dict(l=('a_intro_verse1', 1.060, 1.050, 0.0400, 1.000),
                     r=('b_pre1', 0.940, 0.950, -0.0263, 1.000)),
@@ -118,12 +131,6 @@ def _vign_mask(strength):
     d = np.sqrt(((x - W / 2) / (W / 2)) ** 2 + ((y - H / 2) / (H * 0.42)) ** 2)
     v = np.clip(1 - (d - 0.5) * 0.85, 0, 1) ** 1.5
     return (1 - strength + strength * v).astype(np.float32)
-
-def _blur_ds(a, sig, k=4):
-    h, w = a.shape[:2]
-    s = cv2.resize(a, (max(1, w // k), max(1, h // k)), interpolation=cv2.INTER_AREA)
-    s = cv2.GaussianBlur(s, (0, 0), max(0.5, sig / k))
-    return cv2.resize(s, (w, h), interpolation=cv2.INTER_LINEAR)
 
 @lru_cache(maxsize=16)
 def _kernel(k):

@@ -15,6 +15,7 @@ import typo as T
 import trans as TR
 import sprite as SP
 import vcam as VC
+import grade_unify as GU                     # 全片统一 grade 层（GRADE_UNIFY=1 生效）
 
 for _k, _f in (('serif_r', 'Regular'), ('serif_m', 'Medium'), ('serif_sb', 'SemiBold'), ('serif_b', 'Bold'), ('serif_black', 'Black')):
     T.FONTS.setdefault(_k, ROOT + f'/fonts/NotoSerifSC-{_f}.otf')
@@ -360,7 +361,7 @@ class Section:
             fr = self.fg.draw(fr, t, dict(x=0.0, y=0.0, z=1.0), kind, amt)
         fr = fr * (self.expo_all * self.expo.get(sid, 1.0))
         fr = fr + 0.012 * (1 - np.clip(fr, 0, 1))
-        return K.finish(fr, t, ca=ca, vig=0.42, red_keep=1.0)
+        return GU.apply(K.finish(fr, t, ca=ca, vig=0.42, red_keep=1.0), t, GU.key_for_t(t))   # 统一 grade 层
 
     def frame(self, f):
         return K.to8(self.frame_f(f / FPS))

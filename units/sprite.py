@@ -9,15 +9,15 @@
   - 精灵空间（风吹 + 调色 + rim + look）按参数缓存：同镜同帧的多个甲士只算一次（39 精灵 → 3~6 次）
   - SPRITE_FAST=0 回到旧的全画布实现（对拍用）
 
-2026-11-09 性能前置 R2（渲染组）：把「每个精灵都要算一遍整幅调色」彻底拆掉（C18 单帧 47s → 个位数秒）
+2026-11-09 性能前置 R2（渲染组）：把「每个精灵都要算一遍整幅调色」彻底拆掉（C18 单帧 47s → 5~6s）
   1) 线性基底缓存：精灵空间 F = A0·k0 + Arim·krim + k1，
-       A0   = clip(lum + (F-lum)·sat, 0, 1) ** gamma        （风后 F 的调色 + 保色红）
-       Arim = (ring·(0.25+0.75·facing))·A                    （冷色 rim 的几何项）
-     只跟 (层, 帧, 风幅, sat, gamma, keep_red, rim_dir) 有关，一帧每层算一次；
-     每个精灵自己的 expo / tint / lift / rim.col·rim.amt 只是**系数**。
-     等价性：_front 的 F 对这四个量是仿射的，_look 的 None/'sil' 也是仿射的；
+       A0   = clip(lum + (F-lum)·sat, 0, 1) ** gamma · tint   （风后 F 的调色 + 保色红 + 逐像素色调）
+       Arim = (ring·(0.25+0.75·facing))·A                      （冷色 rim 的几何项）
+     只跟 (层, 帧, 风幅, sat, gamma, tint, keep_red, rim_dir) 有关，一帧每层算一次；
+     每个精灵自己的 expo / lift / rim.col·rim.amt 只剩**标量/三系数**。
+     等价性：_front 的 F 对 expo/lift/rim.col·rim.amt 是仿射的，_look 的 None/'sil' 也是仿射的；
      canvas 空间剩下的算子（warpAffine / shade / mblur / rotblur / defocus / wrap / 合成）对 F 全部线性，
-     所以「先算整幅 F 再 warp」≡「各基底分别 warp 再线性组合」，只在 float32 舍入级有差别。
+     所以「先算整幅 F 再 warp」≡「各基底分别 warp 再线性组合」，只在 float32 舍入级有差别（实测 ≤2.4e-7）。
   2) 精灵空间只在 alpha 支撑 + 余量内算（wind 位移与 rim 模糊半径都落在余量里）；
      A>0 之外 F 只以 Aw 为权进入画面（各处都是 Fw*Aw 再除 clip(Aw)），故裁剪不影响可见像素。
   3) 同一张 PNG 的预处理（LANCZOS 缩放 / 距离变换 / 发区模糊）在进程内共享：flip 变体只做翻转拷贝。
@@ -37,8 +37,7 @@ _BCACHE = {}      # 线性基底（层 / 帧 / 风参 / 调色形参）
 _WCACHE = {}      # wind() 全图结果
 _RAW = {}         # 同一 PNG 的预处理（flip 变体共用）
 _SMALL = None     # 36×64 的风场网格
-_LUMW = np.array([[0.3, 0.59, 0.11]], np.float32)
-_LUMW3 = np.array([[0.3, 0.59, 0.11]] * 3, np.float32)      # 三通道同步输出（cv2.transform，避开 stride-0 广播）
+_LUMW3 = np.array([[0.3, 0.59, 0.11]] * 3, np.float32)      # 亮度权重×3 行 → cv2.transform 三通道同步输出（避开 stride-0 广播）
 _UID = [0]
 _BCACHE_MAX = 8
 
@@ -199,13 +198,19 @@ class SpriteLayer:
         return self._supp
 
     def _crop_box(self, amp):
-        got = self._box.get(amp)
+        # 键带上 alpha 数组身份与支撑框：sec_d_bridge 有 copy.copy(base) 后改 sp.A 的用法，
+        # 浅拷贝会共享 _box 这个 dict，不能只按 amp 缓存，否则两个实例会互相串窗口。
+        x0, y0, x1, y1 = self._support()
+        key = (float(amp), self._supp_for, self._supp)
+        got = self._box.get(key)
         if got is None:
-            x0, y0, x1, y1 = self._support()
             m = int(math.ceil(abs(float(amp)) * 2.0)) + 14
-            x0, y0 = max(0, x0 - m), max(0, y0 - m)
-            x1, y1 = min(self.w, x1 + m), min(self.h, y1 + m)
-            got = self._box[amp] = (x0, y0, max(1, x1 - x0), max(1, y1 - y0))
+            got = (max(0, x0 - m), max(0, y0 - m),
+                   max(1, min(self.w, x1 + m) - max(0, x0 - m)),
+                   max(1, min(self.h, y1 + m) - max(0, y0 - m)))
+            if len(self._box) > 16:
+                self._box.clear()
+            self._box[key] = got
         return got
 
     # ---- 精灵空间：风吹 + 调色 + rim + look（同参数可复用；同镜多精灵只算一次）
