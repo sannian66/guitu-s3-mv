@@ -19,6 +19,17 @@ import d_r5 as R5
 import d_r7 as R7
 from d_kit import V, cp, seal_p, INK, CINNABAR, GOLD, RED, W, H, BAR
 
+# =====================================================================================
+# [r4-DE#46] 用户 51 条之 #46：**180–241s 除 5 处保留外全部去文字（画内字）**。
+#   保留：S21「规矩」/ S26「判」（D 段）、E04-E05「天理昭彰」/ E12「鬼屠」印 / E15「天理」/ E16-E17 ✓✗（E 段）
+#   删除：本集合里的镜 —— 只关「画内巨字」，弹幕式字墙 / 律令碑林 / 木牌 这类道具纹理保留。
+#   分类表见 crew/round4/DE_notes_r1.md；回滚 = 把镜号从集合里删掉。
+NO_GLYPH = {'S18_Draw', 'S19_Forge', 'S25_Leap', 'S27_Bullet', 'S28_Spin', 'S29_Thrust', 'S30_Da'}
+
+
+def glyph_off(sid):
+    return sid in NO_GLYPH
+
 READY = True
 F0, F1 = 4839, 5797
 T0, T1 = F0 / 30, F1 / 30
@@ -1011,8 +1022,9 @@ class S18_Draw(Shot):
         fr = K.rain(fr, t, 18, n=500, amt=0.3, angle=6)
         fr = K.fog(fr, t, 44, amt=0.35, speed=(60, 0), y0=0.72, y1=1.0, color=(0.25, 0.27, 0.32))
         # [r4] 「只」「听」= 冷钢字：与刃上同一道寒光同步扫过（字和刀是同一块钢），不再是白宋体
-        fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
-                           sweep_x=lerp(-200, 900, eo(u, 2)))
+        if not glyph_off('S18_Draw'):                                        # [r4-DE#46] 去「只」「听」
+            fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
+                               sweep_x=lerp(-200, 900, eo(u, 2)))
         return K.cam(fr, 1.03, -20 + 40 * u, 0), 0.0
 
 
@@ -1068,7 +1080,8 @@ class S19_Forge(Shot):
         fr = K.sparks(fr, t, 1950, (bx - 200, 640), n=70, life=0.5, speed=(400, 1100), dirc=(0.3, -1), spread=0.5, grav=600, area=(300, 30), amt=0.9)
         sp_ = seal_p(t, 181.1)
         if sp_ > 0:
-            fr = T.stamp_seal(fr, '我', 270, 330, 220, sp_, style='yin', rot=-6, seed=19, color='red')
+            if not glyph_off('S19_Forge'):                                   # [r4-DE#46] 去「我」朱印
+                fr = T.stamp_seal(fr, '我', 270, 330, 220, sp_, style='yin', rot=-6, seed=19, color='red')
             hits.append(V(181.1))
         return shake_cam(fr, t, hits, 7, z=1.0 + 0.05 * u), 0.0
 
@@ -1371,7 +1384,7 @@ class S25_Leap(Shot):
         # [r4] 「我」被刀光沿斩线方向刻出：空心白热描边 + 朱红外发光，斜放在刀光轨迹上（右上）
         tw = V(O[46][3])
         rv = cl((t - (tw - 0.12)) / 0.3)
-        if rv > 0: fr = D.light_glyph(fr, '我', 1440, 360, 340, rv, rot=20.0, d=(0.8, -0.6))
+        if rv > 0 and not glyph_off('S25_Leap'): fr = D.light_glyph(fr, '我', 1440, 360, 340, rv, rot=20.0, d=(0.8, -0.6))   # [r4-DE#46] 去「我」
         return shake_cam(fr, t, [ts], 8, z=1.02 + 0.05 * u, oy=-15 * u), 0.0
 
 
@@ -1486,7 +1499,7 @@ class S27_Bullet(Shot):
         # 刀身上烙刻「刀」
         tk = V(O[47][0])
         p = cl((t - (tk - 0.22)) / 0.26)
-        if p > 0:
+        if p > 0 and not glyph_off('S27_Bullet'):                                   # [r4-DE#46] 去「刀」热字
             gy = dst[1] + 0.06 * self.sp.h * self.SC
             gx = dst[0] + self.slope * (gy - dst[1])
             A = T.brush_glyph('刀', 'serif_black', 175, p, 0, 0.0, 1.0, splatter=False)
@@ -1546,7 +1559,8 @@ class S28_Spin(Shot):
         fr = D.droplets(fr, t, 281, n=150, burst=(tw, (1000, 560)), focus=0.6)
         fade = math.exp(-max(0.0, t - self.t0 - 0.2) / 0.25)
         # [r4] 「我」在他身后：金色定格残影字（残影层随刀圈错位、慢慢收拢），被人物遮挡 → 字在画面空间里，不是贴片
-        fr = D.echo_glyph(fr, '我', 640, 450, 480, cp(t, O[47][3], 0.12), n=5, step=(60, -14), fade=0.4 + 0.6 * math.exp(-max(0.0, t - V(O[47][3])) / 0.35))
+        if not glyph_off('S28_Spin'):                                              # [r4-DE#46] 去「我」残影
+            fr = D.echo_glyph(fr, '我', 640, 450, 480, cp(t, O[47][3], 0.12), n=5, step=(60, -14), fade=0.4 + 0.6 * math.exp(-max(0.0, t - V(O[47][3])) / 0.35))
         for k in range(5, 0, -1):          # 金色残影
             tk = t - k * 0.035
             a = 0.32 * (1 - k / 6) * fade
@@ -1632,7 +1646,7 @@ class S29_Thrust(Shot):
         # [r4] 「来」被刀尖金光从正中碑里裂出来（金缝沿笔画推进 → 整字爆亮）
         tl = V(O[47][4])
         pq = cl((t - (tl - 0.15)) / 0.4)
-        if pq > 0: fr = D.crack_glyph(fr, '来', 960, 285, 200, pq, seed=29)
+        if pq > 0 and not glyph_off('S29_Thrust'): fr = D.crack_glyph(fr, '来', 960, 285, 200, pq, seed=29)   # [r4-DE#46] 去「来」
         return shake_cam(fr, t, [V(O[47][4])], 6, z=1.0 + 0.05 * u, oy=-20 * u), 0.0
 
 
@@ -1678,7 +1692,7 @@ class S30_Da(Shot):
         fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), (960, 1000 + 160 * eo(u, 2)), D.fit_scale(self.sp, 420), expo=0.5, sat=0.5,
                               tint=(1.05, 0.95, 0.85), rim=GOLDR, rim_amt=5.0, rim_dir=(0.0, -1.0), wind=12, look='sil')
         p = cp(t, O[47][5], 0.1)
-        if p > 0:
+        if p > 0 and not glyph_off('S30_Da'):                                       # [r4-DE#46] 去「答」巨字
             L = D.text_layer([('答', 960, 470, 640, min(1, p * 2), 1 + 0.35 * (1 - eo(p)) + 0.05 * u, 0.0, GOLD)], fname='serif_black')
             fr = T.compose(fr, L, shadow=0.85, shadow_sigma=40, glow=0.5, glow_color=(1.0, 0.55, 0.2), glow_sigma=30)
             fr = K.sparks(fr, t, 3001, (960, 470), n=220, life=1.0, speed=(500, 1600), dirc=(0, -1), spread=3.1, grav=150, burst=True,

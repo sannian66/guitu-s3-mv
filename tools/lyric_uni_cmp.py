@@ -402,6 +402,30 @@ def compact(frames=None):
 
 
 # ---------------------------------------------------------------- ⑤ 重复出字：审计 + 像素检测
+PROP_JSON = os.path.join(ROOT, 'out', 'props_dev', 'prop_boxes.json')
+
+
+def prop_boxes():
+    """props 组「画内道具框」：{帧号: [(x0,y0,x1,y1, 词, why)]}。
+
+    文件格式：{"L01": {frames:[...], box:[x0,y0,x1,y1], key:"夜", fn:"穿线", why:"..."}, …}（19 条）。
+    dupcheck 的归因链：IN_SCENE（按词）→ IN_SCENE_BOX（按实测框）→ **PROP_BOX（按道具框）**。
+    做法不是「重叠才归因」，而是**先把 props 负责的区域整块从检测图里挖掉**，剩下的才算残留；
+    顺带反向检查「props 框里没有字迹 = 该画未画」，那才是真 bug。
+    """
+    try:
+        d = json.load(open(PROP_JSON, encoding='utf-8'))
+    except OSError:
+        return {}, []
+    by_frame, entries = {}, []
+    for k, v in d.items():
+        x0, y0, x1, y1 = [int(t) for t in v['box']]
+        for f in v.get('frames', []):
+            by_frame.setdefault(int(f), []).append((x0, y0, x1, y1, v.get('key', ''), v.get('why', k)))
+        entries.append((k, v.get('key', ''), [int(t) for t in v.get('frames', [])], (x0, y0, x1, y1), v.get('fn', ''), v.get('why', '')))
+    return by_frame, entries
+
+
 def _picks21():
     """7 段 × 3 帧（每段取最长句 / 最短句 / 重音句中那帧）。"""
     L = _lines()
@@ -410,6 +434,13 @@ def _picks21():
         for r in pick_lines(L, rng):
             out.append((name, r['line'], fnum(t_of(r))))
     out.append(('EVIDENCE_f3050(用户证据帧)', 23, 3050))      # 用户抓到的双字幕帧，必须一直是 0 重复
+    pb, ents = prop_boxes()                                  # props 的 19 处画内道具各取 1 帧（取中帧）
+    for k, word, frs, bx, fn, why in ents:
+        if not frs:
+            continue
+        f = int(frs[len(frs) // 2])
+        hit = [r for r in L if r['t_on'] <= f / 30.0 < r['t_off']]
+        out.append(('PROP_%s「%s」%s' % (k, word, fn), hit[0]['line'] if hit else -1, f))
     return out
 
 
@@ -452,6 +483,40 @@ def audit():
     return out
 
 
+def prop_ab(frames):
+    """props 存在性 A/B：同一帧渲 PROPS_OFF=1 与正常两版，量每个道具框内的平均差。
+
+    亮度检测测不到「极暗的朱印」，A/B 差是唯一可靠口径（props_dev 的 PROPS_OFF 就是为此留的）。
+    返回 {帧号: [(word, diff*255, box)]}
+    """
+    import numpy as np
+    from PIL import Image
+    pb, ents = prop_boxes()
+    frs = [f for f in frames if f in pb]
+    if not frs:
+        return {}
+    jobs = [(1, f, os.path.join(TMP, f'propoff_{f}.png')) for f in frs]
+    os.environ['PROPS_OFF'] = '1'
+    try:
+        render(jobs)
+    finally:
+        os.environ.pop('PROPS_OFF', None)
+    out = {}
+    for f in frs:
+        p_off = os.path.join(TMP, f'propoff_{f}.png')
+        p_on = os.path.join(TMP, f'dup_{f}.png')
+        if not (os.path.exists(p_off) and os.path.exists(p_on)):
+            continue
+        A = np.asarray(Image.open(p_on).convert('RGB'), np.float32)
+        B = np.asarray(Image.open(p_off).convert('RGB'), np.float32)
+        rows = []
+        for (x0, y0, x1, y1, word, why) in pb.get(f, []):
+            d = float(np.abs(A[y0:y1, x0:x1] - B[y0:y1, x0:x1]).mean() * 255.0) if (x1 > x0 and y1 > y0) else 0.0
+            rows.append((word, d, (x0, y0, x1, y1)))
+        out[f] = rows
+    return out
+
+
 def _textmask(img, box):
     """字幕区里「像字」的像素：局部对比高的暗/亮笔画。"""
     import numpy as np
@@ -487,6 +552,7 @@ def dupcheck(extra=None):
         picks.append(('EXTRA_f%d' % f, act[0]['line'] if act else 0, int(f)))
     jobs = [(1, f, os.path.join(TMP, f'dup_{f}.png')) for _, _, f in picks]
     render(jobs)
+    AB = prop_ab([f for _, _, f in picks])
     rows, bad = [], []
     for name, ln, f in picks:
         p = os.path.join(TMP, f'dup_{f}.png')
@@ -494,7 +560,24 @@ def dupcheck(extra=None):
             continue
         img = np.asarray(Image.open(p).convert('RGB'))
         box = (1500, 200, 1920, 900)
-        m = _textmask(img, box)
+        m_all = _textmask(img, box)
+        m = m_all.copy()
+        # ① props 负责的区域整块挖掉（这些字是画内道具，不是字幕重复），并反向检查「该画未画」
+        props_here, prop_missing = [], []
+        m_full = _textmask(img, (0, 0, img.shape[1], img.shape[0]))     # 全幅：测「该画未画」用整框，不按字幕带裁
+        for (px0, py0, px1, py1, word, why) in prop_boxes()[0].get(f, []):
+            ink = int(m_full[py0:py1, px0:px1].sum())                   # 整框、全幅
+            inband = not (px1 <= box[0] or px0 >= box[2] or py1 <= box[1] or py0 >= box[3])
+            props_here.append('%s(框内笔画%d%s)' % (word, ink, '' if inband else '，框在字幕带外'))
+            ab = AB.get(f, [])
+            d = next((v for (w2, v, _b) in ab if w2 == word), None)
+            if d is not None:
+                props_here[-1] = '%s(A/B差%.2f)' % (word, d)
+                if d < 0.30:                                            # 与 PROPS_OFF=1 几乎没差 → 该道具没画（真 bug）
+                    prop_missing.append((word, int(round(d * 100)), why))
+            if inband:                                                  # 字幕带内的部分整块挖掉
+                cv2.rectangle(m, (max(px0, box[0]) - box[0], max(py0, box[1]) - box[1]),
+                              (min(px1, box[2]) - box[0], min(py1, box[3]) - box[1]), 0, -1)
         # 挖掉我自己画的字形框（含 1px 描边与朱晕）
         os.environ['LYRIC_UNI'] = '1'
         LU._maybe_out()
@@ -531,23 +614,75 @@ def dupcheck(extra=None):
             att.append('画面内字 ' + why)
         ok = (not big) or bool(att)
         bb = sorted(big, reverse=True)[:3]
-        rows.append((name, ln, f, len(big), max([b[0] for b in big]) if big else 0, att, ok, bb))
-        if not ok:
-            bad.append((name, ln, f, len(big), max(b[0] for b in big), att))
+        rows.append((name, ln, f, len(big), max([b[0] for b in big]) if big else 0, att, ok, bb,
+                     props_here, prop_missing))
+        if not ok or prop_missing:
+            bad.append((name, ln, f, len(big), max([b[0] for b in big]) if big else 0, att, prop_missing))
     print('== 逐帧像素检测（字幕区 x1500–1920 / y200–900，挖掉我的字形框后剩下的「成块笔画」）')
     print('   判定：残留块 0 → 干净；有残留但能归到 IN_SCENE 画面内字（且字幕已留空）→ 干净；否则 ⚠ 重复')
-    for name, ln, f, n_, mx, att, ok, bb in rows:
-        print('   %-22s 第%2d句 f%5d  字形块 %2d  最大%5dpx  %s%s%s' % (
+    for name, ln, f, n_, mx, att, ok, bb, ph, pm in rows:
+        print('   %-26s 第%2d句 f%5d  字形块 %2d  最大%5dpx  %s%s%s%s' % (
             name, ln + 1, f, n_, mx, '✓' if ok else '⚠ 未归因',
             ('  画面内字：' + '、'.join(att)) if att else '',
-            ('  位置 ' + ','.join('%d,%d %dx%d' % (x, y, w_, h_) for a_, w_, h_, x, y in bb)) if bb and not ok else ''))
+            ('  props接管：' + '、'.join(ph)) if ph else '',
+            ('  ✗ props该画未画：' + '、'.join('%s ink=%d' % (w, i) for (w, i, _y) in pm)) if pm else ''))
     with open(os.path.join(OUTDIR, 'dup_frames.md'), 'w', encoding='utf-8') as fh:
-        fh.write('# 22 帧重复出字复检（像素检测 + 归因）\n\n')
-        fh.write('| 段 | 句 | 帧 | 残留笔画块 | 最大面积 | 画面内字（已留空） | 判定 |\n|---|---|---|---|---|---|---|\n')
-        for name, ln, f, n_, mx, att, ok, bb in rows:
-            fh.write('| %s | %d | %d | %d | %d | %s | %s |\n' % (
-                name, ln + 1, f, n_, mx, '、'.join(att) or '—', '✓ 干净' if ok else '⚠ 未归因'))
-    print('== 判定：%d/%d 帧干净，重复 %d 处' % (len(rows) - len(bad), len(rows), len(bad)))
+        fh.write('# 重复出字复检（像素检测 + 三段归因：IN_SCENE / IN_SCENE_BOX / PROP_BOX）\n\n')
+        fh.write('帧集合 = 7 段 × 3 句 + 用户证据帧 3050 + props 的 19 处道具各 1 帧。\n\n')
+        fh.write('| 段/来源 | 句 | 帧 | 残留笔画块 | 最大面积 | 画面内字 | props 接管（框内笔画） | 判定 |\n'
+                 '|---|---|---|---|---|---|---|---|\n')
+        for name, ln, f, n_, mx, att, ok, bb, ph, pm in rows:
+            fh.write('| %s | %d | %d | %d | %d | %s | %s | %s |\n' % (
+                name, ln + 1, f, n_, mx, '、'.join(att) or '—', '、'.join(ph) or '—',
+                '✓ 干净' if ok and not pm else ('⚠ props未画' if pm else '⚠ 未归因')))
+    # 跨帧复核：probe 帧没笔画的 props，再量它自己的其它帧（烧/擦中途消失是允许的）
+    miss0 = [r for r in rows if r[9]]
+    if miss0:
+        ents = {('L%02d' % 0)[:0]: None}
+        pbj = json.load(open(PROP_JSON, encoding='utf-8'))
+        word2frames = {}
+        for k, v in pbj.items():
+            word2frames.setdefault(v.get('key', ''), []).extend([int(x) for x in v.get('frames', [])])
+        extra_hits = []
+        for r in miss0:
+            for (word, ink, why) in r[9]:
+                frs = sorted(set(word2frames.get(word, [])) - {r[2]})
+                if frs:
+                    extra_hits.append((word, frs))
+        todo = []
+        for word, frs in extra_hits:
+            for f2 in frs:
+                todo.append((1, f2, os.path.join(TMP, f'dup_{f2}.png')))
+        if todo:
+            render(todo)
+        recheck = {}
+        for word, frs in extra_hits:
+            best = 0
+            for f2 in frs:
+                p2 = os.path.join(TMP, f'dup_{f2}.png')
+                if not os.path.exists(p2):
+                    continue
+                im2 = np.asarray(Image.open(p2).convert('RGB'))
+                mf = _textmask(im2, (0, 0, im2.shape[1], im2.shape[0]))
+                bx = None
+                for (px0, py0, px1, py1, w2, _w) in prop_boxes()[0].get(f2, []):
+                    if w2 == word:
+                        bx = (px0, py0, px1, py1)
+                if bx:
+                    best = max(best, int(mf[bx[1]:bx[3], bx[0]:bx[2]].sum()))
+            recheck[word] = best
+        rows = [(name, ln, f, n_, mx, att, ok, bb,
+                 ph, [(w, ink, why) for (w, ink, why) in pm if recheck.get(w, 0) < 40])
+                for (name, ln, f, n_, mx, att, ok, bb, ph, pm) in rows]
+        for w_, v_ in recheck.items():
+            print('   跨帧复核「%s」：其它帧最大框内笔画 %d %s' % (w_, v_, '→ 该道具在本窗口内会烧/擦掉，不算漏画' if v_ >= 40 else '→ 确实全程没有'))
+    unatt = [r for r in rows if not r[6]]
+    miss = [r for r in rows if r[9]]
+    print('== 判定：%d/%d 帧干净，⚠ 未归因 %d 处，✗ props 该画未画 %d 处' % (
+        len(rows) - len(unatt), len(rows), len(unatt), len(miss)))
+    for name, ln, f, n_, mx, att, ok, bb, ph, pm in miss:
+        print('   ✗ props 框内无笔画（待 props 确认是否漏画）：%-26s f%d  %s' % (
+            name, f, '、'.join('%s ink=%d' % (w, i) for (w, i, _y) in pm)))
     return bad
 
 

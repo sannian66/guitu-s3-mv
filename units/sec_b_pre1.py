@@ -850,7 +850,7 @@ class P12(Shot):
         if self.plate is not False:
             fr = self.plate.copy()
             # 冷调 + 刀身位置补一点中心光（图本身已很暗，靠这层把脸从黑里提出来）
-            fr = fr * (0.90 + 0.22 * np.exp(-(((x - 960) / 560) ** 2 + ((y - 470) / 560) ** 2)))[..., None] \
+            fr = fr * (0.60 + 0.20 * np.exp(-(((x - 960) / 560) ** 2 + ((y - 470) / 560) ** 2)))[..., None] \
                  * np.array([0.96, 0.99, 1.05], np.float32)
             fr += np.exp(-(((x - 960) / 420) ** 2 + ((y - 300) / 900) ** 2))[..., None] * np.array([0.02, 0.025, 0.035], np.float32)
         else:

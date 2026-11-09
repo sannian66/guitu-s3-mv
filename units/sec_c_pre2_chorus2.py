@@ -29,6 +29,9 @@ LYRIC_UNI = os.environ.get('LYRIC_UNI', '0') == '1'   # [lyric-uni] 全片统一
 # [r4-c-r1 #39/#42/#43] 用户要求 C 段 125–148s / 158–162s 画面里不要文字 → props 组挂在这几镜末尾的道具字层
 # （props_dev.play，只加不删的那 5 处）在这几镜里全部跳过。只关本文件的调用点，不动 props_dev.py（props 组的文件）。
 PROPS_TEXT_OFF = True
+# [r4-c-r1 #38] 2m7「大局为上」：用户要求直接把这四个字做进图里（图生图 c09_plaque），整帧替换、去掉文字分层。
+# 图已到 assets/gen/r1/c09_plaque.png → 下面 C10 走整帧替换分支；图不在时自动退回原来那套四块吊匾（且已改成「不卡点」）。
+C09_PLATE = 'r1/c09_plaque.png' if os.path.exists(ROOT_DIR + '/assets/gen/r1/c09_plaque.png') else None
 
 # 第九棒：c_kit.tex 的缓存键只认名字不认 seed —— 'c1'/'c2'/'gw' 三张云/水纹底图由「本进程第一个调用的镜头」决定，
 # 导致分块渲染 / 联系表分批时同一帧长得不一样（例：C15 批渲成一团白曝、整段顺渲则是清楚的落地闪电）。
@@ -863,6 +866,21 @@ class C10(Shot):
         tc = V(127.86)
         fl = bolt_env(t, tc) * 0.7 + 0.35 * bolt_env(t, V(127.22))
         tins = [V(CT(30, k)) for k in (11, 12, 13, 14)]
+        if C09_PLATE:
+            # [#38] 整帧替换（r1/c09_plaque.png：刀上撩 + 右侧吊牌「大局為上」已烧进图里）：
+            # 代码这层只剩轻推、雷光和 127.86 那一道刀光——不再贴字、不再卡点、匾也不掉。图自带雨，不叠加代码雨。
+            P = plate_frame(C09_PLATE)
+            fr = np.zeros((H, W, 3), np.float32) + 0.005
+            fr[BAR:BAR + P.shape[0]] = P
+            s_ = 1.0 + 0.05 * eio(u)
+            M = np.float32([[s_, 0, W / 2 * (1 - s_)], [0, s_, H / 2 * (1 - s_)]])
+            fr = cv2.warpAffine(fr, M, (W, H), borderMode=cv2.BORDER_REPLICATE)
+            fr = fr * (0.92 + 0.45 * fl)
+            fr = blade_smear(fr, (600, 322), (1160, 248), (t - tc) / 0.22, bend=-0.08, width=52, seed=10, amt=1.25)
+            if t >= tc:
+                fr = sparks(fr, t, 101, (940, 300), n=90, life=0.5, speed=(200, 800), dirc=(1, -0.2), spread=1.2, grav=900, t0=tc, burst=True,
+                            color=(1.0, 0.8, 0.5), area=(500, 10))
+            return fr
         fr = (self.P if t < tc else self.bg) * (0.85 + 0.6 * fl)
         if t >= tc:
             k = t - tc
@@ -876,16 +894,16 @@ class C10(Shot):
             else:
                 k = t - tc
                 dy = 1400 * k * k * (0.85 + 0.12 * i) + 60 * k; ang = sw + (50 + 25 * i) * k * (1 if i % 2 else -1)
-            gl = sm(ti - 0.06, ti + 0.04, t)
+            gl = 1.0                       # [#38] 不卡点：四个字一进来就都在匾上（原来是逐拍 sm(ti-0.06, ti+0.04) 亮起）
             C = tb['C'].copy()
-            gold = np.array([1.0, 0.76, 0.36], np.float32) * (0.75 + 0.9 * pulse(t, ti, 0.25) + 0.5 * fl)
+            gold = np.array([1.0, 0.76, 0.36], np.float32) * (1.05 + 0.35 * fl)     # [#38] 亮度不再跟着拍子跳，只跟雷光
             C = C * (1 - tb['G'][..., None] * gl) + tb['G'][..., None] * gl * gold
             Mx = cv2.getRotationMatrix2D((tb['w'] / 2, tb['h'] * 0.05), ang, 1.0)
             Mx[0, 2] += tb['x0']; Mx[1, 2] += tb['y0'] + dy
             Cw = cv2.warpAffine(C, Mx, (W, H)); Aw = cv2.warpAffine(tb['A'], Mx, (W, H))[..., None]
             fr = fr * (1 - Aw) + Cw * Aw
-            if gl > 0:
-                fr = K.vol_light(fr, (tb['cx'], tb['y0'] + tb['h'] * 0.36 + dy), 90, (1.0, 0.7, 0.3), 0.5 * pulse(t, ti, 0.3) * (t < tc + 0.3))
+            if gl > 0 and t < tc + 0.3:            # [#38] 字上的光晕也不再跟拍子脉冲（只跟雷光）
+                fr = K.vol_light(fr, (tb['cx'], tb['y0'] + tb['h'] * 0.36 + dy), 90, (1.0, 0.7, 0.3), 0.25 + 0.35 * fl)
         fr = blade_smear(fr, (180, 300), (1760, 330), (t - tc) / 0.22, bend=0.10, width=60, seed=10, amt=1.4)
         fr = sparks(fr, t, 101, (960, 315), n=90, life=0.5, speed=(200, 800), dirc=(1, -0.2), spread=1.2, grav=900, t0=tc, burst=True,
                     color=(1.0, 0.8, 0.5), area=(700, 10)) if t >= tc else fr
@@ -1399,13 +1417,15 @@ class C21(Shot):
         u = self.u(t)
         tx = V(139.48)
         A = storm(t, 211, horizon=1300, flash=0.3, ground=False) * np.array([1.1, 0.75, 0.72], np.float32)
-        A = scene_glyph(A, '邪', 268, 306, 238, tint=(0.95, 0.15, 0.09), amt=0.88, glow=0.55, rot=-3)   # [#40] 先字
-        A, _ = put(A, t, 'S072/rise_draw', 566 - 34 * u, self.GY, 920, rim=RED * 1.3, rim_amt=3.2, rim_dir=(0.9, -0.4), expo=0.85, wind=7,
+        A = scene_glyph(A, '邪', 404, 300, 216, tint=(0.84, 0.20, 0.14), amt=0.82, glow=0.50, rot=-3)   # [#40] 先字（半掩在左人肩后）
+        # [#40] 两张角色图改成同一张主角单体（右镜像）——积分耗尽不能单生"双人对称图"，同一张图左右各摆一次，
+        # 对称性是准的：他 / 镜像的他。脚底共用 GY，身高 920（头留在 2.39 画幅内，脚被下遮幅切在脚踝 = 站在地上）。
+        A, _ = put(A, t, 'r1/g_c22_hero', 552 - 22 * u, self.GY, 920, rim=RED * 1.3, rim_amt=3.2, rim_dir=(0.9, -0.4), expo=0.85, wind=4,
                    flash=0.6 * pulse(t, tx, 0.2))
         A = rain(A, t, 211, inten=0.7, angle=10, color=np.array([1.0, 0.5, 0.45], np.float32))
         B = storm(t, 212, horizon=1300, flash=0.3, ground=False) * np.array([1.08, 0.98, 0.82], np.float32)
-        B = scene_glyph(B, '正', 1246, 266, 238, tint=(1.0, 0.78, 0.40), amt=0.85, glow=0.50, rot=2)     # [#40] 先字
-        B, _ = put(B, t, 'S074/head_turn', 1544 + 34 * u, self.GY, 862, flip=True, rim=GOLD, rim_amt=3.0, rim_dir=(-0.9, -0.4), expo=0.7, wind=5)
+        B = scene_glyph(B, '正', 1516, 300, 216, tint=(0.94, 0.75, 0.42), amt=0.80, glow=0.45, rot=2)     # [#40] 先字（半掩在右人肩后）
+        B, _ = put(B, t, 'r1/g_c22_hero', 1368 + 22 * u, self.GY, 920, flip=True, rim=GOLD, rim_amt=3.0, rim_dir=(-0.9, -0.4), expo=0.9, wind=4)
         B = rain(B, t, 212, inten=0.7, angle=10, color=np.array([1.0, 0.85, 0.6], np.float32))
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         d = (xx - 960) * 0.88 + (yy - 540) * 0.47              # 斜线（约 62°）
@@ -1998,6 +2018,20 @@ class C35b(Shot):
 
 
 _PLATE = {}
+def plate_frame(path, w=W, h=H - 2 * BAR):
+    """[r4-c-r1 #38] 图生图整帧底板（文件已自带 2.39 遮幅）：裁掉图里的黑边，只取内容区缩放到内容画幅，
+    避免「图里的黑边 + finish() 的黑边」错位出一道缝。path 是相对 assets/gen 的 '_raw/_frame' 文件名（这里是 .png 原图）。"""
+    k = (path, w, h)
+    if k not in _PLATE_FRAME:
+        im = cv2.imread(ROOT_DIR + '/assets/gen/' + path, cv2.IMREAD_COLOR)[..., ::-1].astype(np.float32) / 255.0
+        g = im.mean(-1); rows = g.mean(1); nz = np.where(rows > 0.012)[0]
+        if len(nz):
+            im = im[int(nz.min()):int(nz.max()) + 1]
+        _PLATE_FRAME[k] = cv2.resize(im, (w, h), interpolation=cv2.INTER_AREA)
+    return _PLATE_FRAME[k]
+
+
+_PLATE_FRAME = {}
 def plate(name, w=W, h=H):
     """生图整幅底板（assets/gen/<name>_raw.png）→ float32 线性 0..1，缩放到覆盖 w×h。"""
     if name not in _PLATE:
@@ -2132,7 +2166,8 @@ class C39(Shot):
         u = self.u(t)
         tq = V(158.56)
         fr = storm(t, 39, horizon=1300, flash=0.3 + 0.5 * pulse(t, V(159.01), 0.2) + 0.5 * pulse(t, tq, 0.15), ground=False, fc=(500, 200))
-        fr = K.vol_light(fr, (520, 520), 420, (1.0, 0.35, 0.15), 0.45 * sm(tq - 0.02, tq + 0.12, t) * (1 - 0.4 * sm(tq + 0.3, self.t1, t)))
+        # [r4-c-r1 #43] 原来这团赤光是为「量」字的刻火打的；字撤掉后改成一团落在刀身/身后的暖反光（不再是一块无源红光）。
+        fr = K.vol_light(fr, (1120, 720), 320, (1.0, 0.45, 0.22), 0.30 * sm(tq - 0.02, tq + 0.14, t) * (1 - 0.4 * sm(tq + 0.3, self.t1, t)))
         fr, _ = put(fr, t, 'S090/wind_up', 1180, 1110, 900 * (1.0 + 0.04 * eout(u)), rim=COLD, rim_amt=2.6, rim_dir=(-0.8, -0.6), expo=1.0,
                     wind=7, flash=0.4 * pulse(t, V(159.01), 0.2) + 0.5 * pulse(t, tq, 0.12))
         gq = clamp((t - tq) / 0.30)                # 第五棒（评审 P1 C39 近静止）：出鞘冷光沿刀身从护手扫到刀尖

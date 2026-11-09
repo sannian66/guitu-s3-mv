@@ -76,6 +76,60 @@ class Shot:
 
 def bloom(fr, thr=0.8, amt=0.5, sig=30): return K.bloom(fr, thr, amt, sig)
 
+# =====================================================================================
+# [r4-DE#46] 用户 51 条之 #46：**180–241s 除 5 处保留外全部去文字（画内字）**。
+#   保留：E04/E05「天理昭彰」匾、E12「鬼屠」朱印、E15「天理」木牌、E16→✓ / E17→✗（另 D 段 S21「规矩」/S26「判」不动）
+#   删除：下面这些镜的**屏幕大字**（LyrO/Lyr 那一层，>160px 的才留得下来）；
+#         镜内道具纹理（律令卷轴刻字、木牌、碑林）不在删除范围 —— 那是道具，不是标题字。
+#   分类表见 crew/round4/DE_notes_r1.md；回滚 = 把镜号从集合里删掉。
+NO_TXT = {'E07', 'E09', 'E10', 'E11', 'E25', 'E26'}
+#   E02 的「刀不放」朱印、E08 的「伪装」烧字、E20 的「天」巨字 是在 render() 里画的，用 glyph_off() 守卫
+NO_GLYPH = {'E02', 'E08', 'E20'}
+
+
+def glyph_off(sid): return sid in NO_GLYPH
+
+
+def _lp(a, b, t): return a + (b - a) * t
+
+
+def _mark(fr, t, t_on, cx, cy, S, col, kind='tick', rot=-6.0):
+    """[r4-DE#46] 用户：「对错」改成 ✓ / ✗ 两个符号，**用代码画**（粗笔画、朱红/金、和原字同位置同大小），不许用字体里的对勾字形。
+    手写感做法：分段变宽（起笔 0.72→中段 0.95→收笔 0.42 倍线宽）+ 两笔顺序落笔（0.42s）+ 轻微倾斜 + 暗衬 + 柔光。"""
+    p = c01((t - t_on) / 0.42)
+    if p <= 0: return fr
+    A = np.zeros((H, W), np.float32)
+    th = max(6.0, S * 0.155)
+
+    def seg(a, b, q, w0, w1, n=14):
+        for i in range(n):
+            u0, u1 = i / n, (i + 1) / n
+            if u0 >= q: break
+            u1 = min(u1, q)
+            ww = _lp(w1, w0, 1 - (u0 + u1) / 2) if False else _lp(w0, w1, (u0 + u1) / 2)
+            cv2.line(A, (int(_lp(a[0], b[0], u0)), int(_lp(a[1], b[1], u0))),
+                     (int(_lp(a[0], b[0], u1)), int(_lp(a[1], b[1], u1))), 1.0, max(1, int(ww)), cv2.LINE_AA)
+
+    if kind == 'tick':                                  # ✓：短笔下行 → 长笔上扬
+        p1 = (cx - 0.36 * S, cy + 0.00 * S); p2 = (cx - 0.07 * S, cy + 0.28 * S); p3 = (cx + 0.40 * S, cy - 0.34 * S)
+        seg(p1, p2, c01(p / 0.40), th * 0.72, th * 0.95)
+        seg(p2, p3, c01((p - 0.40) / 0.60), th * 0.95, th * 0.40)
+    else:                                               # ✗：左上→右下，再右上→左下（第二笔更长）
+        p1 = (cx - 0.32 * S, cy - 0.30 * S); p2 = (cx + 0.32 * S, cy + 0.32 * S)
+        p3 = (cx + 0.36 * S, cy - 0.28 * S); p4 = (cx - 0.38 * S, cy + 0.30 * S)
+        seg(p1, p2, c01(p / 0.40), th * 0.72, th * 0.95)
+        seg(p3, p4, c01((p - 0.40) / 0.60), th * 0.95, th * 0.40)
+    if abs(rot) > 1e-3:
+        M = cv2.getRotationMatrix2D((float(cx), float(cy)), rot, 1.0)
+        A = cv2.warpAffine(A, M, (W, H))
+    A = np.clip(cv2.GaussianBlur(A, (0, 0), 1.8), 0, 1).astype(np.float32)
+    c = np.array(col, np.float32)
+    fr = np.clip(fr, 0, 4).astype(np.float32)
+    fr = fr * (1 - 0.55 * cv2.GaussianBlur(A, (0, 0), 10)[..., None])          # 暗衬
+    fr = fr * (1 - A[..., None]) + A[..., None] * c * 1.05
+    return fr + cv2.GaussianBlur(A, (0, 0), max(2.0, S * 0.035))[..., None] * c * 0.30
+
+
 
 # =========================================================================================== 副歌终「定」
 class E01_r7(Shot):   # 第七棒代码刀（第八棒弃用，留作回退）S111 ECU竖刀刀尖朝天、纵贯画面偏右，逆光晨日在左下画外。
@@ -296,7 +350,8 @@ class E02(Shot):   # S112（第六棒重做，去和副歌一 S030「背影举�
             p = (t - (self.tm[k] - 0.09)) / 0.6
             if p > 0:
                 x, y, sz, rt = spots[k]
-                fr = T.stamp_seal(fr, ch, x, y, sz, min(1, p), style='yin', rot=rt, seed=40 + k, alpha=0.95)
+                if not glyph_off('E02'):                     # [r4-DE#46] 去「刀不放」朱印
+                    fr = T.stamp_seal(fr, ch, x, y, sz, min(1, p), style='yin', rot=rt, seed=40 + k, alpha=0.95)
         return fr
 
 
@@ -610,7 +665,8 @@ class E08(Shot):   # S117 CU（第七棒重做烧洞）纸糊太上皇巨脸：�
         for k in range(2):
             p = c01((t - (self.t_in[k] - 0.07)) / 0.12)
             if p <= 0: continue
-            fr = R7.self_burn_glyph(fr, self.tm[k] * p, t, self.t_in[k] - 0.07, seed=50 + k)
+            if not glyph_off('E08'):        # [r4-DE#46] 去「伪装」烧字
+                fr = R7.self_burn_glyph(fr, self.tm[k] * p, t, self.t_in[k] - 0.07, seed=50 + k)
         return fr
 
 
@@ -752,7 +808,7 @@ class E11(Shot):   # S120a 低机位 MS：刀插大地，尘环冲击；巨字�
         fr = E.dust_motes(fr, t, 1203, n=60, amt=0.4, drift=(80, -20))
         return bloom(fr, 0.8, 0.4)
 
-    def text(self, fr, t): return self.l2.draw(self.l1.draw(fr, t), t)
+    def text(self, fr, t): return self.l2.draw(self.l1.draw(fr, t), t)   # [r4-DE#46] 该镜（E11「定」）已在 NO_TXT 静音
 
 
 class E12(Shot):   # S120b ELS 正俯拍（第三棒返工）：大地即印面，「鬼屠」朱印盖下（摇臂升）；人物立在印旁（不压字），
@@ -990,7 +1046,7 @@ class E16(Shot):   # S123（第五棒改版式）CU 正面推近：整幅金色�
         fr = fr * (1 - w) + self.ink * w
         return bloom(fr, 0.85, 0.4)
 
-    def text(self, fr, t): return self.l2.draw(self.l1.draw(fr, t), t)
+    def text(self, fr, t): return _mark(self.l2.draw(fr, t), t, CT(53, 0), 1450, 500, 470, GOLD_T, 'tick')   # [r4-DE#46] 「对」→ ✓（代码画，位置/大小与原字一致）
 
 
 class E17(Shot):   # S124（第五棒改版式）MS 横向构图：整幅朱光，他在右侧中景回头冷视；左侧朱红巨字「错」，第二个「错」唱出时被一道衣袖暗影扫过、字翻转倒置
@@ -1013,7 +1069,7 @@ class E17(Shot):   # S124（第五棒改版式）MS 横向构图：整幅朱光�
         return bloom(fr * (1 - w) + self.ink * w, 0.85, 0.4)
 
     def text(self, fr, t):
-        F = self.l1.draw(fr.copy(), t)
+        F = _mark(fr.copy(), t, CT(53, 4), 480, 500, 470, REDT, 'cross', rot=4.0)   # [r4-DE#46] 「错」→ ✗（代码画；下面那套「衣袖扫过 → 翻转」动效保留）
         q = c01((t - self.tf) / 0.14)
         if q > 0:                                                            # 衣袖扫过 → 字横向翻转倒置
             sx = math.cos(math.pi * eio(q))
@@ -1102,7 +1158,7 @@ class E20(Shot):   # S126 ELS（第六棒重做，去和副歌一 S042「居中�
         # 天：墨色剪影巨字（偏左、大于半屏高）→ 熔化坍塌
         e = c01((t - (self.tt - 0.2)) / 0.2)
         A = np.zeros((H, W), np.float32)
-        if e > 0:
+        if e > 0 and not glyph_off('E20'):                    # [r4-DE#46] 去「天」墨色巨字（保留光束与日轮）
             a = T.glyph('天', 'serif_black', 640, False).copy()
             g = a.shape[0]
             q = c01((t - (self.tt + 0.22)) / 0.75)
@@ -1927,6 +1983,7 @@ class _Sec:
                     a = amp * math.exp(-q / 0.12)
                     x += a * math.sin(q * 90); y += a * math.cos(q * 73)
             fr = K.cam(np.clip(fr, 0, 4).astype(np.float32), z, x, y, r)
+        if sid in NO_TXT: return fr          # [r4-DE#46] 该镜屏幕大字按用户要求删除
         return o.text(fr, t)
 
     def frame_f(self, f):
