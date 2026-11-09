@@ -475,3 +475,33 @@
 - ✔ `s039w2_b` 3 点（task 2c44fa75）→ `assets/gen/rig/s039w2_b_raw.png` + `_cut.png`
 - ✔ `s039w2_c` 3 点（task f195870a）→ `assets/gen/rig/s039w2_c_raw.png` + `_cut.png`
 - ✔ `s039w2_d` 3 点（task 6429a40d）→ `assets/gen/rig/s039w2_d_raw.png` + `_cut.png`
+
+## 2026-11-09 21:12 · 批量生图（r1_fixes.json，12 张 / 36 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `v14_char` 3 点（task 53f4f261）→ `assets/gen/r1/v14_char.png` + `_cut.png`
+- ✔ `v16_seal` 3 点（task 988ddce8）→ `assets/gen/r1/v16_seal.png` + `_cut.png`
+- ✔ `v20_char` 3 点（task b2317a01）→ `assets/gen/r1/v20_char.png` + `_cut.png`
+- ✔ `v21_hand` 3 点（task eadf9fb0）→ `assets/gen/r1/v21_hand.png` + `_cut.png`
+- ✔ `p12_char` 3 点（task 025f737e）→ `assets/gen/r1/p12_char.png` + `_cut.png`
+- ✔ `s031_emperor` 3 点（task 92b64dca）→ `assets/gen/r1/s031_emperor.png` + `_cut.png`
+- ✔ `s046_blade_face` 3 点（task fdaa55d5）→ `assets/gen/r1/s046_blade_face.png` + `_cut.png`
+- ✔ `c09_plaque` 3 点（task 5e4694e0）→ `assets/gen/r1/c09_plaque.png` + `_cut.png`
+- ✔ `c22_pair` 3 点（task 78c22ef9）→ `assets/gen/r1/c22_pair.png` + `_cut.png`
+- ✔ `d17_char` 3 点（task 24032221）→ `assets/gen/r1/d17_char.png` + `_cut.png`
+- ✔ `e22_scale` 3 点（task eb1ecc83）→ `assets/gen/r1/e22_scale.png` + `_cut.png`
+- ✔ `e218_fix` 3 点（task bf39925f）→ `assets/gen/r1/e218_fix.png` + `_cut.png`
+
+## 2026-11-09 21:15 · 批量生图（r1_fixes.json，12 张 / 36 积分）
+- 渠道 `RH_image2` 4K，纯绿幕 #00FF00，抠图 `tools/cutout_green.py`
+- ✔ `v14_char` 3 点（task fab8c7f1）→ `assets/gen/r1/v14_char.png` + `_cut.png`
+- ✔ `v16_seal` 3 点（task 46c364bd）→ `assets/gen/r1/v16_seal.png` + `_cut.png`
+- ✔ `v20_char` 3 点（task 84999ad1）→ `assets/gen/r1/v20_char.png` + `_cut.png`
+- ✔ `v21_hand` 3 点（task bfd074df）→ `assets/gen/r1/v21_hand.png` + `_cut.png`
+- ✔ `p12_char` 3 点（task b3c19a68）→ `assets/gen/r1/p12_char.png` + `_cut.png`
+- ✔ `s031_emperor` 3 点（task ea3625e5）→ `assets/gen/r1/s031_emperor.png` + `_cut.png`
+- ✔ `s046_blade_face` 3 点（task 4b2f64a2）→ `assets/gen/r1/s046_blade_face.png` + `_cut.png`
+- ✔ `c09_plaque` 3 点（task 5c903bf4）→ `assets/gen/r1/c09_plaque.png` + `_cut.png`
+- ✔ `c22_pair` 3 点（task 34c7ae91）→ `assets/gen/r1/c22_pair.png` + `_cut.png`
+- ✔ `d17_char` 3 点（task 4eda7dad）→ `assets/gen/r1/d17_char.png` + `_cut.png`
+- ✔ `e22_scale` 3 点（task e3d02dc2）→ `assets/gen/r1/e22_scale.png` + `_cut.png`
+- ✔ `e218_fix` 3 点（task 302f6a57）→ `assets/gen/r1/e218_fix.png` + `_cut.png`
