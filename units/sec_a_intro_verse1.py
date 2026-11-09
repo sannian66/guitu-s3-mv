@@ -1643,11 +1643,11 @@ class V21(Shot):
         if a < 0:
             fr = T.compose(fr, L, shadow=0.7, glow=0.25)
         else:
-            fr = T.slash_layer(fr, L, clamp01(a / 0.73), (960, 540), -62, slide=0.35, sz=560, length=1500, sparks=90,
+            fr = T.slash_layer(fr, L, clamp01(a / 0.73), (960, 540), -62, slide=0.12, sz=560, length=1500, sparks=90,   # 第八棒：错开量 0.35→0.12，「锋芒」两半留在画里到末段
                                style_kw=dict(shadow=0.7, glow=0.3))
             if a < 0.07: fr = fr * 1.5 + 0.07 * RED
             # 墨缝：斩线处渗出墨（给 B 组 ink_bleed 入口）
-            k = clamp01((a - 0.42) / 0.31) ** 1.5                                         # 第八棒（P1-6）：墨缝收得更晚，43.9 前「锋芒」余烬仍在
+            k = clamp01((a - 0.58) / 0.15) ** 1.3                                         # 第八棒（P1-6）：墨缝收得更晚，43.9 前「锋芒」余烬仍在
             if k > 0:
                 yy, xx = np.mgrid[0:H // 2, 0:W // 2].astype(np.float32)
                 th = math.radians(-62); n = (-(xx * 2 - 960) * math.sin(th) + (yy * 2 - 540) * math.cos(th))
@@ -1979,6 +1979,8 @@ def a_zoom(A_, B_, p, center=(960, 540)):
 
 # 第八棒（critic_A_r5 P0-1）：镜头层镜内运动（在转场与歌词之前），保证起/止两帧机位可见不同
 INNER = {
+    'A01': dict(z=(1.0, 1.05), c=(960, 600)),
+    'A02': dict(z=(1.0, 1.05), c=(900, 560), d=(-50, 0)),
     'A03': dict(z=(1.0, 1.06), c=(900, 520), d=(-40, 0)),
     'A04': dict(z=(1.0, 1.07), c=(1250, 420), d=(-30, 10)),
     'A07a': dict(z=(1.0, 1.12), c=(960, 760), d=(0, 70), ease='lin'),                 # 升镜：城楼在画里下沉 + 推
