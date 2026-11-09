@@ -422,3 +422,7 @@
 | 11-09 07:02 | B组/fist3 | RH_image2 | 4K 16:9 | 3 | a627b366-29e6-4c16-83dc-f50a8448fbac | submitted | - | try1 extreme close-up of ONLY his right hand and wrist, no face,  |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | completed | b_cands/fist3_try1_0.png | try1 |
 | 11-09 07:06 | B组/fist3 | RH_image2 | 4K 16:9 | 0 | a627b366-29e6-4c16-83dc-f50a8448fbac | 采用 | assets/gen/B_r4/fist3_raw.png | try1 采用 |
+
+## 风格小样（黑白红墨线，2026-11-10 07:15 CST）
+- 渠道：Hark generate_image（0 积分）；参考 = 当前成片帧 + 用户风格图（out/style_test/style_ref.jpg）
+- 镜头 20.0 / 33.5 / 74.5 / 235.6s → out/style_test/style_<秒>.png，对比 out/style_test/style_test_compare.jpg，均 try1 采用
