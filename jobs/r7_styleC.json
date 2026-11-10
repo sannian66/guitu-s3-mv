@@ -1,0 +1,54 @@
+[
+ {
+  "name": "S043_C",
+  "nocut": true,
+  "out": "out/round7/styleC",
+  "refs": [
+   "out/round7/test/src/S043.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST THREE reference images ONLY (ignore their content: no crane, no cat, no girl, no arch): vintage screen-print / risograph poster illustration, bold flat graphic shapes with clean cut edges, limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange (#E5482A) and deep ultramarine blue (#2F5BA8); slight ink misregistration and fine print grain, stylised flame and cloud shapes, minimal interior lines, no gradients, no grey wash, no glossy CG, no gold. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, red collar and sash; keep his face as in the second reference, simplified into flat poster shapes. Keep the composition, framing and pose of the FIRST reference image. Turning to stare into camera at night in the rain, rain as thin cream streaks over deep blue. Wide 2.39:1 framing."
+ },
+ {
+  "name": "S015_C",
+  "nocut": true,
+  "out": "out/round7/styleC",
+  "refs": [
+   "out/round7/test/src/S015.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST THREE reference images ONLY (ignore their content: no crane, no cat, no girl, no arch): vintage screen-print / risograph poster illustration, bold flat graphic shapes with clean cut edges, limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange (#E5482A) and deep ultramarine blue (#2F5BA8); slight ink misregistration and fine print grain, stylised flame and cloud shapes, minimal interior lines, no gradients, no grey wash, no glossy CG, no gold. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, red collar and sash; keep his face as in the second reference, simplified into flat poster shapes. Keep the composition, framing and pose of the FIRST reference image. Close-up drawing the sword, sparks as vermilion flame shapes, deep blue night behind. Wide 2.39:1 framing."
+ },
+ {
+  "name": "S096_C",
+  "nocut": true,
+  "out": "out/round7/styleC",
+  "refs": [
+   "out/round7/test/src/S096.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST THREE reference images ONLY (ignore their content: no crane, no cat, no girl, no arch): vintage screen-print / risograph poster illustration, bold flat graphic shapes with clean cut edges, limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange (#E5482A) and deep ultramarine blue (#2F5BA8); slight ink misregistration and fine print grain, stylised flame and cloud shapes, minimal interior lines, no gradients, no grey wash, no glossy CG, no gold. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, red collar and sash; keep his face as in the second reference, simplified into flat poster shapes. Keep the composition, framing and pose of the FIRST reference image. Cream paper space, a balance scale in black; left pan one tiny vermilion figure, right pan a heap of a thousand tiny black figures, balanced; a large blue circle behind. Wide 2.39:1 framing."
+ },
+ {
+  "name": "S121_C",
+  "nocut": true,
+  "out": "out/round7/styleC",
+  "refs": [
+   "out/round7/test/S121_r7.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST THREE reference images ONLY (ignore their content: no crane, no cat, no girl, no arch): vintage screen-print / risograph poster illustration, bold flat graphic shapes with clean cut edges, limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange (#E5482A) and deep ultramarine blue (#2F5BA8); slight ink misregistration and fine print grain, stylised flame and cloud shapes, minimal interior lines, no gradients, no grey wash, no glossy CG, no gold. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, red collar and sash; keep his face as in the second reference, simplified into flat poster shapes. Keep the composition, framing and pose of the FIRST reference image. Dawn wind, ponytail and red sash whipping, a huge vermilion sun behind him, blue mountains and cream clouds. Wide 2.39:1 framing."
+ }
+]

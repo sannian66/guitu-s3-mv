@@ -22,3 +22,6 @@ AI 味：皮肤过光、对比塑料、背景糊；缺水墨笔触与纸纹。
 - S121 分层：天空红日 / 墨云带 / 鬼屠 MCU / 前景红绸，A 版 assets/gen/R7_layersA，B 版 R7_layersB（绿幕生图 + tools/cutout_green.py）。
 - Remotion：remotion_test/src/S121Layers.tsx，平面按深度 z=-32/-13/0/4.2 摆放，ShaderMaterial 做云/绸飘动，机位推近 + 横移环绕 + 手持噪声。35 帧约 40s（swangle）。对比 out/round7/S121_分层3D对比.mp4（不入库）。
 - 已知：前景红绸层跑出画外，待调位置。
+
+## 风格 C（11-11 04:10）
+用户给 3 张丝网版画海报参考（assets/ref_user/style_C_print_1..3.png）：米白纸、黑、朱橙红、群青蓝四色平涂 + 套色偏移颗粒。4 镜 assets/gen/R7_styleC/，A/B/C 对比 crew/round7_styleABC.jpg。脸偏 80 年代动画，略离母版。
