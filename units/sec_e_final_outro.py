@@ -1958,3 +1958,17 @@ if __name__ == '__main__':
     f = int(sys.argv[1]); out = sys.argv[2] if len(sys.argv) > 2 else '/tmp/e.png'
     a = time.time(); im = frame(f, {}); print('%.2fs' % (time.time() - a))
     Image.fromarray(im).save(out)
+
+# 第六轮 #53（2026-11-10 用户：「竖排歌词要全部去掉，因为我们改成横排了」）：R5_NOVLYR=1（默认）时本段屏幕层竖排歌词一律不画——
+# E06「若规则是」（row vertical=True）、E11「定 / 规」竖叠。默认 E_R5_TEXT=1 已把 3:13 起屏幕字全去，所以默认画面不变；
+# 这里保证单独回滚 E_R5_TEXT=0 时竖排也不回来。R5_NOVLYR=0 回滚。
+# 不动：天理昭彰匾（E04/E05/E27c）、鬼屠印（E12）、天理碑（E15）、✓ ✗（E16/E17/E18）、片名、署名、E31 烧纸「天理规章律」；
+# E19「何须伪装」躯干竖排是用户自己的创意（LOCAL_BRIEF_r5），先留，待问用户（crew/round6/VLYR_cde.md）。
+def _on6(k, d='1'): return os.environ.get(k, d) != '0'
+
+
+NOVLYR = _on6('R5_NOVLYR')
+if NOVLYR:
+    def _nil_vlyr(self, fr, t): return fr
+    for _nm in ('E06', 'E11'):
+        globals()[_nm].text = _nil_vlyr
