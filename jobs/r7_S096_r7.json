@@ -1,0 +1,12 @@
+[
+ {
+  "name": "S096_r7",
+  "refs": [
+   "out/round7/test/src/S096.png",
+   "out/round7/test/S043_master.png"
+  ],
+  "out": "out/round7/test",
+  "nocut": true,
+  "prompt": "Repaint this frame as a single unified art style: traditional Chinese ink-wash painting (shuimo) on aged xuan rice paper, visible brush strokes, dry-brush feibai, wet ink bleeds, five tones of ink from scorched black to pale grey, paper fibre texture showing through. Palette strictly black ink, warm paper white and cinnabar red (#C8281E) as the only colour; no gold, no blue, no glossy CG, no plastic skin, no 3D render look. Faces drawn with confident ink linework and soft wash shading like a master gongbi-xieyi illustrator, not photoreal. Keep the exact composition, camera angle, framing, pose and silhouette of the input. Remove all text, letters and calligraphy characters. Wide 2.39:1 cinematic framing. The second image is the style and character reference: match its brushwork, paper, palette and the swordsman's face exactly. Empty white paper space; a traditional balance scale painted in ink; left pan holds one tiny red figure, right pan a heap of a thousand tiny ink figures, yet balanced."
+ }
+]
