@@ -27,6 +27,8 @@ R5 = os.environ.get('B_R5', '1') != '0'
 R6 = R5 and os.environ.get('B_R6', '1') != '0'
 QUAN_STAFF = os.environ.get('B_R6_QUAN', '0') != '0'      # r6 #30（B4 返工，评审 7 打回）：默认 =0 墙上窗棂投影大「权」（用户只说保留、未说挪位）；=1 备选：「权」刻在杖身
 QUAN_WALL = os.environ.get('B_R6_QUANWALL', '0') != '0'   # =1：杖身刻字的同时保留墙上窗棂投影「权」
+# 第八轮风格 D（日漫墨线 + 网点 + 黑白血红）：STYLE_D=1 时已做 D 版的镜头换成 *D 子类（目前只有 V09D 定方向样镜）；=0 现版完全不变
+STYLE_D = os.environ.get('STYLE_D', '0') == '1'
 
 
 # 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」）：画内竖排歌词列去掉，歌词只走底部横排字幕。
@@ -1237,6 +1239,202 @@ def wood_plane(seed):
 
 
 # =====================================================================================
+# 第八轮 STYLE_D=1：V09D 定方向样镜（风格 D）。切点 / 入出转场 / 字幕不变；素材全部换成 D 风格生图分层（assets/gen/R8_D/B/）：
+#   L1 背景板 V09_bg（雨夜湿案 + 左上血红灯光块）：视差 0.35，只在算盘左侧和档间空隙里透出
+#   L2 主体 V09_abacus_cut（立着的乌木算盘，梁上刻「牺牲多少才算够分量」——字是生图画进去的）：镜头锁定这一层；
+#      透视（低机位 + 左近右远的偏航）；字逐字按演唱时刻「刻出凹槽 → 血灌满」，未唱到的字用梁面木纹补平藏起来
+#   L3 前景 V09_fg_cut（贴镜头的雨丝 + 血珠）：视差 1.6，沿雨向持续下落，轻虚焦
+#   代码层：雨幕（与生图雨同向，中性白）、每字一记血溅 + 刻字白闪、震屏；推镜 1.0→1.07（同现版）+ 横移跟字
+#   各层位移以镜头中点为零（中点时各层严格对齐），粒子 / 前景下落也以中点为零。
+GEN_D = ROOT + '/assets/gen/R8_D/B/'
+
+
+def _rgba(path):
+    im = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+    im = cv2.cvtColor(im, cv2.COLOR_BGRA2RGBA if im.shape[2] == 4 else cv2.COLOR_BGR2RGB).astype(np.float32) / 255
+    return im
+
+
+class V09D(V09):
+    REVEAL = (0, 1, 2, 3)                 # 本镜只刻出「牺牲多少」（第五轮 #31 断句：牺牲多少 / 才算 / 够分量）；才算 / 够分量 留在梁上待 V10 / V11
+    XSEG = [(176, 308), (373, 504), (588, 686), (770, 885), (967, 1076), (1163, 1280), (1348, 1473), (1538, 1672), (1732, 1858)]   # 9 字在源图（2048 宽）里的列
+    RODS = [287, 467, 649, 836, 1018, 1202, 1386, 1569, 1755]   # 9 档竖杆（源图 x）
+    BEAM = (379, 550)                      # 梁的行范围（源图）
+    ANCHOR = (640.0, 460.0)                # 主体锁定点（源图：梁中线，「牲」「多」之间）→ 镜头中点时落在 DST
+    DST = (960.0, 470.0)
+    SW = 2500.0                            # 主体在画面上的整幅宽（中点）
+    PAN = 300.0                            # 镜内横移（跟字，向右看）：中点为零，起 +150 → 止 -150
+    YAW0, YAW1, PITCH = 11.0, 7.0, -7.0    # 偏航（左近右远）/ 低机位仰角（度）
+
+    def __init__(self):
+        self.bg = cv2.resize(cv2.cvtColor(cv2.imread(GEN_D + 'V09_bg.png'), cv2.COLOR_BGR2RGB), (int(W * 1.12), int(H * 1.12)),
+                             interpolation=cv2.INTER_AREA).astype(np.float32) / 255
+        ab = _rgba(GEN_D + 'V09_abacus_cut.png')
+        self.F, self.A = ab[..., :3].copy(), ab[..., 3].copy()
+        self.sh, self.sw = self.A.shape
+        r, g, b = self.F[..., 0], self.F[..., 1], self.F[..., 2]
+        red = np.clip(((r - np.maximum(g, b)) - 0.12) / 0.2, 0, 1) * (self.A > 0.5)
+        y0, y1 = self.BEAM
+        self.glyph = []                                                   # 每字：(x0,x1, red 遮罩, 整字区域遮罩含墨边/投影)
+        redlo = ((r - np.maximum(g, b)) > 0.05) & (self.A > 0.5)          # 含粉红抗锯齿边
+        for x0, x1 in self.XSEG:
+            m = np.zeros_like(red); m[y0:y1, x0 - 6:x1 + 6] = red[y0:y1, x0 - 6:x1 + 6]
+            ml = np.zeros(red.shape, np.uint8); ml[y0:y1, x0 - 8:x1 + 8] = redlo[y0:y1, x0 - 8:x1 + 8]
+            reg = cv2.dilate(ml, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (29, 29)))   # 盖住墨边、斜面高光和外圈暗晕
+            reg = np.maximum(reg, np.roll(np.roll(reg, 8, 0), 8, 1)).astype(np.float32)     # 右下投影
+            reg[:y0 + 1] = 0; reg[y1:] = 0
+            reg = cv2.GaussianBlur(reg, (0, 0), 2.5)
+            self.glyph.append((x0, x1, m, reg))
+        hole = np.clip(sum(g_[3] for g_ in self.glyph), 0, 1)
+        self.clean = self._fill(hole)                                       # 9 字全部补平的梁（藏字底）
+        # 凹槽态：原字的墨边 / 斜面保留，红色换成暗槽
+        lum = (self.F * np.array([0.3, 0.59, 0.11], np.float32)).sum(-1, keepdims=True)
+        self.groove = self.F * (1 - red[..., None]) + red[..., None] * (0.05 + 0.35 * lum)
+        self.rain = fx2.RainSheet(5403, density=0.7)
+        fgc = _rgba(GEN_D + 'V09_fg_cut.png')
+        fw = int(W * 1.15); fh = int(fw * fgc.shape[0] / fgc.shape[1])
+        fgc = cv2.resize(fgc, (fw, fh), interpolation=cv2.INTER_AREA)
+        fgc = cv2.GaussianBlur(fgc, (0, 0), 1.6)                          # 贴镜头：轻虚焦
+        self.fgF, self.fgA = fgc[..., :3], fgc[..., 3]
+        self.fog = fx2.Fog(5407)
+
+    def _fill(self, hole):
+        """藏字（梁面补平）：梁面木纹是横向细纹，逐行用同一行未被字占的像素补（同一取样起点，保持纵向连贯）；
+        取样起点在候选里挑「与字周围一圈明暗 / 细纹密度最接近」的一段，再用一个标量增益对齐亮度"""
+        y0, y1 = self.BEAM
+        bx0, bx1 = 102, 1950                     # 避开梁两端的竖向高光（会被逐行错位拷成弯钩）
+        hb = hole > 0.02
+        F = self.F; L = F.mean(-1)
+        out = F.copy()
+        oks = [np.where(~hb[y, bx0:bx1])[0] + bx0 for y in range(y0, y1)]
+        for k, (x0, x1, _, reg) in enumerate(self.glyph):
+            rk = reg > 0.01
+            ring = (cv2.dilate(rk.astype(np.uint8), np.ones((9, 41), np.uint8)) > 0) & ~hb
+            ring[:y0] = False; ring[y1:] = False
+            tgt_m, tgt_s = float(L[ring].mean()), float(L[ring].std())
+            rows = []
+            for y in range(y0, y1):
+                xs = np.where(rk[y, x0 - 30:x1 + 30])[0] + x0 - 30
+                if len(xs) and len(oks[y - y0]) >= 50: rows.append((y, xs, oks[y - y0]))
+            best = None
+            for st in range(0, 1400, 23):
+                v = np.concatenate([L[y, ok[(st + np.arange(len(xs))) % len(ok)]] for y, xs, ok in rows])
+                sc = abs(v.mean() - tgt_m) / max(tgt_m, 1e-3) + 0.5 * abs(v.std() - tgt_s) / max(tgt_s, 1e-3)
+                if best is None or sc < best[0]: best = (sc, st, v.mean())
+            _, st, m = best
+            gk = float(np.clip(tgt_m / max(m, 1e-3), 0.75, 1.35))
+            for y, xs, ok in rows:
+                out[y, xs] = np.minimum(F[y, ok[(st + np.arange(len(xs))) % len(ok)]] * gk, 0.55)
+        return self._blend(out, hole)
+
+    def _blend(self, filled, hole):
+        h = cv2.GaussianBlur(hole, (0, 0), 1.0)[..., None]
+        return self.F * (1 - h) + filled * h
+
+    def tk(self, k):
+        return V(CT(22, k))
+
+    def glyph_state(self, t):
+        """源图空间：当前梁面（藏字底 + 已唱到的字：先刻出凹槽，再血从上往下灌满）"""
+        rgb = self.clean.copy()
+        hot = np.zeros((self.sh, self.sw), np.float32)
+        y0, y1 = self.BEAM
+        for k in self.REVEAL:
+            tk = self.tk(k)
+            if t < tk - 0.034: continue
+            x0, x1, m, reg = self.glyph[k]
+            ca = clamp01((t - (tk - 0.034)) / 0.067)                         # 凹槽两帧刻出
+            sl = (slice(y0, y1), slice(x0 - 30, x1 + 30))
+            r_ = reg[sl][..., None] * ca
+            fill = eout(clamp01((t - tk) / 0.24), 2)                        # 血灌：0.24s 从上到下
+            yy = np.arange(y0, y1, dtype=np.float32)[:, None]
+            xx = np.arange(x0 - 30, x1 + 30, dtype=np.float32)[None, :]
+            front = (y0 + 20) + fill * (y1 - y0 - 10) + 9 * np.sin(xx * 0.09 + k * 1.7)
+            wet = np.clip((front - yy) / 6, 0, 1)[..., None]
+            cell = self.groove[sl] * (1 - wet) + self.F[sl] * wet
+            rgb[sl] = rgb[sl] * (1 - r_) + cell * r_
+            hot[sl] += m[sl] * pulse(t, tk, 0.10) * (t >= tk - 0.034)
+        # 算珠撞梁（保留现版「每唱一字拨一档」的卡点）：该字下方那档下珠整列向上一顶撞梁，再弹回（0.25s）
+        A = self.A
+        for k in range(5):
+            d = t - self.tk(k)
+            if not (0 <= d < 0.3): continue
+            sh = int(round(18 * math.exp(-d / 0.07)))
+            if sh < 1: continue
+            if A is self.A: A = self.A.copy()
+            xa, xb = self.RODS[k] - 74, self.RODS[k] + 74
+            ya, yb = y1 + 2, self.sh - 60
+            rgb[ya:yb - sh, xa:xb] = rgb[ya + sh:yb, xa:xb]; A[ya:yb - sh, xa:xb] = A[ya + sh:yb, xa:xb]
+        return rgb, hot, A
+
+    def homog(self, t):
+        u = self.u(t)
+        yaw = math.radians(self.YAW0 + (self.YAW1 - self.YAW0) * eio(u)); pit = math.radians(self.PITCH)
+        s = self.SW / self.sw; f = 2200.0
+        ax, ay = self.ANCHOR
+        src = np.float32([[0, 0], [self.sw, 0], [self.sw, self.sh], [0, self.sh]])
+        dst = []
+        for x, y in src:
+            X, Y, Z = (x - ax) * s, (y - ay) * s, 0.0
+            X, Z = X * math.cos(yaw) + Z * math.sin(yaw), -X * math.sin(yaw) + Z * math.cos(yaw)   # 偏航
+            Y, Z = Y * math.cos(pit) - Z * math.sin(pit), Y * math.sin(pit) + Z * math.cos(pit)    # 俯仰
+            k = f / (f + Z)
+            dst.append([self.DST[0] + X * k, self.DST[1] + Y * k])
+        return cv2.getPerspectiveTransform(src, np.float32(dst))
+
+    def render(self, t):
+        u = self.u(t); e = eio(u)
+        off = -self.PAN * (e - 0.5)                                         # 主体横移（中点为零）
+        # L1 背景板：视差 0.35
+        bx = (self.bg.shape[1] - W) / 2 - 0.35 * off; by = (self.bg.shape[0] - H) / 2
+        Mb = np.float32([[1, 0, -bx], [0, 1, -by]])
+        fr = cv2.warpAffine(self.bg, Mb, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT) * 0.85
+        fr = self.rain.draw(fr, t, intensity=0.55, angle=-18, color=(0.70, 0.70, 0.70), layers=(0, 1), cam=(0.35 * off, 0))
+        fr = self.fog.draw(fr, t, density=0.18, y0=300, y1=760, color=(0.20, 0.20, 0.20))
+        # L2 主体：算盘 + 梁上刻字
+        rgb, hot, A = self.glyph_state(t)
+        M = self.homog(t); M = np.float32([[1, 0, off], [0, 1, 0], [0, 0, 1]]) @ M
+        Wf = cv2.warpPerspective(rgb, M, (W, H), flags=cv2.INTER_LINEAR)
+        Af = cv2.warpPerspective(A, M, (W, H), flags=cv2.INTER_LINEAR)[..., None]
+        Hf = cv2.warpPerspective(hot, M, (W, H), flags=cv2.INTER_LINEAR)
+        shd = cv2.GaussianBlur(np.roll(Af[..., 0], 24, 1), (0, 0), 22)        # 算盘落在背景上的暗影（让主体压住背景）
+        fr = fr * (1 - 0.55 * shd[..., None])
+        x, y = K.grid()
+        lit = 0.78 + 0.30 * np.exp(-(((x - 760) / 900) ** 2 + ((y - 470) / 420) ** 2))   # 顶光落在梁上
+        fr = fr * (1 - Af) + Wf * lit[..., None] * Af
+        # 刻字白闪 + 血光晕（只在字上）
+        if Hf.max() > 0.01:
+            fr = fr + (K.blur_ds(Hf, 10) * 0.9 + Hf * 0.6)[..., None] * np.array([1.0, 0.95, 0.93], np.float32)
+            fr = fr + K.blur_ds(Hf, 40)[..., None] * RED * 0.8
+        # 每字一记血溅（字中心）；「才」时刻只溅血不出字（保留现版第 5 记卡点）
+        for k in range(5):
+            tk = self.tk(k)
+            if tk - 0.034 <= t < tk + 0.6:
+                x0, x1 = self.XSEG[k]
+                p = cv2.perspectiveTransform(np.float32([[[0.5 * (x0 + x1), self.BEAM[0] + 30]]]), M)[0, 0]
+                fr = K.sparks(fr, t, 5410 + k, (float(p[0]), float(p[1])), n=46, life=0.55, speed=(250, 800), dirc=(0.15, -1), spread=1.2,
+                              grav=1700, size=1.8, area=(70, 8), color=tuple(RED * 1.15), amt=1.0, t0=tk, burst=True)
+                fr = K.sparks(fr, t, 5420 + k, (float(p[0]), float(p[1])), n=22, life=0.4, speed=(300, 900), dirc=(0, -1), spread=1.4,
+                              grav=1500, size=1.3, area=(70, 8), color=(0.92, 0.92, 0.92), amt=1.0, t0=tk, burst=True)
+        # 代码近景雨（与生图雨同向）
+        fr = self.rain.draw(fr, t, intensity=0.8, angle=-18, color=(0.80, 0.80, 0.80), layers=(2,), cam=(off, 0))
+        # L3 前景：贴镜头雨丝 + 血珠，视差 1.6，沿雨向下落（中点为零）
+        tm = 0.5 * (self.t0 + self.t1)
+        fh, fw = self.fgA.shape
+        sx = (fw - W) / 2 - 0.6 * off + (t - tm) * 520.0 * math.sin(math.radians(18))
+        sy = (t - tm) * 520.0 * math.cos(math.radians(18))
+        Mf = np.float32([[1, 0, -sx], [0, 1, -(fh - H) / 2 - sy]])
+        fF = cv2.warpAffine(self.fgF, Mf, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
+        fA = cv2.warpAffine(self.fgA, Mf, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)[..., None] * 0.55
+        fr = fr * (1 - fA) + fF * fA
+        # 卡点震屏 + 推镜（同现版：1.0→1.07，每字一记）
+        hk = max(hitp(t, CT(22, k), 0.08) for k in range(5))
+        dx, dy, dr = shake(t, 8 * hk, 14, 54)
+        fr = cam(fr, 1.0 + 0.07 * e + 0.02 * hk, dx, dy - 10 * (e - 0.5), dr)
+        return np.clip(fr, 0, 4), (2 if hk > 0.5 else 0)
+
+
+# =====================================================================================
 # V10 97.52–98.48 ECU 贴档微距：算珠沿竹档撞上梁（98.37 重拍：整档 5 颗一记砸上去，画面震、水花炸开）；「算够」大字烫金刻在梁上
 class V10(Shot):
     T_HIT = 98.373
@@ -2376,7 +2574,9 @@ class V25(Shot):
 
 
 # ===================================================================================== 段落装配
-SHOTS = [V01, V02, V03, V04, V05, V06, V07, V08, V09, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20, V21, V22, V23, V24, V25]
+if STYLE_D:
+    V09D.__name__ = 'V09'                      # 沿用 V09 的 CUTS / FG / 字幕键
+SHOTS = [V01, V02, V03, V04, V05, V06, V07, V08, V09D if STYLE_D else V09, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20, V21, V22, V23, V24, V25]
 CUTS = {
     'V02': ('ring_wipe', 0.06, 0.16, dict(center=(1300, 600))),    # 第六棒：钟声折射环开门（钟口圆 → 广场声波环）
     'V03': ('zoom_iris', 0.08, 0.14, dict(center=(960, 560))),     # 第十二棒：zoom_dark 交叉叠化在 f2679 留残影 → 无叠化的推镜圆开门；第六棒：顶拍压进跪拜的人群 → 平视纸人队列
@@ -2406,6 +2606,9 @@ CUTS = {
 FG = {'V03': ('rain', 0.3), 'V07': ('ember', 0.3), 'V08': ('rain', 0.3), 'V09': ('rain', 0.3), 'V13': ('rain', 0.35),
       'V14': ('ember', 0.5), 'V15': ('rain', 0.45)}
 EXPO = {}
+if STYLE_D:
+    CUTS['V09'] = ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160, glow=np.full(3, 0.85, np.float32)))   # 同一转场，只把金边换成中性白（风格 D 无金）
+    EXPO['V09'] = 1 / 1.12                    # 风格 D：抵消段落 expo_all=1.12 提亮，保留生图本身的黑白（同副歌一 STYLE_D 下 EXPO_ALL→1.0）
 
 
 def _bind():
