@@ -25,7 +25,7 @@ T_IN = 86.192                       # 副歌一 S047 的起点（墨退时间基
 R5 = os.environ.get('B_R5', '1') != '0'
 # 第六轮返工（B_R6=0 回滚到第五轮 B 组版本；需 R5 同时开）
 R6 = R5 and os.environ.get('B_R6', '1') != '0'
-QUAN_STAFF = os.environ.get('B_R6_QUAN', '1') != '0'      # r6 #30：「权」刻在杖身（=0 回到窗棂投影「权」）
+QUAN_STAFF = os.environ.get('B_R6_QUAN', '0') != '0'      # r6 #30（B4 返工，评审 7 打回）：默认 =0 墙上窗棂投影大「权」（用户只说保留、未说挪位）；=1 备选：「权」刻在杖身
 QUAN_WALL = os.environ.get('B_R6_QUANWALL', '0') != '0'   # =1：杖身刻字的同时保留墙上窗棂投影「权」
 
 
@@ -990,7 +990,7 @@ class V07(Shot):
         # 第十棒：字不再是发光金字——窗洞的光斑投在墙与手上，「权」是窗上镂刻的木花投下的**影**（光里一个黑字）
         wdx = 50 * math.sin(t * 6.1) + 25 * math.sin(t * 15.7)                   # 第十一棒：烛焰摇 → 窗光斑在手背上来回扫
         win = np.clip(1 - np.maximum(np.abs((x - 1180 - wdx - 0.14 * (y - 540)) / 430), np.abs((y - 540) / 400)) ** 8, 0, 1)
-        Lm = np.clip(win * (1 - lat) * (1 - (0.0 if (R6 and QUAN_STAFF and not QUAN_WALL) else 0.92) * np.clip(L.A, 0, 1)), 0, 1)   # r6 #30：「权」改刻在杖身，墙上窗光只剩窗棂
+        Lm = np.clip(win * (1 - lat) * (1 - (0.0 if (R6 and QUAN_STAFF and not QUAN_WALL) else 0.92) * np.clip(L.A, 0, 1)), 0, 1)   # r6 #30：仅 B_R6_QUAN=1（杖身备选）时墙上窗光只剩窗棂；默认保留墙上投影「权」
         Lm = cv2.GaussianBlur(Lm, (0, 0), 5)
         light = Lm * pq * fl * (1 + 0.8 * pulse(t, V(self.T_QUAN), 0.15))
         amb = 0.55 + 0.45 * (1 - pq)
