@@ -2013,7 +2013,66 @@ class V20(Shot):
     def __init__(self):
         import a_r6
         self.coil = a_r6.clean('A/slash_coil', lo=0.3, erode=4)                     # 第九棒：抠图灰边收 4px
+        if R5.ON['rise']:                                                          # r6 #11：三张同一人物生图（定妆照一致），脚底中点钉在同一点
+            self.K = [(a_r6.clean(k, lo=0.2, erode=3), f, h) for (k, f, h) in (
+                ('R5_A/slash_rise_coil_v2', (0.60, 0.967), 500),                   # 蓄势：低伏、双手握柄、刀尖垂向左下
+                ('R6_A/rise_mid', (0.474, 0.973), 600),                            # 撩刀中段：刀平扫向右
+                ('R6_A/rise_end_a', (0.49, 0.965), 650))]                          # 收势：弓步上冲、双臂送刀指向右上巨印
+            self.KA = [a_r6.anc_for(p_, f) for (p_, f, _) in self.K]
+            self.KT = [(0.017, 0.734), (0.986, 0.276), (0.94, 0.011)]              # 各图刀尖（原图归一化）
+            yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+            gm = np.clip((yy - 880) / 30, 0, 1)
+            gt = cv2.resize(A.tex(207, 512, 10, 5), (W, H))
+            self.ground = gm[..., None], ((0.025 + 0.02 * gt) * (0.6 + 0.6 * np.exp(-((xx - 1250) / 700) ** 2)))[..., None] * np.array([1.0, 0.9, 0.8], np.float32)
+
     def render(self, t):
+        if R5.ON['rise']: return self.render6(t)
+        return self.render5(t)
+
+    def render6(self, t):
+        """r6 #11（用户：0:42 角色图丑、姿势不好看）：极低机位全身（头顶留白、脚入画）。41.97 前低伏蓄势（缓缓再压低），
+        撩刀 1 帧中段（刀平扫 + 横向动态模糊）→ 弓步上冲收势，双臂把刀送向右上金光里的巨印；新月刀弧从左下刀尖位扫到右上刀尖位。"""
+        u = self.u(t)
+        fr = night((0.04, 0.035, 0.03), (0.12, 0.10, 0.09), y1=800)
+        fr = A.glow(fr, (1300, 200), 520, 0.55, (1.0, 0.8, 0.5))
+        fr = A.clouds(fr, t, 83, speed=(0, 60), y0=120, y1=560, amt=0.8, col=(0.12, 0.10, 0.09), light=(1300, 200), light_r=500,
+                      light_col=(1.0, 0.8, 0.5), thr=0.44)
+        gm, gc = self.ground
+        fr = fr * (1 - gm) + gc * gm
+        fr = RAIN.draw(fr, t, 0.6, angle=-6, light=(1300, 200), layers=(0, 1))
+        ts = V(42.0); a = t - ts
+        at = (860, 930)
+        sx_, sy_ = R8.shake(t, ts, amp=14, tau=0.10, seed=3)
+        cs = np.zeros((H // 2, W // 2), np.float32)                                      # 脚下接触阴影
+        cv2.ellipse(cs, (at[0] // 2, at[1] // 2), (170 if a < 0 else 210, 14), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+        fr = fr * (1 - 0.7 * cv2.resize(cv2.GaussianBlur(cs, (0, 0), 6), (W, H))[..., None])
+        if a < 0:
+            i, mb, dy = 0, (0, 0), 6 * eio(clamp01((t - self.t0) / max(1e-3, ts - self.t0)))
+        elif a < 1 / 30 - 1e-4:
+            i, mb, dy = 1, (34, -10), 0
+        else:
+            i, mb, dy = 2, (0, 18 * max(0, 1 - a / 0.12)), -12 * eout(clamp01(a / 0.4))
+        spr, f, h = self.K[i]
+        fr, info = A.place(fr, t, spr, (at[0] + sx_, at[1] + dy + sy_), h=h, anc=self.KA[i], rim=COLD, rim_amt=2.8, rim_dir=(0.6, -0.8),
+                           wind=10, grade=dict(expo=0.62 if a < 0 else 0.80, sat=0.42, gamma=1.08), mblur=mb, breathe=0.0)
+        if a >= 0:
+            P0 = np.array([540.0, 800.0]); P2 = np.array(info['to_scr'](self.KT[2])) if i == 2 else np.array([1160.0, 285.0])
+            Pm = np.array([1230.0, 560.0]); Q = 2 * Pm - (P0 + P2) / 2
+            q = min(1.0, a / 0.07); fade = max(0.0, 1 - a / 0.45)
+            L = np.zeros((H // 2, W // 2), np.float32); N = 40
+            pts = [((1 - s_) ** 2 * P0 + 2 * (1 - s_) * s_ * Q + s_ * s_ * P2) for s_ in np.linspace(0, q, N)]
+            for j in range(N - 1):
+                w_ = 1 + int(16 * (j / N) ** 1.5)
+                cv2.line(L, tuple((pts[j] / 2).astype(int)), tuple((pts[j + 1] / 2).astype(int)), 0.35 + 0.65 * j / N, w_, cv2.LINE_AA)
+            L = cv2.resize(L, (W, H)) * fade
+            fr = fr + (cv2.GaussianBlur(L, (0, 0), 2) * 1.2 + cv2.GaussianBlur(L, (0, 0), 18) * 1.0)[..., None] * np.array([0.95, 0.9, 0.82], np.float32)
+            fr = K.sparks(fr, t, 81, (1300, 260), n=70, life=0.6, speed=(200, 900), dirc=(0, 1), spread=1.3, grav=900, area=(260, 10), amt=0.8, t0=ts, burst=True)
+            fr = K.sparks(fr, t, 82, at, n=40, life=0.5, speed=(80, 300), dirc=(0, -1), spread=1.6, grav=500, area=(160, 6), amt=0.35, t0=ts, burst=True,
+                          color=(0.5, 0.45, 0.4))                                         # 蹬地扬尘
+            if a < 0.06: fr = fr * 1.35 + 0.06 * GOLDV
+        return fr, (5 if 0 <= a < 0.12 else 0)
+
+    def render5(self, t):
         u = self.u(t)
         fr = night((0.04, 0.035, 0.03), (0.12, 0.10, 0.09), y1=800)
         fr = A.glow(fr, (1300, 200), 500, 0.5, (1.0, 0.8, 0.5))
@@ -2241,8 +2300,8 @@ LY2 = [
     (4, [(k, 80, _Wt) for k in range(5, 10)], 640, 880, 32.55, False),                              # 也放过混账
     (6, [(0, 120, _Wt), (1, 220, _R), (2, 220, _R)], 600, 905, 37.90, False),   # 第七棒：38.30 前退净，不与「由权势」叠成残字   # 第六棒：挨着金光里的巨印剪影                       # 若「正义」
     (6, [(3, 80, _Wt), (4, 140, _G), (5, 140, _G), (6, 80, _Wt), (7, 80, _Wt)], 960, 925, 39.85, False),  # 由「权势」执掌（第六棒：离开印面，放到下三分之一）
-    (7, [(0, 145, _Wt), (1, 145, _Wt), (2, 165, _G), (3, 165, _G), (4, 90, _Wt), (5, 165, _R), (6, 165, _R), (7, 90, _Wt)],
-     1250, 300, 42.48, True),  # 第十一棒：整句移到右上（V19 镜像后人在左；V18 人头上方、V20 刀弧右侧都是空天幕）   # 第十一棒：42.40→42.48 + 0.15s 等量淡出，「的」(42.36) 完整露出后 42.63 切点前退净   # 第七棒：中心 640→730，首字「那」不出左边画                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
+    (7, [(0, 128, _Wt), (1, 128, _Wt), (2, 145, _G), (3, 145, _G), (4, 80, _Wt), (5, 145, _R), (6, 145, _R), (7, 80, _Wt)],
+     1280, 262, 42.48, True),  # r6 #11：整句缩 12%、上移 38px —— V20 新收势刀尖指向右上（y≈280），不再插进字里  # 第十一棒：整句移到右上（V19 镜像后人在左；V18 人头上方、V20 刀弧右侧都是空天幕）   # 第十一棒：42.40→42.48 + 0.15s 等量淡出，「的」(42.36) 完整露出后 42.63 切点前退净   # 第七棒：中心 640→730，首字「那」不出左边画                                                                        # 那我「宁愿」做「乱世」的（随刀光逐字点亮）
 ]
 
 
