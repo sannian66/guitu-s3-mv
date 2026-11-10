@@ -1,7 +1,16 @@
 """全片统一歌词字幕（第五轮用户要求 #52：歌词放居中下方字幕位置）。
-在 render_sprite_full.frame 的成品帧上叠加：下黑边内居中、思源宋体 Medium、白字 + 柔阴影、逐句淡入淡出。
-时间轴 = align.log 逐句起止（56 句）。环境变量 SUB_OFF=1 关闭。"""
-import os, re, numpy as np
+在 render_sprite_full.frame 的成品帧上叠加。时间轴 = align.log 逐句起止（56 句），逐字时刻 = align.json words。
+环境变量 SUB_OFF=1 关闭。
+
+r6-SUB（用户 11-10 15:28「底部的字幕好丑，能做成之前竖版歌词那种风格吗」）：SUB_STYLE 切换风格
+  SUB_STYLE=cur   （默认，现状）下黑边内居中、思源宋体 Medium、白字 + 柔阴影、逐句淡入淡出。
+  SUB_STYLE=ink_h  旧竖版歌词风格搬到底部横排：马善政楷书（lib/typo 'kai'），逐字按演唱时刻笔序书写
+                   （先铺整字淡墨影 → 笔锋湿墨晕开 → 行笔末段飞白 → 落笔墨点），关键字朱红放大 + 金描边 + 朱红外发光，
+                   虚字缩小、大小错落、底边对齐；暖白字 + 墨色晕影；句尾墨散（淡出 + 晕开）。全部落在 y 960–1080 下黑边内。
+  SUB_STYLE=ink_v  同上风格，改为画面右侧竖排（右起列，>8 字分两列，右列先唱），不画底部字幕。
+  SUB_STYLE=old    = ink_h 的别名（「旧版风格」）。
+"""
+import os, re, json, math, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 ROOT = '/workspace/work/mv'
 FONT = ROOT + '/fonts/NotoSerifSC-Medium.otf'
@@ -13,6 +22,12 @@ for l in open(ROOT + '/align.log', encoding='utf-8'):
     if m: LINES.append((float(m.group(1)), float(m.group(2)), m.group(3).strip()))
 _C = {}
 
+
+def style():
+    s = os.environ.get('SUB_STYLE', 'cur').strip().lower()
+    return 'ink_h' if s == 'old' else s
+
+
 def _layer(txt):
     if txt in _C: return _C[txt]
     f = ImageFont.truetype(FONT, SIZE)
@@ -23,15 +38,19 @@ def _layer(txt):
     _C[txt] = (np.asarray(a, np.float32) / 255, np.asarray(sh, np.float32) / 255)
     return _C[txt]
 
+
 def current(t):
     for t0, t1, s in LINES:
-        if t0 - FADE <= t < t1 + 0.25 + FADE: 
+        if t0 - FADE <= t < t1 + 0.25 + FADE:
             k = min(1, (t - (t0 - FADE)) / FADE, (t1 + 0.25 + FADE - t) / FADE)
             return s, max(0.0, k)
     return None, 0
 
+
 def apply(img, t):
     if os.environ.get('SUB_OFF'): return img
+    st = style()
+    if st in ('ink_h', 'ink_v'): return ink_apply(img, t, st)
     s, k = current(t)
     if not s or k <= 0: return img
     a, sh = _layer(s)
@@ -41,3 +60,137 @@ def apply(img, t):
     reg *= (1 - 0.75 * k * sh)[..., None]
     reg[:] = reg * (1 - 0.93 * k * a)[..., None] + np.array([238, 232, 222], np.float32) * (0.93 * k * a)[..., None]
     return out.clip(0, 255).astype(np.uint8)
+
+
+# ===================================================================== r6-SUB 墨书风格（ink_h / ink_v）
+# 风格要素取自 #53 删掉的旧竖版歌词（sec_a V09「谁把人命/装进天平」、V14「每一次拔刀」、A 段 LY2、sec_b P03「谁配画」）：
+#   字体 MaShanZheng 楷（'kai'）/ ZhiMangXing 行（'xing'）；typo.brush_glyph 笔序书写 + BG 整字淡墨影防错读；
+#   白字 (0.96,0.93,0.86) shadow 0.85 σ12 glow 0.15；朱红 (0.98,0.22,0.12) 金描边 2px + 朱红外发光 0.35。
+INK_FONT = os.environ.get('SUB_INK_FONT', 'kai')
+WHITE = (0.96, 0.93, 0.86)
+REDC = (0.98, 0.22, 0.12)
+# 关键字：按优先级取每句最多 2 个（同字只取首个）
+RED_PRI = '血刀骨命罪杀邪墙锋权扛判答闯伪葬黑撕天'
+RED_OVR = {                     # 个别句手定（避免自动规则挑到不该红的字）
+    '五百重甲拦不住一道寒光': '寒光',
+    '谁在高处定对错罪状': '罪',
+    '谁把人命装进天平里称量': '命',
+    '谁配写生死簿谁配画善恶框': '死框',
+    '什么叫以一人换千人理所应当': '千',
+    '对就是对错就是错何须伪装': '伪',
+    '世间从来没有什么天理昭彰': '天',
+    '若这世道黑白颠倒': '黑',
+    '什么叫大局什么叫牺牲什么叫忍让': '牺牲',
+    '牺牲多少才算够分量': '牺牲',
+    '被牺牲的人可曾有机会反抗': '反抗',
+    '谁定好规则谁写好剧本提纲': '纲',
+    '谁的正义成了交易的暗箱': '暗箱',
+    '世人教我顾全大局退让': '退让',
+    '那就劈开它看个天亮': '劈',
+    '这一刀就是我的回答': '刀',
+    '这一刀就是我的正道沧桑': '刀',
+}
+SMALL = set('之的在了也过是就把被又来为么叫个它都还着与而且所这那')   # 虚字缩小（旧版「长夜 压在我 刀锋」的大小节奏）
+_WT = None
+_INKC = {}
+
+
+def _wtimes():
+    """每句逐字演唱时刻（align.json words，多字词内均分）。"""
+    global _WT
+    if _WT is None:
+        _WT = {}
+        try:
+            d = json.load(open(ROOT + '/align.json', encoding='utf-8'))
+            for (t0, t1, s), seg in zip(LINES, d['segments']):
+                cs = []
+                for w in seg['words']:
+                    ww = w['word'].strip()
+                    for i, c in enumerate(ww): cs.append(w['start'] + (w['end'] - w['start']) * i / max(1, len(ww)))
+                if len(cs) == len(s.replace(' ', '')) and abs(cs[0] - t0) < 1.0: _WT[t0] = cs     # 按句起点索引（副歌重复句文字相同）
+        except Exception:
+            pass
+    return _WT
+
+
+def _reds(s):
+    if s in RED_OVR: return set(RED_OVR[s])
+    out = []
+    for c in RED_PRI:
+        if c in s and c not in out: out.append(c)
+        if len(out) >= 2: break
+    return set(out)
+
+
+def _line_info(t):
+    for t0, t1, s in LINES:
+        if t0 - 0.3 <= t < t1 + 0.6:
+            return t0, t1, s
+    return None
+
+
+def _plan(s, mode):
+    """排版：[(ch, x, y, size, red, idx)]，idx = 去空格后的字序号。"""
+    if (s, mode) in _INKC: return _INKC[(s, mode)]
+    reds = _reds(s); P = []
+    if mode == 'ink_h':
+        n = len(s.replace(' ', ''))
+        B = 74 if n <= 10 else (68 if n <= 13 else 62)                 # 基础字号；最长 16 字（16×0.96×62≈950px）
+        sz = [(round(B * 1.24) if c in reds else round(B * 0.78) if c in SMALL else B) if c != ' ' else 0 for c in s]
+        adv = [z * 0.96 if c != ' ' else B * 0.7 for c, z in zip(s, sz)]
+        x = 960 - sum(adv) / 2; base = 1054; i = 0                     # 底边对齐 y≈1054（最大字 92px → 顶 ≈962，黑边 960–1080 内）
+        for c, z, a in zip(s, sz, adv):
+            if c != ' ':
+                P.append((c, x + a / 2, base - z * 0.5, z, c in reds, i)); i += 1
+            x += a
+    else:
+        parts = [p for p in s.split(' ') if p]
+        if len(parts) == 1 and len(parts[0]) > 10:                       # 长句从中间断成两列（断点避开虚字开头）
+            p0 = parts[0]; k = (len(p0) + 1) // 2
+            for d in (0, 1, -1, 2, -2):
+                if p0[k + d] not in SMALL: k += d; break
+            parts = [p0[:k], p0[k:]]
+        cols = parts if len(parts) <= 2 else [''.join(parts[:len(parts) // 2]), ''.join(parts[len(parts) // 2:])]
+        nmax = max(len(c) for c in cols)
+        B = min(92, int(800 / (nmax * 1.04)))
+        i = 0
+        for ci, ctext in enumerate(cols):
+            cx = 1770 - ci * (B * 1.35)
+            y = 170 + ci * B * 0.6                                       # 第二列下错半格（旧版「谁把人命/装进天平」错落）
+            for c in ctext:
+                z = round(B * 1.2) if c in reds else round(B * 0.82) if c in SMALL else B
+                y += z * 0.51
+                P.append((c, cx, y, z, c in reds, i)); i += 1
+                y += z * 0.51
+    _INKC[(s, mode)] = P
+    return P
+
+
+def ink_apply(img, t, mode):
+    info = _line_info(t)
+    if info is None: return img
+    import typo as T
+    t0, t1, s = info
+    wt = _wtimes().get(t0)
+    n = len(s.replace(' ', ''))
+    if wt is None: wt = [t0 + (t1 - t0) * 0.85 * i / max(1, n) for i in range(n)]
+    tend = t1 + 0.25
+    ko = 1.0 - min(1.0, max(0.0, (t - tend) / 0.3))                  # 句尾墨散
+    if ko <= 0: return img
+    P = _plan(s, mode)
+    L = T.Layer(); Lr = T.Layer()
+    for ch, x, y, z, red, i in P:
+        p = min(1.0, max(0.0, (t - (wt[i] - 0.10)) / 0.32))           # 每字 0.32s 写完，提前 0.1s 起笔
+        if p <= 0: continue
+        g = T.brush_glyph(ch, INK_FONT, z, p, seed=17 + i)
+        if p < 0.999:                                                  # 整字淡墨影（BG 写法，防半笔错读）
+            gf = T.brush_glyph(ch, INK_FONT, z, 1.0, seed=17 + i)
+            g = np.maximum(g, gf * 0.55 * (1 - (1 - min(1.0, p * 3.0)) ** 3))
+        if ko < 1:
+            import cv2
+            g = cv2.GaussianBlur(g, (0, 0), 0.5 + 3.0 * (1 - ko)) * ko  # 墨散：晕开 + 淡出
+        (Lr if red else L).paste(g, x, y, REDC if red else WHITE)
+    fr = img.astype(np.float32) * (1 / 255)
+    fr = T.compose(fr, L, shadow=0.85, shadow_sigma=12, glow=0.15)
+    fr = T.compose(fr, Lr, shadow=0.9, shadow_sigma=12, outline=2, outline_color=(1.0, 0.78, 0.40), glow=0.35, glow_color=(0.9, 0.15, 0.06))
+    return (fr.clip(0, 1) * 255 + 0.5).astype(np.uint8)
