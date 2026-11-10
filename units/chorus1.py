@@ -524,6 +524,7 @@ class S034(Shot):
         lum = wall.mean(-1) * rake * fall
         self.wall = np.stack([lum * 0.86, lum * 0.95, lum * 1.12], -1).astype(np.float32); self.seam = seam
         T.warm('铁壁铜墙', 'kai', 70)
+        self.dtex = K.tile(512, 3403, 4, 5)
 
     def quad(self, t):
         u = self.u(t)
@@ -531,6 +532,41 @@ class S034(Shot):
         topy = 120 - 260 * eio(u)
         cx = 960
         return np.float32([[cx - 1500 * k, topy], [cx + 1500 * k, topy], [cx + 1600, 1160], [cx - 1600, 1160]])
+
+    def debris(self, fr, a):
+        """砖屑：从砖缝崩出的碎块（暗灰、顶面受光、翻滚下落）+ 一团灰尘缓慢散开"""
+        r = np.random.default_rng(3402)
+        n = 70
+        ox = r.normal(900, 260, n); oy = r.normal(540, 170, n)
+        vx = (ox - 900) * r.uniform(0.6, 1.6, n); vy = (oy - 540) * r.uniform(0.4, 1.0, n) - r.uniform(50, 260, n)
+        sz = r.uniform(4, 17, n) * (1 + 0.25 * a); ang0 = r.uniform(0, 180, n); spin = r.normal(0, 260, n)
+        shade = r.uniform(0.07, 0.16, n)
+        D = np.zeros((H // 2, W // 2), np.float32); C = np.zeros_like(D); Lt = np.zeros_like(D)
+        for i in range(n):
+            px = ox[i] + vx[i] * a; py = oy[i] + vy[i] * a + 820 * a * a
+            if not (-40 < px < W + 40 and -40 < py < H + 40): continue
+            k = r.integers(4, 7)
+            th = np.linspace(0, 2 * np.pi, k, endpoint=False) + np.radians(ang0[i] + spin[i] * a) + r.uniform(-0.3, 0.3, k)
+            rad = sz[i] * r.uniform(0.55, 1.0, k) / 2
+            pts = np.stack([px / 2 + rad * np.cos(th), py / 2 + rad * 0.8 * np.sin(th)], -1)
+            cv2.fillConvexPoly(D, np.round(pts * 4).astype(np.int32), 1.0, cv2.LINE_AA, shift=2)
+            cv2.fillConvexPoly(C, np.round(pts * 4).astype(np.int32), float(shade[i]), cv2.LINE_AA, shift=2)
+            top = pts[pts[:, 1] < py / 2]
+            if len(top) >= 2:
+                cv2.polylines(Lt, [np.round(top * 4).astype(np.int32)], False, 1.0, 1, cv2.LINE_AA, shift=2)
+        fade = clamp01(1 - (a - 0.7) / 0.5)
+        D = cv2.resize(cv2.GaussianBlur(D, (0, 0), 0.6), (W, H)) * fade
+        C = cv2.resize(cv2.GaussianBlur(C, (0, 0), 0.6), (W, H))
+        Lt = cv2.resize(Lt, (W, H)) * D
+        col = (C * fade)[..., None] * np.array([0.95, 0.97, 1.05], np.float32) + Lt[..., None] * np.array([0.30, 0.32, 0.38], np.float32)
+        fr = fr * (1 - D[..., None]) + col
+        # 灰尘团：软噪声云，随时间扩散、变淡
+        xg, yg = K.grid()
+        R = 260 + 520 * eout(clamp01(a / 1.0), 2)
+        cloud = np.exp(-(((xg - 900) / 1.3) ** 2 + (yg - 560) ** 2) / (2 * R * R))
+        nz = cv2.resize(K.tile_crop(self.dtex, a * 60, a * 25, H // 8, W // 8), (W, H))
+        dm = np.clip(cloud * (0.35 + 0.9 * nz) * 0.6 * math.exp(-a / 0.9) * clamp01(a / 0.08), 0, 0.55)
+        return over(fr, dm.astype(np.float32), (0.20, 0.205, 0.22))
 
     def render(self, t):
         u = self.u(t)
@@ -547,20 +583,20 @@ class S034(Shot):
         p1 = clamp01((t - self.t0 - 0.1) / (self.T_POP - self.t0 - 0.1))
         xg, yg = K.grid()
         rr = np.sqrt(((xg - 900) / 1.25) ** 2 + (yg - 560) ** 2)
+        # r6 F组（评审 #22 7 分）：亮斑柔化 —— 渗光与冲击环都改宽羽化、降峰值（不再出现发白的硬亮缝）；
+        #   白色火星细线 → 砖屑碎块（暗灰带顶光、随重力翻落）+ 灰尘团（软噪声云团缓慢扩散）
         if t < self.T_POP:
-            gm = np.exp(-(rr / (120 + 220 * eio(p1))) ** 2) * eio(p1) * 0.55
+            gm = np.exp(-(rr / (180 + 260 * eio(p1))) ** 2) * eio(p1) * 0.34
         else:
             a = t - self.T_POP
-            R = 300 + 1500 * eout(a / 0.5, 2)
-            gm = (np.exp(-(rr / 340) ** 2) * (0.25 + 0.4 * math.exp(-a / 0.3))
-                  + np.exp(-((rr - R) / 110) ** 2) * 0.75 * math.exp(-a / 0.35))
-        seamlight = np.clip(sw_ * gm, 0, 1)
-        fr = fr + seamlight[..., None] * np.array([0.80, 0.86, 1.0], np.float32) * 0.8
-        fr += K.blur_ds(seamlight, 8)[..., None] * np.array([0.85, 0.88, 1.0], np.float32) * 0.5
-        fr = K.dust(fr, t, 3401, n=90, amt=0.5, size=(1, 4), drift=(10, 40), blur=1.2)
+            R = 300 + 1400 * eout(a / 0.6, 2)
+            gm = (np.exp(-(rr / 420) ** 2) * (0.18 + 0.26 * math.exp(-a / 0.35))
+                  + np.exp(-((rr - R) / 240) ** 2) * 0.40 * math.exp(-a / 0.40))
+        seamlight = np.clip(K.blur_ds(sw_, 2) * gm, 0, 1)
+        fr = fr + seamlight[..., None] * np.array([0.72, 0.80, 0.95], np.float32) * 0.65
+        fr += K.blur_ds(seamlight, 12)[..., None] * np.array([0.75, 0.80, 0.95], np.float32) * 0.35
         if t >= self.T_POP:
-            fr = K.sparks(fr, t, 3402, (900, 540), n=70, life=1.0, speed=(200, 700), dirc=(0, 1), spread=1.5, grav=900,
-                          burst=True, t0=self.T_POP, area=(300, 280), color=(0.55, 0.56, 0.6), amt=0.8)
+            fr = self.debris(fr, t - self.T_POP)
         dx, dy, dr = shake(t, 8 * pulse(t, self.T_POP, 0.25) * (t >= self.T_POP) + 2, 7, 34)
         fr = cam(fr, 1.0 + 0.05 * u, dx, dy, dr)
         pr = tprog(14, [4, 5, 6, 7], t, 0.25)
