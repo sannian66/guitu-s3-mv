@@ -25,7 +25,7 @@
   SPRITE_FAST=0 仍是旧的全画布实现（对拍基准，逐像素不变）。
 
 2026-11-10 r6-SPRITE（工程组）从 feat/quality-pass 移植到 main：只移植本文件（R1/R2），不含转场去重/加刀/道具化/rig/grade_unify。
-  改动：①开关 SPRITE_FAST 默认值见下（对拍 ≤2/255 才改 1）；②三处缓存键补 id(A)/id(ring)/id(wind_w)
+  改动：①SPRITE_FAST 默认 1（对拍见 crew/round6/ENG_r6.md）；②三处缓存键补 id(A)/id(ring)/id(wind_w)
   （main 各组有「改 sp.A / sp.ring 再画」的写法，原键只认 id(F) 会命中旧结果）；③_support 的 `is not` 比整数改成 !=。
 """
 import math, os
@@ -33,7 +33,7 @@ import numpy as np, cv2
 from PIL import Image
 
 W, H = 1920, 1080
-FAST = os.environ.get('SPRITE_FAST', '0') != '0'          # r6-SPRITE 移植：先默认 0，四帧对拍过线后再改默认
+FAST = os.environ.get('SPRITE_FAST', '1') != '0'          # r6-SPRITE：四帧对拍 max 1/255（≤2 过线）→ 默认 1；SPRITE_FAST=0 = 旧 main 全画布实现（逐像素相同）
 
 _GRID = {}        # (h, w) -> (gy, gx) 广播视图
 _SCACHE = {}      # 整幅精灵空间结果（非线性 look 的回退路径）
