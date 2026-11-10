@@ -38,6 +38,7 @@ R6D_KEEPTXT = _on('R6D_KEEPTXT')
 R6D_EMBER = _on('R6D_EMBER')   # [D组 r6 #46] S26 3:08 炸开后余烬火星
 R6D_S18 = _on('R6D_S18')    # [D组 r6 #45] S18 头顶留白加大 + 鞘尾红穗去掉（R6D_S18=0 回滚到 r5 复审版）
 R6D_C = _on('R6D_C')        # [D组 r6 第三棒] 评审 a200f95 返工：#45 S18 换按 S22 画风重出的新生图 R6_D/s18_s22style_a（柔光减半）、192.3 S30 体积光柱/答描边/人物放大（R6D_C=0 回滚到第二棒）
+R6D_F = _on('R6D_F')        # [D组 r6 第六棒] 评审 r6c 建议项：#45 两耳尖收圆 + 琥珀瞳发光减半；193.0 光柱两侧橙降饱和/外缘再衰减/柱外烟纹压暗；「答」字芯偏金（R6D_F=0 回到第四棒）
 R6D_B = _on('R6D_B')        # [D组 r6 第二棒] 评审返工：#45 肤色暖化/耳尖收圆/柔化，#46-f 余烬断口，184.3 碎片、186.0 地平线、192.3 光柱与构图（R6D_B=0 回滚到第一棒）
 TXTCUT = R5D_TEXT_CUT and not R6D_KEEPTXT   # 镜内横排/刻/写/印字：r6 默认保留
 VCUT = R5D_TEXT_CUT                        # 竖排宋体歌词列：继续去
@@ -1010,7 +1011,8 @@ class S18_Draw(Shot):
     def __init__(self):
         if R5D_S18_NEW and R5D_S18_V2 and R6D_C and R6D_B:
             self.sp = D.spr('R6_D/s18_s22style_a')   # [D组 r6 第三棒 #45] 以 184.3 S22 主角为参考、按 S22 2.5D 插画画风重出（素黑漆鞘、无穗、琥珀瞳）
-            _s18c_fix(self.sp)
+            _s18c_fix(self.sp, iris_k=0.6 if R6D_F else 1.2)
+            if R6D_F: _s18_round_ears(self.sp)
         elif R5D_S18_NEW and R5D_S18_V2:
             self.sp = D.spr('R5_D/s18_draw_xb')     # [D r5 复审 #45] 刀鞘是素面黑漆长鞘（无缠绳），脸部在 _s18_face_fix 里去妆感
             _s18_face_fix(self.sp)
@@ -1133,7 +1135,37 @@ def _s18_face_fix(sp, RW=1672):
     sp.F = np.clip(F, 0, 1).astype(np.float32)
 
 
-def _s18c_fix(sp, RW=1671):
+def _s18_round_ears(sp, ears=((894, 292, 0.31, 0.95, 30), (1152, 291, -0.25, 0.97, 4)), R=11.0, dc=24.0):
+    """[D组 r6 第六棒 #45] 新图两只耳朵上缘是往上收的尖头（精灵耳感）。耳尖坐标/耳轴方向按 2048 宽精灵像素。
+    在耳轴上离耳尖 dc 处取圆心、半径 R 的圆当耳朵上缘：圆外、圆心以上的暖色耳廓像素（削掉约 dc−R≈10px 精灵 ≈ 6px 成片的尖角）
+    用 cv2.inpaint 从周围头发补上（保留发丝走向，不是一块平涂黑）。"""
+    if getattr(sp, '_s18ears', False):
+        return
+    sp._s18ears = True
+    F = sp.F.astype(np.float32).copy()
+    k = sp.w / 2048.0
+    hsv = cv2.cvtColor(F, cv2.COLOR_RGB2HSV); Hh, S, Vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    A = sp.A.astype(np.float32)
+    for tx, ty, ax, ay, xr in ears:                                        # xr：耳尖外侧最多往外动多少（右耳外侧就是抠像边的蓝发梢，不碰）
+        tx, ty = tx * k, ty * k
+        cx, cy = tx + ax * dc * k, ty + ay * dc * k
+        x0, x1, y0, y1 = int(tx - 30 * k), int(tx + xr * k), int(ty - 16 * k), int(cy + 4 * k)
+        yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        h, sat, v = Hh[y0:y1, x0:x1], S[y0:y1, x0:x1], Vv[y0:y1, x0:x1]
+        warm = (v > 0.12) & ~((h > 150) & (h < 280) & (sat > 0.10))          # 耳廓（含高光）= 不偏蓝的亮像素；头发是暗/偏蓝
+        along = (xx - cx) * ax + (yy - cy) * ay                              # <0 = 圆心往耳尖方向
+        out = (np.hypot(xx - cx, yy - cy) > R * k) & (along < 0)
+        m = (warm & out & (A[y0:y1, x0:x1] > 0.5)).astype(np.uint8)
+        m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))     # 外扩 2px，inpaint 只从头发取样
+        blk8 = (np.clip(F[y0:y1, x0:x1], 0, 1) * 255).astype(np.uint8)
+        fill = cv2.inpaint(blk8, m, 4, cv2.INPAINT_TELEA).astype(np.float32) / 255
+        w = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 0.8)[..., None]
+        w = np.maximum(w, m[..., None].astype(np.float32))
+        F[y0:y1, x0:x1] = F[y0:y1, x0:x1] * (1 - w) + fill * w
+    sp.F = np.clip(F, 0, 1).astype(np.float32)
+
+
+def _s18c_fix(sp, RW=1671, iris_k=1.2):
     """[D组 r6 第三棒 #45] 新生图 s18_s22style_a 的轻修（坐标按生图原图 1671 宽）：脸/耳范围内偏红的像素（唇、耳廓）
     色相拉到 20°、饱和度封顶 0.18 → 无红唇、无红耳；抠像发梢 6px 带里残留的绿/冷白溢色去掉。"""
     def ss(a, b, x):
@@ -1156,7 +1188,7 @@ def _s18c_fix(sp, RW=1671):
     for cx, cy in ((795, 294), (873, 292)):
         iris = np.maximum(iris, np.exp(-(((xx - cx) / 15) ** 2 + ((yy - cy) / 8) ** 2)))
     amb = cv2.GaussianBlur(iris * ss(8, 18, Hh) * ss(60, 42, Hh) * ss(0.12, 0.25, S) * ss(0.04, 0.10, Vv), (0, 0), 0.8)
-    amb = np.clip(amb * 1.2, 0, 1)
+    amb = np.clip(amb * iris_k, 0, 1)
     tgt = np.stack([np.clip(Vv * 2.2, 0, 1), np.clip(Vv * 1.4, 0, 1), np.clip(Vv * 0.35, 0, 1)], -1)
     F = F * (1 - amb[..., None]) + tgt * amb[..., None]
     dist = cv2.distanceTransform((A > 0.5).astype(np.uint8), cv2.DIST_L2, 5)
@@ -2270,7 +2302,12 @@ class S30_Da(Shot):
         s_ = K.sstep(60, max(61.0, gap), dx)                                                           # 热芯 ±60 平台 → S 曲线到边
         core = np.array([0.97, 0.91, 0.80], np.float32) * 0.985                                       # 暖白（灰度 ≈ 0.90 → 230）
         amb = np.array([0.74, 0.46, 0.17], np.float32)                                                # 琥珀（灰度 ≈ 0.47 → 120）
+        if R6D_F:                                                                                      # [D组 r6 第六棒] 193.0 两侧橙降饱和 15% + 柱外烟纹压暗
+            amb = amb + (float(amb @ np.array([0.299, 0.587, 0.114], np.float32)) - amb) * 0.15
+            sm = fr.max(-1, keepdims=True)                                                             # 柱外风暴烟纹：亮度软顶 ≈ 80/255
+            fr = fr * np.where(sm > 0.24, (0.24 + 0.075 * (1 - np.exp(-(sm - 0.24) / 0.075))) / np.maximum(sm, 1e-6), 1.0)
         sky = core * (1 - s_[..., None]) + amb * s_[..., None]
+        if R6D_F: sky = sky * (1 - 0.30 * K.sstep(0.45 * gap, gap + 40, dx))[..., None]              # 柱外沿再加一级明度衰减（不再是两片平涂幕布）
         tex = 1 + (0.03 + 0.07 * s_) * ((n3 - 0.5) * 2)                                               # 云纹在柱边更明显，热芯干净
         vg = 0.68 + 0.32 * K.sstep(330, 560, y)                                                       # 「答」所在的上段柱光收一点（给金字让出亮度），热芯在人身处
         sky = sky * (tex * vg)[..., None]
@@ -2315,7 +2352,8 @@ S30_TIP = (960, 545)       # 人放大后的刀尖位置（gold_tip 转场圆心
 
 def _da_c(fr, a, scl, s=None):
     """[D组 r6 第三棒] 金「答」：背后暗晕（压周边背景）→ 下移 6px 投影 α0.4 → 3px 深棕描边 → 金白字芯 + 细金辉。"""
-    L = D.text_layer([('答', 960, DA2_Y, s or DA2_S, a, scl, 0.0, np.array([1.0, 0.94, 0.76], np.float32))], fname='serif_black')
+    dcol = np.array([1.0, 0.87, 0.56] if R6D_F else [1.0, 0.94, 0.76], np.float32)    # [D组 r6 第六棒] 字芯米白 → 金（色相 45°→40°、饱和 0.24→0.44）
+    L = D.text_layer([('答', 960, DA2_Y, s or DA2_S, a, scl, 0.0, dcol)], fname='serif_black')
     bx = L.box(140)
     if bx is None: return fr
     x0, y0, x1, y1 = bx

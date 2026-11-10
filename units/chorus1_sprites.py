@@ -168,7 +168,8 @@ def install(G):
             if self.E:
                 from PIL import Image as _I
                 ld = lambda n: np.asarray(_I.open(GEN + 'R6_F/' + n).convert('RGBA')).astype(np.float32) / 255
-                self.ep = L('R6_F/emp_liu_e_plate')
+                # 私有图层（不走 SP.layer 缓存）：每帧会改写 .F/.A，若与缓存共享，第二个实例会把上一帧的珠串当底板拷走 = 鬼珠串
+                self.ep = SP.SpriteLayer(GEN + 'R6_F/emp_liu_e_plate_cut.png')
                 self.epF, self.epA = self.ep.F.copy(), self.ep.A.copy()
                 self.es = {x0: ld(f'emp_liu_e_s{x0}_cut.png') for x0 in self.E_HOME}
                 hh, ww = self.epA.shape
