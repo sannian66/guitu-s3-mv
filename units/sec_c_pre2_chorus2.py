@@ -2266,9 +2266,9 @@ class C38(Shot):
         fr = storm(t, 38, horizon=1300, flash=0.25 + 0.6 * fl, ground=False, fc=(400, 150)) * 0.8
         fr = K.vol_light(fr, (300, 200), 600, COLD, 0.25 + 0.4 * fl)
         grip = eio(clamp((t - self.t0) / 0.6)) + 0.4 * pulse(t, V(158.18), 0.2)
-        if R6:   # r6 #43：换年轻手（R5_C/c38_grip_young_v1：手背平滑、指节修长，不再青筋暴起显老）；肤色压回冷调、去油光
-            fr, _ = put(fr, t, 'R5_C/c38_grip_young_v1', 930, 560, 1120 * (1.0 + 0.05 * u), anchor='src', src=(0.5, 0.5), rot=1.5 - 2.5 * grip,
-                        rim=COLD, rim_amt=2.0, rim_dir=(-0.8, -0.6), flash=0.8 * fl, expo=0.82, sat=0.45, tint=(0.97, 0.97, 1.03), wind=0, breathe=0.0)
+        if R6:   # r6 #43：换年轻手（R5_C/c38_grip_young_v1 → 预处理 R6_C/c38_grip_young_soft：皮肤双边滤波去青筋纹理、压油光：手背平滑、指节修长，不再青筋暴起显老）；肤色压回冷调、去油光
+            fr, _ = put(fr, t, 'R6_C/c38_grip_young_soft', 930, 560, 1120 * (1.0 + 0.05 * u), anchor='src', src=(0.5, 0.5), rot=1.5 - 2.5 * grip,
+                        rim=COLD, rim_amt=1.6, rim_dir=(-0.8, -0.6), flash=0.7 * fl, expo=0.82, sat=0.62, tint=(1.02, 0.98, 0.97), wind=0, breathe=0.0)
         else:
             fr, _ = put(fr, t, 'C5/c38_grip', 960, 560, 1180 * (1.0 + 0.05 * u), anchor='src', src=(0.5, 0.5), rot=1.5 - 2.5 * grip,
                         rim=COLD, rim_amt=2.6, rim_dir=(-0.8, -0.6), flash=fl, expo=0.95, sat=0.55, wind=0, breathe=0.0)
