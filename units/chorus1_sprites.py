@@ -434,7 +434,8 @@ def install(G):
         BLADE = (0.312, 0.458)                            # 刀身左右缘（归一化 x），护手在 0.81
         def __init__(self):
             super().__init__(); self.sp = L('R5_F/bladeface_a')
-            x, y = K.grid(); self.x, self.y = x, y; self.inkm = sstep(950, 870, x).astype(np.float32)
+            x, y = K.grid(); self.x, self.y = x, y
+            self.inkm = sstep(660, 580, x).astype(np.float32)        # r6：墨爆收在刀身左侧更远处，不再有墨滴溅上刀身（读作血点）
         def render(self, t):
             tr = REAL_T[0] if REAL_T[0] is not None else t     # 画面定格慢放；风/刀光/闪光/墨爆按真实时间
             x, y = self.x, self.y
@@ -448,6 +449,12 @@ def install(G):
             fr, Aw = sp.draw(fr, tr, self.EYE, (ex, ey), s, breathe=0.004, wind_amp=5,
                              grade=dict(expo=0.62, sat=0.50, tint=(0.90, 0.95, 1.05), lift=0.0, gamma=1.22),
                              rim=dict(col=(0.80, 0.86, 1.0), amt=2.0, dir=(0.7, -0.7)), wrap=0.45, shade=None, extra_A=ea, keep_red=0.45)    # 压唇色（防只有唇红抢眼）
+            # r6 F组（#28 可选「去掉红点」）：左耳廓内侧的红（耳朵透光）在暗画面里读成一个红点 → 局部去饱和
+            k_ = s / 0.50
+            erx, ery = ex + 205 * k_, ey - 110 * k_
+            em_ = np.exp(-(((x - erx) / (46 * k_)) ** 2 + ((y - ery) / (60 * k_)) ** 2)).astype(np.float32)[..., None]
+            lum_ = fr.mean(-1, keepdims=True)
+            fr = fr * (1 - em_) + lum_ * np.array([0.97, 0.99, 1.03], np.float32) * em_
             # 刀身：冷光扫过（入镜一次、「答」前再一次）
             bx0 = x0 + self.BLADE[0] * sp.w * s; bx1 = x0 + self.BLADE[1] * sp.w * s
             gy = ey + (0.81 - self.EYE[1]) * sp.h * s
