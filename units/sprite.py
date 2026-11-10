@@ -184,7 +184,7 @@ class SpriteLayer:
         if got is not None:
             return got
         got = self._wind_full(t, amp, wdir, freq)
-        if len(_WCACHE) > 3:
+        if len(_WCACHE) >= 2:
             _WCACHE.clear()
         _WCACHE[key] = got
         return got
@@ -250,9 +250,10 @@ class SpriteLayer:
         F = F + rimm * np.array(rim['col'], np.float32) * rim['amt'] * 0.25
         if look:                                                   # 2026-11-09 全片整合：复用镜头的变体（剪影/水墨/纸/负片/投影）
             F, A = _look(F, A, rimm, rim, red, look)
-        if len(_SCACHE) > 32:
-            _SCACHE.clear()
-        _SCACHE[key] = (F, A)
+        if FAST:                                                   # r6：只在 FAST 回退路径缓存（每条是整幅精灵 ~100MB，旧上限 32 会吃几 GB）
+            if len(_SCACHE) >= 4:
+                _SCACHE.clear()
+            _SCACHE[key] = (F, A)
         return F, A
 
     # ---- R2：线性基底（一次算好 A0 / Arim / A，每个精灵只剩系数）

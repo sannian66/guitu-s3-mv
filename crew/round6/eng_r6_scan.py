@@ -1,5 +1,5 @@
 """r6-SPRITE 全片冒烟：一个进程按镜头表逐镜取中点渲一帧（SPRITE_FAST 取环境变量），记每帧 SpriteLayer.draw 次数/耗时/异常。
-python3 crew/round6/eng_r6_scan.py <shots.json> <out.jsonl>   （外包 tools/cpu_slot.sh）"""
+python3 crew/round6/eng_r6_scan.py <shots.json> <out.jsonl> [i0 i1]（按镜头表下标切片，分段跑免得单进程缓存堆满内存）   （外包 tools/cpu_slot.sh）"""
 import os, sys, time, json, random, traceback
 sys.path.insert(0, '/workspace/work/mv')
 import numpy as np
@@ -9,7 +9,7 @@ n = [0]; _d = SP.SpriteLayer.draw
 def draw(self, *a, **k):
     n[0] += 1; return _d(self, *a, **k)
 SP.SpriteLayer.draw = draw
-shots = json.load(open(sys.argv[1])); out = open(sys.argv[2], 'a')
+shots = json.load(open(sys.argv[1]))[int(sys.argv[3]) if len(sys.argv) > 3 else 0:int(sys.argv[4]) if len(sys.argv) > 4 else None]; out = open(sys.argv[2], 'a')
 cache = {}
 for g, sid, a, b in shots:
     t = (a + b) / 2; n[0] = 0; t0 = time.time(); err = None
