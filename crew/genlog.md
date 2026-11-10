@@ -626,3 +626,10 @@
 ## 2026-11-10 04:27 · OpenAI 协议渠道批量生图（s18_draw_xb.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `s18_draw_xb`（67s）→ `assets/gen/R5_D/s18_draw_xb_cut.png`
+
+## 2026-11-10 06:25 · OpenAI 协议渠道批量生图（r5redo.json，4 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `c28_face_pt_v1`（52s）→ `assets/gen/R5_C/c28_face_pt_v1_cut.png`
+- ✔ `c28_face_pt_v2`（54s）→ `assets/gen/R5_C/c28_face_pt_v2_cut.png`
+- ✔ `c38_grip_young_v1`（59s）→ `assets/gen/R5_C/c38_grip_young_v1_cut.png`
+- ✔ `c38_grip_young_v2`（53s）→ `assets/gen/R5_C/c38_grip_young_v2_cut.png`

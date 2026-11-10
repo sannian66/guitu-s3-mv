@@ -21,6 +21,8 @@ from d_kit import V, cp, seal_p, INK, CINNABAR, GOLD, RED, W, H, BAR
 READY = True
 # [D r5] 用户第五轮意见开关（关掉即回滚到 r8 版）
 R5D_S18_NEW = True      # #45 3:00 主角重新出图（S18_Draw 换新生图 + 中景构图）
+R5D_S18_V2 = True       # #45 复审：换 s18_draw_xb（素鞘、更长）+ 脸部去红（唇/眼周/耳）+ 琥珀瞳 + 发梢冷白描边压掉 + 头顶留白 + 弱轮廓光
+R5D_NO_PAN = True       # #46 复审追加（用户：「判字不留了」）：S26 3:08 天平上的「判」也去掉，炸开后不再退成空的暗红夜，而是劈成两半的天平留在朱红余烬里
 R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S21) 与「判」(S26)，其余画内字去掉
 F0, F1 = 4839, 5797
 T0, T1 = F0 / 30, F1 / 30
@@ -989,7 +991,10 @@ class S18_Draw(Shot):
     """MS 雨夜：鬼屠横刀出鞘，寒光沿刃走过；脚下积水倒影 + 地雾（第三棒：去漩涡底，换雨夜地面空间）；宋体「只」+ 巨字「听」"""
     t0, t1 = 180.09, 181.0
     def __init__(self):
-        if R5D_S18_NEW:
+        if R5D_S18_NEW and R5D_S18_V2:
+            self.sp = D.spr('R5_D/s18_draw_xb')     # [D r5 复审 #45] 刀鞘是素面黑漆长鞘（无缠绳），脸部在 _s18_face_fix 里去妆感
+            _s18_face_fix(self.sp)
+        elif R5D_S18_NEW:
             self.sp = D.spr('R5_D/s18_draw_wa')     # [D r5 #45] 新生图：中景正面半拔刀（绿幕），与 S16/S17/S19 同一张脸、同一写实暗调
         else:
             self.sp = D.spr('draw_side')       # [r4] 侧身半抽刀（替换正面 T 字横刀站姿）
@@ -1030,12 +1035,19 @@ class S18_Draw(Shot):
         cx = 1150 + 30 * u
         anc = (sp.top[0], 1.0)
         sc = 830 / sp.h * (1 + 0.035 * eo(u, 2))
+        if R5D_S18_V2:                                   # [D r5 复审 #45] 人缩小一点：发髻上方留 ~140px（黑边内），腰部切线仍压在下黑边里
+            cx = 1080 + 30 * u
+            sc = 735 / sp.h * (1 + 0.035 * eo(u, 2))
         fr = D.night(t, 181, top=(0.045, 0.05, 0.068), bot=(0.012, 0.012, 0.018), glow=(cx + 60, 260, 560, (0.45, 0.52, 0.72), 0.42), clouds=0.6)
         fr = K.rain(fr, t, 181, n=380, amt=0.22, angle=6, length=(30, 80))            # 人后远雨（细、暗）
         fr = K.fog(fr, t, 44, amt=0.32, speed=(60, 0), y0=0.55, y1=1.0, color=(0.2, 0.22, 0.28))
-        fr, Aw = D.real_figure(fr, sp, t, anc, (cx, 1005), sc, expo=1.02, sat=0.62, gamma=1.12, tint=(0.94, 0.97, 1.04),
-                               rim=COLD, rim_amt=4.0, rim_dir=(0.7, -0.7), wind=8)
-        fr = R7.rim_edge(fr, Aw, (0.7, -0.7), 3, 0.7, (0.75, 0.85, 1.0), glow=6, gamt=0.2)
+        if R5D_S18_V2:                                   # [D r5 复审 #45] 轮廓光降到场景光的量级，不再一圈冷白描边
+            fr, Aw = D.real_figure(fr, sp, t, anc, (cx, 1005), sc, expo=1.02, sat=0.66, gamma=1.12, tint=(0.95, 0.97, 1.02),
+                                   rim=COLD, rim_amt=1.3, rim_dir=(0.7, -0.7), wind=8)
+        else:
+            fr, Aw = D.real_figure(fr, sp, t, anc, (cx, 1005), sc, expo=1.02, sat=0.62, gamma=1.12, tint=(0.94, 0.97, 1.04),
+                                   rim=COLD, rim_amt=4.0, rim_dir=(0.7, -0.7), wind=8)
+            fr = R7.rim_edge(fr, Aw, (0.7, -0.7), 3, 0.7, (0.75, 0.85, 1.0), glow=6, gamt=0.2)
         # 刀身寒光：刃面像素（亮、低饱和）× 一道从左（护手）扫到右（鞘口）的光带
         Fw, A2 = D.warp(sp, t, anc, (cx, 1005), sc, wind=0)
         lum = Fw.mean(-1); sat = Fw.max(-1) - Fw.min(-1)
@@ -1045,6 +1057,39 @@ class S18_Draw(Shot):
         fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
                            sweep_x=lerp(-200, 900, eo(u, 2)))
         return K.cam(fr, 1.03, -10 + 20 * u, 0), 0.0
+
+
+def _s18_face_fix(sp, RW=1672):
+    """[D r5 复审 #45] s18_draw_xb 局部修脸（坐标按生图原图 1672 宽）：
+    脸/耳区域里偏红的像素（色相 0–12°/345–360°：唇、眼眶、耳、颊）色相拉到 20°、饱和度封顶 0.2 → 苍白自然唇色；
+    两眼虹膜（琥珀色相 12–55°）提亮提饱和，与 S17 180.0s 特写的琥珀瞳一致；
+    发梢 7px 轮廓带里的冷白/蓝亮边（抠像残留 + 生图蓝高光）压暗去色。"""
+    def ss(a, b, x):
+        x = np.clip((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x)
+    if getattr(sp, '_s18_fixed', False):
+        return
+    sp._s18_fixed = True
+    F, A = sp.F, sp.A
+    s = sp.w / RW
+    yy, xx = np.mgrid[0:sp.h, 0:sp.w].astype(np.float32) / s
+    hsv = cv2.cvtColor(F, cv2.COLOR_RGB2HSV); Hh, S, Vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    face = np.clip(np.exp(-(((xx - 840) / 125) ** 2 + ((yy - 300) / 100) ** 4)) * 1.6, 0, 1) * (1 - ss(375, 392, yy))
+    w = face * np.maximum(ss(24, 12, Hh), ss(330, 345, Hh)) * ss(0.10, 0.22, S)
+    H2 = np.where(Hh > 180, Hh - 360, Hh)
+    Hn = H2 + (20 - H2) * w
+    Sn = S + (np.minimum(S, 0.2) - S) * w
+    F = cv2.cvtColor(np.stack([np.mod(Hn, 360), Sn, Vv], -1).astype(np.float32), cv2.COLOR_HSV2RGB)
+    iris = np.zeros_like(A)
+    for cx, cy in ((800, 281), (876, 279)):
+        iris = np.maximum(iris, np.exp(-(((xx - cx) / 16) ** 2 + ((yy - cy) / 9) ** 2)))
+    amb = cv2.GaussianBlur(iris * ss(12, 20, Hh) * ss(55, 40, Hh) * ss(0.15, 0.3, S) * ss(0.05, 0.12, Vv), (0, 0), 0.8)
+    amb = np.clip(amb * 1.3, 0, 1)                       # 整体 sat 0.66 会再压一次，这里给足
+    tgt = np.stack([np.clip(Vv * 2.4, 0, 1), np.clip(Vv * 1.5, 0, 1), np.clip(Vv * 0.35, 0, 1)], -1)
+    F = F * (1 - amb[..., None]) + tgt * amb[..., None]
+    dist = cv2.distanceTransform((A > 0.5).astype(np.uint8), cv2.DIST_L2, 5)
+    k = ss(7, 2, dist) * (A > 0.02) * ss(0.0, 0.08, F[..., 2] - F[..., 0]) * ss(0.12, 0.3, F.mean(-1))
+    F = F * (1 - 0.65 * k[..., None]) + (F.mean(-1, keepdims=True) - F) * 0.6 * k[..., None]
+    sp.F = np.clip(F, 0, 1).astype(np.float32)
 
 
 def stroke_head(ch, fname, x, y, s, p):
@@ -1158,6 +1203,7 @@ class S20_Wall(Shot):
         its = []
         for k, (ch, gx, gy) in enumerate((('规', 470, 660), ('矩', 1450, 660))):
             on = O[45][3 + k]
+            if R5D_TEXT_CUT: continue                            # [D r5 复审 #46-3] 「规」「矩」不再在 S20 单独先冒，改到 S21 两字同时出现
             pre = cl((t - (V(on) - 0.3)) / 0.3)
             if pre > 0:
                 gl = np.exp(-(((x - gx) / 60) ** 2 + ((y - gy - 70) / 170) ** 2)) * pre       # 一整片竹简渗金（竖条形）
@@ -1216,6 +1262,9 @@ class S21_Charge(Shot):
         if t < self.TC:
             pj = cp(t, O[45][4], 0.1)
             its = [('规', 600, 600, 250, 1.0, 'g')]
+            if R5D_TEXT_CUT:                                     # [D r5 复审 #46-3] 横扫转场（-182.93）走完后两字同时砸出，转场里不露半个「矩」
+                pj = cl((t - 182.93) / 0.07)
+                its = [('规', 600, 600, 250, pj, 'g')] if pj > 0 else []
             if pj > 0: its.append(('矩', 960, 545, 320, pj, 'g'))
             fr = D.song(fr, its)
             fr = fr + impact(t, tj, 0.1) * np.array([0.25, 0.16, 0.05], np.float32) * 0.5
@@ -1225,7 +1274,11 @@ class S21_Charge(Shot):
                              offset=0, slide=0.3, appear=0.0, style_kw=dict(shadow=0.6, outline=0, glow=0.45, glow_color=(1.0, 0.55, 0.2)))
             a_ = 1 - cl((t - self.TC - 0.16) / 0.16)
             fr = fr + (f2 - fr) * a_
-        if self.TC - 0.03 <= t < self.TC + 0.22:
+        if R5D_TEXT_CUT:                                         # [D r5 复审 #46-1] 刀光改为在斩点 TC 正好扫过「规矩」（-0.08…+0.08），不再在字已断开后独自划过右侧
+            if self.TC - 0.08 <= t < self.TC + 0.08:
+                q = (t - self.TC + 0.08) / 0.16
+                fr = TR._slash_streak(fr, (lerp(-100, 2000, q), lerp(780, 330, q)), np.array((0.977, -0.21)), q, length=2400, width=7, color=(1.0, 0.92, 0.85))
+        elif self.TC - 0.03 <= t < self.TC + 0.22:
             q = (t - self.TC + 0.03) / 0.25
             fr = TR._slash_streak(fr, (lerp(-100, 2000, eo(q)), lerp(780, 330, eo(q))), np.array((0.977, -0.21)), q, length=2400, width=7, color=(1.0, 0.92, 0.85))
         fr = K.sparks(fr, t, 2101, (960, 560), n=90, life=0.6, speed=(300, 1000), dirc=(0, -1), spread=2.6, grav=900, burst=True,
@@ -1260,16 +1313,24 @@ class S22_Chuang(Shot):
         q = cl((t - self.t0) / (th - self.t0))
         h = lerp(820, 1250, ei(q, 2)) + (600 * eo(cl((t - th) / 0.4)) if t > th else 0)
         pin = cp(t, O[45][7], 0.25)
-        fr, Aw = D.real_figure(fr, self.sp, t, (0.5, 0.42), (1060, 600), D.fit_scale(self.sp, h), expo=0.95, sat=0.55, gamma=1.2,
-                               tint=(0.80, 0.92, 1.16), rim=(0.70, 0.82, 1.0), rim_amt=4.0, rim_dir=(-0.7, -0.7), wind=12)
+        if R5D_TEXT_CUT:                                         # [D r5 复审 #46-2] 头顶不出画：以头顶为锚点钉在 y≈175（2.39 黑边内），人往下、往镜头长大；轮廓光减弱
+            anc = (0.5, self.sp.bbox[1]); dst = (1060, 205 + 15 * (1 - q))
+            fr, Aw = D.real_figure(fr, self.sp, t, anc, dst, D.fit_scale(self.sp, h), expo=0.95, sat=0.55, gamma=1.2,
+                                   tint=(0.80, 0.92, 1.16), rim=(0.70, 0.82, 1.0), rim_amt=1.6, rim_dir=(-0.7, -0.7), wind=12)
+        else:
+            fr, Aw = D.real_figure(fr, self.sp, t, (0.5, 0.42), (1060, 600), D.fit_scale(self.sp, h), expo=0.95, sat=0.55, gamma=1.2,
+                                   tint=(0.80, 0.92, 1.16), rim=(0.70, 0.82, 1.0), rim_amt=4.0, rim_dir=(-0.7, -0.7), wind=12)
         # [r8] 「闯」朱红反光：右侧（字一侧）暖红轮廓 + 身体右半边的红色漫反射；脸 / 刀刃左上冷高光一线
         x_, y_ = K.grid()
         red = (1.0, 0.26, 0.14)
         bounce = np.exp(-(((x_ - 1530) / 520) ** 2 + ((y_ - 640) / 420) ** 2)) * (0.35 + 0.65 * min(1.0, pin * 2))
         if R5D_TEXT_CUT: bounce = bounce * 0.45                 # [D r5 #46] 没有朱红「闯」了：红反光减半（留木牌暖红光源）
         fr = fr + (Aw * bounce * 0.22)[..., None] * np.array(red, np.float32)
-        fr = R7.rim_edge(fr, Aw * np.clip(bounce * 1.6, 0, 1), (0.95, -0.25), 5, 1.3, red, glow=9, gamt=0.35)
-        fr = R7.rim_edge(fr, Aw, (-0.75, -0.65), 3, 0.75, (0.80, 0.90, 1.0), glow=5, gamt=0.15)
+        if R5D_TEXT_CUT:                                         # [D r5 复审 #46-2] 去掉一侧红描边 / 一侧白描边（只留很淡的冷边）
+            fr = R7.rim_edge(fr, Aw, (-0.75, -0.65), 2, 0.25, (0.70, 0.78, 0.95), glow=4, gamt=0.08)
+        else:
+            fr = R7.rim_edge(fr, Aw * np.clip(bounce * 1.6, 0, 1), (0.95, -0.25), 5, 1.3, red, glow=9, gamt=0.35)
+            fr = R7.rim_edge(fr, Aw, (-0.75, -0.65), 3, 0.75, (0.80, 0.90, 1.0), glow=5, gamt=0.15)
         fr = K.radial_blur(fr, (1060, 520), 0.015 + 0.03 * q)
         if R5D_TEXT_CUT: pass                                   # [D r5 #46] 去「闯」「我偏要」
         elif t < th:
@@ -1464,12 +1525,23 @@ class S26_Judge(Shot):
             burst = cl((t - tj) / 0.08) * (1 - cl((t - tj - 0.12) / 0.14))       # ≈4 帧全屏朱墨
             R = 2400 * eo(cl((t - tj) / 0.1), 2)
             bm = np.clip((R - self.rd) / 60, 0, 1) * burst
+            split = fr
             fr = fr * (1 - bm[..., None]) + bm[..., None] * np.array([0.72, 0.04, 0.03], np.float32)
-            if t > tj + 0.1:                                    # 炸开之后纸已烧没：朱墨退成暗红夜，只剩「判」
+            if R5D_NO_PAN:                                       # [D r5 复审 #46-5] 不砸「判」：朱墨炸开后，劈断错开的天平在朱红余烬里显影，构图主体仍是天平
+                if t > tj + 0.1:
+                    ember = D.night(t, 263, top=(0.05, 0.01, 0.008), bot=(0.008, 0.0, 0.0), clouds=0.5) + \
+                        np.exp(-(self.rd / 800) ** 2)[..., None] * np.array([0.4, 0.03, 0.02], np.float32)
+                    ink = 1 - np.clip(split.mean(-1, keepdims=True) * 1.15, 0, 1)            # 天平墨线 = 1，纸 = 0
+                    paper = ember + (1 - ink) * np.array([0.30, 0.035, 0.02], np.float32) * (1 - 0.35 * cl((t - tj - 0.1) / 0.25))
+                    post = paper * (1 - 0.92 * ink)
+                    fr = fr * burst + post * (1 - burst)
+            elif t > tj + 0.1:                                    # 炸开之后纸已烧没：朱墨退成暗红夜，只剩「判」
                 ember = D.night(t, 263, top=(0.05, 0.01, 0.008), bot=(0.008, 0.0, 0.0), clouds=0.5) + \
                     np.exp(-(self.rd / 800) ** 2)[..., None] * np.array([0.4, 0.03, 0.02], np.float32)
                 fr = fr * burst + ember * (1 - burst)
-            if burst > 0.5:
+            if R5D_NO_PAN:
+                pass
+            elif burst > 0.5:
                 fr = D.song(fr, [('判', 960, 520, 600, pj, 'k')])
             else:
                 fr = D.song(fr, [('判', 960, 520, 600, pj, 'r')], glow=0.35)
@@ -1766,6 +1838,8 @@ CUTS = {
     'S29_Thrust': ('gold_beam', 0.08, 0.14, dict(x0=960)),
     'S30_Da': ('gold_tip', 0.1, 0.14, dict(tip=(960, 345))),
 }
+if R5D_TEXT_CUT:   # [D r5 复审 #46-4] 189.71 S27→S28 的故障撕裂（7 帧，像坏帧）改成 2 帧冷白闪硬切
+    CUTS['S28_Spin'] = ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.55))
 
 
 def seal_iris(A, B, p, center=(760, 400), ch='理', rot=-7.0):
