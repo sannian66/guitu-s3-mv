@@ -1572,6 +1572,20 @@ SENTENCES = [
 ]
 
 
+# r6 F组第二棒（总导演裁定 #55 13:30：画面里横排歌词字一律保留，只删竖排；评审 REVIEW_F_r6 阻断项「骨未凉」）：
+#   NOVLYR 时仍画 lyric3 的横排句（血未冷 74.62 / 天不判 81.68 / 我来量 83.68，y=850 在画内、不进下黑边字幕区），
+#   用户点名的「骨未凉」原为右侧竖排 → 改成 S039 镜内右上横排行书。R6F_HLYR=0 回滚到整层不画。
+HLYR = _on('R6F_HLYR')
+def _h_sentences():
+    out = [s_ for s_ in SENTENCES if s_.layout == 'bottom' and not s_.skip]
+    g = SL('骨未凉', 16, [3, 4, 5], 'bottom', 76.30, red='骨')     # 镜内字：在 S039（75.19–76.58）里写出、停住，切镜前散
+    sz, adv = 104, 104 * 1.12
+    for i, q in enumerate(g.P):
+        q.update(x=1300 + adv * i, y=300, size=sz, font='xing')
+    out.append(g)
+    return out
+
+
 class _Lazy:
     def __init__(self, cls): self.cls = cls; self.t0 = cls.t0; self.t1 = cls.t1; self.obj = None; self.id = cls.__name__
     def render(self, t):
@@ -1611,6 +1625,11 @@ class Chorus1:
         self.cam = build_cam(int(os.environ.get('C1_CAM', '3')))
         self.fg = VC.FGLayer(11, n=24)
         self.lyr = LY.LyricLayer(SENTENCES, lambda li, k: V(CT(li, k)))
+        self.lyr_h = LY.LyricLayer(_h_sentences(), lambda li, k: V(CT(li, k))) if (NOVLYR and HLYR) else None
+        if self.lyr_h is not None:                       # 「骨未凉」只在 S039 镜内出现（原字头 ~74.9 会落在 S038 刀面上）
+            g = self.lyr_h.S[-1]
+            g.tin = [max(ti, 75.42 + 0.14 * i) for i, ti in enumerate(g.tin)]
+            g.t_on = g.tin[0] - LY.IN_DUR
         self.occ = {k: V3.FGOcc(a, b, d, seed=int(k[1:]), rim=r) for k, (a, b, d, r) in OCC.items()}
 
     def idx(self, t):
@@ -1690,6 +1709,8 @@ class Chorus1:
         fr = fr + 0.012 * (1 - np.clip(fr, 0, 1))        # 抬一点黑位（避免死黑）
         if os.environ.get('C1_LYR', '3') == '3' and not NOVLYR:          # r6 #53：NOVLYR 时整层不画
             fr = self.lyr.draw(fr, t)                       # 统一字幕层（屏幕层，不随镜头）
+        elif self.lyr_h is not None:
+            fr = self.lyr_h.draw(fr, t)                     # r6 #55：只留横排句
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         return finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), 0
 
