@@ -205,9 +205,11 @@ PAD22 = 140
 
 def _pad_top(img, pad):
     """r6：底板上沿补天空（顶行镜像 + 重模糊 + 渐压暗），给头顶留白，不再顶着画幅上沿。"""
-    top = cv2.GaussianBlur(img[pad - 1::-1].copy(), (0, 0), 22)
+    row = cv2.GaussianBlur(img[:14].mean(0, keepdims=True), (0, 0), 30)    # 只取头顶以上的天空行（头顶在 y≈26），不镜像，免得把头发翻上去成黑团
+    tex = cv2.GaussianBlur(img[:pad][::-1] - cv2.GaussianBlur(img[:pad][::-1], (0, 0), 25), (0, 0), 3)   # 借云纹细节（去低频，头发的大块暗不进来）
+    yy = np.arange(pad, dtype=np.float32)[:, None, None]
     g = np.linspace(0.82, 1.0, pad, dtype=np.float32)[:, None, None]
-    ext = top * g
+    ext = np.clip(np.repeat(row, pad, 0) + 0.35 * np.clip(tex, -0.04, 0.04) * (yy / pad), 0, 1) * g
     k = np.linspace(0, 1, 24, dtype=np.float32)[:, None, None]                 # 接缝 24 行羽化
     out = np.concatenate([ext, img], 0)
     out[pad:pad + 24] = ext[-1:] * (1 - k) + img[:24] * k
