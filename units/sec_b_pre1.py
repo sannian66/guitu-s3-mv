@@ -422,8 +422,9 @@ class P05(Shot):
         fr = fr * (1 - self.m[..., None]) + gl * self.m[..., None]
         # 第八棒（P2-13：下摇时匾「规矩」上半截被顶边裁掉半拍以上）：开头 0.25s 匾完整在画（顶边离黑边 ≥35px），再加速下摇、匾快速出画
         off = int(195 * ein(clamp01((t - self.t0 - 0.25) / (self.t1 - self.t0 - 0.25)), 2) ** 0.8)
+        if R6: off = 0                     # r6 #14：不再下摇把匾甩出画——「规矩」匾整镜完整在画（顶边离黑边 ≥40px），运动改为缓推
         fr = np.ascontiguousarray(fr[off:off + H]); seam = self.seam[off:off + H]; studs = self.studs[off:off + H]
-        fr, _ = self.plq.draw(fr, t, 960, 270 - off, 600, sheen=clamp01((t - self.t0) / 1.2) * 1.4 - 0.2)
+        fr, _ = self.plq.draw(fr, t, 960, (310 if R6 else 270) - off, 600, sheen=clamp01((t - self.t0) / 1.2) * 1.4 - 0.2)
         # 金箔浮字：左扇「谁的」右扇「规矩」，被中缝与板缝切断（缝里漏出暗红）
         pr = tp(9, [0, 1, 2, 3], t, 0.2)
         L = T.Layer()
@@ -442,7 +443,7 @@ class P05(Shot):
         fr = np.clip(fr, 0, None)
         fr = BK.rain(fr, t, 951, amt=0.3, n=400, angle=6)
         fr = K.fog(fr, t, 952, amt=0.2, y0=0.65, y1=1.0)
-        fr = cam(fr, 1.0 + 0.06 * eio(u), 0, 0)
+        fr = cam(fr, 1.0 + 0.06 * eio(u), 0, 0) if not R6 else cam(fr, 1.0 + 0.035 * eio(u), 0, 0, center=(960, 600))
         return fr, 0
 
 
