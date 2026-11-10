@@ -1593,10 +1593,16 @@ class S24_Defy(Shot):
         fr = fr * (1 - 0.45 * np.clip((y - 500) / 400, 0, 1))[..., None]
         fr = fr + (np.exp(-(((x - 960) / 520) ** 2 + ((y - 830) / 110) ** 2)) * (0.22 + 0.5 * fl))[..., None] * np.array([0.55, 0.62, 0.85], np.float32)   # 剪影背后的地平冷光
         # 地平线 + 低机位地面（黑、上缘一线冷光）
-        hor = 905 + 6 * math.sin(x[0] / 210.0)[None, :] if False else 905
+        hor = 905 + 6 * math.sin(x[0] / 210.0)[None, :] if False else (865 if R6D_B else 905)   # [D组 r6 第二棒] 地平线抬 40px：留出一条湿地面（倒影）不贴黑边
         g = np.clip((y - hor) / 6, 0, 1)
-        fr = fr * (1 - g[..., None]) + g[..., None] * np.array([0.012, 0.013, 0.018], np.float32)
-        fr = fr + (np.exp(-((y - hor) / 3) ** 2) * np.exp(-((x - 960) / 700) ** 2) * (0.25 + 0.8 * fl))[..., None] * np.array(COLD, np.float32)
+        if R6D_B:                                                # [D组 r6 第二棒] 186.0 地平线：不再是 2–3px 白硬线 + 死黑地面
+            gnd = np.array([0.030, 0.034, 0.048], np.float32) + (np.exp(-((y - hor) / 90)) * np.exp(-((x - 960) / 620) ** 2) * (0.10 + 0.22 * fl))[..., None] * np.array([0.42, 0.50, 0.75], np.float32)
+            fr = fr * (1 - g[..., None]) + g[..., None] * gnd    # 湿地面：冷蓝反光，离地平线越远越暗
+            lg = np.exp(-((y - hor) / 10) ** 2) * 0.6 + np.exp(-((y - hor) / 26) ** 2) * 0.25   # 亮线 σ10 高斯柔化 + 一层薄雾晕
+            fr = fr + (lg * np.exp(-((x - 960) / 700) ** 2) * (0.16 + 0.42 * fl))[..., None] * np.array(COLD, np.float32)
+        else:
+            fr = fr * (1 - g[..., None]) + g[..., None] * np.array([0.012, 0.013, 0.018], np.float32)
+            fr = fr + (np.exp(-((y - hor) / 3) ** 2) * np.exp(-((x - 960) / 700) ** 2) * (0.25 + 0.8 * fl))[..., None] * np.array(COLD, np.float32)
         fr = K.fog(fr, t, 243, amt=0.35, speed=(60, 0), y0=0.72, y1=0.9, color=(0.16, 0.17, 0.22))
         # 人：剪影 + 冷轮廓
         sc = D.fit_scale(self.sp, self.h * (1 + 0.04 * u))
@@ -1610,6 +1616,7 @@ class S24_Defy(Shot):
         if t > tj:
             gt = np.exp(-(((x - tip[0]) ** 2 + (y - tip[1]) ** 2) / (2 * 30 ** 2))) * 3.0 * math.exp(-(t - tj) / 0.25)
             fr = fr + gt[..., None] * np.array([0.85, 0.9, 1.0], np.float32)
+        if R6D_B: fr = _wet_reflect(fr, hor, t)                 # [D组 r6 第二棒] 地面雨水倒影（人、闪电、天光），与上方衔接
         fr = K.rain(fr, t, 24, n=600, amt=0.32, angle=4, length=(40, 120))
         # 「天」「不」冷白；「判」从云眼砸到刀尖
         pj = cl((t - (tj - 0.16)) / 0.16)
@@ -1628,6 +1635,20 @@ class S24_Defy(Shot):
                 fr = fr + (np.clip(Ld, 0, 1) * 1.6 * math.exp(-(t - tj) / 0.15))[..., None] * np.array([0.9, 0.93, 1.0], np.float32)
         fr = fr * (1 + fl * 0.3)
         return shake_cam(fr, t, [tj], 12, z=1.0 + 0.05 * u + 0.05 * impact(t, tj, 0.1), oy=-20 * u, center=(960, 600)), 0.0
+
+
+def _wet_reflect(fr, hor, t, depth=150, amt=0.32):
+    """[D组 r6 第二棒] 湿地倒影：地平线以上 depth 行竖直翻到线下，横向细波纹扰动 + 纵向拉糊，随深度衰减。"""
+    hor = int(hor); d = min(depth, H - hor)
+    src = fr[hor - d:hor][::-1].copy()
+    yy = np.arange(d, dtype=np.float32)[:, None]; xx = np.arange(W, dtype=np.float32)[None, :]
+    dx = (3.0 + yy * 0.04) * np.sin(xx * 0.045 + yy * 0.6 + t * 9.0) + 2.0 * np.sin(xx * 0.013 - t * 4.0)
+    mx = np.broadcast_to(xx, (d, W)) + dx; my = np.broadcast_to(yy, (d, W)).copy()
+    src = cv2.remap(src, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    src = cv2.GaussianBlur(src, (0, 0), sigmaX=1.5, sigmaY=5)
+    k = (amt * np.exp(-yy / (d * 0.45)) * np.clip(yy / 4, 0, 1))[..., None]
+    out = fr.copy(); out[hor:hor + d] = fr[hor:hor + d] + src * k * np.array([0.85, 0.92, 1.1], np.float32)
+    return out
 
 
 class S25_Leap(Shot):
