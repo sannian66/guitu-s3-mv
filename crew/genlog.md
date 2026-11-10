@@ -662,3 +662,12 @@
 ## 2026-11-10 06:32 · OpenAI 协议渠道批量生图（blade_face4_a.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `blade_face4_a`（61s）→ `assets/gen/R6_B/blade_face4_a_cut.png`
+
+## 2026-11-10 06:35 · OpenAI 协议渠道批量生图（jobs_D_r6c_s18.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `s18_s22style_b`（53s）→ `assets/gen/R6_D/s18_s22style_b_cut.png`
+
+## 2026-11-10 14:34–14:37 · [D组 r6 第三棒] #45 S18 按 S22 画风重出（jobs_D_r6c_s18.json，2 张；D 组本轮 2/12）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（`/images/edits`，refs：原 S18 构图 s18_draw_xb_raw、S22 源图 S105/charge_front_raw 上半身、184.3 渲帧截取、男主定妆照）
+- ✔ `s18_s22style_a`（61s）→ `assets/gen/R6_D/s18_s22style_a_cut.png`（第一次进程被 shell 超时杀掉前已存盘，日志手补）
+- ✔ `s18_s22style_b`（53s）→ `assets/gen/R6_D/s18_s22style_b_cut.png`

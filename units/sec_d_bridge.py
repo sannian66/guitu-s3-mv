@@ -37,6 +37,7 @@ R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S2
 R6D_KEEPTXT = _on('R6D_KEEPTXT')
 R6D_EMBER = _on('R6D_EMBER')   # [D组 r6 #46] S26 3:08 炸开后余烬火星
 R6D_S18 = _on('R6D_S18')    # [D组 r6 #45] S18 头顶留白加大 + 鞘尾红穗去掉（R6D_S18=0 回滚到 r5 复审版）
+R6D_C = _on('R6D_C')        # [D组 r6 第三棒] 评审 a200f95 返工：#45 S18 换按 S22 画风重出的新生图 R6_D/s18_s22style_a（柔光减半）、192.3 S30 体积光柱/答描边/人物放大（R6D_C=0 回滚到第二棒）
 R6D_B = _on('R6D_B')        # [D组 r6 第二棒] 评审返工：#45 肤色暖化/耳尖收圆/柔化，#46-f 余烬断口，184.3 碎片、186.0 地平线、192.3 光柱与构图（R6D_B=0 回滚到第一棒）
 TXTCUT = R5D_TEXT_CUT and not R6D_KEEPTXT   # 镜内横排/刻/写/印字：r6 默认保留
 VCUT = R5D_TEXT_CUT                        # 竖排宋体歌词列：继续去
@@ -1007,7 +1008,10 @@ class S18_Draw(Shot):
     """MS 雨夜：鬼屠横刀出鞘，寒光沿刃走过；脚下积水倒影 + 地雾（第三棒：去漩涡底，换雨夜地面空间）；宋体「只」+ 巨字「听」"""
     t0, t1 = 180.09, 181.0
     def __init__(self):
-        if R5D_S18_NEW and R5D_S18_V2:
+        if R5D_S18_NEW and R5D_S18_V2 and R6D_C and R6D_B:
+            self.sp = D.spr('R6_D/s18_s22style_a')   # [D组 r6 第三棒 #45] 以 184.3 S22 主角为参考、按 S22 2.5D 插画画风重出（素黑漆鞘、无穗、琥珀瞳）
+            _s18c_fix(self.sp)
+        elif R5D_S18_NEW and R5D_S18_V2:
             self.sp = D.spr('R5_D/s18_draw_xb')     # [D r5 复审 #45] 刀鞘是素面黑漆长鞘（无缠绳），脸部在 _s18_face_fix 里去妆感
             _s18_face_fix(self.sp)
             if R6D_B: _s18_skin_warm(self.sp)
@@ -1060,7 +1064,10 @@ class S18_Draw(Shot):
         fr = D.night(t, 181, top=(0.045, 0.05, 0.068), bot=(0.012, 0.012, 0.018), glow=(cx + 60, 260, 560, (0.45, 0.52, 0.72), 0.42), clouds=0.6)
         fr = K.rain(fr, t, 181, n=380, amt=0.22, angle=6, length=(30, 80))            # 人后远雨（细、暗）
         fr = K.fog(fr, t, 44, amt=0.32, speed=(60, 0), y0=0.55, y1=1.0, color=(0.2, 0.22, 0.28))
-        if R5D_S18_V2:                                   # [D r5 复审 #45] 轮廓光降到场景光的量级，不再一圈冷白描边
+        if R5D_S18_V2 and R6D_C and R6D_B:              # [D组 r6 第三棒 #45] 新图：色调对齐 S22 184.3（少压饱和、不加冷 tint，肤色保留血色）
+            fr, Aw = D.real_figure(fr, sp, t, anc, (cx, 1005), sc, expo=1.04, sat=0.82, gamma=1.08, tint=(1.0, 0.98, 0.99),
+                                   rim=COLD, rim_amt=1.3, rim_dir=(0.7, -0.7), wind=8)
+        elif R5D_S18_V2:                                   # [D r5 复审 #45] 轮廓光降到场景光的量级，不再一圈冷白描边
             fr, Aw = D.real_figure(fr, sp, t, anc, (cx, 1005), sc, expo=1.02, sat=0.66, gamma=1.12, tint=(0.95, 0.97, 1.02),
                                    rim=COLD, rim_amt=1.3, rim_dir=(0.7, -0.7), wind=8)
         else:
@@ -1074,10 +1081,11 @@ class S18_Draw(Shot):
         fr = D.metal_sheen(fr, metal, np.ones_like(lum), t, (600, 0), 0, speed=lerp(500, 1500, eo(u, 2)), width=90, amt=2.0)
         if R6D_B:                                        # [D组 r6 第二棒 #45] 与 S22 同一画风：人物降一点 CG 微反差 + 柔光（pro-mist）+ 一层冷雾空气透视
             Am = cv2.GaussianBlur(Aw, (0, 0), 3)[..., None]
+            kc = 0.5 if R6D_C else 1.0                   # [D组 r6 第三棒 #45] 新图本身是插画画风：柔光/泛光减半
             soft = cv2.GaussianBlur(fr, (0, 0), 1.3)
-            fr = fr + (soft - fr) * 0.45 * Am
+            fr = fr + (soft - fr) * 0.45 * kc * Am
             bloom = cv2.GaussianBlur(np.clip(fr - 0.35, 0, None), (0, 0), 14)
-            fr = fr + bloom * 0.35 + Am * 0.018 * np.array([0.55, 0.6, 0.8], np.float32)
+            fr = fr + bloom * 0.35 * kc + Am * 0.018 * np.array([0.55, 0.6, 0.8], np.float32)
         fr = K.rain(fr, t, 18, n=420, amt=0.3, angle=6)                                    # 人前近雨
         if not NOVLYR:                                               # [r6 #53] 去竖排「只听」
             fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
@@ -1122,6 +1130,39 @@ def _s18_face_fix(sp, RW=1672):
         tas = ss(1350, 1370, xx) * ss(1480, 1460, xx) * ss(775, 800, yy)
         sp.A = (A * (1 - tas)).astype(np.float32)
         sp.ring = cv2.GaussianBlur(np.clip(sp.A - cv2.erode(sp.A, np.ones((5, 5), np.uint8)), 0, 1), (0, 0), 1.5)
+    sp.F = np.clip(F, 0, 1).astype(np.float32)
+
+
+def _s18c_fix(sp, RW=1671):
+    """[D组 r6 第三棒 #45] 新生图 s18_s22style_a 的轻修（坐标按生图原图 1671 宽）：脸/耳范围内偏红的像素（唇、耳廓）
+    色相拉到 20°、饱和度封顶 0.18 → 无红唇、无红耳；抠像发梢 6px 带里残留的绿/冷白溢色去掉。"""
+    def ss(a, b, x):
+        x = np.clip((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x)
+    if getattr(sp, '_s18c', False):
+        return
+    sp._s18c = True
+    F, A = sp.F.astype(np.float32), sp.A.astype(np.float32)
+    s = sp.w / RW
+    yy, xx = np.mgrid[0:sp.h, 0:sp.w].astype(np.float32) / s
+    hsv = cv2.cvtColor(F, cv2.COLOR_RGB2HSV); Hh, S, Vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    face = np.clip(np.exp(-(((xx - 833) / 125) ** 2 + ((yy - 290) / 95) ** 4)) * 1.6, 0, 1) * (1 - ss(362, 378, yy))   # 下限在下巴，红内领不动
+    w = face * np.maximum(ss(24, 12, Hh), ss(330, 345, Hh)) * ss(0.12, 0.24, S)
+    H2 = np.where(Hh > 180, Hh - 360, Hh)
+    Hn = H2 + (20 - H2) * w
+    Sn = S + (np.minimum(S, 0.18) - S) * w
+    F = cv2.cvtColor(np.stack([np.mod(Hn, 360), Sn, Vv], -1).astype(np.float32), cv2.COLOR_HSV2RGB)
+    hsv = cv2.cvtColor(F, cv2.COLOR_RGB2HSV); Hh, S, Vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    iris = np.zeros_like(A)                              # 琥珀瞳：雨夜整体压色后仍读得出（同 S17 180.0 特写）
+    for cx, cy in ((795, 294), (873, 292)):
+        iris = np.maximum(iris, np.exp(-(((xx - cx) / 15) ** 2 + ((yy - cy) / 8) ** 2)))
+    amb = cv2.GaussianBlur(iris * ss(8, 18, Hh) * ss(60, 42, Hh) * ss(0.12, 0.25, S) * ss(0.04, 0.10, Vv), (0, 0), 0.8)
+    amb = np.clip(amb * 1.2, 0, 1)
+    tgt = np.stack([np.clip(Vv * 2.2, 0, 1), np.clip(Vv * 1.4, 0, 1), np.clip(Vv * 0.35, 0, 1)], -1)
+    F = F * (1 - amb[..., None]) + tgt * amb[..., None]
+    dist = cv2.distanceTransform((A > 0.5).astype(np.uint8), cv2.DIST_L2, 5)
+    k = ss(6, 1, dist) * (A > 0.02)
+    g = np.clip(F[..., 1] - np.maximum(F[..., 0], F[..., 2]), 0, None)        # 绿溢色
+    F[..., 1] -= g * k
     sp.F = np.clip(F, 0, 1).astype(np.float32)
 
 
