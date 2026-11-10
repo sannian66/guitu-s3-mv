@@ -2111,7 +2111,7 @@ class S29_Thrust(Shot):
         return shake_cam(fr, t, [V(O[47][4])], 6, z=1.0 + 0.05 * u, oy=-20 * u), 0.0
 
 
-def _blade_sil(fr, sp, feet, sc, src=((1124, 214), (1126, 24))):
+def _blade_sil(fr, sp, feet, sc, src=((1127, 300), (1126, 24))):
     """[D组 r6 第二棒] S30 剪影刀身：暗芯 + 朝光一侧 1px 金白刃光（源图刀身细且亮，金光里会被吃掉）。"""
     fx, fy = D.feet(sp)
     P = [(feet[0] + (a / sp.w - fx) * sp.w * sc, feet[1] + (b / sp.h - fy) * sp.h * sc) for a, b in src]
@@ -2124,7 +2124,7 @@ def _blade_sil(fr, sp, feet, sc, src=((1124, 214), (1126, 24))):
     return fr + G[..., None] * np.array([1.0, 0.85, 0.55], np.float32) * 0.9
 
 
-DA_Y, DA_S = 330, 420      # [D组 r6 第二棒] S30 金「答」新位置/字号（原 470 / 640）
+DA_Y, DA_S = 338, 400      # [D组 r6 第二棒] S30 金「答」新位置/字号（原 470 / 640）
 
 
 def _knee(fr, knee=0.80, top=0.92):
@@ -2174,7 +2174,7 @@ class S30_Da(Shot):
         if R6D_B:                                              # [D组 r6 第二棒] 192.3 光柱不再一团纯白：压亮度 + 保留云纹
             cn = cv2.resize(D._tile(305)[:H // 4, :W // 4], (W, H)); cn = cv2.GaussianBlur(cn, (0, 0), 6)
             cn = (cn - cn.mean()) / (cn.std() + 1e-6)
-            sky = np.array([0.95, 0.72, 0.42], np.float32) * (0.50 + 0.26 * (1 - y / H) + 0.09 * cn)[..., None]
+            sky = np.array([0.90, 0.58, 0.30], np.float32) * (0.50 + 0.24 * (1 - y / H) + 0.10 * cn)[..., None]   # 深琥珀天光，给金白「答」让出亮度
         fr = fr * (1 - open_[..., None]) + sky * open_[..., None]
         edge = np.clip(1 - np.abs(np.abs(x - 960 - (n - 0.5) * 120) - gap) / 30, 0, 1) * (1 - K.sstep(700, 1000, y))
         fr = fr + edge[..., None] * GOLD * 1.5
@@ -2188,8 +2188,10 @@ class S30_Da(Shot):
         if p > 0:
             if not TXTCUT:                                      # [D r5 #46] 去「答」；[r6 #55] 金「答」保留（金光、火星照旧）
                 ay, asz = (DA_Y, DA_S) if R6D_B else (470, 640)       # [D组 r6 第二棒] 「答」上移缩小，字脚离刀尖 ≥30px
-                L = D.text_layer([('答', 960, ay, asz, min(1, p * 2), 1 + 0.35 * (1 - eo(p)) + 0.05 * u, 0.0, GOLD)], fname='serif_black')
-                fr = T.compose(fr, L, shadow=0.85, shadow_sigma=40, glow=0.5, glow_color=(1.0, 0.55, 0.2), glow_sigma=30)
+                dc = np.array([1.0, 0.86, 0.58], np.float32) if R6D_B else GOLD           # r6 第二棒：金白字芯，亮过琥珀天光
+                L = D.text_layer([('答', 960, ay, asz, min(1, p * 2), (1 + 0.22 * (1 - eo(p)) + 0.04 * u) if R6D_B else (1 + 0.35 * (1 - eo(p)) + 0.05 * u), 0.0, dc)], fname='serif_black')
+                if R6D_B: fr = T.compose(fr, L, shadow=0.9, shadow_sigma=22, outline=2, outline_color=(0.30, 0.12, 0.03), glow=0.55, glow_color=(1.0, 0.62, 0.25), glow_sigma=26)
+                else: fr = T.compose(fr, L, shadow=0.85, shadow_sigma=40, glow=0.5, glow_color=(1.0, 0.55, 0.2), glow_sigma=30)
             fr = K.sparks(fr, t, 3001, (960, 470), n=220, life=1.0, speed=(500, 1600), dirc=(0, -1), spread=3.1, grav=150, burst=True,
                           t0=td, color=tuple(GOLD), amt=1.5)
         fr = fr + impact(t, td, 0.12) * GOLD * 0.8
