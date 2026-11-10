@@ -2,6 +2,7 @@
 设计说明：crew/round4/E_storyboard.md。36 镜：副歌终 26 镜（平均 1.08s）+ 尾奏 10 镜（含片名再现、6 条署名、收刀落印、收墨）。
 接口：READY=False；frame(f, cache) -> uint8 (1080,1920,3) 成品帧（含黑边/颗粒/暗角）。
 结构仿 units/chorus1.py：每镜一个类（render(t) 场景 + text(fr,t) 屏幕字层），SHOTS 表驱动切点，CUTS 表驱动转场，MOVE 表驱动运镜。"""
+import zlib
 import math, os, sys, json
 ROOT = '/workspace/work/mv'
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
@@ -1533,7 +1534,7 @@ class Credits(Shot):
             out = c01((t - (self.t1 - 0.35)) / 0.35)
             if p <= 0: continue
             g = R3.credit_block_up(fr.copy(), role, names, x, y, p, role_size=32, name_size=66, seal_text=(role[0] if names[0][0].isascii() else names[0][0]),
-                               seal_size=46, color='white', name_font='kai', seed=hash(role) % 50)
+                               seal_size=46, color='white', name_font='kai', seed=zlib.crc32(role.encode('utf-8')) % 50)   # [E组 r6] 原 hash(role) 受 PYTHONHASHSEED 每进程随机 → 署名笔触每次不同、分块渲染接缝；改确定性
             fr = g * (1 - out) + fr * out
         return fr
 
