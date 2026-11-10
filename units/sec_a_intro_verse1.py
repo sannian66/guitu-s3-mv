@@ -1559,6 +1559,47 @@ class V13(Shot):
 # V14 32.60–34.44 CU 手握刀柄慢拔：刀身阴刻歌词随拔出依次亮起；34.10「刀」朱红 + 白刃闪
 class V14(Shot):
     def render(self, t):
+        if R5.ON['draw_cu']: return self.render6(t)
+        return self.render5(t)
+
+    def render6(self, t):
+        """r6 #8（用户：0:33 角色图不好看）：换 draw_cu_v1 生图（定妆照一致：高马尾、中分乱刘海、琥珀眼、黑衣暗红内领）——
+        右手握柄、左手按鞘，刀身斜出半鞘；慢推 + 右移（拔刀方向）。#53 后火星不再飞向右侧字位：每个字拍从鞘口刮出一簇火星，
+        沿刀身向护手方向擦过、落在刀身上熄灭；「刀」拍一道寒光从鞘口扫到护手 + 白刃闪。"""
+        u = self.u(t)
+        if not hasattr(self, 'spr'):
+            import a_r6
+            self.spr = a_r6.hair_clean('R5_A/draw_cu_v1', protect=(0.0, 0.3, 1.0, 1.0))
+        fr = night((0.012, 0.011, 0.014), (0.035, 0.032, 0.036))
+        fr = A.glow(fr, (1560, 280), 520, 0.30, (1.0, 0.6, 0.3))
+        fr = A.glow(fr, (420, 200), 600, 0.10, (0.55, 0.65, 0.9))
+        fr = EMB.draw(fr, t, 0.35, wind=(80, -60))
+        k = eio(u)
+        fr, info = A.place(fr, t, self.spr, (975 - 30 * k, 540), w=1720, anc=(0.5, 0.5), rim=COLD, rim_amt=2.2,
+                           rim_dir=(0.7, -0.7), wind=3, grade=dict(expo=0.92, sat=0.62, gamma=1.06), breathe=0.002)
+        G = info['to_scr']((0.285, 0.548)); M = info['to_scr']((0.612, 0.775))            # 护手 / 鞘口（原图归一化坐标，人工标定）
+        dx, dy = G[0] - M[0], G[1] - M[1]; Ln = math.hypot(dx, dy); ux, uy = dx / Ln, dy / Ln
+        for i in range(8):                                                                  # 每个字拍一簇火星：鞘口 → 沿刀身 → 刀身上熄灭
+            t0_ = CT(5, i) - 0.12
+            if 0 <= t - t0_ < 0.5:
+                fr = K.sparks(fr, t, 300 + i, (M[0] - 10 * ux, M[1] - 10 * uy), n=22, life=0.32, speed=(260, 620), dirc=(ux, uy), spread=0.22,
+                              grav=60, area=(10, 10), amt=0.85, t0=t0_, burst=True, color=(1.0, 0.62, 0.24))
+                fr = A.glow(fr, M, 46, 0.5 * math.exp(-(t - t0_) / 0.12), (1.0, 0.6, 0.25))
+        # 拔刀的冷光沿刃口缓慢上移（鞘口 → 护手），每个字拍刷新一次
+        ph = (t - (CT(5, 0) - 0.12)) / max(0.1, CT(5, 4) - CT(5, 0))
+        if 0 < ph < 1.2:
+            q = ph % 1.0 if ph < 1 else 1.0
+            P = (M[0] + dx * q, M[1] + dy * q)
+            fr = A.glow(fr, P, 70, 0.22 * (1 - max(0, ph - 1) * 5), (0.8, 0.88, 1.0), aspect=0.35)
+        a = t - CT(5, 4)
+        if a >= 0:
+            fr = streak(fr, (M[1] + G[1]) / 2, M[0], G[0], a / 0.12, amt=1.1, ang=math.degrees(math.atan2(G[1] - M[1], G[0] - M[0])))
+        g = math.exp(-max(0, a) / 0.15) * (a >= 0)
+        for p in ((0.425, 0.365), (0.525, 0.36)):
+            fr = pupil_glint(fr, info['to_scr'](p), 0.25 * g, 0.6, col=(1.0, 0.85, 0.6))
+        return fr, (4 if 0 <= a < 0.1 else 0)
+
+    def render5(self, t):
         u = self.u(t)
         fr = night((0.01, 0.01, 0.014), (0.03, 0.03, 0.035))
         fr = A.glow(fr, (1500, 300), 450, 0.25, (1.0, 0.6, 0.3))
