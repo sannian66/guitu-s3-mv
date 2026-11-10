@@ -2295,6 +2295,8 @@ def credits(fr, t):
 
 LY_TXT = {0: '长夜压在我刀锋之上', 1: '五百重甲拦不住一道寒光', 2: '谁在高处定对错罪状', 4: '我杀过恶徒也放过混账',
           6: '若正义由权势执掌', 7: '那我宁愿做乱世的锋芒'}
+if R5.ON['sha_fang'] and 'ly_sha' not in os.environ.get('A_R6_OFF', ''):
+    LY_TXT[4] = '我殺过恶徒也放过混账'          # r6 #7：屏幕层小字与镜内大字统一用繁体「殺」（旧：大字「殺」旁边是简体小「杀」）；A_R6_OFF=ly_sha 回滚
 
 
 # ---------------- 屏幕层：主歌一歌词（第四棒：停用 LY 双列竖排）
@@ -2341,6 +2343,10 @@ def lyrics(fr, t):
                     g = BG(LY_TXT[li][k], 'kai', s, p, seed=li * 13 + k)
                     if pop > 1.001: g = cv2.resize(g, None, fx=pop, fy=pop)
                     L.paste(g, cxx, cyy, c)
+                elif LY_TXT[li][k] == '殺':                                     # r6 #7：马善政楷无「殺」→ 用镜内同一张书法生图缩成小字
+                    g = R5.cal_alpha(SF_SHA[0], int(s * 1.08)) * eout(p)
+                    if p < 1: g = cv2.GaussianBlur(g, (0, 0), 0.3 + 3 * (1 - p))
+                    L.paste(g, cxx, cyy + 14 * (1 - eout(p)), c)
                 else:
                     T.place(L, LY_TXT[li][k], cxx, cyy + 14 * (1 - eout(p)), s, c, 'kai', alpha=eout(p), blur=3 * (1 - p))
                 if sweep:
