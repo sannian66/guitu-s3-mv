@@ -1585,10 +1585,14 @@ class S26_Judge(Shot):
             al = (x - self.C[0]) * self.d[0] + (y - self.C[1]) * self.d[1]
             r = np.random.default_rng(2611)
             j = np.zeros_like(al)
-            for f, a in ((0.011, 5.0), (0.031, 3.0), (0.083, 2.0), (0.21, 1.2)):
-                j += a * np.sin(al * f + r.uniform(0, 6.28))
-            saw = ((al / 23.0 + 0.37 * np.sin(al * 0.017)) % 1.0)          # 不规则撕口齿
-            j += 3.0 * (np.abs(saw - 0.5) - 0.25)
+            for step, a in ((140, 9.0), (46, 4.5), (15, 2.4), (5, 1.0)):           # 多尺度值噪声（不是正弦波纹）：撕纸的大起伏 + 焦痕碎齿
+                kn = np.arange(-2600, 2600 + step, step, dtype=np.float32)
+                v = r.uniform(-1, 1, kn.size).astype(np.float32)
+                if step <= 15: v = np.sign(v) * np.abs(v) ** 0.5                # 碎齿更尖
+                j += a * np.interp(al.ravel(), kn, v).reshape(al.shape).astype(np.float32)
+            kn = np.arange(-2600, 2600, 9, dtype=np.float32)
+            notch = (r.random(kn.size) < 0.06) * r.uniform(4, 10, kn.size)       # 偶尔一个烧穿的缺口
+            j -= np.interp(al.ravel(), kn, notch.astype(np.float32)).reshape(al.shape).astype(np.float32)
             self.jag = j.astype(np.float32); self.along = al.astype(np.float32)
             self.cn = cv2.resize(D._tile(2612)[:H // 4, :W // 4], (W, H)).astype(np.float32)
         return self.jag
@@ -1640,10 +1644,10 @@ class S26_Judge(Shot):
         return comp, E, Kc, U, Ms, off
 
     def _edge_embers(self, fr, t, Ms, off, s, t_on):
-        """断口冒火星：~300 颗（第一棒 110 的 2.7 倍），两成是 4–6px 大颗；七成从两条断口上冒，三成全画面缓升"""
+        """断口冒火星：420 颗发射源（188.2 画内可见约 270 颗，第一棒 110 颗的 2.5 倍），两成是 4–6px 大颗；七成从两条断口上冒，三成全画面缓升"""
         if t < t_on: return fr
         r = np.random.default_rng(2613)
-        N = 300
+        N = 420
         big = r.random(N) < 0.2
         fromedge = r.random(N) < 0.7
         sg = np.where(r.random(N) < 0.5, 1, -1)
@@ -1654,6 +1658,7 @@ class S26_Judge(Shot):
         vy = -r.uniform(60, 230, N) * np.where(big, 0.7, 1.0); vx = r.normal(0, 35, N)
         wob = r.uniform(0, 6.28, N)
         L = np.zeros((H // 2, W // 2), np.float32); Lh = np.zeros_like(L)
+        self._nem = [0, 0]
         for i in range(N):
             if not born[i]: continue
             if fromedge[i]:
@@ -1666,12 +1671,13 @@ class S26_Judge(Shot):
             px = ox + vx[i] * age[i] + 14 * math.sin(age[i] * 5 + wob[i]); py = oy + vy[i] * age[i]
             if not (-20 < px < W + 20 and BAR - 20 < py < H - BAR + 20): continue
             k = (1 - age[i] / lf[i]) * min(1.0, age[i] / 0.08)
+            self._nem[int(big[i])] += 1
             rad = (r.uniform(2.0, 3.0) if big[i] else r.uniform(0.6, 1.1))
             cv2.circle(L, (int(px * 4 / 2), int(py * 4 / 2)), max(1, int(rad * 4 / 2)), float(k), -1, cv2.LINE_AA, 2)
             if age[i] < 0.35 * lf[i]: cv2.circle(Lh, (int(px * 2), int(py * 2)), max(1, int(rad * 2)), float(k), -1, cv2.LINE_AA, 2)
         Lb = cv2.resize(cv2.GaussianBlur(L, (0, 0), 3.0) * 1.6 + L * 1.4, (W, H))
         Lhb = cv2.resize(Lh, (W, H))
-        return fr + Lb[..., None] * np.array([1.0, 0.36, 0.09], np.float32) * 1.1 + Lhb[..., None] * self.HOT * 0.9
+        return fr + Lb[..., None] * np.array([1.0, 0.36, 0.09], np.float32) * 1.3 + Lhb[..., None] * self.HOT * 1.2
 
     def render_b(self, t):
         u = self.u(t)
@@ -1712,7 +1718,8 @@ class S26_Judge(Shot):
                 post = post * Kc[..., None] + E
                 post = self._edge_embers(post, t, Ms, off, s, ts + 0.08)
                 fr = fr * burst + post * (1 - burst)
-            fr = fr + impact(t, tj, 0.1) * RED * 0.3
+            Uw = U if E is not None else np.ones(fr.shape[:2], np.float32)
+            fr = fr + (impact(t, tj, 0.1) * (0.2 + 0.8 * Uw))[..., None] * RED * 0.3      # 落拍红闪只打在纸上，虚空保持近黑
             pm = 0.0
         tb = self.t1 - 0.1                                     # 3 帧黑场憋气
         if t >= tb: fr = fr * 0.0
