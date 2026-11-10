@@ -681,3 +681,8 @@
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `emp_liu_a`（69s）→ `assets/gen/R6_F/emp_liu_a_cut.png`
 - ✔ `emp_liu_b`（55s）→ `assets/gen/R6_F/emp_liu_b_cut.png`
+
+## 2026-11-10 06:41 · OpenAI 协议渠道批量生图（jobs_C_r6_a.json，2 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `c23_tools_v1`（51s）→ `assets/gen/R6_C/c23_tools_v1_cut.png`
+- ✔ `c22_feet_v1`（75s）→ `assets/gen/R6_C/c22_feet_v1.png`

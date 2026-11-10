@@ -136,61 +136,22 @@ def install(G):
     #     落幅 63.30–63.53 前排两串被风分开 ≈6 帧，露出一只冷灰、不发光的眼睛，随后合上（评审裁定的「戏眼」）
     #   · 比例 0.36 → 0.42，冕板顶 ≥ y200；满月 0.74 压在头后（月顶仍在画内），冕板剪影横过月面 = 逆光
     #   · 云只在胸口以下流过
+    # r6 F组第三棒（评审 6：代码冕旒 = 网格黑点 + 直尺冕板）：
+    #   · 冕旒/冕板改由生图：R6_F/emp_liu_a（以 emp_flat_a 为 ref 编辑：8 串白玉珠、珠径不一、串距不等、有景深；冕板有厚度、
+    #     底面暗边、前沿略低的透视，宽不过肩）；预处理 crew/round6/F_r6c_prep_liu.py（不再压板，alpha 轻羽化，脸压暗、玉珠少压）
+    #   · 代码不再画珠，只留整体风摆（wind_amp 2）；冕板眼部投影改成柔和渐变
+    #   · 戏眼：生图本身在画面左眼前留了一道自然旒缝；63.267–63.53（8 帧）一缕冷月光把这只眼的眼窝提亮（比周围脸面高 ≥25），不发光、不加高光点
     class S031Sprite(S031):
         SW = SH_ = 2048
         ANC = (1042 / 2048, 655 / 2048)                   # 两眼中点（源图像素 / 源图边长）
-        BOARD_Y, BOARD_X = 127.0, (640.0, 1428.0)         # 冕板前沿（源图像素）
-        EYE_L = (930.0, 655.0)                            # 露出的那只眼（画面左眼）
-        T_OPEN, T_HOLD, T_CLOSE = 63.30, 63.37, 63.47
+        EYE_L = (935.0, 655.0)                            # 旒缝里露出的那只眼（画面左眼）
+        T_OPEN, T_HOLD = 63.235, 63.262                   # 63.267 起 ≥8 帧到镜尾
+        EYE_GAIN, EYE_ADD = 1.2, 0.05
         def __init__(self):
-            super().__init__(); self.sp = L('R6_F/emp_flat_a_f')
-            self.sx = np.linspace(self.BOARD_X[0] + 20, self.BOARD_X[1] - 20, 12)
-            k = int(np.argmin(np.abs(self.sx - self.EYE_L[0])))
-            self.sx += self.EYE_L[0] - self.sx[k]                      # 让一串正好垂在左眼前
-            self.kL = k
+            super().__init__(); self.sp = L('R6_F/emp_liu_a_f')
         def _open(self, t):
-            if t < self.T_OPEN or t >= self.T_CLOSE + 0.07: return 0.0
-            if t < self.T_HOLD: return eio((t - self.T_OPEN) / (self.T_HOLD - self.T_OPEN))
-            if t < self.T_CLOSE: return 1.0
-            return 1 - eio((t - self.T_CLOSE) / 0.07)
-        def _beads(self, fr, t, ax, ay, s):
-            """12 串玉珠（屏幕空间画）：小珠密串；逆光下是暗剪影，背后越亮（月面）勾边越亮；月光下闪 1–2 点"""
-            S2 = lambda px, py: (ax + (px - self.ANC[0] * self.SW) * s, ay + (py - self.ANC[1] * self.SH_) * s)
-            op = self._open(t)
-            Lb = np.zeros((H, W), np.float32); Lr = np.zeros((H, W), np.float32); Lg = np.zeros((H, W), np.float32)
-            rr = max(2.0, 10.5 * s)
-            nb = 16; step = 35.0
-            glint = []
-            for i, x0 in enumerate(self.sx):
-                sway = 6.0 * math.sin(t * 2.3 + i * 0.9) + 3.0 * math.sin(t * 3.7 + i * 1.7)
-                part = 0.0
-                if i == self.kL: part = -64.0 * op
-                elif i == self.kL + 1: part = 34.0 * op
-                elif i == self.kL - 1: part = -20.0 * op
-                top = S2(x0, self.BOARD_Y)
-                prev = top
-                for j in range(nb):
-                    yy = self.BOARD_Y + 22 + j * step
-                    f = (yy - self.BOARD_Y) / (nb * step)
-                    px, py = S2(x0 + (sway + part) * f ** 0.9, yy)
-                    cv2.line(Lb, (int(prev[0] * 4), int(prev[1] * 4)), (int(px * 4), int(py * 4)), 0.7, 1, cv2.LINE_AA, 2)
-                    r_ = rr * (0.85 + 0.3 * ((i * 7 + j * 3) % 5) / 4)
-                    cv2.circle(Lb, (int(px * 4), int(py * 4)), int(r_ * 4), 1.0, -1, cv2.LINE_AA, 2)
-                    cv2.circle(Lr, (int(px * 4), int(py * 4)), int(r_ * 4), 1.0, 2, cv2.LINE_AA, 2)
-                    prev = (px, py)
-                    ph = math.sin(t * 7.0 + i * 2.1 + j * 1.3)
-                    if ph > 0.992 and j < 5 and abs(i - self.kL - 1.5) > 3: glint.append((px - r_ * 0.35, py - r_ * 0.4, (ph - 0.992) / 0.008))
-            glint.sort(key=lambda g: -g[2])
-            for gx, gy, g in glint[:2]:                                    # 月光点：同屏最多 2 粒
-                cv2.circle(Lg, (int(gx), int(gy)), 1, float(g), -1, cv2.LINE_AA)
-            back = cv2.GaussianBlur(fr.mean(-1), (0, 0), 6)                # 珠子背后的亮度：月面前 = 剪影 + 亮勾边
-            Lb = cv2.GaussianBlur(Lb, (0, 0), 0.5)
-            fr = fr * (1 - 0.9 * Lb[..., None]) + Lb[..., None] * np.array([0.018, 0.026, 0.024], np.float32)
-            rim = cv2.GaussianBlur(Lr, (0, 0), 0.6) * np.clip(Lb * 1.2, 0, 1) * np.clip(back * 0.7, 0.05, 0.45)
-            fr = fr + rim[..., None] * np.array([0.62, 0.68, 0.78], np.float32) * 0.7
-            if glint:
-                fr = fr + (cv2.GaussianBlur(Lg, (0, 0), 0.9) * 5 + cv2.GaussianBlur(Lg, (0, 0), 4) * 8)[..., None] * np.array([0.85, 0.92, 1.0], np.float32)
-            return fr
+            if t < self.T_OPEN: return 0.0
+            return eio(clamp01((t - self.T_OPEN) / (self.T_HOLD - self.T_OPEN)))
         def render(self, t):
             u = self.u(t)
             cr = 60 * (1 - eio(u))                       # 巨像从地平线后缓缓升起 60px 落定
@@ -204,20 +165,17 @@ def install(G):
             halo = np.exp(-((x - mx) ** 2 + (y - my) ** 2) / (2 * 380.0 ** 2)).astype(np.float32)
             fr = fr + halo[..., None] * np.array([0.08, 0.09, 0.11], np.float32)
             fade = np.clip(1.0 - (y - (ay + 420)) / 360, 0.2, 1.0).astype(np.float32)   # 胸以下渐隐入云
-            fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=3.0, breathe=0.0,
+            fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=2.0, breathe=0.0,
                                  grade=dict(expo=0.40, sat=0.62, tint=(0.88, 0.93, 1.07), lift=0.0, gamma=1.3),
-                                 rim=dict(col=(0.88, 0.92, 1.0), amt=2.8, dir=(0, -1)), wrap=0.9,
+                                 rim=dict(col=(0.88, 0.92, 1.0), amt=2.2, dir=(0, -1)), wrap=0.9,
                                  shade=None, alpha=0.97, extra_A=fade)
-            # 冕板在眼部的投影（旒后双眼沉在暗里）；分旒那一刻左眼局部移开阴影 + 一点冷灰眼神光（不发光）
+            # 冕板在眼部的柔和投影（渐变，无硬上沿）；戏眼时画面左眼窝被一缕冷月光提亮（不发光）
             op = self._open(t)
             ex0, ey0 = S2(*self.EYE_L); ex1, ey1 = S2(1155, 655)
-            band = np.exp(-((y - ey0) / (60 * s / 0.42)) ** 2) * np.exp(-((x - (ex0 + ex1) / 2) / (260 * s / 0.42)) ** 4)
-            eyeL = np.exp(-(((x - ex0) / (46 * s / 0.42)) ** 2 + ((y - ey0) / (26 * s / 0.42)) ** 2))
-            fr = fr * (1 - (0.55 * band * (1 - 0.85 * op * eyeL))[..., None])
-            fr = fr * (1 + (0.9 * op * eyeL)[..., None] * np.array([0.92, 0.98, 1.08], np.float32))   # 分旒处漏进一缕冷月光：这只眼读得清
-            if op > 0.01:
-                fr = fr + (np.exp(-(((x - ex0 - 3) / 2.2) ** 2 + ((y - ey0 + 2) / 1.6) ** 2)) * 0.14 * op)[..., None] * np.array([0.80, 0.85, 0.90], np.float32)
-            fr = self._beads(fr, t, ax, ay, s)
+            band = np.exp(-((y - ey0 + 10) / (95 * s / 0.42)) ** 2) * np.exp(-((x - (ex0 + ex1) / 2) / (260 * s / 0.42)) ** 4)
+            eyeL = np.exp(-(((x - ex0) / (40 * s / 0.42)) ** 2 + ((y - ey0) / (24 * s / 0.42)) ** 2)).astype(np.float32)
+            fr = fr * (1 - (0.30 * band * (1 - op * eyeL))[..., None])
+            fr = fr * (1 + (self.EYE_GAIN * op * eyeL)[..., None]) + (self.EYE_ADD * op * eyeL)[..., None] * np.array([0.80, 0.86, 0.94], np.float32)
             # 云层只在胸口以下流过（天幕感），不遮脸
             cl = cv2.resize(K.tile_crop(self.cloud, t * 40, 0, H // 4, W // 4), (W, H))
             ca_ = np.clip((cl - 0.5) * 2.2, 0, 1) * 0.40 * sstep(ay + 380, ay + 560, y)
