@@ -1421,6 +1421,8 @@ class S22_Chuang(Shot):
             p_in = cp(t, O[45][7], 0.25)
             L = D.text_layer([('闯', 1530 + 40 * (1 - ei(q, 2)), 700 - 100 * ei(q, 2), 380 + 120 * ei(q, 2), min(1, p_in * 2), 1.0, -4.0 * ei(q, 2), RED)], fname='serif_black')
             fr = T.compose(fr, L, **T.auto_style('red'))
+        elif R6D_B:                                              # [D组 r6 第二棒] 碎片有体积（暗红内描边 + 一侧受光 + 轻运动模糊），飞过脸降到 30%
+            fr = _shatter_vol(fr, '闯', cl((t - th) / 0.5), self.P2, 'serif_black', 'red', (1330, 560), 1.6, 7, face=(1060, 440, 1200, 640))
         else:
             fr = T.shatter_out(fr, '闯', cl((t - th) / 0.5), places=self.P2, fname='serif_black', color='red', impact=(1330, 560), power=1.6, seed=7)
         if not VCUT:                                            # 竖排「我偏要」继续去（#53）
@@ -1428,6 +1430,94 @@ class S22_Chuang(Shot):
             fr = D.song(fr, its)
         fr = fr + impact(t, th, 0.08) * 0.7 * np.array([0.78, 0.86, 1.0], np.float32)   # [r8] 撞击闪改冷白，不把整帧洗灰
         return shake_cam(fr, t, [th], 14), 0.0
+
+
+def _shatter_layer_avoid(L, p, impact=None, n=90, seed=0, power=1.0, gravity=600.0, spin=360.0, avoid=None):
+    """T.shatter_layer 同一套碎片与随机序列（seed 一致 → 其余碎片轨迹不变），只多一条：
+    直线 + 重力轨迹会穿过 avoid 矩形（脸）的碎片，把飞散方向在 ±8°…±64° 内找最近的一个绕开角度。"""
+    bx = L.box(2)
+    out = T.Layer()
+    if bx is None: return out
+    X0, Y0, X1, Y1 = bx
+    TT = T._tris(X0, Y0, X1, Y1, n, seed)
+    c = np.array(impact if impact is not None else ((X0 + X1) / 2, (Y0 + Y1) / 2), np.float32)
+    r = T._rng(seed + 1)
+    crack = T.smooth(0.0, 0.12, p)
+    e = 0.012 * crack + max(0.0, p - 0.1) ** 1.5 * 1.25
+    ps = np.linspace(0, 1, 41)
+    es = 0.012 * np.clip(ps / 0.12, 0, 1) ** 2 * (3 - 2 * np.clip(ps / 0.12, 0, 1)) + np.maximum(0, ps - 0.1) ** 1.5 * 1.25
+    for k, tri in enumerate(TT):
+        cen = tri.mean(0)
+        if L.A[int(np.clip(cen[1], 0, H - 1)), int(np.clip(cen[0], 0, W - 1))] < 0.02:
+            bx0, by0 = np.floor(tri.min(0)).astype(int); bx1, by1 = np.ceil(tri.max(0)).astype(int)
+            if L.A[max(0, by0):by1, max(0, bx0):bx1].max(initial=0) < 0.05: continue
+        v = cen - c; dist = np.linalg.norm(v) + 1e-6; v = v / dist
+        sp = (300 + r.uniform(0, 900)) * power * (1.2 - min(1, dist / 900) * 0.6)
+        v = v + r.normal(0, 0.35, 2)
+        dz = r.uniform(-0.4, 0.8)
+        if avoid is not None:
+            rad = float(np.linalg.norm(tri - cen, axis=1).max()) * 1.4 + 10
+            ax0, ay0, ax1, ay1 = avoid[0] - rad, avoid[1] - rad, avoid[2] + rad, avoid[3] + rad
+            def hits(vv):
+                px = cen[0] + vv[0] * sp * es; py = cen[1] + vv[1] * sp * es + gravity * ps * ps
+                return bool(np.any((px > ax0) & (px < ax1) & (py > ay0) & (py < ay1)))
+            if hits(v):
+                for dg in (8, -8, 16, -16, 24, -24, 32, -32, 44, -44, 64, -64):
+                    a_ = math.radians(dg); vv = np.array([v[0] * math.cos(a_) - v[1] * math.sin(a_), v[0] * math.sin(a_) + v[1] * math.cos(a_)], np.float32)
+                    if not hits(vv): v = vv; break
+        tx = v[0] * sp * e; ty = v[1] * sp * e + gravity * p * p
+        ang = r.uniform(-1, 1) * spin * e; sc = 1 + dz * e
+        shade = r.uniform(0.7, 1.35)
+        bx0, by0 = np.floor(tri.min(0)).astype(int); bx1, by1 = np.ceil(tri.max(0)).astype(int) + 1
+        bx0, by0 = max(0, bx0), max(0, by0); bx1, by1 = min(W, bx1), min(H, by1)
+        if bx1 <= bx0 or by1 <= by0: continue
+        pa = L.A[by0:by1, bx0:bx1]; pc = L.C[by0:by1, bx0:bx1]
+        m = np.zeros(pa.shape, np.float32)
+        cv2.fillConvexPoly(m, np.round((tri - [bx0, by0]) * 4).astype(np.int32), 1.0, cv2.LINE_AA, shift=2)
+        pa = pa * m
+        hw, hh = bx1 - bx0, by1 - by0
+        d = int(max(hw, hh) * max(1.5, sc * 1.5)) + 2
+        M = cv2.getRotationMatrix2D((cen[0] - bx0, cen[1] - by0), ang, sc)
+        M[:, 2] += [d / 2 - (cen[0] - bx0), d / 2 - (cen[1] - by0)]
+        wa = cv2.warpAffine(pa, M, (d, d)); wc = cv2.warpAffine(pc, M, (d, d))
+        fade = 1 - T.smooth(0.6, 1.0, p)
+        out.paste_rgba(np.clip(wc * shade, 0, 1.2), wa * fade, int(cen[0] + tx - d / 2), int(cen[1] + ty - d / 2))
+    return out
+
+
+def _shatter_vol(fr, text, p, places, fname, color, impact, power, seed, face=None, light=(-0.7, -0.7)):
+    """[D组 r6 第二棒] T.shatter_out 的本组版（不改共享 typo.py）：同一套三角碎片轨迹，碎片图层再做
+    1–2px 暗红内描边（厚度）+ 朝光一侧（左上）的边缘高光 + σ0.8 运动模糊；face=(x0,y0,x1,y1) 区内碎片不透明度压到 30%。"""
+    P = T._P(text, places, 'h', None, fname, None, (0.5, 0.5), seed, ())
+    L = T._line_layer(P, T._colors(P, color, 'red'))
+    if p <= 0: return T._finish(fr, L, color, None)
+    L2 = _shatter_layer_avoid(L, p, impact, 9 * len(P), seed, power, avoid=face)
+    bx = L2.box(12)
+    if bx is None: return fr
+    x0, y0, x1, y1 = bx
+    A = L2.A[y0:y1, x0:x1].copy(); C = L2.C[y0:y1, x0:x1].copy()
+    k3 = np.ones((3, 3), np.uint8)
+    inner = np.clip(A - cv2.erode(A, k3, iterations=2), 0, 1)
+    Ab = cv2.GaussianBlur(A, (0, 0), 1.2)
+    gx = cv2.Sobel(Ab, cv2.CV_32F, 1, 0, ksize=3); gy = cv2.Sobel(Ab, cv2.CV_32F, 0, 1, ksize=3)
+    facing = np.clip(-(gx * light[0] + gy * light[1]) * 1.6, 0, 1)
+    hi = facing * np.clip(A - cv2.erode(A, k3, iterations=3), 0, 1)
+    dark = np.array([0.30, 0.02, 0.02], np.float32)
+    C = C * (1 - 0.75 * inner[..., None]) + dark * 0.75 * inner[..., None]
+    C = C + hi[..., None] * np.array([1.0, 0.62, 0.52], np.float32) * 0.9
+    if face is not None:
+        yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        fm = K.sstep(face[0] - 25, face[0] + 10, xx) * K.sstep(face[2] + 25, face[2] - 10, xx) * \
+            K.sstep(face[1] - 25, face[1] + 10, yy) * K.sstep(face[3] + 25, face[3] - 10, yy)
+        A = A * (1 - 0.7 * fm)
+    CA = cv2.GaussianBlur(C * A[..., None], (0, 0), 0.8); A = cv2.GaussianBlur(A, (0, 0), 0.8)
+    C = CA / np.maximum(A, 1e-4)[..., None]
+    L2.A[y0:y1, x0:x1] = A; L2.C[y0:y1, x0:x1] = np.clip(C, 0, 1.3)
+    out = T._finish(fr, L2, color, None)
+    if 0.08 < p < 0.3:
+        X0, Y0, X1, Y1 = T.bbox(P)
+        out = T._radial_flash(out, impact, 0.55 * (1 - abs(p - 0.12) / 0.18), radius=min(380, (X1 - X0) * 0.18))
+    return out
 
 
 # ===================================================================================== 第四幕：天判 / 刀答

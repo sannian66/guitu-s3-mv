@@ -295,12 +295,10 @@ class E24n(E23n):
 def _feet(A):
     """两只脚的屏幕 x（取 alpha 最底 36 行的列投影，按中缝分左右）、底 y、站姿宽。"""
     ys = np.nonzero(A.max(1) > 0.5)[0]; yb = int(ys.max())
-    col = A[yb - 36:yb + 1].max(0) > 0.5
-    xs = np.nonzero(col)[0]
-    mid = (xs.min() + xs.max()) / 2
-    l, r = xs[xs < mid], xs[xs >= mid]
-    return dict(l=float(l.mean()) if len(l) else float(mid - 200), r=float(r.mean()) if len(r) else float(mid + 200),
-                x0=float(xs.min()), x1=float(xs.max()), y=float(yb))
+    xs = np.nonzero(A[yb - 40:yb + 1].max(0) > 0.5)[0]
+    runs = np.split(xs, np.nonzero(np.diff(xs) > 6)[0] + 1)                 # 连续段：最左段 = 左靴，最右段 = 右靴
+    l, r = runs[0], runs[-1]
+    return dict(l=float(l.mean()), r=float(r.mean()), x0=float(xs.min()), x1=float(xs.max()), y=float(yb))
 
 
 def _contact(fr, ft, gy):
@@ -333,11 +331,11 @@ def _foot_dust(fr, t, ts, ft):
     if q < 0 or q > 0.6: return fr
     dust = np.zeros((H // 4, W // 4), np.float32)
     if q < 0.3:
-        r = 22 + 80 * eout(q / 0.3)
+        r = 30 + 110 * eout(q / 0.3)
         for x in (ft['l'], ft['r']):
             cv2.ellipse(dust, (int(x / 4), int((ft['y'] - 10) / 4)), (int(r * 1.5 / 4), int(r * 0.55 / 4)), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
-        dust = cv2.resize(cv2.GaussianBlur(dust, (0, 0), 4), (W, H)) * 0.55 * (1 - q / 0.3) ** 1.5
-        fr = fr * (1 - dust[..., None]) + dust[..., None] * np.array([0.72, 0.46, 0.28], np.float32)
+        dust = cv2.resize(cv2.GaussianBlur(dust, (0, 0), 5), (W, H)) * 0.7 * (1 - q / 0.3) ** 1.3
+        fr = fr * (1 - dust[..., None]) + dust[..., None] * np.array([0.95, 0.60, 0.32], np.float32)    # 逆光里的尘：被身后光带照亮
     for k, x in enumerate((ft['l'], ft['r'])):
         fr = RS.fx_sparks(fr, t, ts, (x, ft['y'] - 8), 1311 + k, n=28, spd=420, dirv=(-0.5 if k == 0 else 0.5, -1), spread=1.0, grav=900, amt=0.9)
     return fr
@@ -354,12 +352,16 @@ class E25n:
 
     def render(self, t):
         fr = self.sky.copy()
-        hy = 930
+        hy = 868 if R6B else 930                                           # r6b：地平线抬到脚后 → 人站在地面上（不是站在地平线那条缝上）
         m = sstep(hy - 2, hy + 20, np.arange(H, dtype=np.float32))[:, None, None]
-        fr = fr * (1 - m) + self.ground * m
+        gnd = self.ground
+        if R6B:                                                            # 地面受光：近地平线处被身后的天光/光带照暖，往镜头方向渐暗 → 接触阴影读得出
+            yv = np.arange(H, dtype=np.float32)[:, None, None]
+            gnd = gnd + np.exp(-np.clip(yv - hy, 0, None) / 70) * np.array([0.30, 0.12, 0.05], np.float32) + 0.05 * np.array([0.5, 0.25, 0.12], np.float32)
+        fr = fr * (1 - m) + gnd * m
         ts = M.CT(55, 6)
         mb = (90, 0) if (t < ts + 0.04 and not R6FIX) else (0, 0)            # r6：硬切后不再留 2 帧动态模糊残影
-        z, info = M.put(np.zeros((H, W, 3), np.float32), t, 'S130/hslash', (930, hy - 6) if R6FIX else (930, 1200), h=760 if R6FIX else 1040,   # r6：脚落地平线入画、头顶留白 rim=(1.0, 0.7, 0.4), rim_amt=3.4,
+        z, info = M.put(np.zeros((H, W, 3), np.float32), t, 'S130/hslash', (930, 924) if R6B else (930, hy - 6) if R6FIX else (930, 1200), h=720 if R6B else 760 if R6FIX else 1040,   # r6：脚落地平线入画、头顶留白 rim=(1.0, 0.7, 0.4), rim_amt=3.4,
                         rim_dir=(-0.9, -0.3), wind=6, mblur=mb, grade=self.GR)
         A = np.clip(info['A'], 0, 1)
         if R6B:                                                             # r6b #49：抠像边内缩 1px + 羽化 1.5px（去硬边贴纸感）
@@ -373,6 +375,9 @@ class E25n:
             e = eout(q / 0.25)
             gap = 70 * e * (1 - 0.3 * c01((q - 0.6) / 0.5))
             top = K.cam(fr, 1.0, oy=-gap / 2); bot = K.cam(fr, 1.0, oy=gap / 2)
+            if R6B:                                                        # r6b：地面不跟着裂开下沉（脚要一直踩在地上）
+                wb = 1 - sstep(hy - 160, hy - 20, yy)
+                bot = bot * wb + fr * (1 - wb)
             fr = np.where(yy < by, top, bot)
             band = np.exp(-((yy[..., 0] - by) / max(2, gap * 0.45)) ** 2)
             fr = fr * (1 - band[..., None] * 0.85) + band[..., None] * GOLDW * 1.8
@@ -536,6 +541,33 @@ class E35n:   # 收刀「咔」落在最强拍 7154（切点 = 拍前 1 帧）�
         return M.bloom(fr, 0.8, 0.35)
 
 
+# ------------------------------------------------------------------ r6b：转场护栏
+def _guard_frames():
+    """#47：E21→E22 圆形 match_cut 圆外是 E21 定格帧，原来连 E21 的镜内字（#55 恢复的红「我」）一起定格 → 圆外挂一块红色残字。
+    入圆这几帧里 E21 只出底板、不出字层。
+    #50：E34 ELS 入镜的 warm_veil / 7061 硬切会给整帧 ca=2–3 的红青色差 → 人物轮廓挂红青边；这几帧色差归零。"""
+    if getattr(M._Sec.frame_f, '_r6b', False): return
+    f0 = M._Sec.frame_f
+    t21 = M.E21.text
+
+    def text21(self, fr, t):
+        return fr if getattr(M, '_MC22', False) else t21(self, fr, t)
+    M.E21.text = text21
+
+    def frame_f(self, f):
+        i22 = M.IDS.index('E22'); c22 = M.BOUNDS[i22]; post = M.CUTS.get('E22', ('hard', 0, 0))[2]
+        M._MC22 = c22 <= f < c22 + post * M.FPS + 1
+        try: fr, ca = f0(self, f)
+        finally: M._MC22 = False
+        if c22 <= f < c22 + post * M.FPS + 1: ca = 0                       # 色差 roll 会把右缘红通道卷到左缘 → 圆外一条红边
+        if 'E34' in M.IDS:
+            c34 = M.BOUNDS[M.IDS.index('E34')]
+            if c34 - 6 <= f < (M.BOUNDS[M.IDS.index('E34L')] + 2 if 'E34L' in M.IDS else c34 + 10): ca = 0
+        return fr, ca
+    frame_f._r6b = True
+    M._Sec.frame_f = frame_f
+
+
 # ================================================================== 挂载
 def _cls(name, body, base):
     c = type(name, (base,), {k: v for k, v in body.__dict__.items() if not k.startswith('__') or k == '__init__'})
@@ -624,6 +656,7 @@ def apply(mod):
         M.SHAKE['E35'] = [(7133 / 30, 3), (7143 / 30, 3), (7153 / 30, 7), (7160 / 30, 4), (7167 / 30, 3)]
         rep['E35'] = e35
         shots = [s for s in shots if s[1] < 7037] + tail + [s for s in shots if s[1] >= 7174]
+    if R6B: _guard_frames()
     for k, c in rep.items(): setattr(M, k, c)                               # E18/E36 按全局名取 E16/E17/E35
     M.SHOTS[:] = shots
     M.IDS[:] = [s[0].__name__ for s in shots]
