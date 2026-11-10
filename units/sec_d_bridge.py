@@ -1072,6 +1072,12 @@ class S18_Draw(Shot):
         lum = Fw.mean(-1); sat = Fw.max(-1) - Fw.min(-1)
         metal = A2 * np.clip((lum - 0.35) * 3, 0, 1) * (sat < 0.12)
         fr = D.metal_sheen(fr, metal, np.ones_like(lum), t, (600, 0), 0, speed=lerp(500, 1500, eo(u, 2)), width=90, amt=2.0)
+        if R6D_B:                                        # [D组 r6 第二棒 #45] 与 S22 同一画风：人物降一点 CG 微反差 + 柔光（pro-mist）+ 一层冷雾空气透视
+            Am = cv2.GaussianBlur(Aw, (0, 0), 3)[..., None]
+            soft = cv2.GaussianBlur(fr, (0, 0), 1.3)
+            fr = fr + (soft - fr) * 0.45 * Am
+            bloom = cv2.GaussianBlur(np.clip(fr - 0.35, 0, None), (0, 0), 14)
+            fr = fr + bloom * 0.35 + Am * 0.018 * np.array([0.55, 0.6, 0.8], np.float32)
         fr = K.rain(fr, t, 18, n=420, amt=0.3, angle=6)                                    # 人前近雨
         if not NOVLYR:                                               # [r6 #53] 去竖排「只听」
             fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
