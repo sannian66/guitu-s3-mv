@@ -1706,7 +1706,19 @@ class V15(Shot):
         stone = ((0.6 + 0.45 * self.tex) * (0.85 + 0.25 * self.tex2) * lit)[..., None] * np.array([0.13, 0.135, 0.15], np.float32)
         wet = np.clip(np.sin(xx / 23 + self.tex * 6) * 0.5 + 0.5, 0, 1) ** 8
         stone = stone + (wet * 0.07)[..., None] * np.array([0.6, 0.7, 0.9], np.float32) - self.chip[..., None] * 0.05
+        if 'stele3d' not in os.environ.get('A_R6_OFF', ''):                            # r6 #9 补：碑有厚度 —— 右侧面（背光暗面 26px，透视微斜）+ 顶沿受光高光 + 碑后投影
+            if not hasattr(self, 'side'):
+                s0 = self.st
+                sh_ = cv2.warpAffine(s0, np.float32([[1, 0, 26], [0, 1, 6]]), (W, H))
+                self.side = np.clip(sh_ - s0, 0, 1)
+                self.rim = cv2.GaussianBlur(np.clip(s0 - cv2.warpAffine(s0, np.float32([[1, 0, 0], [0, 1, 9]]), (W, H)), 0, 1), (0, 0), 2.5) * (0.6 + 0.8 * self.tex)
+                self.cast = np.clip(cv2.GaussianBlur(cv2.warpAffine(s0, np.float32([[1, 0, 70], [0, 1, 30]]), (W, H)), (0, 0), 30) - s0 - self.side, 0, 1)
+            fr = fr * (1 - 0.55 * self.cast[..., None])
+            side_c = ((0.5 + 0.3 * self.tex) * (0.8 + 0.3 * self.tex2))[..., None] * np.array([0.045, 0.047, 0.055], np.float32)
+            fr = fr * (1 - self.side[..., None]) + side_c * self.side[..., None]
         fr = fr * (1 - st) + stone * st
+        if 'stele3d' not in os.environ.get('A_R6_OFF', ''):
+            fr = fr + (self.rim * lit * 0.22)[..., None] * np.array([0.45, 0.5, 0.62], np.float32)
         fr = fx2.god_rays(fr, (200, 40), strength=0.35, length=1.0, color=(0.65, 0.72, 0.9), t=t, src_r=180)
         tx, ty, cur, pr = self.tip6(t)
         fr = self.CV.draw(fr, pr, mask=self.st)
