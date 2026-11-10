@@ -29,6 +29,8 @@ R6 = R5 and os.environ.get('C_R6', '1') != '0'
 # r6 第二棒（用户 15:28 拍板）：C23 铜牌去自身倒角边、城墙底板去三块画框浮雕（补成连续砖墙）。默认都开，=0 单独关。
 R6_NOBEVEL = R6 and os.environ.get('C_R6_NOBEVEL', '1') != '0'
 R6_NOWALLFRAME = R6 and os.environ.get('C_R6_NOWALLFRAME', '1') != '0'
+R6_FEET = R6 and os.environ.get('C_R6_FEET', '1') != '0'        # r6-C3 #41：C22 开头插脚部特写（靴子踩礁石），141.32 闪电切回大全景
+R6_C39L = R6 and os.environ.get('C_R6_C39L', '1') != '0'        # r6-C3 #43：C39 左半幅补远景青铜天平剪影（为 C40 斩天平铺垫），不加字
 WALLP = 'R6_C/c22_wall_noframe' if R6_NOWALLFRAME else 'C5/c22_wall'   # tools/c_r6/wall_noframe.py 生成
 if R5:   # 第五轮通用：人物精灵 wind_amp 统一 5–8px（0 = 道具/手/刀/影子，保持不动）
     _put0 = put
@@ -1496,11 +1498,37 @@ class C21(Shot):
 class C22(Shot):
     """第五棒重做（评审 P1：扁平梯形字墙 = 代码味）：生图底板 C5/c22_wall——乌铁色城墙从积水直插雷云，极低机位仰拍、缓慢上摇；
     墙脚积水里一个小小的人（look_up_back 第 1 次，中景仰望）。「若规则是」逐字在墙心被闪电照出（冷白刻痕，「规」朱红）。"""
+    _FEET = None
+    def _feet(self, t, tb):
+        """r6-C3 #41：脚部特写——生图 R6_C/c22_feet_v1（黑靴踩湿礁石、刀尖点石、袍角滴水，背后城墙），水平镜像让刀在画左（同 look_up_back）。
+        靴底落在 y≈870（2.39 画幅下沿 960 之上），缓推 1.00→1.05，冷调压暗与大全景同档；雨 + 低雾。"""
+        if C22._FEET is None:
+            im = cv2.imread(ROOT_DIR + '/assets/gen/R6_C/c22_feet_v1.png', cv2.IMREAD_COLOR)[:, ::-1, ::-1]
+            sc = W * 1.10 / im.shape[1]
+            im = cv2.resize(im, (round(im.shape[1] * sc), round(im.shape[0] * sc)), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+            g = im.mean(-1, keepdims=True)
+            im = (g + (im - g) * 0.70) * np.array([0.92, 0.97, 1.06], np.float32) * 0.82     # 去饱和、偏冷、压暗一档
+            C22._FEET = im
+        P = C22._FEET; ph, pw = P.shape[:2]
+        k = clamp((t - self.t0) / max(1e-3, tb - self.t0))
+        z = 1.0 + 0.05 * eio(k)
+        ax, ay = 0.5 * pw, 0.87 * ph          # 靴底锚点
+        M = np.float32([[z, 0, 960 - z * ax], [0, z, 870 - z * ay]])
+        fr = cv2.warpAffine(P, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        fr = fr * (1.0 + 0.35 * bolt_env(t, self.t0 + 0.02))
+        fr = fog(fr, t, 23, density=0.35, y0=820, y1=960, color=(0.4, 0.43, 0.5), speed=(60, 0))
+        fr = rain(fr, t, 222, inten=1.1, angle=8)
+        return fr
+
     def render(self, t):
         u = self.u(t)
         tb = V(141.32)
+        if R6_FEET and t < tb:
+            return self._feet(t, tb)
         fl = bolt_env(t, tb) + 0.7 * bolt_env(t, V(141.94))
         cy = lerp(0.60, 0.54, eio(u)) if R5 else lerp(0.56, 0.47, eio(u))   # 第五轮 #41：起幅压低、摇幅收小，人始终在画内
+        if R6_FEET:   # r6-C3 #41：大全景只剩 141.32 之后半段；摇幅收到 0.61→0.575，脚始终在 2.39 下沿（960）之上 ≥70px
+            cy = lerp(0.61, 0.575, eio(clamp((t - tb) / max(1e-3, self.t1 - tb))))
         fr = plate_view(WALLP, 0.5, cy, 1.0 + 0.04 * u) * (0.85 + 0.75 * fl)
         oy = (cy - 0.5) * plate(WALLP).shape[0]
         fr = bolt(fr, t, tb, 221, (1400, 40), (1250, 420), inten=0.9)
