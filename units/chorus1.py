@@ -22,6 +22,15 @@ import vcam3 as V3
 import fx2
 import props as PR
 import lyric3 as LY
+
+
+# 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」「红墙也去掉」）：v3 统一字幕层（lyric3.LyricLayer：
+#   右侧竖排一列 + 底部三分之一横排）整层不画——歌词已统一走 units/subtitle.py 底部横排字幕；1:06「若规则是铁壁铜墙」竖排红「墙」随之去掉。
+#   R5_NOVLYR=1（默认）删；=0 回滚。镜内字（S028/S038 巨「血」、S032 正/邪、S035 那就劈开它、S041 是非对错、S046 刀身刻字、S040/S036 字墙底纹）不动。
+def _on(k, d='1'): return os.environ.get(k, d) != '0'
+
+
+NOVLYR = _on('R5_NOVLYR')
 # v3 字幕规范：思源宋多字重；宋体字形不加墨迹纹理
 for _k, _f in (('serif_r', 'Regular'), ('serif_m', 'Medium'), ('serif_sb', 'SemiBold'), ('serif_b', 'Bold'), ('serif_black', 'Black')):
     T.FONTS[_k] = ROOT + f'/fonts/NotoSerifSC-{_f}.otf'
@@ -1598,7 +1607,7 @@ class Chorus1:
             fr = self.fg.draw(fr, t, st, kind, amt)
         fr = fr * (EXPO_ALL * EXPO.get(sid, 1.0))
         fr = fr + 0.012 * (1 - np.clip(fr, 0, 1))        # 抬一点黑位（避免死黑）
-        if os.environ.get('C1_LYR', '3') == '3':
+        if os.environ.get('C1_LYR', '3') == '3' and not NOVLYR:          # r6 #53：NOVLYR 时整层不画
             fr = self.lyr.draw(fr, t)                       # 统一字幕层（屏幕层，不随镜头）
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         return finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), 0
