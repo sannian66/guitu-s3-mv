@@ -2272,7 +2272,8 @@ class S30_Da(Shot):
         amb = np.array([0.74, 0.46, 0.17], np.float32)                                                # 琥珀（灰度 ≈ 0.47 → 120）
         sky = core * (1 - s_[..., None]) + amb * s_[..., None]
         tex = 1 + (0.03 + 0.07 * s_) * ((n3 - 0.5) * 2)                                               # 云纹在柱边更明显，热芯干净
-        sky = sky * (tex * (0.96 + 0.06 * (1 - y / H)))[..., None]
+        vg = 0.68 + 0.32 * K.sstep(330, 560, y)                                                       # 「答」所在的上段柱光收一点（给金字让出亮度），热芯在人身处
+        sky = sky * (tex * vg)[..., None]
         fr = fr * (1 - open_[..., None]) + sky * open_[..., None]
         rim = np.exp(-((ed + 10) / 28) ** 2) * vfade * (0.35 + 0.65 * n3)                              # 云缘被照亮的一圈暖边（碎、不连续）
         fr = fr + rim[..., None] * np.array([0.55, 0.36, 0.14], np.float32) * 0.45
@@ -2287,7 +2288,7 @@ class S30_Da(Shot):
             stream = cv2.resize(tile[:, (k * 97) % 400:(k * 97) % 400 + 1], (1, 512))[:, 0]
             sv = np.interp(np.mod(along * 0.35 - mv, 512), np.arange(512), stream)
             beams += a * np.exp(-(across / wd) ** 2) * (0.4 + 1.2 * sv) * K.sstep(-40, 160, along) * vfade
-        fr = fr + (beams * open_)[..., None] * np.array([1.0, 0.88, 0.62], np.float32)
+        fr = fr + (beams * open_ * (0.6 + 0.4 * vg))[..., None] * np.array([1.0, 0.88, 0.62], np.float32)
         feet, fh = (960, 905 - 8 * eo(u, 2)), 380                                                      # 人身（头顶→脚）≈ 220px，脚在下黑边内
         sc = D.fit_scale(self.sp, fh)
         fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), feet, sc, expo=0.5, sat=0.5,
@@ -2314,7 +2315,7 @@ S30_TIP = (960, 545)       # 人放大后的刀尖位置（gold_tip 转场圆心
 
 def _da_c(fr, a, scl, s=None):
     """[D组 r6 第三棒] 金「答」：背后暗晕（压周边背景）→ 下移 6px 投影 α0.4 → 3px 深棕描边 → 金白字芯 + 细金辉。"""
-    L = D.text_layer([('答', 960, DA2_Y, s or DA2_S, a, scl, 0.0, np.array([1.0, 0.90, 0.64], np.float32))], fname='serif_black')
+    L = D.text_layer([('答', 960, DA2_Y, s or DA2_S, a, scl, 0.0, np.array([1.0, 0.94, 0.76], np.float32))], fname='serif_black')
     bx = L.box(140)
     if bx is None: return fr
     x0, y0, x1, y1 = bx
