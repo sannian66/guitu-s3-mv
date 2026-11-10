@@ -35,6 +35,7 @@ R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S2
 #   仍去：竖排宋体歌词列（S22「我偏要」、S24「天」「不」、S26「我来」、S27「不答」，同 #53 竖排全去）；「判」全去（S24 + S26，用户「判字不留了」）。
 #   R6D_KEEPTXT=0 回滚到第五轮去字状态。#46 复审的「规矩」同时砸出 / 刀光落点 / 头顶锚点 / 189.71 闪白硬切不受此开关影响。
 R6D_KEEPTXT = _on('R6D_KEEPTXT')
+R6D_EMBER = _on('R6D_EMBER')   # [D组 r6 #46] S26 3:08 炸开后余烬火星
 R6D_S18 = _on('R6D_S18')    # [D组 r6 #45] S18 头顶留白加大 + 鞘尾红穗去掉（R6D_S18=0 回滚到 r5 复审版）
 TXTCUT = R5D_TEXT_CUT and not R6D_KEEPTXT   # 镜内横排/刻/写/印字：r6 默认保留
 VCUT = R5D_TEXT_CUT                        # 竖排宋体歌词列：继续去
@@ -1560,6 +1561,10 @@ class S26_Judge(Shot):
                     ink = 1 - np.clip(split.mean(-1, keepdims=True) * 1.15, 0, 1)            # 天平墨线 = 1，纸 = 0
                     paper = ember + (1 - ink) * np.array([0.30, 0.035, 0.02], np.float32) * (1 - 0.35 * cl((t - tj - 0.1) / 0.25))
                     post = paper * (1 - 0.92 * ink)
+                    if R6D_EMBER:                                # [D组 r6 #46] 朱红余烬：断口一线余火 + 全画面缓升的火星（非爆闪），天平两半仍是主体
+                        post = post + gap[..., None] * np.array([1.0, 0.32, 0.1], np.float32) * 0.35 if back is not None else post
+                        post = K.sparks(post, t, 2601, (960, 760), n=110, life=1.4, speed=(40, 160), dirc=(0.15, -1), spread=0.5, grav=-30,
+                                        color=(1.0, 0.42, 0.12), amt=0.9, area=(900, 260))
                     fr = fr * burst + post * (1 - burst)
             elif t > tj + 0.1:                                    # 炸开之后纸已烧没：朱墨退成暗红夜，只剩「判」
                 ember = D.night(t, 263, top=(0.05, 0.01, 0.008), bot=(0.008, 0.0, 0.0), clouds=0.5) + \
