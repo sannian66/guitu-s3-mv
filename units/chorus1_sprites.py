@@ -149,10 +149,60 @@ def install(G):
         # 抠成图层按「冕板前沿为支点的摆」挪位，出 c0 合旒（双眼沉在旒后）→ c1/c2 风起 → c3 分旒（露画面左眼）四档精灵
         T_OPEN, T_HOLD = 63.20, 63.30                     # 63.233 / 63.267 过渡两帧，63.30 起分旒到镜尾（≥8 帧）
         EYE_GAIN, EYE_ADD = 0.30, 0.0                     # 只一缕冷月光提眼窝，不加色、不发光
+        # r6 第六棒（REVIEW_F_r6d #21=7.5 打回：鬼珠串+克隆补丁、脸灰糊、分旒跳变）· 开关 R6F_E=0 回第四棒四档精灵
+        #   · 底板 emp_liu_e_plate：三条挪动的旒所在竖带整条换成同人无旒生图 emp_flat_a（不再同行克隆）
+        #   · 三串旒 = 独立 RGBA 图层（珠芯 alpha=1、边缘颜色去污），预处理 crew/round6/F_r6f_prep_liu.py
+        #   · 每帧按「冕板前沿为支点的摆」连续插值位移：63.20→63.40 七帧 smoothstep 分开，之后 ±4px（成片）衰减余摆两次
+        #   · 脸：投影带 0.30→0.16、脸部单独抬暗部（屏幕空间椭圆、只抬中间调），右眼窝加一层旒影（只露画面左眼）
+        E_TOP, E_BOT = 150.0, 760.0
+        E_HOME = (862, 1084, 1185)
+        E_CLOSE = {862: 70.0, 1084: -150.0, 1185: -22.0}     # 合旒：左眼前两串向眼心合拢（源像素，旒底处位移）
+        E_OPEN = {862: -50.0, 1084: 50.0, 1185: -22.0}       # 分旒：左眼两侧外分，右眼前两串仍挡右眼
+        E_T0, E_T1 = 63.20, 63.40
+        FK_GAIN, FK_LIFT, FK_DET = 1.35, 0.03, 1.7            # 脸部：整体增益 / 抬底 / 细节（σ10 高频）增益
         def __init__(self):
             super().__init__()
             self.sps = [L(f'R6_F/emp_liu_c{k}') for k in range(4)]
             self.sp = self.sps[0]
+            self.E = os.environ.get('R6F_E', '1') != '0'
+            if self.E:
+                from PIL import Image as _I
+                ld = lambda n: np.asarray(_I.open(GEN + 'R6_F/' + n).convert('RGBA')).astype(np.float32) / 255
+                self.ep = L('R6_F/emp_liu_e_plate')
+                self.epF, self.epA = self.ep.F.copy(), self.ep.A.copy()
+                self.es = {x0: ld(f'emp_liu_e_s{x0}_cut.png') for x0 in self.E_HOME}
+                hh, ww = self.epA.shape
+                self.eyy, self.exx = np.mgrid[0:hh, 0:ww].astype(np.float32)
+                self.epend = np.clip((self.eyy - self.E_TOP) / (self.E_BOT - self.E_TOP), 0, 1.15)
+        def _edisp(self, t):
+            """三串旒在旒底处的位移（源像素）：连续 smoothstep 分开 + 余摆 + 合旒时的微风摆"""
+            u = clamp01((t - self.E_T0) / (self.E_T1 - self.E_T0)); e = u * u * (3 - 2 * u)
+            out = {}
+            for i, x0 in enumerate(self.E_HOME):
+                d = self.E_CLOSE[x0] * (1 - e) + self.E_OPEN[x0] * e
+                sgn = np.sign(self.E_OPEN[x0] - self.E_CLOSE[x0]) or 1.0
+                if t > self.E_T1:                          # 余摆：先过冲再回，±4px 成片（≈10 源像素），两次衰减
+                    tt = t - self.E_T1
+                    d += sgn * 10.0 * math.exp(-tt / 0.22) * math.sin(2 * math.pi * tt / 0.30)
+                d += 3.0 * math.sin(2 * math.pi * 0.7 * t + i * 1.9)   # 微风
+                out[x0] = d
+            return out
+        def _ecompose(self, t):
+            F = self.epF.copy(); A = self.epA.copy()
+            cs = []
+            for x0, d in self._edisp(t).items():
+                mx = self.exx - d * self.epend
+                cs.append(cv2.remap(self.es[x0], mx, self.eyy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT))
+            # 旒在脸前：珠串在脸上投一道柔影（右下 8/12 源像素、σ5），读出前后层次，不贴脸
+            sh = np.clip(sum(c[..., 3] for c in cs), 0, 1)
+            sh = cv2.GaussianBlur(cv2.warpAffine(sh, np.float32([[1, 0, 8], [0, 1, 12]]), sh.shape[::-1]), (0, 0), 5)
+            F = F * (1 - 0.35 * sh)[..., None]
+            for c in cs:
+                a = c[..., 3:]
+                F = F * (1 - a) + c[..., :3] * a
+                A = np.maximum(A, a[..., 0])
+            self.ep.F, self.ep.A = F, A
+            return self.ep
         def _open(self, t):
             if t < self.T_OPEN: return 0.0
             return clamp01((t - self.T_OPEN) / (self.T_HOLD - self.T_OPEN))
@@ -170,7 +220,11 @@ def install(G):
             fr = fr + halo[..., None] * np.array([0.08, 0.09, 0.11], np.float32)
             fade = np.clip(1.0 - (y - (ay + 420)) / 360, 0.2, 1.0).astype(np.float32)   # 胸以下渐隐入云
             op = self._open(t)
-            sp = self.sps[min(3, int(round(op * 3)))] if os.environ.get('R6F_LIU', '1') != '0' else L('R6_F/emp_liu_a_f')
+            if self.E:
+                u_ = clamp01((t - self.E_T0) / (self.E_T1 - self.E_T0)); op = u_ * u_ * (3 - 2 * u_)
+                sp = self._ecompose(t)
+            else:
+                sp = self.sps[min(3, int(round(op * 3)))] if os.environ.get('R6F_LIU', '1') != '0' else L('R6_F/emp_liu_a_f')
             fr, _ = sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=2.0, breathe=0.0,
                                  grade=dict(expo=0.40, sat=0.62, tint=(0.88, 0.93, 1.07), lift=0.0, gamma=1.3),
                                  rim=dict(col=(0.88, 0.92, 1.0), amt=2.2, dir=(0, -1)), wrap=0.9,
@@ -179,7 +233,19 @@ def install(G):
             ex0, ey0 = S2(*self.EYE_L); ex1, ey1 = S2(1155, 655)
             band = np.exp(-((y - ey0 + 10) / (95 * s / 0.42)) ** 2) * np.exp(-((x - (ex0 + ex1) / 2) / (260 * s / 0.42)) ** 4)
             eyeL = np.exp(-(((x - ex0) / (40 * s / 0.42)) ** 2 + ((y - ey0) / (24 * s / 0.42)) ** 2)).astype(np.float32)
-            fr = fr * (1 - (0.30 * band * (1 - op * eyeL))[..., None])
+            if self.E:
+                # r6 第六棒：脸部抬结构（逆光下暗部也要看得出眉骨/眼窝/鼻梁/法令纹）——只在脸椭圆内，旒珠与发丝不动
+                fx, fy = S2(1042, 735)
+                fm = np.exp(-(((x - fx) / (215 * s)) ** 2 + ((y - fy) / (300 * s)) ** 2) ** 2).astype(np.float32)
+                base = cv2.GaussianBlur(fr, (0, 0), 10)
+                key = np.clip(base * self.FK_GAIN + self.FK_LIFT + (fr - base) * self.FK_DET, 0, 1)
+                fr = fr * (1 - fm[..., None]) + key * fm[..., None]
+                ex2, ey2 = S2(1160, 655)                  # 右眼窝：旒影（只露画面左眼）
+                eyeR = np.exp(-(((x - ex2) / (55 * s)) ** 2 + ((y - ey2) / (30 * s)) ** 2)).astype(np.float32)
+                fr = fr * (1 - 0.35 * eyeR)[..., None]
+                fr = fr * (1 - (0.16 * band * (1 - op * eyeL))[..., None])
+            else:
+                fr = fr * (1 - (0.30 * band * (1 - op * eyeL))[..., None])
             fr = fr * (1 + (self.EYE_GAIN * op * eyeL)[..., None]) + (self.EYE_ADD * op * eyeL)[..., None] * np.array([0.80, 0.86, 0.94], np.float32)
             # 云层只在胸口以下流过（天幕感），不遮脸
             cl = cv2.resize(K.tile_crop(self.cloud, t * 40, 0, H // 4, W // 4), (W, H))
