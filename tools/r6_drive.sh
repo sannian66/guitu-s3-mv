@@ -9,6 +9,8 @@ cd /workspace/work/mv
 R=out/render_r6; W=${W:-2}
 mkdir -p $R/base $R/sub $R/logs
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 R
+# 依赖装在 JuiceFS（沙箱重启不丢、不占内存盘）：pip install --target /workspace/work/.pydeps -r requirements.txt
+[ -d /workspace/work/.pydeps ] && export PYTHONPATH=/workspace/work/.pydeps${PYTHONPATH:+:$PYTHONPATH}
 
 nframes() { ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 "$1" 2>/dev/null || echo 0; }
 export -f nframes
