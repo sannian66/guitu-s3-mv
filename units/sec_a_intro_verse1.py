@@ -631,8 +631,14 @@ class A08(Shot):
         brick = (0.7 + 0.5 * self.tex) * (1 - 0.4 * ((np.mod(yy, 60) < 3) | (np.mod(xx + 60 * (np.mod(yy // 60, 2)), 120) < 3)))
         wcol = brick[..., None] * np.array([0.035, 0.038, 0.05], np.float32) * (1 + 2.5 * env)
         fr = fr * (1 - wall[..., None]) + wcol * wall[..., None]
-        ed = np.clip(cv2.dilate(1 - wall, np.ones((5, 5), np.uint8)) - (1 - wall), 0, 1) * (yy < TH - 4)
-        fr = fr + ed[..., None] * np.array([0.5, 0.6, 0.85], np.float32) * (0.5 + 2 * env)
+        if 'archline' in os.environ.get('A_R6_OFF', ''):
+            ed = np.clip(cv2.dilate(1 - wall, np.ones((5, 5), np.uint8)) - (1 - wall), 0, 1) * (yy < TH - 4)
+            fr = fr + ed[..., None] * np.array([0.5, 0.6, 0.85], np.float32) * (0.5 + 2 * env)
+        else:                                                              # r6 #2 补：拱门不再是一圈 5px 冷白描线（读成线稿）→ 门外天光溢到拱券石面上的柔和漫射（向墙内衰减 + 砖纹调制）
+            if not hasattr(self, 'spill'):
+                op = (1 - wall)
+                self.spill = (cv2.GaussianBlur(op, (0, 0), 14) * wall * (yy < TH - 4)).astype(np.float32)
+            fr = fr + (self.spill * brick * 0.55)[..., None] * np.array([0.5, 0.6, 0.85], np.float32) * (0.5 + 2 * env)
         # 门内石板地（门槛以下）+ 门槛石 + 门缝光在湿地上的竖条倒影
         fl = np.clip((yy - TH) / 3, 0, 1)
         slab = (0.7 + 0.5 * self.tex) * (1 - 0.35 * ((np.mod(np.maximum(yy - TH, 0), 46 + np.maximum(yy - TH, 0) * 0.3) < 2) | (np.mod((xx - 960) / (1 + np.maximum(yy - TH, 0) / 120), 150) < 2)))

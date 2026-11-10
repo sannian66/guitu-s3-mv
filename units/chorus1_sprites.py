@@ -128,32 +128,95 @@ def install(G):
             return over(fr, gm, (0.01, 0.01, 0.012)), 0
 
     # ---------------------------------------------------------------- S031 ELS 太上皇天幕巨像
-    #   r5 F组 用户 #21：代码建模 → 生图；r6 F组（评审 6 分）：换冕服生图 R6_F/emp_mian_b（冕旒 + 龙纹），
-    #   逆光（满月压在冕冠后、轮廓冷银 rim、正脸压暗），去掉眼中金光，冕冠顶部留白（≥ 画幅黑边下 80px）
+    #   r5 F组 用户 #21：代码建模 → 生图；r6 F组：冕服生图；
+    #   r6 F组第二棒（评审 7.5：冕冠读成高黑盒、顶边硬灰条、脸最亮不是逆光、龙纹看不见、人小）：
+    #   · 换生图 R6_F/emp_flat_a（薄平冕板 + 低冠身、无前旒、冷灰眼），预处理 emp_flat_a_f（板压到 ≈18px 厚、alpha 收边羽化、
+    #     脸压暗、龙纹提饱和/局部对比），见 crew/round6/F_r6b_prep_emp.py
+    #   · 冕旒改为代码画：12 串玉珠从冕板前沿垂到眼下，随风微摆，月光下珠子闪 1–2 点；起幅双眼在旒与冕板阴影后，
+    #     落幅 63.30–63.53 前排两串被风分开 ≈6 帧，露出一只冷灰、不发光的眼睛，随后合上（评审裁定的「戏眼」）
+    #   · 比例 0.36 → 0.42，冕板顶 ≥ y200；满月 0.74 压在头后（月顶仍在画内），冕板剪影横过月面 = 逆光
+    #   · 云只在胸口以下流过
     class S031Sprite(S031):
-        ANC = (0.5, 0.33)                                 # emp_mian_b 精灵内锚点 = 两眼中点
-        CROWN = 0.03                                      # 冕板顶（归一化 y）
+        SW = SH_ = 2048
+        ANC = (1042 / 2048, 655 / 2048)                   # 两眼中点（源图像素 / 源图边长）
+        BOARD_Y, BOARD_X = 127.0, (640.0, 1428.0)         # 冕板前沿（源图像素）
+        EYE_L = (930.0, 655.0)                            # 露出的那只眼（画面左眼）
+        T_OPEN, T_HOLD, T_CLOSE = 63.30, 63.37, 63.47
         def __init__(self):
-            super().__init__(); self.sp = L('R6_F/emp_mian_b')
+            super().__init__(); self.sp = L('R6_F/emp_flat_a_f')
+            self.sx = np.linspace(self.BOARD_X[0] + 20, self.BOARD_X[1] - 20, 12)
+            k = int(np.argmin(np.abs(self.sx - self.EYE_L[0])))
+            self.sx += self.EYE_L[0] - self.sx[k]                      # 让一串正好垂在左眼前
+            self.kL = k
+        def _open(self, t):
+            if t < self.T_OPEN or t >= self.T_CLOSE + 0.07: return 0.0
+            if t < self.T_HOLD: return eio((t - self.T_OPEN) / (self.T_HOLD - self.T_OPEN))
+            if t < self.T_CLOSE: return 1.0
+            return 1 - eio((t - self.T_CLOSE) / 0.07)
+        def _beads(self, fr, t, ax, ay, s):
+            """12 串玉珠（屏幕空间画）：珠径 ≈5px，冷银逆光勾边，月光下闪 1–2 点"""
+            S2 = lambda px, py: (ax + (px - self.ANC[0] * self.SW) * s, ay + (py - self.ANC[1] * self.SH_) * s)
+            op = self._open(t)
+            Lb = np.zeros((H, W), np.float32); Lr = np.zeros((H, W), np.float32); Lg = np.zeros((H, W), np.float32)
+            rr = max(2.0, 11.5 * s)
+            nb = 13; step = 44.0
+            glint = []
+            for i, x0 in enumerate(self.sx):
+                sway = 7.0 * math.sin(t * 2.3 + i * 0.9) + 4.0 * math.sin(t * 3.7 + i * 1.7)
+                part = 0.0
+                if i == self.kL: part = -62.0 * op
+                elif i == self.kL + 1: part = 30.0 * op
+                elif i == self.kL - 1: part = -18.0 * op
+                pts = []
+                for j in range(nb):
+                    yy = self.BOARD_Y + 26 + j * step
+                    f = (yy - self.BOARD_Y) / (nb * step)
+                    pts.append(S2(x0 + (sway + part) * f ** 0.9, yy))
+                P = np.array(pts)
+                top = S2(x0, self.BOARD_Y)
+                cv2.line(Lb, (int(top[0] * 4), int(top[1] * 4)), (int(P[-1][0] * 4), int(P[-1][1] * 4)), 0.8, 1, cv2.LINE_AA, 2)
+                for j, (px, py) in enumerate(P):
+                    cv2.circle(Lb, (int(px * 4), int(py * 4)), int(rr * 4), 1.0, -1, cv2.LINE_AA, 2)
+                    cv2.ellipse(Lr, (int(px * 4), int((py - rr * 0.35) * 4)), (int(rr * 4), int(rr * 0.75 * 4)), 0, 200, 340, 1.0, 3, cv2.LINE_AA, 2)
+                    ph = math.sin(t * 9.0 + i * 2.1 + j * 1.3)
+                    if ph > 0.985: glint.append((px - rr * 0.3, py - rr * 0.4, (ph - 0.985) / 0.015))
+            for gx, gy, g in glint[:2]:                                    # 月光点：同屏最多 2 粒
+                cv2.circle(Lg, (int(gx), int(gy)), 1, float(g), -1, cv2.LINE_AA)
+            Lb = cv2.GaussianBlur(Lb, (0, 0), 0.6)
+            fr = fr * (1 - 0.92 * Lb[..., None]) + Lb[..., None] * np.array([0.020, 0.032, 0.028], np.float32)
+            fr = fr + cv2.GaussianBlur(Lr, (0, 0), 0.7)[..., None] * np.array([0.55, 0.62, 0.72], np.float32) * 0.55
+            if glint:
+                fr = fr + (cv2.GaussianBlur(Lg, (0, 0), 1.0) * 6 + cv2.GaussianBlur(Lg, (0, 0), 5) * 10)[..., None] * np.array([0.85, 0.92, 1.0], np.float32)
+            return fr
         def render(self, t):
             u = self.u(t)
-            cr = -240 * (1 - eio(u))                      # 机位从低处升起 + 上摇（同原镜）
+            cr = 60 * (1 - eio(u))                       # 巨像从地平线后缓缓升起 60px 落定
             fr = cam(self.bg, 1.0, 0, -cr * 0.25)
-            s = 0.36 * (1 + 0.02 * u)                     # 巨像缓慢逼近；冕冠整顶留在画内
-            ax, ay = 960, 565 + cr
-            hcy = ay - (self.ANC[1] - 0.12) * self.sp.h * s     # 冕冠中心
-            fr = K.paste_sprite(fr, *self.moon, ax, hcy + 12, scale=0.88)   # 满月压在冕冠后：逆光光源
+            s = 0.42 * (1 + 0.02 * u)
+            ax, ay = 960, 448 + cr
+            S2 = lambda px, py: (ax + (px - self.ANC[0] * self.SW) * s, ay + (py - self.ANC[1] * self.SH_) * s)
+            mx, my = S2(1034, 300)
+            fr = K.paste_sprite(fr, *self.moon, mx, my, scale=0.74)     # 满月压在头后：逆光光源，冕板剪影横过月面
             x, y = K.grid()
-            halo = np.exp(-((x - ax) ** 2 + (y - hcy) ** 2) / (2 * 420.0 ** 2)).astype(np.float32)
-            fr = fr + halo[..., None] * np.array([0.10, 0.11, 0.13], np.float32)
-            fade = np.clip(1.0 - (y - (ay + 340)) / 400, 0.2, 1.0).astype(np.float32)   # 胸以下渐隐入云
-            fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=5.0, breathe=0.0,
-                                 grade=dict(expo=0.47, sat=0.50, tint=(0.86, 0.92, 1.08), lift=0.02, gamma=1.3),
+            halo = np.exp(-((x - mx) ** 2 + (y - my) ** 2) / (2 * 380.0 ** 2)).astype(np.float32)
+            fr = fr + halo[..., None] * np.array([0.08, 0.09, 0.11], np.float32)
+            fade = np.clip(1.0 - (y - (ay + 420)) / 360, 0.2, 1.0).astype(np.float32)   # 胸以下渐隐入云
+            fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=3.0, breathe=0.0,
+                                 grade=dict(expo=0.40, sat=0.62, tint=(0.88, 0.93, 1.07), lift=0.0, gamma=1.3),
                                  rim=dict(col=(0.88, 0.92, 1.0), amt=3.6, dir=(0, -1)), wrap=0.9,
-                                 shade=None, alpha=0.96, extra_A=fade)
-            # 云层在巨像前流过（天幕感）
+                                 shade=None, alpha=0.97, extra_A=fade)
+            # 冕板在眼部的投影（旒后双眼沉在暗里）；分旒那一刻左眼局部移开阴影 + 一点冷灰眼神光（不发光）
+            op = self._open(t)
+            ex0, ey0 = S2(*self.EYE_L); ex1, ey1 = S2(1155, 655)
+            band = np.exp(-((y - ey0) / (60 * s / 0.42)) ** 2) * np.exp(-((x - (ex0 + ex1) / 2) / (260 * s / 0.42)) ** 4)
+            eyeL = np.exp(-(((x - ex0) / (46 * s / 0.42)) ** 2 + ((y - ey0) / (26 * s / 0.42)) ** 2))
+            fr = fr * (1 - (0.55 * band * (1 - 0.85 * op * eyeL))[..., None])
+            if op > 0.01:
+                fr = fr + (np.exp(-(((x - ex0 - 3) / 2.2) ** 2 + ((y - ey0 + 2) / 1.6) ** 2)) * 0.35 * op)[..., None] * np.array([0.80, 0.85, 0.90], np.float32)
+            fr = self._beads(fr, t, ax, ay, s)
+            # 云层只在胸口以下流过（天幕感），不遮脸
             cl = cv2.resize(K.tile_crop(self.cloud, t * 40, 0, H // 4, W // 4), (W, H))
-            ca_ = np.clip((cl - 0.5) * 2.2, 0, 1) * 0.38 * sstep(380, 620, y)
+            ca_ = np.clip((cl - 0.5) * 2.2, 0, 1) * 0.40 * sstep(ay + 380, ay + 560, y)
             fr = over(fr, ca_, (0.10, 0.11, 0.13))
             # 地面草浪 + 一粒黑点（远景小剪影仍用代码 rig）
             rg = self.ridge + cr
