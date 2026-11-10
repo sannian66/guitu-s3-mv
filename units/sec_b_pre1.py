@@ -102,7 +102,9 @@ class P01(Shot):
         ang = pc * 9.0
         tip = (pp['x'] + 40 + 90 * pc + 30 * math.sin(ang), pp['y'] - 70 + 150 * pc + 25 * math.cos(ang * 1.3))
         if pc >= 1 and k == 1: tip = (pp['x'] + 130, pp['y'] + 90 - 60 * (t - 45.0))
-        if R5:
+        if R6:
+            fr = self.hand_r6(fr, t, tip, pc)
+        elif R5:
             # 俯拍：手的投影 = 手精灵 alpha 向左下偏移（烛光在右上），离纸越远（手腕/袖）偏得越多、越虚；笔尖处投影与笔尖重合
             HS = (0.322, 0.911); HW = 1800; HR = -42.0             # 绕笔尖顺时针转 42°：手腕/袖子从画面右侧入画（俯拍下手在纸面上的朝向），袖口出右边框
             _, Ah = put_at(np.zeros_like(fr), self.hand, t, HS, tip, HW, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0, shade=None, wrap=0.0, rot=HR)
@@ -131,6 +133,44 @@ class P01(Shot):
             m = K.ink_blot(0.86 + 0.14 * eout((t - self.t0) / 0.28, 2), seed=201, center=(930, 520), reverse=True)
             fr = over(fr, m, np.array([0.015, 0.012, 0.012], np.float32))
         return fr, 0
+
+
+    def hand_r6(self, fr, t, tip, pc):
+        """r6 #13：笔杆立起来（屏幕上与纸面夹角 ≈56°，原 -42° 旋转把它压成 ~24° 横卧）；
+        投影 = 真正的接触投影：以笔尖为不动点，离纸越高（沿笔杆向上越远）投得越远、越虚 → 笔尖处投影与笔尖重合、往上分开；
+        笔尖一颗湿亮的朱墨珠 + 笔锋湿光，落纸处洇开一小圈湿墨 + 接触暗点。"""
+        HS = (0.322, 0.911); HW = 1350; HR = -5.0 + 2.0 * math.sin(pc * 6.0)
+        a = math.radians(66.0 + HR)                                   # 生图笔杆与水平夹角 66°（实测）；屏幕上笔杆向右上
+        u_ = np.array([math.cos(a), -math.sin(a)], np.float32)        # 笔杆「向上」方向（屏幕坐标）
+        L = np.array([-0.30, 0.42], np.float32)                       # 烛光在右上 → 影子往左下
+        _, Ah = put_at(np.zeros_like(fr), self.hand, t, HS, tip, HW, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0, shade=None, wrap=0.0, rot=HR)
+        A2 = np.eye(2, dtype=np.float32) + np.outer(L, u_)             # p' = p + L·dot(p-tip, u)
+        tp = np.array(tip, np.float32)
+        M = np.hstack([A2, (tp - A2 @ tp)[:, None]]).astype(np.float32)
+        sh = cv2.warpAffine(Ah.astype(np.float32), M, (W, H))
+        x, y = K.grid()
+        d = np.sqrt((x - tip[0]) ** 2 + (y - tip[1]) ** 2)
+        wsh = np.exp(-d / 260.0)[..., None]
+        shs = cv2.GaussianBlur(sh, (0, 0), 2.0)[..., None]; shb = cv2.GaussianBlur(sh, (0, 0), 14.0)[..., None]
+        shm = shs * wsh + shb * (1 - wsh)
+        fr = fr * (1 - 0.58 * shm * (0.55 + 0.45 * wsh))
+        # 落纸点：洇开的湿墨圈 + 接触暗点（ao）
+        wet = np.exp(-(((x - tip[0]) / 20) ** 2 + ((y - tip[1]) / 13) ** 2))[..., None]
+        fr = fr * (1 - 0.65 * wet) + wet * 0.65 * np.array([0.26, 0.015, 0.02], np.float32)
+        fr = fr * (1 - 0.35 * np.exp(-(d / 34) ** 2)[..., None])
+        fr, _ = put_at(fr, self.hand, t, HS, tip, HW, grade=GR_WARM, rim=RIM_WARM, wind_amp=0, breathe=0.0, shade=None, wrap=0.2, rot=HR)
+        # 笔锋湿：笔尖挂一颗饱满朱墨珠（深朱、朝光一侧一粒小镜面高光）+ 沿笔毛一道细长湿光（不是点状）
+        bead = np.exp(-(((x - tip[0] - u_[0] * 6) / 10) ** 2 + ((y - tip[1] - u_[1] * 6) / 10) ** 2))[..., None]
+        fr = fr * (1 - 0.9 * bead) + bead * 0.9 * np.array([0.34, 0.010, 0.015], np.float32)
+        spc = np.exp(-(((x - tip[0] - u_[0] * 9 - 3) / 2.6) ** 2 + ((y - tip[1] - u_[1] * 9 + 2) / 2.6) ** 2))[..., None]
+        fr = fr + spc * 0.55 * np.array([1.0, 0.95, 0.90], np.float32)
+        nx, ny = -u_[1], u_[0]
+        st = np.zeros((H, W), np.float32)
+        p0_ = (int(tip[0] + u_[0] * 16 + nx * 4), int(tip[1] + u_[1] * 16 + ny * 4)); p1_ = (int(tip[0] + u_[0] * 70 + nx * 7), int(tip[1] + u_[1] * 70 + ny * 7))
+        cv2.line(st, p0_, p1_, 1.0, 2, cv2.LINE_AA)
+        st = cv2.GaussianBlur(st, (0, 0), 1.4)[..., None]
+        fr = fr + st * 0.30 * np.array([1.0, 0.85, 0.80], np.float32)
+        return fr
 
 
 # =====================================================================================
