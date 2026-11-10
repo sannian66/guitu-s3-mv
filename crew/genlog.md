@@ -691,3 +691,10 @@
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `stele_stone_v1`（40s）→ `assets/gen/R6_A/stele_stone_v1.png`
 - 备注：A 组 r6 第三棒 #9 碑面青石材质（R6_A 本轮第 6/12 张，剩 6）
+
+## 2026-11-10 07:27 · OpenAI 协议渠道批量生图（jobs_C_r6_b.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `c23_tools_intaglio_v2`（62s）→ `assets/gen/R6_C/c23_tools_intaglio_v2.png`
+
+## 2026-11-10 15:27 · C 组 r6 第二棒（jobs_C_r6_b.json，1 张）
+- ✔ `c23_tools_intaglio_v2`（62s）→ `assets/gen/R6_C/c23_tools_intaglio_v2.png`（C23 三块铜牌阴刻圆规/曲尺/天平，黑底，替代 v1 绿幕溢色变紫那版）

@@ -30,6 +30,7 @@ READY = True
 #   V14 火星竖排一列「每一次拔刀都是」（火星本身保留）。镜内互动字（五百重甲、寒光、罪状、里/称量、殺/放、我的主张、正、锋芒）与诏文乱码不动。
 def _on(k, d='1'): return os.environ.get(k, d) != '0'
 def R6B_OFF(k): return k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'   # r6 第二棒开关（改前对比用）
+def HG_ON(): return os.environ.get('A_R6D_HANGUANG', '') == '1'   # r6 第四棒：用户 11-10 15:28 拍板 V05/V06 画内「寒光」字全去；=1 恢复（改前对比用）
 def R6C_OFF(k): return k in os.environ.get('A_R6C_OFF', '').split(',') or os.environ.get('A_R6C_OFF', '') == 'all'   # r6 第三棒开关（改前对比用）：sf7 / stele / …
 
 
@@ -867,7 +868,7 @@ class V05(Shot):
         fr = A.glow(fr, p, 140, 0.5 * g, (0.75, 0.85, 1.0), aspect=0.35)
         fr = RAIN.draw(fr, t, 0.5, angle=10, layers=(2,))
         p = cprog(1, [9], t, 0.16)[0]                                   # 第五棒：「寒」20.82 随刃口寒光落下（与 V06 同位，跨切点连续）
-        if p > 0:
+        if p > 0 and HG_ON():                                            # r6 第四棒：默认不出「寒」字
             _hx, _hy = (800, 760) if R6B_OFF('hanguang') else V06.HG[0]                 # r6 第二棒：跟 V06「寒光」新位置（人物右侧）同位
             L = T.Layer(); L.paste(BG('寒', 'kai', 230, p, seed=1), _hx, _hy, (0.94, 0.92, 0.88))
             fr = T.compose(fr, L, shadow=0.8, shadow_sigma=16, glow=0.2)
@@ -926,6 +927,8 @@ class V06(Shot):
         if 0 <= a < 0.07: fr = fr * 1.55 + 0.06 * COLDV          # 第三棒：冲击改冷色曝光脉冲（不再白闪）
         # 「寒光」斩开：字在屏幕下方，被同一刀切开两半错位
         p = cprog(1, [9], t, 0.25)[0]
+        if not HG_ON():                                                  # r6 第四棒：寒光字层、逐字点亮、刀光扫字、斩字火星全部不出；刀身扫光/斩击/裂线保留
+            return fr, (5 if 0 <= a < 0.1 else 0)
         if p > 0 and not R6B_OFF('hanguang'):
             return self.r6b_words(fr, t, p, ts2, lit), (5 if 0 <= a < 0.1 else 0)
         if p > 0:
