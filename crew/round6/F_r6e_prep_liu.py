@@ -8,7 +8,7 @@
 渲染时（units/chorus1_sprites.py S031Sprite，开关 R6F_E=0 回第四棒）按时间把三串做「以冕板前沿为支点的摆」位移插值。"""
 import numpy as np, cv2
 from PIL import Image
-R = '/workspace/work/mv/assets/gen/R6_F/'
+R = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/R6_F/'
 ld = lambda n: np.asarray(Image.open(R + n).convert('RGBA')).astype(np.float32) / 255
 L4 = ld('emp_liu_a_cut.png'); F4 = ld('emp_flat_a_cut.png')
 h, w = L4.shape[:2]

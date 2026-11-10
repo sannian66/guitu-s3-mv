@@ -1,6 +1,6 @@
 """A 组逐镜试渲：每镜中点(或指定时刻)一帧，捕获报错与耗时。python3 tools/a_test.py [镜名...]"""
 import os, sys, time, traceback
-ROOT = '/workspace/work/mv'; sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
 os.chdir(ROOT)
 import numpy as np
 from PIL import Image

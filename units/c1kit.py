@@ -4,7 +4,7 @@ import os
 粒子全部“无状态”（位置是 t 的解析函数），分段并行渲染结果一致。"""
 import sys, math, os
 from functools import lru_cache
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

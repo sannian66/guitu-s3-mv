@@ -6,7 +6,7 @@ import os, sys, time, json, random
 sec, fast = float(sys.argv[1]), sys.argv[2]
 out = sys.argv[3] if len(sys.argv) > 3 else 'out/round6/eng_r6'
 os.environ['SPRITE_FAST'] = fast
-sys.path.insert(0, '/workspace/work/mv')
+sys.path.insert(0, __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'))
 import numpy as np
 if os.environ.get('BENCH_OLD'):            # 对照：用 main 旧版 sprite.py（BENCH_OLD=文件路径），验证 SPRITE_FAST=0 与旧实现逐像素相同
     import importlib.util

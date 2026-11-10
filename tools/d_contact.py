@@ -4,7 +4,7 @@
   python3 tools/d_contact.py times out.jpg 1.0 2.5 ...                                      指定秒
   分块渲染时每帧缓存到 /tmp/d/cache/<f>.png，最后一块自动拼表（缓存命中就不重渲）。"""
 import os, sys, time, traceback
-ROOT = '/workspace/work/mv'; sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
 os.chdir(ROOT)
 os.environ.setdefault('V4_FORCE', 'd_bridge')
 from PIL import Image, ImageDraw, ImageFont

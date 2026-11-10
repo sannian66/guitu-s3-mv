@@ -7,7 +7,7 @@
 冕旒仍是生图玉珠本身（只做整体平移/摆），不新画任何珠子。"""
 import numpy as np, cv2
 from PIL import Image
-R = '/workspace/work/mv/assets/gen/R6_F/'
+R = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/R6_F/'
 src = np.asarray(Image.open(R + 'emp_liu_a_f_cut.png').convert('RGBA')).astype(np.float32) / 255
 raw = np.asarray(Image.open(R + 'emp_liu_a_cut.png').convert('RGB')).astype(np.float32) / 255
 h, w = src.shape[:2]

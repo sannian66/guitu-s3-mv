@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, crowd
 def cell(sp,col=crowd.COLD,h=760,w=520):
     A,B,R=sp['A'],sp['base'],sp['rim']; c=np.full((h,w,3),0.22,np.float32); C=B+R[...,None]*col

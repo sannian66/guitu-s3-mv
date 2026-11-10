@@ -5,7 +5,7 @@ import os, math
 import numpy as np, cv2
 from PIL import Image
 from c1kit import W, H, sstep
-GEN = '/workspace/work/mv/assets/gen/B_r4/'
+GEN = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/B_r4/'
 _C = {}
 
 

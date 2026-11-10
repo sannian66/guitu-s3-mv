@@ -6,7 +6,7 @@
 - crowd：水墨人群剪影（站/跪），做中景层。
 全部无状态、按 t 计算。"""
 import sys, math
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

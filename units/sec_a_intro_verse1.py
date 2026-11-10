@@ -3,7 +3,7 @@
 接口：READY / frame(f, cache) → uint8 (1080,1920,3) 成品帧（含黑边、颗粒、暗角）。
 结构仿 units/chorus1.py：每镜一个类 render(t)->(线性帧, ca)；CUTS 表驱动转场；VCam3 主运镜 + 卡点脉冲；屏幕层 = 署名 / 歌词竖排。"""
 import os, sys, math, json
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 os.environ.setdefault('SPRITE_MODE', '1')

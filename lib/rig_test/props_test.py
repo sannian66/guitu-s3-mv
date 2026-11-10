@@ -1,4 +1,4 @@
-import sys,time,warnings; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time,warnings; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, props, fx2
 W,H=1920,1080
 def bg(c0=0.10,c1=0.03, glow=None, col=props.GOLD):
@@ -42,5 +42,5 @@ pq=props.Plaque('天理昭彰')
 run('Plaque sheen', lambda: pq.draw(bg(0.3,0.15),1.0,960,540,1400,sheen=0.4))
 run('Plaque crack 0.8 (S114)', lambda: pq.draw(bg(0.3,0.15),1.0,960,540,1400,crack=0.8))
 img=np.vstack([np.hstack(cells[i:i+2]) for i in range(0,len(cells)-1,2)])
-cv2.imwrite('/workspace/work/mv/lib/rig_test/props_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,85])
+cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/props_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,85])
 for k,v in T.items(): print('%-36s %.3f'%(k,v))

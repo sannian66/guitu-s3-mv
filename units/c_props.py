@@ -5,7 +5,7 @@
 - BronzeBalance：青铜天平（圆柱体着色的横梁/立柱/吊链、碗形秤盘、铜绿斑、高光）。
 材质全部 numpy 程序生成；不改共享库。"""
 import math, sys
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

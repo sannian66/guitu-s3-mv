@@ -3,7 +3,7 @@
 接口：Chorus1().frame(t, dt) -> (float32 RGB 1080x1920x3 已收尾含黑边, ca)
 每镜一个类（render(t) -> (fr, ca)，fr 为未收尾的线性画面）；切点转场由 CUTS 表驱动。"""
 import sys, math
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

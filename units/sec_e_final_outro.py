@@ -4,7 +4,7 @@
 结构仿 units/chorus1.py：每镜一个类（render(t) 场景 + text(fr,t) 屏幕字层），SHOTS 表驱动切点，CUTS 表驱动转场，MOVE 表驱动运镜。"""
 import zlib
 import math, os, sys, json
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

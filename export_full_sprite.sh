@@ -5,7 +5,7 @@
 #   预览版 full_sprite_720p.mp4     720p CRF26 + AAC 128k
 # 每个文件：ffprobe 时长/流 + 全量解码（ffmpeg -xerror -f null）校验，结果写 out/full_sprite/verify.txt
 set -e
-cd /workspace/work/mv
+cd "${MV_ROOT:-/workspace/work/mv}"
 D=out/full_sprite; C=$D/chunks; A="audio/谁定正邪.mp3"
 n=$(ls $C/c_*.mp4 | wc -l); [ "$n" -eq 31 ] || { echo "chunks=$n, need 31"; exit 1; }
 ls $C/c_*.mp4 | sort | sed "s#.*/#file '#; s#\$#'#" > $C/list.txt

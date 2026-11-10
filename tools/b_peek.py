@@ -2,7 +2,7 @@
   python3 tools/b_peek.py out.jpg f1 f2 ...      （>1 帧须 tools/cpu_slot.sh 包裹）
   FULL=1 另存全尺寸 /tmp/bp_<f>.png；COLS=n 改列数（默认 3）"""
 import sys, os, time
-ROOT = '/workspace/work/mv'; sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
 os.environ.setdefault('SPRITE_MODE', '1')
 from PIL import Image, ImageDraw, ImageFont
 import sec_b_pre1 as P1, sec_b_verse2 as V2

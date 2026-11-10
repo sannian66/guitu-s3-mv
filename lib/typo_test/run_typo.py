@@ -1,6 +1,6 @@
 """typo 联系表：每个效果 6 相位，深色水墨背景 / 浅色宣纸背景。用法: python run_typo.py [效果名...]"""
 import sys, time, math, os
-sys.path.insert(0, '/workspace/work/mv/lib')
+sys.path.insert(0, __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 import typo as T
@@ -35,7 +35,7 @@ def letterbox(fr):
     fr = np.clip(fr, 0, 1); fr[:BAR] = 0; fr[H - BAR:] = 0; return fr
 
 
-LBLF = ImageFont.truetype('/workspace/work/mv/fonts/NotoSerifSC.otf', 22)
+LBLF = ImageFont.truetype(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/NotoSerifSC.otf', 22)
 def sheet(name, frames, labels, cols=3):
     ims = []
     for f, l in zip(frames, labels):

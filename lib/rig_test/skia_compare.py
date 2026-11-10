@@ -1,5 +1,5 @@
 """cv2 光栅 vs skia 矢量：同一帧左右对比 + 局部放大 + 计时。输出 skia_cmp_*.png"""
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, rig
 def bg(h=1080,w=1920):
     return (np.linspace(0.30,0.10,h)[:,None,None]*np.ones((1,w,3))).astype(np.float32)

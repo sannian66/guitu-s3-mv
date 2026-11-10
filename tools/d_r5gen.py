@@ -6,7 +6,7 @@ Key 由 .env.local / 代理注入，绝不写文件。"""
 import sys, os, json, time
 sys.path.insert(0, os.path.dirname(__file__))
 import nb
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 STATE = ROOT + '/crew/round5/D_r5_gen.json'
 CANDS = ROOT + '/assets/gen/R5_D/cands'
 LOG = ROOT + '/crew/genlog.md'

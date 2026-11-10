@@ -5,7 +5,7 @@
 白纸世界烧出黑洞 → 余烬中睁眼、拔刀（字体切回手写 = 他的话）→ 撞碎字墙 →「天」在风暴之眼里 → 刀光在天上刻「判」→
 子弹时间 → 雨滴炸成金 →「答」在裂开的云里金色爆开，白金出画接副歌终。"""
 import sys, math, os
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

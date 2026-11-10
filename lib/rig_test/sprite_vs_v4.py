@@ -3,7 +3,7 @@ python3 lib/rig_test/sprite_vs_v4.py [t=82.70] → lib/rig_test/sprite_vs_v4_S04
 import os, sys, subprocess
 import numpy as np, cv2
 T = float(sys.argv[1]) if len(sys.argv) > 1 else 82.70
-R = '/workspace/work/mv'
+R = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 code = ("import sys,cv2,numpy as np;sys.path.insert(0,'%s/units');import chorus1 as C;fr,_=C.Chorus1().frame(%f);"
         "cv2.imwrite(sys.argv[1],(np.clip(fr,0,1)[...,::-1]*255+.5).astype(np.uint8))") % (R, T)
 for mode, out in (('0', '/tmp/cmp_v4.png'), ('1', '/tmp/cmp_sp.png')):

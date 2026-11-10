@@ -4,7 +4,7 @@
   V4_FORCE=c_pre2_chorus2 tools/cpu_slot.sh python3 tools/c_contact.py keys    out/round4/C_keys_v1.jpg    [i0 i1]
 i0 i1：只渲第 i0..i1-1 张（缩略图缓存在 /tmp/c_contact_cache/，分批跑避开 120s 超时）；不给则渲剩余并拼图。"""
 import os, sys, time
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT + '/units')
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont

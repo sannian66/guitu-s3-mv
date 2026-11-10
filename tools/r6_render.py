@@ -10,7 +10,7 @@ seg 与 render_sprite_full.seg 相同：块起点 random.seed(A)、np.random.see
 改字幕 / 去画内重复字时：只需重渲受影响镜头所在块的底层（或只重跑 sub），见 crew/round6/RENDER_r6.md。
 """
 import os, sys, json, subprocess, time, random
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 OUT = ROOT + '/out/render_r6'
 PLAN = ROOT + '/crew/round6/render_r6_chunks.json'
 FPS, W, H, N = 30, 1920, 1080, 7240

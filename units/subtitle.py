@@ -16,7 +16,7 @@ r6-SUB（用户 11-10 15:28「底部的字幕好丑，能做成之前竖版歌�
 """
 import os, re, json, math, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 FONT = ROOT + '/fonts/NotoSerifSC-Medium.otf'
 SIZE, Y_C = 38, 1020          # 下黑边 120px（1080-120…1080），字幕中心 y=1020
 FADE = 0.14

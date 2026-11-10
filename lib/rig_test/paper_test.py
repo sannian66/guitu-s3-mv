@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, paper, fx2
 W,H=1920,1080
 def bg(c0=0.10,c1=0.03, glow=None):
@@ -53,5 +53,5 @@ cur=paper.PaperCurtain(6)
 run('PaperCurtain wind', lambda: cur.draw(bg(0.35,0.2,glow=(960,500,900)),1.0))
 run('Curtain cut x2 (S118)', lambda: cur.draw(bg(0.35,0.2,glow=(960,500,900)),2.0,cuts=[((0,300),(1920,800),1.4),((0,900),(1920,350),1.6)]))
 img=np.vstack([np.hstack(cells[i:i+2]) for i in range(0,len(cells),2)])
-cv2.imwrite('/workspace/work/mv/lib/rig_test/paper_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,85])
+cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/paper_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,85])
 for k,v in T.items(): print('%-40s %.3f'%(k,v))

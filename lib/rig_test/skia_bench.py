@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, rig
 fr0=np.zeros((1080,1920,3),np.float32)+0.2
 sw=rig.Swordsman(1,view='3q'); 

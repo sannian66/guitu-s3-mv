@@ -7,7 +7,7 @@ python3 units/hitmap.py  → crew/hitmap_c1.json + crew/hitmap_c1.png
 所有时间同时给出最近帧号（30fps）与「视觉帧」= 最近帧 - 1（感知同步：画面早 1 帧）。"""
 import json, sys, math
 import numpy as np
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT + '/lib'); sys.path.insert(0, ROOT)
 FPS = 30
 A0, A1 = 115.0, 163.0      # 分析窗（含前后余量）

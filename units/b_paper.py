@@ -11,7 +11,7 @@ import math
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 H0 = 640                     # 纸人基准高（像素）
 _FONT = {}
 

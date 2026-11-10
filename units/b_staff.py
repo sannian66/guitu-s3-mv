@@ -7,7 +7,7 @@ import numpy as np, cv2
 import c1kit as K
 
 W, H = 1920, 1080
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 _C = {}
 
 

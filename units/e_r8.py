@@ -3,7 +3,7 @@ blade_ecu：E01 竖刀 ECU —— 用生图 E_r6/blade_vert 的真刃身（锻�
           冷暖环境反射重新着色（刃口侧映地平线暖光、平地映天空冷云），日光自下而上扫刃；「血」阴刻入刃面（凹槽暗壁 + 受光壁 + 槽底残血），
           扫光过字时字口反光。"""
 import math, os, sys
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

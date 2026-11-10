@@ -3,7 +3,7 @@
   python3 crew/round4/C_gen6.py quote|submit [名字,...]|poll
 Key 由沙箱代理注入，绝不写文件。"""
 import sys, os, json, time
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT + '/tools')
 import nb
 from sprite_plan_rest import GT_LOOK, BG, HANDS

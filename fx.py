@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1920, 1080
 BAR = 120  # letterbox
-FD = '/workspace/work/mv/fonts/'
+FD = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/'
 F_BRUSH = FD + 'MaShanZheng-Regular.ttf'
 F_WILD = FD + 'ZhiMangXing-Regular.ttf'
 F_CAO = FD + 'LiuJianMaoCao-Regular.ttf'

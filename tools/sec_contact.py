@@ -2,7 +2,7 @@
   tools/cpu_slot.sh python3 tools/sec_contact.py <段落key> out.jpg [mid|beats]   （段落 key 见 units/sections.py）
   环境变量 V4_FORCE=<key> 让未 READY 的组也接入（组内自测）。"""
 import os, sys, json
-ROOT = '/workspace/work/mv'; sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units')
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units')
 os.chdir(ROOT)
 from PIL import Image, ImageDraw, ImageFont
 import sections as SEC

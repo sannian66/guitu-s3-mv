@@ -7,7 +7,7 @@ import os, sys, subprocess, shutil
 os.environ['SPRITE_MODE'] = '1'
 WIN = (82.059, 85.559)
 os.environ['SPRITE_EXT'] = '%f,%f' % WIN
-sys.path.insert(0, '/workspace/work/mv/units')
+sys.path.insert(0, __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/units')
 import numpy as np, cv2
 import chorus1 as C
 from c1kit import finish, to8
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         out = sys.argv[2]; tmp = '/tmp/s43/S043_sprite.mp4'
         n = int(round((WIN[1] - WIN[0]) * 30))
         p = subprocess.Popen(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '1920x1080', '-r', '30',
-                              '-i', '-', '-ss', '%.3f' % WIN[0], '-t', '%.3f' % (n / 30), '-i', '/workspace/work/mv/audio/谁定正邪.mp3',
+                              '-i', '-', '-ss', '%.3f' % WIN[0], '-t', '%.3f' % (n / 30), '-i', __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/audio/谁定正邪.mp3',
                               '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-pix_fmt', 'yuv420p',
                               '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', tmp], stdin=subprocess.PIPE)
         for i in range(n):

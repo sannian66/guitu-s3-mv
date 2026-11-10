@@ -8,7 +8,7 @@ import sys, os, json, time, shutil, subprocess
 sys.path.insert(0, os.path.dirname(__file__))
 import nb
 from sprite_plan_rest import GT_LOOK, TSH_LOOK, BG, LIGHT_COLD, FRAME, HANDS
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 STATE = ROOT + '/crew/round4/A_gen_state.json'
 LOG = ROOT + '/crew/genlog.md'
 CANDS = '/workspace/work/a_cands'
