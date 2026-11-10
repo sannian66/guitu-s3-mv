@@ -542,6 +542,8 @@ class S034(Shot):
         r = np.random.default_rng(3402)
         CX, CY = 900.0, 560.0
         TAU, G = 0.10, 1300.0
+        R6D = os.environ.get('R6F_DEB', '1') != '0'            # r6 第四棒（评审 #22 方案 a）：删细砂、中块 ≤16、大块 40–64px 带拖影，69.4 前全部落出/消失
+        if R6D: G = 4200.0
         def pos(o, v, aa):                                     # 阻尼爆开 + 重力
             k = TAU * (1 - math.exp(-aa / TAU))
             return o[0] + v[0] * k, o[1] + v[1] * k + 0.5 * G * aa * aa
@@ -551,8 +553,11 @@ class S034(Shot):
         tiers = [(8, 60, (28, 44), (1800, 3200), (0.03, 0.05), True),
                  (36, 140, (12, 18), (2600, 4600), (0.03, 0.06), True),
                  (200, 220, (2.5, 4.5), (3200, 6500), (0.04, 0.10), False)]
+        if R6D:
+            tiers = [(8, 60, (52, 80), (1800, 3200), (0.03, 0.05), True),   # 外接 52–80 → 实体 ≈40–64px
+                     (16, 140, (14, 22), (2600, 4600), (0.03, 0.06), True)]
         D = np.zeros((H, W), np.float32); C = np.zeros_like(D)
-        fade = clamp01(1 - (a - 0.55) / 0.35)
+        fade = clamp01(1 - (a - 0.55) / 0.35) if not R6D else clamp01(1 - (a - 0.40) / 0.13)   # R6D：69.40 前归零
         for n, spread, (s0, s1), (v0, v1), (c0, c1), poly in tiers:
             for i in range(n):
                 ang = r.uniform(0, 2 * np.pi)
@@ -566,12 +571,13 @@ class S034(Shot):
                 vx, vy = vel(v, a)
                 spd = math.hypot(vx, vy) + 1e-3
                 bl = float(np.clip(spd / 30 * 0.5, 6, 12))      # 运动模糊长度（px）
+                if R6D: bl = float(np.clip(spd / 30 * 0.6, 10, 34)) * (1.0 if s0 >= 50 else 0.6)   # 大块拖影 10–34px
                 ux, uy = vx / spd, vy / spd
-                ns = 5
+                ns = 5 if not R6D else 7
                 for q in range(ns):
                     f = (q / (ns - 1) - 0.5) * bl
                     cx_, cy_ = px - ux * f, py - uy * f
-                    w_ = 1.0 / ns * (1.4 if q == ns // 2 else 0.9)
+                    w_ = 1.0 / ns * (1.4 if q == ns // 2 else 0.9) if not R6D else 1.0 / ns * (1.6 if q == ns // 2 else 0.9)
                     if poly:
                         th = np.linspace(0, 2 * np.pi, kk, endpoint=False) + np.radians(a0 + spin * a)
                         rad = sz * jit * 0.62
@@ -600,8 +606,8 @@ class S034(Shot):
         R = 80 + 340 * eout(q, 2)
         cloud = np.exp(-((((xg - CX) / 1.25) ** 2 + (yg - CY) ** 2) / (2 * R * R)))
         nz = cv2.resize(K.tile_crop(self.dtex, a * 60, a * 25, H // 8, W // 8), (W, H))
-        op = 0.5 * (1 - q)
-        dm = np.clip(cloud * (0.55 + 0.6 * nz) * op, 0, 0.5).astype(np.float32)
+        op = (0.5 if not R6D else 0.7) * (1 - q)                 # R6D：灰尘峰值 0.7（评审方案 b 的灰尘量并入）
+        dm = np.clip(cloud * (0.55 + 0.6 * nz) * op, 0, 0.5 if not R6D else 0.7).astype(np.float32)
         lum = fr.mean(-1, keepdims=True)
         dust = lum + np.float32(0.13)
         return fr * (1 - dm[..., None]) + dust * np.array([0.98, 1.0, 1.04], np.float32) * dm[..., None]
