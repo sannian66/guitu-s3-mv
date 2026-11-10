@@ -1,0 +1,4 @@
+node_modules/
+out/*
+!out/s06_compare.jpg
+ref/*.mp4
