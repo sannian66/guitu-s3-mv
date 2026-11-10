@@ -1,0 +1,12 @@
+[
+ {
+  "name": "slash_pass",
+  "out": "assets/gen/R6_A",
+  "refs": [
+   "assets/characters/png/男主_鬼屠.png",
+   "assets/gen/R5_A/slash_k1_windup_v2_raw.png",
+   "assets/gen/R5_A/slash_k2_mid_v2_raw.png"
+  ],
+  "prompt": "Same character, same outfit, same render style, same camera distance and same wide horizontal-stance framing as reference images 2 and 3 (this is the in-between frame of the same horizontal sword slash): young wuxia swordsman 'Gui Tu' — high ponytail, center-parted messy bangs, amber eyes, pale lean face, no headband, natural unpainted lips, black layered robe with dark-red inner collar and dark-red sash, black leather bracers, black boots, single-edged slightly curved long dao with plain dark hilt. Photorealistic cinematic CG, cold rim light from upper right. Solid pure chroma green background #00FF00, no shadow on background, no ground plane, no text, no watermark. Full body fully in frame with empty space above the head, both boots fully visible, the ENTIRE sword inside the frame. POSE (passing position, exactly halfway between reference 2 and reference 3): wide low horse stance like the references, feet planted in the same places; both hands on the hilt directly in front of the navel at the body centerline; the blade sweeping HORIZONTALLY across the front of the body at waist height, pointing toward the viewer's left-front and foreshortened (blade passing in front of the belly from the left side toward the right); torso mid-rotation from left to right, shoulders square to camera, eyes looking to the viewer's right where the cut is going; robe hem and ponytail swinging with the motion. Three-quarter front view, slightly low camera angle."
+ }
+]

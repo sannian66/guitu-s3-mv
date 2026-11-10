@@ -264,9 +264,24 @@ class V01(Shot):
             q = clamp01((t - self.t0) / (th - self.t0))
             return -120 + (120 + self.HIT_X) * q ** 2.6
         q = t - th
+        if R6:                                               # r6 #29：顶住钟沿 3 帧（0.10s），期间撞木跟着被顶开的钟沿一起往前（接触不断开），再弹开
+            HOLD = 0.10
+            if q < HOLD: return self.HIT_X + self.push(q) / (1.14 * 0.981)
+            o0 = self.HIT_X + self.push(HOLD) / (1.14 * 0.981); q2 = q - HOLD
+            return o0 * math.exp(-q2 / 0.06) - 75 * math.sin(min(q2 / 0.34, 1.0) * math.pi * 0.5) * math.exp(-max(0, q2 - 0.34) / 0.6)
         if R5:                                               # 第五轮 #29：顶住钟沿 ~1.5 帧（30fps 采样必落在接触帧上）再弹开
             q = max(0.0, q - 0.05)
         return self.HIT_X * math.exp(-q / 0.05) - 75 * math.sin(min(q / 0.34, 1.0) * math.pi * 0.5) * math.exp(-max(0, q - 0.34) / 0.6)   # 弹开
+
+    @staticmethod
+    def push(rt):
+        """r6 #29：钟体被顶开（底板像素）：1 帧内顶到 ~20px，撞木离开后回弹过头 ~-7px 再摆回"""
+        if rt < 0: return 0.0
+        p = 20.0 * (1 - math.exp(-rt / 0.012)) * math.exp(-max(0.0, rt - 0.10) / 0.07)
+        if rt > 0.10:
+            q = rt - 0.10
+            p -= 7.0 * math.sin(min(q / 0.22, 1.0) * math.pi) * math.exp(-q / 0.35)
+        return p
 
     def bell_dx(self, t):
         """第五轮 #29：钟体位移场（只作用在钟上、不带撞木）：撞上瞬间被顶向右 + 衰减高频震 + 慢摆"""
@@ -281,6 +296,7 @@ class V01(Shot):
             self._xx, self._yy = xx, yy
             self._bm5 = (np.clip((xx - 1000 * 1.14) / 45, 0, 1) * np.clip((yy - 140 * 1.14) / 80, 0, 1)).astype(np.float32)
         push = 16.0 * (1 - math.exp(-rt / 0.012)) * math.exp(-rt / 0.10)          # 被撞木顶开（1 帧内到位、3 帧回）
+        if R6: push = self.push(rt)
         osc = math.sin(rt * 2 * math.pi * 11.0) * hk * 5.0
         ang = math.sin(rt * 2 * math.pi * 3.2 + 0.4) * hk * 0.004
         return self._bm5 * (push + osc + (self._yy - 140 * 1.14) * ang)
@@ -323,6 +339,10 @@ class V01(Shot):
         bx, by = self.BELL[0] * 1.14, self.BELL[1] * 1.14
         zoom = (0.93 + 0.07 * e) * (1 + 0.05 * hk2)                    # 撞击帧镜头被震得一顶
         dx, dy, dr = shake(t, 3 + 26 * hk, 13, 471)
+        if R6:                                                       # r6 #29：接触那 3 帧镜头不乱晃（看得清撞木贴在钟沿上），震感推迟到撞木弹开后
+            hkd = 0.0 if t < th + 0.10 else math.exp(-(t - th - 0.10) / 0.35)
+            zoom = (0.93 + 0.07 * e) * (1 + 0.015 * hk2)
+            dx, dy, dr = shake(t, 3 + 18 * hkd, 13, 471)
         fr = plate_view(P, zoom, W * 1.14 / 2 + 60 * e, H * 1.14 / 2 - 20 * e, 0.0, dx, dy)
         fr = fr * 1.25
         # 雨先画：声波环之后再折射，雨丝在环带处被推弯 → 声音「推开雨幕」
@@ -332,7 +352,8 @@ class V01(Shot):
         bell = (self.BELL[0], self.BELL[1] + 40)
         hit = (1000, 640)                                            # 撞木头顶上钟沿的点
         if R5:                                                       # 第五轮 #29：冲击点 = 撞木头的真实接触点（底板 → 屏幕）
-            tx = (self.TIP[0] + self.rdir[0] * self.HIT_X) * 1.14; ty = (self.TIP[1] + self.rdir[1] * self.HIT_X) * 1.14
+            hx_ = max(self.HIT_X, self.ram_off(t)) if R6 else self.HIT_X
+            tx = (self.TIP[0] + self.rdir[0] * hx_) * 1.14; ty = (self.TIP[1] + self.rdir[1] * hx_) * 1.14
             cx_, cy_ = W * 1.14 / 2 + 60 * e, H * 1.14 / 2 - 20 * e
             hit = (zoom * (tx - cx_) + W / 2 + dx, zoom * (ty - cy_) + H / 2 + dy)
         if t >= th:
@@ -344,7 +365,10 @@ class V01(Shot):
                     fr = fr + edge[..., None] * np.array([0.80, 0.82, 0.86], np.float32) * 0.16 * hk
             # 撞点：冷白冲击核 + 放射铜屑（2–3 帧）
             d = np.sqrt((x - hit[0]) ** 2 + ((y - hit[1]) * 1.3) ** 2)
-            fr = fr + (np.exp(-(d / 55) ** 2) * 0.9 + np.exp(-(d / 240) ** 2) * 0.15)[..., None] * np.array([0.92, 0.93, 0.95], np.float32) * hk2
+            if R6:                                                   # r6：冲击核缩小、压暗，不再一团白把接触点盖住
+                fr = fr + (np.exp(-(d / 22) ** 2) * 0.45 + np.exp(-(d / 200) ** 2) * 0.10)[..., None] * np.array([0.92, 0.93, 0.95], np.float32) * hk2
+            else:
+                fr = fr + (np.exp(-(d / 55) ** 2) * 0.9 + np.exp(-(d / 240) ** 2) * 0.15)[..., None] * np.array([0.92, 0.93, 0.95], np.float32) * hk2
             sheen = np.exp(-(((x - (1050 + 520 * clamp01(ring_t / 0.5))) / 60) ** 2)) * np.exp(-(((y - 560) / 330) ** 4))
             fr = fr + sheen[..., None] * np.array([0.50, 0.52, 0.55], np.float32) * hk * 0.55
             buf = np.zeros((H // 2, W // 2), np.float32)
