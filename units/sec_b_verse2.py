@@ -24,6 +24,16 @@ T_IN = 86.192                       # 副歌一 S047 的起点（墨退时间基
 # 第五轮用户意见（B_R5=0 整体回滚到第四轮版本）
 R5 = os.environ.get('B_R5', '1') != '0'
 
+
+# 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」）：画内竖排歌词列去掉，歌词只走底部横排字幕。
+#   R5_NOVLYR=1（默认）删；=0 回滚。去：V05 屏风「可大局背后」、V06「是谁的」、V12「被牺牲的人」（连同字背后暗衬带；秤砣砸地保留）、V13「可曾有机会」。
+#   不动：V07「权」（白名单 #30）、V09–V11 算盘/秤杆「牺牲多少 / 才算 / 够分量」（#31）、V20/V21「黑」「白」（#33）、
+#   V03「世人教我顾全」、V04 笏板刻字、V14「反抗」、V22–V25「那就用刀锋重新划出方向」（横排/镜内互动，待问）。
+def _on(k, d='1'): return os.environ.get(k, d) != '0'
+
+
+NOVLYR = _on('R5_NOVLYR')
+
 # 切点（秒）：落拍 / 字头（第二棒按 align.json 逐字时间修正，避免字头跨镜）
 CUT_T = [86.192, 87.53, 89.40, 90.77, 91.67, 93.34, 93.97, 94.48, 96.10, 97.52, 98.48, 99.47, 100.58, 102.14,
          103.14, 104.30, 105.88, 107.55, 108.34, 109.55, 110.92, 112.29, 113.60, 115.03, 116.42, 117.80]
@@ -833,7 +843,7 @@ class V05(Shot):
         Aw = K.blur_ds(Aw, 7 + 2 * math.sin(t * 5), 2)
         fr = fr * (1 - 0.78 * Aw[..., None])
         # 宋体竖排印在屏风上（乘法墨色，透纸纹）
-        pr = prs(21, [0, 1, 2, 3, 4], t)
+        pr = [0.0] * 5 if NOVLYR else prs(21, [0, 1, 2, 3, 4], t)          # r6 #53：去竖排「可大局背后」
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('可大局背后', pr)):
             if pc <= 0: continue
@@ -872,7 +882,7 @@ class V06(Shot):
                        shade=(1300, 1900, 0.35, 300, -0.15), wrap=0.25)
         # 底光：脸下半更亮（烛焰），上半沉入暗部
         fr = fr * (0.55 + 0.55 * sstep(150, 760, y))[..., None]
-        pr = prs(21, [5, 6, 7], t)
+        pr = [0.0] * 3 if NOVLYR else prs(21, [5, 6, 7], t)                # r6 #53：去竖排「是谁的」
         L = T.Layer()
         for i, (ch, pc) in enumerate(zip('是谁的', pr)):
             if pc <= 0: continue
@@ -1398,9 +1408,9 @@ class V12(Shot):
         fr = fx2.ripples(fr, t, [(wx, GL + 30), (wx + 30, GL + 60)], [T_REN, T_REN + 0.04], amt=1.2, flat=0.25, speed=520, life=0.6, rings=5)
         fr = K.sparks(fr, t, 5709, (wx, GL - 10), n=70, life=0.40, speed=(250, 900), dirc=(0, -1), spread=1.1, grav=2600, size=0.9,
                       area=(200, 6), color=(0.6, 0.65, 0.75), amt=0.55, t0=T_REN, burst=True)
-        pr = prs(23, [0, 1, 2, 3, 4], t, 0.22)
+        pr = [0.0] * 5 if NOVLYR else prs(23, [0, 1, 2, 3, 4], t, 0.22)    # r6 #53：去竖排「被牺牲的人」
         P = [dict(ch=c, x=1360, y=230 + i * 124 + 40 * eio(u), size=112 + 16 * (c in '的人'), rot=0, font='kai', idx=i, emph=c in '牺牲') for i, c in enumerate('被牺牲的人')]
-        fr = fr * (1 - 0.88 * K.blur_ds(((np.abs(x - 1360) < 110) & (y > 160) & (y < 920)).astype(np.float32), 34)[..., None])   # 第十一棒：暗衬再加重、「的人」放大一号   # 第七棒：暗衬加重，「的人」可读
+        if not NOVLYR: fr = fr * (1 - 0.88 * K.blur_ds(((np.abs(x - 1360) < 110) & (y > 160) & (y < 920)).astype(np.float32), 34)[..., None])   # 第十一棒：暗衬再加重、「的人」放大一号   # 第七棒：暗衬加重，「的人」可读
         fr = T.ink_bleed_in(fr, '被牺牲的人', pr, places=P, color='white', emph_color=(0.90, 0.14, 0.09), bleed=1.4,
                             style_kw=dict(shadow=0.9, glow=0.1))
         fr = self.rain.draw(fr, t * 0.6 + self.t0 * 0.4, intensity=0.8, angle=4)
@@ -1445,7 +1455,7 @@ class V13(Shot):
             fr = fr + ring[..., None] * COLDC * 0.35 * (1 - clamp01((t - tl) / 0.45))
         fr = self.spl.draw(fr, t, y_far=850, y_near=1000, rate=120, amt=0.7)
         fr = self.rain.draw(fr, t, intensity=1.1, angle=10)
-        pr = prs(23, [5, 6, 7, 8, 9], t)
+        pr = [0.0] * 5 if NOVLYR else prs(23, [5, 6, 7, 8, 9], t)          # r6 #53：去竖排「可曾有机会」
         P = [dict(ch=c, x=1480 + (i % 2) * 40, y=250 + i * 120, size=104, rot=0, font='kai', idx=i, emph=False) for i, c in enumerate('可曾有机会')]
         fr = T.ink_bleed_in(fr, '可曾有机会', pr, places=P, color='white', style_kw=dict(shadow=0.85, glow=0.12))
         e = eio(u)
