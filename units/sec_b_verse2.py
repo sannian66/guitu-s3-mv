@@ -23,6 +23,8 @@ F0, F1 = 2586, 3534
 T_IN = 86.192                       # 副歌一 S047 的起点（墨退时间基准）
 # 第五轮用户意见（B_R5=0 整体回滚到第四轮版本）
 R5 = os.environ.get('B_R5', '1') != '0'
+# 第六轮返工（B_R6=0 回滚到第五轮 B 组版本；需 R5 同时开）
+R6 = R5 and os.environ.get('B_R6', '1') != '0'
 
 
 # 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」）：画内竖排歌词列去掉，歌词只走底部横排字幕。
@@ -1855,6 +1857,7 @@ class V20(Shot):
     后半拍（u>0.45）世界开始 roll，V21 接着转到 180° —— 倒影翻到上方成「正面」，正是「黑白颠倒」。"""
     WL = 540
     HX, HY, HS = 1290, 345, 175                 # r5 #33「黑」位置（岸上）；「白」= 关于水线的倒影位置
+    if R6: HX = 1220                            # r6 #33：字与人物各离转轴 ±260px → 转到 90° 时也在画内（原 330 转上去压黑边）
     def __init__(self):
         self.sp = spr('look_down')
         x, y = K.grid()
@@ -1880,7 +1883,7 @@ class V20(Shot):
     def scene(self, t):
         x, y = K.grid()
         up = self.fog.draw(self.sky.copy(), t, density=0.8, y0=300, y1=self.WL, color=(0.30, 0.32, 0.36), speed=(25, 0), top_fade=200)
-        fh, fx_ = (320, 650) if R5 else (395, 760)          # r5 #33：人物左移到左三分线、缩小（转 180° 后倒影头顶仍离黑边 ≥60px），倒影中心落在左下井字交点附近
+        fh, fx_ = (320, 700 if R6 else 650) if R5 else (395, 760)          # r5 #33：人物左移到左三分线、缩小（转 180° 后倒影头顶仍离黑边 ≥60px），倒影中心落在左下井字交点附近
         up, _ = put(up, self.sp, t, fh, (fx_, self.WL + 4), rim=dict(col=(0.78, 0.86, 1.0), amt=3.0, dir=(0.5, -1.0)),
                     grade=dict(expo=0.80, sat=0.55, tint=(0.92, 0.97, 1.06), lift=0.0, gamma=1.12), wind_amp=7, shade=None, wrap=0.3)
         # 倒影：上半关于水线翻转 + 涟漪 + 冷暗
@@ -1889,7 +1892,9 @@ class V20(Shot):
         nz = cv2.resize(K.tile_crop(self.wn, t * 20, t * 55, H // 8, W // 8), (W, H))
         refl = cv2.remap(refl, (x + (nz - 0.5) * 12).astype(np.float32), (y + (nz - 0.5) * 5).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
         refl = refl * np.array([0.58, 0.64, 0.74], np.float32) * (0.9 + 0.2 * nz[..., None])
-        if R5:                                   # 岸上墨「黑」；水中倒置的白「白」（随涟漪抖动，冷暗一档）
+        if R6:                                   # r6 #33：字不画进场景——旋转/负片之后再按语义上色合成（见 words_after）
+            self._Ab_t = cv2.remap(self.Ab, (x + (nz - 0.5) * 12).astype(np.float32), (y + (nz - 0.5) * 5).astype(np.float32), cv2.INTER_LINEAR)
+        elif R5:                                 # 岸上墨「黑」；水中倒置的白「白」（随涟漪抖动，冷暗一档）
             up = up * (1 - 0.92 * self.Ah[..., None]) + self.Ah[..., None] * 0.02 + self.Ah_rim[..., None] * np.array([0.30, 0.34, 0.40], np.float32)
             Ab = cv2.remap(self.Ab, (x + (nz - 0.5) * 12).astype(np.float32), (y + (nz - 0.5) * 5).astype(np.float32), cv2.INTER_LINEAR)
             refl = refl * (1 - Ab[..., None]) + Ab[..., None] * np.array([0.80, 0.83, 0.88], np.float32) * (0.9 + 0.2 * nz[..., None])
@@ -1911,8 +1916,14 @@ class V20(Shot):
             if pc > 0: T.place(L, ch, 1480, 230 + i * 135, 120, color='white', fname='serif_black', alpha=min(1, pc * 2) * (1 - sstep(0.5, 0.75, u)), scale=1.2 - 0.2 * eout(pc))   # 第八棒：roll 前退场，不被甩出画
         fr = T.compose(fr, L, shadow=0.85, glow=0.12)
         ang = 90 * ein(clamp01((u - 0.45) / 0.55), 2)
+        if R6:                                      # r6 #33：转镜用加边画布（不再按角度放大 1.78×），黑/白/人物/倒影全程在画内
+            fr, Ah, Ab = roll_pad(fr, ang, 1.0 + 0.06 * eio(u), [self.Ah, self._Ab_t])
+            return words_after(fr, Ah, Ab, self.Ah_rim_k(ang)), 0
         fr = roll_cover(fr, ang, 1.0 + 0.06 * eio(u))
         return fr, 0
+
+    def Ah_rim_k(self, ang):
+        return 1.0
 
 
 def edge_rim(A, dx, dy, blur=2.0):
@@ -1930,6 +1941,54 @@ def roll_cover(fr, ang, extra=1.0):
     return cam(fr, max(1.0, z) * extra, 0, 0, ang)
 
 
+RP_X, RP_Y = 160, 580          # r6 #33：转镜加边画布的左右/上下边宽（覆盖 0–180° 任意角度，zoom≈1 不出画）
+
+
+def _pad_fill(fr, px, py):
+    """把场景四周补出 px/py 宽的边：近处 = 镜像（雨丝/云/水纹连续），越往外越过渡到按列平均的平滑天/水色（防止镜像出第二个人/城楼）"""
+    big = cv2.copyMakeBorder(fr, py, py, px, px, cv2.BORDER_REFLECT)
+    h, w = big.shape[:2]
+    top = fr[:120].mean(0, keepdims=True); bot = fr[-120:].mean(0, keepdims=True)
+    top = cv2.GaussianBlur(cv2.copyMakeBorder(top, 0, 0, px, px, cv2.BORDER_REFLECT), (0, 0), 60)[0]
+    bot = cv2.GaussianBlur(cv2.copyMakeBorder(bot, 0, 0, px, px, cv2.BORDER_REFLECT), (0, 0), 60)[0]
+    yy = np.arange(h, dtype=np.float32)[:, None]
+    dt = np.clip(py - yy, 0, None); db = np.clip(yy - (py + fr.shape[0] - 1), 0, None)
+    wt = np.clip(1 - dt / 170, 0, 1); wb = np.clip(1 - db / 170, 0, 1)
+    ft = top[None] * (0.85 - 0.25 * np.clip(dt / py, 0, 1))[..., None]
+    fb = bot[None] * (0.85 - 0.25 * np.clip(db / py, 0, 1))[..., None]
+    out = big.copy()
+    m_t = (yy < py)[..., 0]; m_b = (yy >= py + fr.shape[0])[..., 0]
+    out[m_t] = (big * wt[..., None] + ft * (1 - wt[..., None]))[m_t]
+    out[m_b] = (big * wb[..., None] + fb * (1 - wb[..., None]))[m_b]
+    n = cv2.resize(K.fbm(h // 8, w // 8, 6611, 5, 4), (w, h))[..., None].astype(np.float32)
+    far = ((1 - wt) * (yy < py) + (1 - wb) * (yy >= py + fr.shape[0]))[..., None]
+    return out * (1 + far * (n - 0.5) * 0.5)
+
+
+def roll_pad(fr, ang, extra, masks=()):
+    """r6 #33：绕画面中心转 ang 度，画布先补边（_pad_fill）→ 只需 zoom=extra，内容不被甩出画；masks 同变换"""
+    big = _pad_fill(fr, RP_X, RP_Y)
+    c = (W / 2 + RP_X, H / 2 + RP_Y)
+    M = cv2.getRotationMatrix2D((float(c[0]), float(c[1])), ang, extra)
+    M[0, 2] += W / 2 - c[0]; M[1, 2] += H / 2 - c[1]
+    out = cv2.warpAffine(big, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    ms = [cv2.warpAffine(cv2.copyMakeBorder(m.astype(np.float32), RP_Y, RP_Y, RP_X, RP_X, cv2.BORDER_CONSTANT, value=0), M, (W, H), flags=cv2.INTER_LINEAR) for m in masks]
+    return (out, *ms)
+
+
+def words_after(fr, Ah, Ab, k=1.0):
+    """r6 #33：「黑」「白」按字义上色、在任何底色上都立得住——
+    黑 = 近黑墨字 + 身后一团冷白月雾晕（正片暗底/负片亮底都有反差）；白 = 冷白字 + 身后一圈墨色暗晕 + 微光。负片之后合成，不再被反相成「白字黑、黑字白」。"""
+    hh = cv2.GaussianBlur(Ah, (0, 0), 26); hh = np.clip(hh / max(hh.max(), 1e-3), 0, 1) * 0.78
+    fr = fr * (1 - hh[..., None]) + hh[..., None] * np.array([0.64, 0.68, 0.74], np.float32)
+    fr = fr * (1 - Ah[..., None]) + Ah[..., None] * np.array([0.020, 0.020, 0.026], np.float32)
+    hb = cv2.GaussianBlur(Ab, (0, 0), 20); hb = np.clip(hb / max(hb.max(), 1e-3), 0, 1) * 0.70
+    fr = fr * (1 - hb[..., None]) + hb[..., None] * np.array([0.020, 0.022, 0.028], np.float32)
+    gb = cv2.GaussianBlur(Ab, (0, 0), 5)
+    fr = fr * (1 - Ab[..., None]) + Ab[..., None] * np.array([0.95, 0.96, 0.98], np.float32) + gb[..., None] * 0.10
+    return fr
+
+
 class V21(Shot):
     """第八棒：歌词不再随整个世界绕画面中心转（90° 时被放大 1.8× 甩到画外，f3328–3330「道」顶边出画）——
     字列改在屏幕空间、绕自己的列中心 (730,540) 同步转 90°→180°：90° 时横躺在画面中部，180° 时倒立竖排（颠倒），全程在安全区内。"""
@@ -1943,6 +2002,11 @@ class V21(Shot):
         # 90°→180°，同时反相（黑白颠倒）；「黑」「白」随反相互换
         e = eio(u)
         ang = 90 + 90 * eout(u, 2)
+        if R6:                                      # r6 #33：加边画布转镜（全程不出画）；负片只作用于世界，字在负片后按语义上色
+            fr, Ah, Ab = roll_pad(fr, ang, 1.04 + 0.04 * (1 - e), [self.v20.Ah, self.v20._Ab_t])
+            k = sstep(0.2, 0.55, u)
+            fr = fr * (1 - k) + neg_grade(fr) * k
+            return words_after(fr, Ah, Ab), 0
         fr = roll_cover(fr, ang, 1.04 + 0.04 * (1 - e))
         pr = prs(26, [3, 4, 5, 6, 7], t)
         if R5:                                      # r5 #33：去「道黑白颠倒」字列与压暗带，只留场景里常驻的 黑 / 倒影 白
