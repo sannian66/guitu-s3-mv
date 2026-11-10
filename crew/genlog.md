@@ -762,3 +762,19 @@
 ## 2026-11-10 20:01 · OpenAI 协议渠道批量生图（styleB_S043_B.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `S043_B`（55s）→ `out/round7/styleB/S043_B.png`
+
+## 2026-11-10 20:09 · OpenAI 协议渠道批量生图（S015.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S015_C`（41s）→ `out/round7/styleC/S015_C.png`
+
+## 2026-11-10 20:09 · OpenAI 协议渠道批量生图（S121.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S121_C`（43s）→ `out/round7/styleC/S121_C.png`
+
+## 2026-11-10 20:09 · OpenAI 协议渠道批量生图（S043.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S043_C`（48s）→ `out/round7/styleC/S043_C.png`
+
+## 2026-11-10 20:09 · OpenAI 协议渠道批量生图（S096.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S096_C`（53s）→ `out/round7/styleC/S096_C.png`
