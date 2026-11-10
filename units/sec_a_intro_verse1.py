@@ -23,6 +23,15 @@ import a_r5 as R5                                     # 第五轮（用户 12 �
 from a_kit import clamp01, eio, eout, ein, COLD, GOLD, REDR, WARM
 
 READY = True
+
+
+# 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」）：画内歌词层全部掐掉，歌词只走底部横排字幕 units/subtitle.py。
+#   R5_NOVLYR=1（默认）删；R5_NOVLYR=0 回滚到第五轮现状。只掐歌词层：屏幕层 LY2 整句歌词、V09 梁下两列竖排「谁把人命/装进天平」、
+#   V14 火星竖排一列「每一次拔刀都是」（火星本身保留）。镜内互动字（五百重甲、寒光、罪状、里/称量、殺/放、我的主张、正、锋芒）与诏文乱码不动。
+def _on(k, d='1'): return os.environ.get(k, d) != '0'
+
+
+NOVLYR = _on('R5_NOVLYR')
 FPS = 30
 W, H, BAR = 1920, 1080, 120
 F0, F1 = 0, 1321
@@ -1156,9 +1165,9 @@ class V09(Shot):
         m = np.clip((xx - fx_) / 40, 0, 1)
         fr = fr * (1 - 0.94 * m) + np.exp(-((xx - fx_ - 30) / 14) ** 2) * np.array([0.35, 0.18, 0.08], np.float32) * 0.4
         fr = A.glow(fr, (140 + 80 * u, 900), 70, 0.5, (1.0, 0.55, 0.25), aspect=1.3)
-        # 梁下两列竖排
+        # 梁下两列竖排（r6 #53：NOVLYR 时不画）
         L = T.Layer(); Lr = T.Layer()
-        cols = (('谁把人命', [0, 1, 2, 3], (0.430, 0.235)), ('装进天平', [4, 5, 6, 7], (0.603, 0.315)))
+        cols = () if NOVLYR else (('谁把人命', [0, 1, 2, 3], (0.430, 0.235)), ('装进天平', [4, 5, 6, 7], (0.603, 0.315)))
         for txt, ks, (nx, ny) in cols:
             x0, y0 = info['to_scr']((nx, ny))
             for i, (c, p) in enumerate(zip(txt, cprog(3, ks, t, 0.22))):
@@ -1568,7 +1577,8 @@ class V14(Shot):
             q = eout(clamp01(a_ / 0.28))
             tx, ty = 1690, 228 + i * 101                                     # 落位：右侧暗区竖排一列（不压脸）
             x = P0[0] + (tx - P0[0]) * q; y = P0[1] + (ty - P0[1]) * q
-            T.place(Ls, c, x, y, 92 * (0.35 + 0.65 * q), (1.0, 0.62, 0.22) if c != '刀' else (1.0, 0.25, 0.10), 'kai', alpha=min(1.0, a_ / 0.1))
+            if not NOVLYR:                                                   # r6 #53：竖排火星字去掉，鞘口刮出的火星照飞
+                T.place(Ls, c, x, y, 92 * (0.35 + 0.65 * q), (1.0, 0.62, 0.22) if c != '刀' else (1.0, 0.25, 0.10), 'kai', alpha=min(1.0, a_ / 0.1))
             if q < 1:
                 fr = K.sparks(fr, t, 300 + i, (x, y), n=26, life=0.3, speed=(80, 300), dirc=(-ux, -uy), spread=0.5, grav=300,
                               area=(20, 20), amt=0.8, t0=CT(5, i) - 0.12, burst=True, color=(1.0, 0.6, 0.2))
@@ -2114,6 +2124,7 @@ LY2 = [
 
 
 def lyrics(fr, t):
+    if NOVLYR: return fr                                               # r6 #53：屏幕层歌词去掉（底部字幕已有）
     for (li, chars, cx, by, t_out, sweep) in LY2:
         t_on = CT(li, chars[0][0]) - 0.3
         if li == 2 and chars[0][0] == 0: t_on = max(t_on, V(22.52))          # 第五棒：「谁在高处」等 V06「寒光」切走后再落（不叠团）
