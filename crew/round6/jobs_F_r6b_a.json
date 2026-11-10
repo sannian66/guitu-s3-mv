@@ -1,0 +1,11 @@
+[
+{
+"name": "emp_flat_a",
+"out": "assets/gen/R6_F",
+"refs": [
+"assets/characters/png/最终boss_太上皇.png",
+"assets/gen/R6_F/emp_mian_a_raw.png"
+],
+"prompt": "The same aged emperor as in the reference images (same gaunt pale face, deep-set eyes, long black hair streaked with silver). He wears an ancient Chinese imperial mian crown seen from the front: a THIN FLAT black lacquered rectangular board on top (like a thin plank, only a finger thick, tilted slightly forward, wider than the head), supported by a LOW small black cap that fits snugly on the top of the head (the cap is short, not a tall hat). IMPORTANT: there are NO bead strings or tassels hanging in front of the face; the forehead, eyes and face are completely unobstructed (any jade bead strands hang only far behind the head, out of view). His eyes are cold pale grey irises, natural, not glowing, half-lidded with contempt, looking down at the viewer. Black imperial robe with large clearly visible embroidered dark crimson and gold five-clawed dragons coiling over the chest and both shoulders, crimson inner collar. Chest-up portrait, front view, centered, the whole crown board inside the frame with generous empty space above it (top of board at about 15% from the top of the image). Strong cold silver moonlight backlight from directly behind: bright rim light outlining the crown board, hair and shoulders, the face and chest in soft low-key shadow. Photorealistic cinematic dark fantasy wuxia film still, desaturated. Isolated on a flat solid pure chroma green #00FF00 background, nothing else, no text."
+}
+]
