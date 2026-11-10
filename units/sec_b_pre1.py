@@ -15,6 +15,16 @@ import b_paper as BP
 
 # 第五轮用户意见（B_R5=0 整体回滚到第四轮版本）
 R5 = os.environ.get('B_R5', '1') != '0'
+
+
+# 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」）：画内竖排歌词列去掉，歌词只走底部横排字幕。
+#   R5_NOVLYR=1（默认）删；=0 回滚。去：P02「写生死簿」、P03「谁配画」、P04「善恶」（「框」字与朱框保留）、P06「用血来装潢」整列（含血水「血」）、
+#   P07「我不信」、P09「不信」、P12「只信这柄」。不动：P05 牌匾「规矩」（白名单 #14）、P08 云隙「天」（#16）、P09「命」印（#16）、
+#   P01 朱笔手写「谁配」、P05 门上「谁的规」、P08「不信」（横排）、P10/P11 铅字、诏书/名册底纹。
+def _on(k, d='1'): return os.environ.get(k, d) != '0'
+
+
+NOVLYR = _on('R5_NOVLYR')
 READY = True   # 第五轮：用户看的是含 B 组新版的整片，接入
 F0, F1 = 1321, 1784
 C1_FROM = 1779                    # 59.30 起交给副歌一（它的 S028 =「血」字头硬切）
@@ -151,7 +161,7 @@ class P02(Shot):
                 a = r.uniform(0, 6.28); dd = r.uniform(120, 520) * eout((t - self.T_DROP) / 0.12)
                 rr = int(r.uniform(4, 16))
                 cv2.circle(fr, (int(cx + math.cos(a) * dd), int(cy + math.sin(a) * dd * 0.8)), rr, (0.5, 0.05, 0.03), -1, cv2.LINE_AA)
-        pr = tp(8, [2, 3, 4, 5], t, 0.16)
+        pr = [0.0] * 4 if NOVLYR else tp(8, [2, 3, 4, 5], t, 0.16)          # r6 #53：去竖排「写生死簿」
         cols = [(0.08, 0.06, 0.05) if not p['emph'] else (0.62, 0.05, 0.04) for p in self.P]
         L = T.Layer()
         for p, pc, c in zip(self.P, pr, cols):
@@ -228,7 +238,7 @@ class P03(Shot):
         u = self.u(t)
         prog = clamp01((t - self.t0 - 0.05) / 0.75)
         fr = self.scene(t, prog, self.HALF, BOX_C)
-        pr = tp(8, [6, 7, 8], t, 0.18)
+        pr = [0.0] * 3 if NOVLYR else tp(8, [6, 7, 8], t, 0.18)             # r6 #53：去竖排「谁配画」
         fr = T.scatter_stack(fr, '谁配画', pr, places=[dict(ch='谁', x=1480, y=300, size=160, rot=-6, font='xing', idx=0, emph=False),
                                                          dict(ch='配', x=1600, y=480, size=180, rot=5, font='xing', idx=1, emph=False),
                                                          dict(ch='画', x=1470, y=700, size=230, rot=-3, font='xing', idx=2, emph=True)],
@@ -259,6 +269,7 @@ class P04(Shot):
                        rim=RIM_WARM, wind_amp=0, breathe=0.0, shade=None, wrap=0.25)
         # 「善恶框」：善恶毛草；「框」外画朱红真框，字头时合拢
         pr = tp(8, [9, 10, 11], t, 0.18)
+        if NOVLYR: pr = [0.0, 0.0, pr[2]]                                   # r6 #53：去「善恶」，被朱框框住的「框」保留（待问）
         L = T.Layer()
         for ch, xx, yy, s, pc in (('善', 1450, 330, 160, pr[0]), ('恶', 1590, 500, 160, pr[1])):
             if pc > 0: T.place(L, ch, xx, yy, s, color=(0.10, 0.08, 0.07), fname='xing', alpha=min(1, pc * 2), scale=1 + (1 - eout(pc)) * 1.2)
@@ -440,7 +451,7 @@ class P06(Shot):
         fr = fr + spec[..., None] * np.array([1.0, 0.62, 0.52], np.float32) * 0.8
         # 第七棒：去掉朱红「血」巨字（留给副歌一 S028）。「用血来装潢」竖排刻在血幕右侧门板上；「血」一字由门缝流下的血水写成（墨洇 + 下淌），
         #   与其余宋体同一列、同一字号，只是它是湿的、红的、还在往下流
-        pr = tp(9, [4, 5, 6, 7, 8], t, 0.18)
+        pr = [0.0] * 5 if NOVLYR else tp(9, [4, 5, 6, 7, 8], t, 0.18)       # r6 #53：去竖排「用血来装潢」（含血水「血」）
         L = T.Layer(); LB = T.Layer()
         for i, (ch, pc) in enumerate(zip('用血来装潢', pr)):
             if pc <= 0: continue
@@ -450,7 +461,7 @@ class P06(Shot):
             else:
                 T.place(L, ch, 1600, 290 + i * 118, 100, color=(0.96, 0.94, 0.88), fname='serif_sb', alpha=min(1, pc * 2), scale=1 + 0.4 * (1 - eout(pc)))
         LB = T.drip_layer(LB, clamp01((t - self.T_XUE) / 0.9), n=5, seed=6, length=0.45)
-        fr = fr * (1 - 0.5 * K.blur_ds((np.abs(x - 1600) < 80) * (y > 220) * (y < 900) * 1.0, 30)[..., None])
+        if not NOVLYR: fr = fr * (1 - 0.5 * K.blur_ds((np.abs(x - 1600) < 80) * (y > 220) * (y < 900) * 1.0, 30)[..., None])
         fr = T.compose(fr, L, shadow=0.85, glow=0.10)
         fr = T.compose(fr, LB, shadow=0.6, glow=0.35, glow_color=(0.7, 0.05, 0.03))
         hb = cv2.GaussianBlur(LB.A, (0, 0), 2)
@@ -498,7 +509,7 @@ class P07(Shot):
         fr, _ = put(fr, self.sp, t, 1700, (820, 1080 + 1050 + crane), rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(0.4, -1.0)),
                     grade=GR_COLD, wind_amp=6, shade=(400, 1500, 0.2, 700, 0.3), keep_red=self.kr)
         fr = BK.rain(fr, t, 971, amt=0.42, n=650, angle=-8, speed=2500)
-        pr = tp(10, [0, 1, 2], t, 0.18)
+        pr = [0.0] * 3 if NOVLYR else tp(10, [0, 1, 2], t, 0.18)            # r6 #53：去「我不信」竖列
         fr = T.scatter_stack(fr, '我不信', pr, places=[dict(ch='我', x=1400, y=330, size=190, rot=-5, font='cao', idx=0, emph=False),
                                                          dict(ch='不', x=1560, y=540, size=150, rot=6, font='xing', idx=1, emph=True),
                                                          dict(ch='信', x=1690, y=720, size=170, rot=-4, font='cao', idx=2, emph=True)],
@@ -602,7 +613,7 @@ class P09(Shot):
             if ring < 1:
                 d = np.sqrt((x - self.SC[0] - 230) ** 2 + (y - self.SC[1]) ** 2)
                 fr = fr + (np.exp(-((d - 60 - 700 * eout(ring, 2)) / 14) ** 2) * (1 - ring))[..., None] * np.array([1.0, 0.55, 0.42], np.float32) * 0.9
-        pr = tp(10, [7, 8], t, 0.18)
+        pr = [0.0] * 2 if NOVLYR else tp(10, [7, 8], t, 0.18)               # r6 #53：去竖排「不信」（「命」印保留）
         fr = T.scatter_stack(fr, '不信', pr, places=[dict(ch='不', x=1700, y=250, size=110, rot=-6, font='kai', idx=0, emph=False),
                                                        dict(ch='信', x=1760, y=400, size=130, rot=5, font='kai', idx=1, emph=False)],
                              color='white', t_local=u, style_kw=dict(shadow=0.75, glow=0.1))
@@ -825,7 +836,7 @@ class P12(Shot):
         g = np.exp(-(((x - 960) / 26) ** 2 + ((y - yy) / 60) ** 2))
         fr += g[..., None] * np.array([0.9, 0.95, 1.0], np.float32) * 0.8 * (1 - q * 0.5)
         fr = K.sparks(fr, t, 1212, (960, 980), n=30, life=1.2, speed=(60, 200), dirc=(0, -1), spread=0.8, grav=-60, area=(900, 40), amt=0.6)
-        pr = tp(11, [0, 1, 2, 3], t, 0.2)
+        pr = [0.0] * 4 if NOVLYR else tp(11, [0, 1, 2, 3], t, 0.2)          # r6 #53：去竖排「只信这柄」
         fr = T.ink_bleed_in(fr, '只信这柄', pr, places=[dict(ch=c, x=1420, y=300 + i * 130, size=104, rot=0, font='kai', idx=i, emph=False)
                                                         for i, c in enumerate('只信这柄')],
                             color='white', style_kw=dict(shadow=0.85, glow=0.12))
