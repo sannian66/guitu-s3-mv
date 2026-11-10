@@ -1,0 +1,58 @@
+[
+ {
+  "name": "S043_T2",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. Medium close-up from behind his shoulder: he turns his head to look back toward the viewer, night, heavy rain drawn as thin cream diagonal lines over a flat ultramarine sky, a cream moon, dark flat clouds."
+ },
+ {
+  "name": "S015_T2",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. Close shot, chest up, he draws a long sword horizontally across the frame toward the viewer, fierce eyes, vermilion flame-shaped sparks flying off the blade, ultramarine night sky."
+ },
+ {
+  "name": "S096_T2",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. Symbolic image on cream paper: a huge black balance scale centered; on the left pan stands one tiny vermilion figure, on the right pan a heap of a thousand tiny black figures, the beam perfectly level; a giant flat ultramarine circle behind the scale; vermilion flames along the bottom edge."
+ },
+ {
+  "name": "S121_T2",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. He stands on a black rocky ridge at dawn, seen from a low angle, red sash and ponytail whipping in strong wind, a gigantic vermilion sun behind him, layered flat blue mountains, cream cloud bands."
+ },
+ {
+  "name": "S043_T25",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2.5-flare",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. Medium close-up from behind his shoulder: he turns his head to look back toward the viewer, night, heavy rain drawn as thin cream diagonal lines over a flat ultramarine sky, a cream moon, dark flat clouds."
+ },
+ {
+  "name": "S015_T25",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2.5-flare",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. Close shot, chest up, he draws a long sword horizontally across the frame toward the viewer, fierce eyes, vermilion flame-shaped sparks flying off the blade, ultramarine night sky."
+ },
+ {
+  "name": "S096_T25",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2.5-flare",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. Symbolic image on cream paper: a huge black balance scale centered; on the left pan stands one tiny vermilion figure, on the right pan a heap of a thousand tiny black figures, the beam perfectly level; a giant flat ultramarine circle behind the scale; vermilion flames along the bottom edge."
+ },
+ {
+  "name": "S121_T25",
+  "nocut": true,
+  "out": "out/round7/styleC3",
+  "model": "gpt-image-2.5-flare",
+  "prompt": "Vintage mid-century screen-print poster illustration, risograph print. Limited palette of exactly four inks: warm cream paper, solid black, vermilion red-orange, deep ultramarine blue. Large flat silhouette shapes with clean cut edges, almost no linework, no hatching, no gradients; faces reduced to a few flat shapes with minimal features; stylised flat clouds and flame shapes; visible paper grain, slight ink misregistration, thin cream paper border around the image. Graphic, bold, poster-like, Japanese ukiyo-e influenced modern print. No text, no letters, no anime style, no realism. Wide cinematic 16:9 composition. The hero: a lone Chinese swordsman in a black robe with a red sash, long black hair in a high ponytail. He stands on a black rocky ridge at dawn, seen from a low angle, red sash and ponytail whipping in strong wind, a gigantic vermilion sun behind him, layered flat blue mountains, cream cloud bands."
+ }
+]

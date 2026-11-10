@@ -810,3 +810,35 @@
 ## 2026-11-10 20:14 · OpenAI 协议渠道批量生图（S043_C2.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `S043_C2`（61s）→ `out/round7/styleC2/S043_C2.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S015_T25.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S015_T25`（32s）→ `out/round7/styleC3/S015_T25.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S043_T25.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S043_T25`（37s）→ `out/round7/styleC3/S043_T25.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S121_T2.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S121_T2`（37s）→ `out/round7/styleC3/S121_T2.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S096_T25.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S096_T25`（37s）→ `out/round7/styleC3/S096_T25.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S015_T2.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S015_T2`（41s）→ `out/round7/styleC3/S015_T2.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S043_T2.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S043_T2`（42s）→ `out/round7/styleC3/S043_T2.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S121_T25.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S121_T25`（43s）→ `out/round7/styleC3/S121_T25.png`
+
+## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S096_T2.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S096_T2`（44s）→ `out/round7/styleC3/S096_T2.png`
