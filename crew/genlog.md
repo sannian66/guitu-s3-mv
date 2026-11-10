@@ -675,3 +675,9 @@
 ## 2026-11-10 06:37 · OpenAI 协议渠道批量生图（slash_pass.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `slash_pass`（59s）→ `assets/gen/R6_A/slash_pass_cut.png`
+- 备注：A 组 r6 第二棒 #3 第二刀过身帧（R6_A 本轮第 5/12 张，剩 7）
+
+## 2026-11-10 06:38 · OpenAI 协议渠道批量生图（jobs_F_r6c_liu.json，2 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `emp_liu_a`（69s）→ `assets/gen/R6_F/emp_liu_a_cut.png`
+- ✔ `emp_liu_b`（55s）→ `assets/gen/R6_F/emp_liu_b_cut.png`

@@ -924,6 +924,8 @@ class V06(Shot):
         if 0 <= a < 0.07: fr = fr * 1.55 + 0.06 * COLDV          # 第三棒：冲击改冷色曝光脉冲（不再白闪）
         # 「寒光」斩开：字在屏幕下方，被同一刀切开两半错位
         p = cprog(1, [9], t, 0.25)[0]
+        if p > 0 and not R6B_OFF('hanguang'):
+            return self.r6b_words(fr, t, p, ts2, lit), (5 if 0 <= a < 0.1 else 0)
         if p > 0:
             L = T.Layer()
             L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
@@ -946,6 +948,55 @@ class V06(Shot):
                 fr = streak(fr, 760, 300, 1700, a2 / 0.08, w=4, amt=1.2, ang=-4)
         return fr, (5 if 0 <= a < 0.1 else 0)
 
+    # r6 第二棒 #3：「寒光」整组挪到人物右侧空区（x 1150–1600、y 625–855），不再压在腿/袍上；逐字点亮节奏不变，
+    #   但冷光只在字形 alpha 内（+ ≤18px 贴字微晕，半径 <80），不叠到人物层；斩字刀光只跨两字（1110–1650），整段同时淡出，不留孤立白段。
+    HG = ((1265, 740), (1492, 740))
+    def r6b_words(self, fr, t, p, ts2, lit):
+        L = T.Layer()
+        p2 = cprog(1, [10], t, 0.12)[0]
+        L.paste(BG('寒', 'kai', 230, p, seed=1), self.HG[0][0], self.HG[0][1], (0.94, 0.92, 0.88))
+        L.paste(BG('光', 'kai', 230, p2, seed=2), self.HG[1][0], self.HG[1][1], (0.86, 0.12, 0.08))
+        # 逐字点亮：一道冷光沿字行由左向右掠过（只照亮字形本身）
+        xx = np.arange(W, dtype=np.float32)[None, :]
+        lightm = np.zeros((H, W), np.float32)
+        for sa, sd in ((V(21.24), 0.30), (ts2 - 0.26, 0.24)):
+            q2 = (t - sa - sd * 0.5) / 0.30
+            if -0.2 <= q2 <= 1.3:
+                sx = 1080 + 620 * q2
+                lightm = np.maximum(lightm, np.exp(-((xx - sx) / 110.0) ** 2) * math.sin(math.pi * clamp01(q2 + 0.1)) * np.ones((H, 1), np.float32))
+        a2 = t - ts2
+        if a2 < 0:
+            fr = T.compose(fr, L, shadow=0.7, glow=0.2 + 0.5 * lit, glow_color=(0.7, 0.85, 1.0), glow_sigma=14)
+            LA = L.A
+        else:
+            fr = T.slash_layer(fr, L, clamp01(a2 / 0.66), (1378, 740), -4, slide=0.25, sz=70, length=560, sparks=40, light=False,
+                               style_kw=dict(shadow=0.7, glow=0.3, glow_sigma=14))
+            LA = L.A
+            fr = self.cutline(fr, (1378, 740), -4, 1110, 1650, a2)
+        if lightm.max() > 0.02:
+            m = LA * lightm
+            m = m + cv2.GaussianBlur(m, (0, 0), 6) * 0.35 * (cv2.GaussianBlur(LA, (0, 0), 6) > 0.02)
+            fr = fr + m[..., None] * 0.85 * np.array([0.70, 0.85, 1.0], np.float32)
+        return fr
+
+    @staticmethod
+    def cutline(fr, c, ang, x0, x1, a2):
+        """斩字刀光：2 帧内由左扫到右（全长只跨两字），之后整段原地 0.22s 淡出 —— 不收缩成孤立白段。"""
+        hd = clamp01(a2 / 0.07); f = 1.0 if a2 < 0.07 else max(0.0, 1 - (a2 - 0.07) / 0.22)
+        if f <= 0: return fr
+        th = math.radians(ang)
+        Y = lambda x: c[1] + (x - c[0]) * math.tan(th)
+        xe = x0 + (x1 - x0) * hd
+        Ls = np.zeros((H // 2, W // 2), np.float32)
+        n = 24
+        for i in range(n):                                                        # 两端收尖（线宽随位置衰减）
+            xa = x0 + (xe - x0) * i / n; xb = x0 + (xe - x0) * (i + 1) / n
+            s_ = (i + 0.5) / n; wv = math.sin(math.pi * s_) ** 0.6
+            cv2.line(Ls, (int(xa / 2), int(Y(xa) / 2)), (int(xb / 2), int(Y(xb) / 2)), float(wv), 2, cv2.LINE_AA)
+        Ls = cv2.resize(Ls, (W, H))
+        g = Ls * 1.4 + cv2.GaussianBlur(Ls, (0, 0), 6) * 1.2 + cv2.GaussianBlur(Ls, (0, 0), 18) * 0.5
+        return fr + g[..., None] * np.array([1.0, 0.97, 0.92], np.float32) * f
+
     RC = 21.47                                                                       # 第五轮 3：第一刀后收刀回身后蓄势的时刻
     def r5_keys(self, fr, t, ts, ts2, th):
         """第五轮 3（用户：0:22 挥刀动作难看）：五张同人物关键姿态逐帧切换 —— 第一刀送出 → 收刀到身后蓄势 → 第二刀
@@ -959,6 +1010,12 @@ class V06(Shot):
         ax = 880 + fw + back
         ay = 1000 + 4 * eio(clamp01((t - V(self.RC)) / 0.3)) * (F < b - 2)
         s_raw = 0.744 * (0.93 if 'k3' in cur else 1.0)
+        SK = 1.0
+        if not R6B_OFF('feet'):                                                        # r6 第二棒 #3：脚入画 —— 人物缩 8%、脚点 y 1000→912（有效区下沿 960 之上），脚下接触阴影
+            SK = 0.92; ay -= 88; ax -= 80; s_raw *= SK
+            yy_, xx_ = np.mgrid[0:H, 0:W].astype(np.float32)
+            sh = np.exp(-(((xx_ - ax) / 330) ** 2 + ((yy_ - ay - 4) / 16) ** 2)) * 0.7 + np.exp(-(((xx_ - ax) / 520) ** 2 + ((yy_ - ay - 6) / 38) ** 2)) * 0.3
+            fr = fr * (1 - 0.75 * sh[..., None])
         at = (ax, ay)
         path = R5.sk_path(cur)
         gm = R5.sk_geom(cur)
@@ -969,12 +1026,12 @@ class V06(Shot):
                            mblur=(mb, 0), rim_dir=(-2.2 * math.sin(th), -1.0))
         xf = R5.sk_xf(cur, at, s_raw)
         if prv is not None:                                                            # 刀弧：上一档刀尖 → 本档刀尖，绕护手扫过身前
-            gp = R5.sk_geom(prv); xp = R5.sk_xf(prv, at, 0.744 * (0.93 if 'k3' in prv else 1.0))
+            gp = R5.sk_geom(prv); xp = R5.sk_xf(prv, at, 0.744 * (0.93 if 'k3' in prv else 1.0) * SK)
             C = tuple((np.array(xp(gp['hilt'])) + np.array(xf(gm['hilt']))) / 2)
             old = F in (b, int(round(ts * 30)) + 1)                                    # 已送出的那一帧：刀弧只剩余辉
             fr = R5.blade_arc(fr, C, xp(gp['tip']), xf(gm['tip']), amt=0.7 if old else 1.4)
         if F in (b + 1, b + 2, int(round(ts * 30)) + 2):                                 # 送出后残留的一道淡弧
-            g1_ = R5.sk_geom('slash_k1_windup_v1'); x1_ = R5.sk_xf('slash_k1_windup_v1', at, 0.744)
+            g1_ = R5.sk_geom('slash_k1_windup_v1'); x1_ = R5.sk_xf('slash_k1_windup_v1', at, 0.744 * SK)
             C = tuple(xf(gm['hilt']))
             fr = R5.blade_arc(fr, C, x1_(g1_['tip']), xf(gm['tip']), amt=0.45 if F != b + 2 else 0.22)
         h0, tp = np.array(xf(gm['hilt'])), np.array(xf(gm['tip']))

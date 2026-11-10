@@ -63,11 +63,13 @@ SK_HILT = {                      # 护手处（原图归一化坐标，人工标
     'slash_k1_windup_v1': (0.268, 0.392), 'slash_k1_windup_v2': (0.318, 0.385),
     'slash_k2_mid_v1': (0.548, 0.268), 'slash_k2_mid_v2': (0.552, 0.220),
     'slash_k3_follow_v1': (0.620, 0.240), 'slash_k3_follow_v2': (0.590, 0.244),
+    'slash_pass': (0.544, 0.385),                                   # r6 第二棒：第二刀过身帧（刀横过腹前、刀尖指左前）
 }
+R6B_OFF = lambda k: k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'
 _SKG = {}
 
 
-def sk_path(n): return os.path.normpath(os.path.join(_R5A, n + '_cut.png'))
+def sk_path(n): return os.path.normpath(os.path.join(_R5A if n != 'slash_pass' else os.path.join(_R5A, '..', 'R6_A'), n + '_cut.png'))
 
 
 def sk_geom(n):
@@ -82,7 +84,7 @@ def sk_geom(n):
     y1 = ys.max(); y0 = ys.min(); band = ys > y1 - 0.07 * (y1 - y0)
     feet = ((xs[band].min() + xs[band].max()) / 2 / w, y1 / h)
     hx, hy = SK_HILT[n]
-    i = xs.argmin() if 'k1' in n else xs.argmax()     # k1 刀在身后左侧，其余刀尖在右
+    i = xs.argmin() if ('k1' in n or 'pass' in n) else xs.argmax()     # k1/过身帧 刀尖在左，其余刀尖在右
     tip = (xs[i] / w, ys[i] / h)
     _SKG[n] = dict(feet=feet, tip=tip, hilt=(hx, hy), k=w / rw, size=(w, h))
     return _SKG[n]
@@ -115,6 +117,9 @@ def sk_schedule(t, ts, rc, ts2):
     if F == r + 1: return K1b, None, _MB(-18)
     if F < b - 3: return K1, None, 0
     if F == b - 3: return K1b, None, _MB(8)                 # 起刀
+    if not R6B_OFF('pass'):                                  # r6 第二棒 #3：补过身帧 —— 起刀(左下) → 过身(刀横过腹前) → 平出(右上) → 送出
+        if F == b - 2: return 'slash_pass', K1b, _MB(22)
+        if F == b - 1: return K2b, K1b, _MB(20)
     if F == b - 2: return K2, K1b, _MB(26)
     if F == b - 1: return K2b, K1b, _MB(20)
     if F == b: return K3, K1b, _MB(12)
