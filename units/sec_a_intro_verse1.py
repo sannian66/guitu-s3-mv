@@ -32,6 +32,9 @@ def _on(k, d='1'): return os.environ.get(k, d) != '0'
 
 
 NOVLYR = _on('R5_NOVLYR')
+# 第六轮补充（总导演 13:30，按用户 #55「镜里那些横排……的歌词字，保留」）：屏幕层 LY2 是横排 → 恢复；竖排（V09「谁把人命/装进天平」、V14 火星竖列）继续去掉。
+#   R5_NOVLYR=1（默认）只去竖排、保留横排 LY2；R5_NOVLYR=all 横竖都去（#53 原样）；R5_NOVLYR=0 回滚到第五轮现状（横竖都在）。
+NOHLYR = os.environ.get('R5_NOVLYR', '1').strip() == 'all'
 FPS = 30
 W, H, BAR = 1920, 1080, 120
 F0, F1 = 0, 1321
@@ -2244,7 +2247,7 @@ LY2 = [
 
 
 def lyrics(fr, t):
-    if NOVLYR: return fr                                               # r6 #53：屏幕层歌词去掉（底部字幕已有）
+    if NOHLYR: return fr                                               # r6 #53 → #55：横排 LY2 默认保留；R5_NOVLYR=all 才去
     for (li, chars, cx, by, t_out, sweep) in LY2:
         t_on = CT(li, chars[0][0]) - 0.3
         if li == 2 and chars[0][0] == 0: t_on = max(t_on, V(22.52))          # 第五棒：「谁在高处」等 V06「寒光」切走后再落（不叠团）
