@@ -94,6 +94,12 @@ def sk_xf(n, at, s_raw):
     return lambda p: (at[0] + (p[0] - g['feet'][0]) * w * s, at[1] + (p[1] - g['feet'][1]) * h * s)
 
 
+# r6 #3：动态模糊减半 —— 原 20–26px 横向线核把细长身体的 alpha 抹薄，挥刀帧人物半透明、能透过躯干看到后面的军阵（鬼影）。
+#   A_R6_OFF=mb 回到原值（改前对比用）。
+_MBK = 1.0 if 'mb' in os.environ.get('A_R6_OFF', '') else 0.42
+def _MB(v): return int(round(v * _MBK))
+
+
 def sk_schedule(t, ts, rc, ts2):
     """时间 → (当前关键帧, 上一关键帧或 None(不画刀弧), 水平动态模糊 px)。
     ts=第一刀命中、rc=回收蓄势、ts2=第二刀命中（斩「寒光」）。每档 1 帧（30fps），用帧号判断避免浮点抖动。"""
@@ -101,17 +107,17 @@ def sk_schedule(t, ts, rc, ts2):
     F, a, r, b = f(t), f(ts), f(rc), f(ts2)
     K1, K1b, K2, K2b, K3, K3h = ('slash_k1_windup_v1', 'slash_k1_windup_v2', 'slash_k2_mid_v1', 'slash_k2_mid_v2',
                                  'slash_k3_follow_v2', 'slash_k3_follow_v1')
-    if F < a: return K2, K1, 24
-    if F == a: return K2b, K1, 20
-    if F == a + 1: return K3, K1, 14
+    if F < a: return K2, K1, _MB(24)
+    if F == a: return K2b, K1, _MB(20)
+    if F == a + 1: return K3, K1, _MB(14)
     if F < r: return K3h, None, 0
-    if F == r: return K2, None, -26                    # 回刀（刀从右收回到身后）
-    if F == r + 1: return K1b, None, -18
+    if F == r: return K2, None, _MB(-26)                    # 回刀（刀从右收回到身后）
+    if F == r + 1: return K1b, None, _MB(-18)
     if F < b - 3: return K1, None, 0
-    if F == b - 3: return K1b, None, 8                 # 起刀
-    if F == b - 2: return K2, K1b, 26
-    if F == b - 1: return K2b, K1b, 20
-    if F == b: return K3, K1b, 12
+    if F == b - 3: return K1b, None, _MB(8)                 # 起刀
+    if F == b - 2: return K2, K1b, _MB(26)
+    if F == b - 1: return K2b, K1b, _MB(20)
+    if F == b: return K3, K1b, _MB(12)
     return K3h, None, 0
 
 
