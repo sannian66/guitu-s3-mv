@@ -534,39 +534,77 @@ class S034(Shot):
         return np.float32([[cx - 1500 * k, topy], [cx + 1500 * k, topy], [cx + 1600, 1160], [cx - 1600, 1160]])
 
     def debris(self, fr, a):
-        """砖屑：从砖缝崩出的碎块（暗灰、顶面受光、翻滚下落）+ 一团灰尘缓慢散开"""
+        """r6 F组第二棒（评审 #22：碎屑像静止脏点、灰尘看不见、残留浅色短线）：
+        砖屑分三档 —— 近中心 7 块大块 24–40px（带受光面）、22 块中块 10–16px、细砂 140 粒；
+        前 2 帧向外爆开（带阻尼的初速），之后受重力下落；每块沿当前速度方向拉 6–12px 运动模糊。
+        灰尘：砖缝中心一团中灰体积尘，比墙面亮 +12～18（不发白），半径 80→420px、不透明 0.5→0（68.867→69.6）。
+        原「顶面受光细线」（读作白色短划）删除。"""
         r = np.random.default_rng(3402)
-        n = 70
-        ox = r.normal(900, 260, n); oy = r.normal(540, 170, n)
-        vx = (ox - 900) * r.uniform(0.6, 1.6, n); vy = (oy - 540) * r.uniform(0.4, 1.0, n) - r.uniform(50, 260, n)
-        sz = r.uniform(4, 17, n) * (1 + 0.25 * a); ang0 = r.uniform(0, 180, n); spin = r.normal(0, 260, n)
-        shade = r.uniform(0.07, 0.16, n)
-        D = np.zeros((H // 2, W // 2), np.float32); C = np.zeros_like(D); Lt = np.zeros_like(D)
-        for i in range(n):
-            px = ox[i] + vx[i] * a; py = oy[i] + vy[i] * a + 820 * a * a
-            if not (-40 < px < W + 40 and -40 < py < H + 40): continue
-            k = r.integers(4, 7)
-            th = np.linspace(0, 2 * np.pi, k, endpoint=False) + np.radians(ang0[i] + spin[i] * a) + r.uniform(-0.3, 0.3, k)
-            rad = sz[i] * r.uniform(0.55, 1.0, k) / 2
-            pts = np.stack([px / 2 + rad * np.cos(th), py / 2 + rad * 0.8 * np.sin(th)], -1)
-            cv2.fillConvexPoly(D, np.round(pts * 4).astype(np.int32), 1.0, cv2.LINE_AA, shift=2)
-            cv2.fillConvexPoly(C, np.round(pts * 4).astype(np.int32), float(shade[i]), cv2.LINE_AA, shift=2)
-            top = pts[pts[:, 1] < py / 2]
-            if len(top) >= 2:
-                cv2.polylines(Lt, [np.round(top * 4).astype(np.int32)], False, 1.0, 1, cv2.LINE_AA, shift=2)
-        fade = clamp01(1 - (a - 0.7) / 0.5)
-        D = cv2.resize(cv2.GaussianBlur(D, (0, 0), 0.6), (W, H)) * fade
-        C = cv2.resize(cv2.GaussianBlur(C, (0, 0), 0.6), (W, H))
-        Lt = cv2.resize(Lt, (W, H)) * D
-        col = (C * fade)[..., None] * np.array([0.95, 0.97, 1.05], np.float32) + Lt[..., None] * np.array([0.30, 0.32, 0.38], np.float32)
+        CX, CY = 900.0, 560.0
+        TAU, G = 0.10, 1300.0
+        def pos(o, v, aa):                                     # 阻尼爆开 + 重力
+            k = TAU * (1 - math.exp(-aa / TAU))
+            return o[0] + v[0] * k, o[1] + v[1] * k + 0.5 * G * aa * aa
+        def vel(v, aa):
+            e = math.exp(-aa / TAU)
+            return v[0] * e, v[1] * e + G * aa
+        tiers = [(8, 60, (28, 44), (1800, 3200), (0.03, 0.05), True),
+                 (36, 140, (12, 18), (2600, 4600), (0.03, 0.06), True),
+                 (200, 220, (2.5, 4.5), (3200, 6500), (0.04, 0.10), False)]
+        D = np.zeros((H, W), np.float32); C = np.zeros_like(D)
+        fade = clamp01(1 - (a - 0.55) / 0.35)
+        for n, spread, (s0, s1), (v0, v1), (c0, c1), poly in tiers:
+            for i in range(n):
+                ang = r.uniform(0, 2 * np.pi)
+                o = (CX + r.normal(0, spread) * 1.25, CY + r.normal(0, spread * 0.7))
+                sp = r.uniform(v0, v1) * (0.55 + 0.45 * r.random())
+                v = (math.cos(ang) * sp * 1.25, math.sin(ang) * sp * 0.75 - r.uniform(0, 600))
+                sz = r.uniform(s0, s1); a0 = r.uniform(0, 180); spin = r.normal(0, 300)
+                shade = r.uniform(c0, c1); kk = r.integers(4, 7); jit = r.uniform(0.55, 1.0, kk)
+                px, py = pos(o, v, a)
+                if not (-60 < px < W + 60 and -60 < py < 940): continue
+                vx, vy = vel(v, a)
+                spd = math.hypot(vx, vy) + 1e-3
+                bl = float(np.clip(spd / 30 * 0.5, 6, 12))      # 运动模糊长度（px）
+                ux, uy = vx / spd, vy / spd
+                ns = 5
+                for q in range(ns):
+                    f = (q / (ns - 1) - 0.5) * bl
+                    cx_, cy_ = px - ux * f, py - uy * f
+                    w_ = 1.0 / ns * (1.4 if q == ns // 2 else 0.9)
+                    if poly:
+                        th = np.linspace(0, 2 * np.pi, kk, endpoint=False) + np.radians(a0 + spin * a)
+                        rad = sz * jit * 0.62
+                        pts = np.stack([cx_ + rad * np.cos(th), cy_ + rad * 0.8 * np.sin(th)], -1)
+                        P = np.round(pts * 4).astype(np.int32)
+                        x0_, y0_ = max(0, int(cx_ - sz) - 2), max(0, int(cy_ - sz) - 2)
+                        x1_, y1_ = min(W, int(cx_ + sz) + 3), min(H, int(cy_ + sz) + 3)
+                        if x1_ <= x0_ or y1_ <= y0_: continue
+                        loc = np.zeros((y1_ - y0_, x1_ - x0_), np.float32)
+                        cv2.fillConvexPoly(loc, P - np.array([x0_ * 4, y0_ * 4]), 1.0, cv2.LINE_AA, shift=2)
+                        D[y0_:y1_, x0_:x1_] += loc * w_
+                        yy_ = np.arange(y0_, y1_, dtype=np.float32)[:, None]
+                        lit = np.clip((cy_ - sz * 0.12 - yy_) / (sz * 0.18), 0, 1)   # 顶面一条受光（砖缝冷光 + 月顶光），其余是暗侧
+                        C[y0_:y1_, x0_:x1_] += loc * w_ * (shade + (0.42 if s0 >= 24 else 0.30) * lit)
+                    else:
+                        if q % 2: continue
+                        cv2.circle(D, (int(cx_ * 4), int(cy_ * 4)), int(sz * 2), 2.0 / ns, -1, cv2.LINE_AA, 2)
+                        cv2.circle(C, (int(cx_ * 4), int(cy_ * 4)), int(sz * 2), 2.0 / ns * shade, -1, cv2.LINE_AA, 2)
+        D = np.clip(cv2.GaussianBlur(D, (0, 0), 0.7), 0, 1) * fade
+        C = cv2.GaussianBlur(C, (0, 0), 0.7) * fade
+        col = C[..., None] * np.array([0.95, 0.97, 1.05], np.float32)
         fr = fr * (1 - D[..., None]) + col
-        # 灰尘团：软噪声云，随时间扩散、变淡
+        # 灰尘：中灰体积尘（相对墙面 +0.05～0.07，不发白）
         xg, yg = K.grid()
-        R = 260 + 520 * eout(clamp01(a / 1.0), 2)
-        cloud = np.exp(-(((xg - 900) / 1.3) ** 2 + (yg - 560) ** 2) / (2 * R * R))
+        q = clamp01(a / 0.733)
+        R = 80 + 340 * eout(q, 2)
+        cloud = np.exp(-((((xg - CX) / 1.25) ** 2 + (yg - CY) ** 2) / (2 * R * R)))
         nz = cv2.resize(K.tile_crop(self.dtex, a * 60, a * 25, H // 8, W // 8), (W, H))
-        dm = np.clip(cloud * (0.35 + 0.9 * nz) * 0.6 * math.exp(-a / 0.9) * clamp01(a / 0.08), 0, 0.55)
-        return over(fr, dm.astype(np.float32), (0.20, 0.205, 0.22))
+        op = 0.5 * (1 - q)
+        dm = np.clip(cloud * (0.55 + 0.6 * nz) * op, 0, 0.5).astype(np.float32)
+        lum = fr.mean(-1, keepdims=True)
+        dust = lum + np.float32(0.13)
+        return fr * (1 - dm[..., None]) + dust * np.array([0.98, 1.0, 1.04], np.float32) * dm[..., None]
 
     def render(self, t):
         u = self.u(t)
@@ -592,12 +630,17 @@ class S034(Shot):
             R = 300 + 1400 * eout(a / 0.6, 2)
             gm = (np.exp(-(rr / 420) ** 2) * (0.18 + 0.26 * math.exp(-a / 0.35))
                   + np.exp(-((rr - R) / 240) ** 2) * 0.40 * math.exp(-a / 0.40))
+        # r6 第二棒：卡点「暗 → 亮 → 暗」局部压缩 —— 卡点前一帧收暗，卡点帧渗光峰值回到 r5 的 ~80%，下一帧掉回
+        nf = int(round((t - self.T_POP) * 30))
+        gm = gm * {-1: 0.55, 0: 1.75, 1: 0.9}.get(nf, 1.0)
         seamlight = np.clip(K.blur_ds(sw_, 2) * gm, 0, 1)
         fr = fr + seamlight[..., None] * np.array([0.72, 0.80, 0.95], np.float32) * 0.65
         fr += K.blur_ds(seamlight, 12)[..., None] * np.array([0.75, 0.80, 0.95], np.float32) * 0.35
         if t >= self.T_POP:
             fr = self.debris(fr, t - self.T_POP)
         dx, dy, dr = shake(t, 8 * pulse(t, self.T_POP, 0.25) * (t >= self.T_POP) + 2, 7, 34)
+        if nf in (0, 1): dx, dy = dx + (6, -5)[nf], dy + (-5, 6)[nf]          # 卡点 2 帧硬震 ±6px
+        if nf == -1: fr = fr * 0.9
         fr = cam(fr, 1.0 + 0.05 * u, dx, dy, dr)
         pr = tprog(14, [4, 5, 6, 7], t, 0.25)
         pass  # v3 字幕统一：此处歌词移到 lyric3 统一字幕层
