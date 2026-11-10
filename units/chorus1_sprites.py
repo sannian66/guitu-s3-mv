@@ -172,6 +172,18 @@ def install(G):
                 self.ep = SP.SpriteLayer(GEN + 'R6_F/emp_liu_e_plate_cut.png')
                 self.epF, self.epA = self.ep.F.copy(), self.ep.A.copy()
                 self.es = {x0: ld(f'emp_liu_e_s{x0}_cut.png') for x0 in self.E_HOME}
+                if os.environ.get('R6F_BLUE', '1') != '0':
+                    # r6 POLISH1（REVIEW_F_r6f 建议 1）：两条外侧旒靠光环处的饱和蓝点 = 第六棒头内 alpha 补实后露出的抠图蓝边
+                    # （源图 x 600–800 / 1260–1440、y 100–800）。肩以上把 B−R 钳到 ≤12/255（向亮度收色度，亮度不变）；
+                    # 珠串层同钳。开关 R6F_BLUE=0 回滚
+                    def _cl(F, ymax):
+                        l3 = F.mean(-1, keepdims=True); br = F[..., 2:3] - F[..., 0:1]
+                        k = np.where(br > 12 / 255, (12 / 255) / np.maximum(br, 1e-4), 1.0)
+                        rows = (np.arange(F.shape[0]) < ymax)[:, None, None]
+                        return np.where(rows, l3 + (F - l3) * k, F).astype(np.float32)
+                    self.epF = _cl(self.epF, 840)
+                    for x0 in self.E_HOME:
+                        c = self.es[x0]; self.es[x0] = np.dstack([_cl(c[..., :3], 840), c[..., 3:]])
                 hh, ww = self.epA.shape
                 self.eyy, self.exx = np.mgrid[0:hh, 0:ww].astype(np.float32)
                 self.epend = np.clip((self.eyy - self.E_TOP) / (self.E_BOT - self.E_TOP), 0, 1.15)
