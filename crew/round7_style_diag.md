@@ -27,3 +27,4 @@ AI 味：皮肤过光、对比塑料、背景糊；缺水墨笔触与纸纹。
 用户给 3 张丝网版画海报参考（assets/ref_user/style_C_print_1..3.png）：米白纸、黑、朱橙红、群青蓝四色平涂 + 套色偏移颗粒。4 镜 assets/gen/R7_styleC/，A/B/C 对比 crew/round7_styleABC.jpg。脸偏 80 年代动画，略离母版。
 风格 C 重做（04:15）：风格图排前、去母版、原帧只管构图；gpt-image-2 与 2.5-flare 各一版（assets/gen/R7_styleC2/，对比 crew/round7_styleC_redo.jpg）。明显更接近参考的大色块剪影；教训：参考图顺序决定画风权重，风格图须排第一、角色母版会把画风拉回漫画。
 风格 C 无参考纯文生图（04:23）：assets/gen/R7_styleC3/（T2=gpt-image-2，T25=2.5-flare），对比 crew/round7_styleC_noref.jpg。纸纹与套印更足、偏浮世绘木刻、细节多，会自加楼阁；有参考版更平更剪影。脸仍偏动画。
+风格 D（04:26）：用户自己的提示词抽画风（漫画墨线+网点+黑白血红），nananobanana 纯文生图，nano-banana-pro（2 积分）与 RH_image2（3 积分）各 4 镜：assets/gen/R7_styleD/，对比 crew/round7_styleD_nb.jpg。效果明显好于前几版；RH_image2 更精致封面感，nano-banana-pro 更干净平涂。用户指定之后出图用 nananobanana（tools/nb.py）。
