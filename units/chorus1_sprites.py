@@ -625,6 +625,20 @@ def install(G):
             self.bg = cv2.GaussianBlur(paste_red_moon(bg, 140, (1500, 330)), (0, 0), 10)
             x, y = K.grid(); self.x, self.y = x, y
             self.inkm = sstep(660, 580, x).astype(np.float32)        # r6：墨爆收在刀身左侧更远处，不再有墨滴溅上刀身（读作血点）
+            # r6 第四棒（评审 #28=7：x≈620 竖直硬右缘、内部平涂）：右缘改不规则撕口墨晕——边线 x 随 y 低频起伏 ±55px
+            # （另叠 2D 噪声），过渡带 ≈40–70px；内部浓淡两层（浓 ≈(98,21,16) / 淡 ≈(150,40,30)）按低频噪声各占约一半
+            rs = np.random.RandomState(4628)
+            def lf(gh, gw, amp):
+                return cv2.resize(rs.rand(gh, gw).astype(np.float32), (W, H), interpolation=cv2.INTER_CUBIC) * amp
+            n2 = lf(5, 9, 1.0) * 0.6 + lf(11, 19, 1.0) * 0.3 + lf(27, 48, 1.0) * 0.1          # 0..1 多倍频
+            edge_x = 600 + 55 * np.sin(y / 97.0 + 0.7) * np.cos(y / 233.0) + 70 * (n2 - 0.5)
+            bw = 30 + 40 * lf(7, 12, 1.0)                                                    # 过渡带宽随位置变（30–70px）
+            if os.environ.get('R6F_INK', '1') != '0':
+                self.inkm = np.clip(0.5 - (x - edge_x) / bw, 0, 1).astype(np.float32)
+                self.inkm = cv2.GaussianBlur(self.inkm, (0, 0), 3)
+            nt = lf(4, 7, 1.0) * 0.7 + lf(13, 22, 1.0) * 0.3
+            med = float(np.median(nt[150:930, :600]))                                       # 以墨爆所在左下区的中位数分浓淡 → 各占约一半
+            self.inkt = sstep(med - 0.06, med + 0.06, nt).astype(np.float32)[..., None]       # 0 = 浓、1 = 淡
         def render(self, t):
             tr = REAL_T[0] if REAL_T[0] is not None else t     # 画面定格慢放；风/刀光/闪光/墨爆按真实时间
             x, y = self.x, self.y
@@ -673,7 +687,11 @@ def install(G):
                 m = K.ink_blot(pb, seed=46, center=(150, 950)) * self.inkm     # 墨点不溅上脸（只在刀身左侧）
                 # r6 F组第二棒（评审 #28 可选）：颗粒/飞白版试过像毛毡（见 F_r6.md 第二棒），回退形状，只把平涂橙压成朱砂墨色
                 edge = np.clip(K.blur_ds(m, 6) - m * 0.85, 0, 1)
-                fr = over(fr, m, np.array([0.30, 0.040, 0.030], np.float32))
+                if os.environ.get('R6F_INK', '1') != '0':
+                    col = np.array([0.30, 0.040, 0.030], np.float32) * (1 - self.inkt) + np.array([0.62, 0.135, 0.095], np.float32) * self.inkt
+                    fr = fr * (1 - m[..., None]) + col * m[..., None]
+                else:
+                    fr = over(fr, m, np.array([0.30, 0.040, 0.030], np.float32))
                 fr += edge[..., None] * np.array([0.55, 0.16, 0.06], np.float32) * (1 - 0.5 * pb)
             return fr, (3 if k > 0.5 else 0)
 

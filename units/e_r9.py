@@ -32,6 +32,7 @@ ON = dict(wind=_on('E_R5_WIND'), text=_on('E_R5_TEXT'), mark=_on('E_R5_MARK'), e
 R6FIX = _on('E_R6_FIX')       # r6 #47/#49/#50/#51 构图与卡点修正（'0' 回到 r5 画面，出对比图用）
 KEEPTXT = _on('E_R6_KEEPTXT')   # r6 #55：镜内横排/刻/写/印歌词字保留（'0' 回到 r5 #46 全去）
 R6B = R6FIX and _on('E_R6B')   # r6 第二棒（评审 REVIEW_E_r6 返工：#47 圆外残字 / #49 接地 / #50 ELS 人物可读 + LS / #51 强拍动作 / 3:40.6、3:41.3 亮斑）；'0' 回到第一棒
+R6C = R6B and _on('E_R6C')   # r6 第四棒（评审 a200f95 返工：#50/#51 日面+大气透视山脊+扬尘团、E26 恢复暖色日出——压过曝面积、不压整体亮度）；'0' 回到第二棒
 M = None
 
 
@@ -436,6 +437,7 @@ class E34n:   # ELS：日在左、人在右 1/3，头不压日面；写实背影
         self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]
 
     def render(self, t):
+        if R6C: return _els_r6c(self, t)
         if R6B: return _els_r6b(self, t)
         u = self.u(t)
         fr = self.sky.copy()
@@ -558,6 +560,7 @@ class E34L:   # r6b：7061 强拍硬切 LS（人高 ≈600px），头肩轮廓�
         self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]                       # 署名④ 延续（p=1，不重新出场）
 
     def render(self, t):
+        if R6C: return _ls_r6c(self, t)
         u = self.u(t)
         fr = self.sky.copy()
         sun = (600, 700 - 20 * u)
@@ -737,6 +740,195 @@ def _e27a_render(self, t):
     return _tone_cap(M.bloom(fr, 0.8, 0.3), 0.80, 0.92)
 
 
+
+# ================================================================== r6 第四棒（E_R6C）：共用「日面 + 大气透视」
+def sun_atmo(fr, c, r, amt=1.0, core=(1.0, 0.95, 0.84), limb=0.18, inner=40, outer=200, a_in=0.6, a_out=0.25,
+             col_in=(1.0, 0.80, 0.55), col_out=(1.0, 0.52, 0.20), soft=4.0, disc=True):
+    """真实一点的落日/朝日：软边日面 + 临边变暗（边缘比中心暗 limb）+ 两层辉光（内 inner px α a_in，外 outer px α a_out，暖橙），
+    辉光用 screen 叠（不顶白）。日面下沿留给后面画的山脊 / 地平线去吃。core 峰值 ≤0.95 → 成品 ≤245。"""
+    yy, xx = E.grid()
+    d = np.hypot(xx - c[0], yy - c[1])
+    e = np.maximum(d - r, 0)
+    g = (np.exp(-e / (inner * 0.5)) * a_in)[..., None] * np.asarray(col_in, np.float32) \
+        + (np.exp(-(e / outer) ** 2) * a_out + np.exp(-e / (outer * 2.2)) * a_out * 0.35)[..., None] * np.asarray(col_out, np.float32)
+    g = np.clip(g * amt, 0, 0.95)
+    fr = 1 - (1 - np.clip(fr, 0, 1)) * (1 - g)
+    if not disc: return fr
+    mu = np.sqrt(np.clip(1 - (d / r) ** 2, 0, 1))
+    ld = (1 - limb * (1 - mu ** 0.5))[..., None]
+    disc = np.clip((r - d) / soft + 0.5, 0, 1)[..., None]
+    return fr * (1 - disc) + disc * np.asarray(core, np.float32) * ld * min(1.0, amt)
+
+
+SUNC = (1.0, 0.93, 0.76)   # 日面核心：暖白（不是纯白）
+
+
+def _ridge_line(seed, base, amp, bumps=()):
+    """不规则山脊线：低频大起伏 + 中频 + 高频碎齿，总起伏 ≈ amp px（10–30px 远山）。"""
+    a = K.ridge_line(W, 0, amp * 0.52, seed, peaks=7)
+    b = K.ridge_line(W, 0, amp * 0.36, seed + 1, peaks=31)
+    c = K.ridge_line(W, 0, amp * 0.12, seed + 2, peaks=110)
+    rl = a + b + c
+    xs = np.arange(W, dtype=np.float32)
+    for bx, bh, bw in bumps: rl = rl - bh * np.exp(-((xs - bx) / bw) ** 2)          # 局部山头（让日面下沿被斜坡吃掉，不是一刀水平）
+    return (base + rl - rl.max()).astype(np.float32)          # base = 山脊最低处
+
+
+class AtmoRidges:
+    """大气透视山脊（替 E.ridges 的平涂带）：每层颜色 = 该层上沿那一行背后天光 × 透射 f（越远 f 越大 → 越亮越暖、跟天空过渡）+ 墨，
+    层内往下渐暗、山脚一层薄雾；每帧取当前帧天光，所以日面附近的远山被逆光照亮。"""
+    def __init__(self, seed, bases, amps, fs, soft=1.2, bumps=(), warm=(1.10, 0.94, 0.74)):
+        self.warm = np.asarray(warm, np.float32)
+        yy = np.arange(H, dtype=np.float32)[:, None]
+        self.L = []
+        for i, (b, a, f) in enumerate(zip(bases, amps, fs)):
+            rl = _ridge_line(seed + 17 * i, b, a, bumps if i == 0 else ())
+            m = np.clip((yy - rl[None]) / soft + 0.5, 0, 1).astype(np.float32)
+            dep = np.clip((yy - rl[None]) / 90.0, 0, 1)                       # 离山脊线的深度
+            tex = cv2.resize(K.fbm(H // 4, W // 4, seed + 50 + i, base=7, octaves=4), (W, H))
+            nxt = bases[i + 1] - amps[i + 1] * 0.5 if i + 1 < len(bases) else H
+            mist = np.exp(-((yy - nxt) / 26.0) ** 2) * (i + 1 < len(bases))      # 下一层山脚前的薄雾
+            ref = int(max(BAR, rl.min() - 6))
+            self.L.append((m, (f * (1 - 0.30 * dep) * (0.92 + 0.16 * tex) + 0.22 * f * mist).astype(np.float32), ref, f))
+
+    def paint(self, fr, src=None):
+        src = fr if src is None else src
+        ink = np.array([0.020, 0.015, 0.013], np.float32)
+        for m, k, ref, f in self.L:
+            row = cv2.GaussianBlur(src[ref - 3:ref + 1].mean(0, keepdims=True), (0, 0), sigmaX=40, sigmaY=0.1)   # 1×W 背后天光（取不含日面的天+辉光，山不透出日轮）
+            wt = 1 + (self.warm - 1) * min(1.0, f / 0.5)                                       # 远山偏暖（大气散射），近山墨黑
+            col = row * wt * k[..., None] + ink * (1 - np.clip(k, 0, 1))[..., None]
+            fr = fr * (1 - m[..., None]) + col * m[..., None]
+        return fr
+
+
+def dust_kick(fr, t, hits, puffs, seed, r0=40.0, rise=50.0, life=0.5, amt=0.55, n_spark=60, spark_v=(80, 320)):
+    """强拍扬尘：不规则尘雾团（低频噪声塑形）在拍点扬起、0.4–0.6s 内散掉（不常驻）；火星 = 随机方向的 2–5px 点粒子 + 重力。"""
+    k4 = 4; hs, ws = H // k4, W // k4
+    D = np.zeros((hs, ws), np.float32); S = np.zeros((H // 2, W // 2), np.float32); any_ = False
+    yq, xq = np.mgrid[0:hs, 0:ws].astype(np.float32)
+    for hk, th in enumerate(hits):
+        q = t - th + 1 / 30
+        if q < 0 or q > life + 0.1: continue
+        any_ = True
+        r = np.random.default_rng(seed + 31 * hk)
+        for j, (px, py, sc) in enumerate(puffs):
+            lj = life * r.uniform(0.8, 1.2); qj = q - r.uniform(0, 0.05)
+            if qj < 0 or qj > lj: continue
+            pr = qj / lj
+            rad = r0 * sc * (0.6 + 1.6 * (1 - (1 - pr) ** 2.2)) * r.uniform(0.8, 1.2)
+            cx = (px + r.uniform(-20, 20) + r.uniform(-30, 30) * pr) / k4
+            cy = (py - rise * sc * (1 - (1 - pr) ** 2) * r.uniform(0.6, 1.2)) / k4
+            dd = np.hypot((xq - cx) / (rad * 1.5 / k4), (yq - cy) / (rad / k4))
+            env = np.exp(-dd ** 2 * 1.6)
+            a = (1 - pr) ** 1.4 * min(1.0, qj / 0.05 + 0.35) * r.uniform(0.7, 1.0)
+            D += env * a
+        nn = int(n_spark * min(1.5, len(puffs) / 4))
+        pj = r.integers(0, len(puffs), nn)
+        ang = r.uniform(-math.pi * 0.95, -math.pi * 0.05, nn)                      # 上半平面随机方向
+        v = r.uniform(*spark_v, nn); sz = r.uniform(2.0, 5.0, nn); lf = r.uniform(0.25, 0.6, nn); dl = r.uniform(0, 0.06, nn)
+        for i in range(nn):
+            qi = q - dl[i]
+            if qi < 0 or qi > lf[i]: continue
+            bx, by, sc = puffs[pj[i]]; bx = bx + (hash((i * 7919) % 104729) % 61 - 30) * sc
+            x = bx + math.cos(ang[i]) * v[i] * sc * qi; y = by - 10 * sc + math.sin(ang[i]) * v[i] * sc * qi + 520 * qi * qi
+            a = (1 - qi / lf[i]) ** 1.3
+            cv2.circle(S, (int(x / 2), int(y / 2)), max(1, int(round(sz[i] / 4))), float(a), -1, cv2.LINE_AA)
+    if not any_: return fr
+    nz = cv2.resize(K.fbm(hs, ws, seed + 5, base=9, octaves=4), (ws, hs))
+    nz2 = np.roll(cv2.resize(K.fbm(hs, ws, seed + 6, base=24, octaves=3), (ws, hs)), int(t * 60) % ws, 1)
+    Dm = np.clip(D, 0, 1.2) * np.clip((0.55 * nz + 0.45 * nz2 - 0.22) * 2.0, 0, 1)      # 噪声侵蚀 → 团状、边缘破碎
+    Dm = cv2.resize(cv2.GaussianBlur(Dm, (0, 0), 1.2), (W, H))
+    dust = np.clip(Dm * amt, 0, 0.8)[..., None] * np.array([1.0, 0.72, 0.42], np.float32)
+    fr = 1 - (1 - np.clip(fr, 0, 1.2)) * (1 - dust)                                    # 逆光被照亮的尘（screen）
+    S = cv2.resize(S, (W, H))
+    return fr + (S * 1.1 + cv2.GaussianBlur(S, (0, 0), 3) * 0.6)[..., None] * np.array([1.0, 0.70, 0.36], np.float32)
+
+
+def _els_r6c(self, t):
+    if not hasattr(self, 'rg6'):
+        self.sky6 = E.dawn_sky(1380, horizon=0.68, top=(0.20, 0.15, 0.10), mid=(0.58, 0.42, 0.25), hor=(0.95, 0.74, 0.48), cloud=0.7, sun=(640, 660))
+        self.rg6 = AtmoRidges(1366, [742, 806, 866], [30, 40, 22], [0.70, 0.36, 0.07], bumps=[(735, 48, 150), (420, 22, 120)])
+    u = self.u(t)
+    fr = self.sky6.copy()
+    sun = (640, 700 - 30 * u)                                                              # 日心离头 ≈550px
+    kw = beat_pulse(t, HITS34W) + beat_pulse(t, [(x, 1.0) for x in STRONG34])
+    src = sun_atmo(fr, sun, 92, amt=0.92 + 0.08 * kw, disc=False)
+    fr = sun_atmo(fr, sun, 92, amt=0.92 + 0.08 * kw, core=SUNC)
+    fr = fx2.god_rays(fr, sun, strength=0.30 + 0.35 * kw, length=1.1, t=t)
+    fr = self.rg6.paint(fr, src)
+    bob = 3 * abs(math.sin(t * 5.5))
+    fx, fy = 1200 - 24 * u, 872
+    fr = _shadow(fr, fx, fy, L=90, lean=0.9, wmax=26)
+    fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985, keep=(sun[0], sun[1], 92))
+    fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 340, sun, rim_w=1.2, rim_amt=0.85)
+    fr = dust_kick(fr, t, STRONG34[:1], [(fx - 30, fy - 4, 0.8), (fx + 40, fy - 2, 0.7), (fx - 260, fy - 10, 0.9), (fx + 300, fy - 8, 0.8),
+                                         (fx - 620, fy - 22, 0.7), (fx + 560, fy - 14, 0.6)], 7340, r0=85, rise=60, amt=1.2, n_spark=30, spark_v=(140, 380))
+    fr = E.dust_motes(fr, t, 1381, n=40, amt=0.22, drift=(-18, -10))
+    z = step_zoom(t, [(7040 / 30, 0.025)]) * (1 + 0.004 * u)
+    return K.cam(fr, z, center=(fx, 640))
+
+
+def _ls_r6c(self, t):
+    if not hasattr(self, 'rg6'):
+        self.rg6 = AtmoRidges(1396, [786, 852, 918], [28, 34, 18], [0.68, 0.34, 0.06], soft=2.2, bumps=[(705, 52, 170), (380, 24, 130)])   # 浅景深：远山略虚
+    u = self.u(t)
+    fr = self.sky.copy()
+    sun = (600, 700 - 20 * u)
+    kw = beat_pulse(t, [(x, 1.0) for x in STRONG34[1:]])
+    src = sun_atmo(fr, sun, 110, amt=0.92 + 0.08 * kw, inner=46, outer=230, disc=False)
+    fr = sun_atmo(fr, sun, 110, amt=0.92 + 0.08 * kw, inner=46, outer=230, core=SUNC)
+    fr = fx2.god_rays(fr, sun, strength=0.28 + 0.35 * kw, length=1.0, t=t)
+    fr = self.rg6.paint(fr, src)
+    bob = 4 * abs(math.sin(t * 5.5))
+    fx, fy = 1250 - 30 * u, 936
+    fr = _shadow(fr, fx, fy, L=60, lean=0.9, wmax=40, amt=0.6)
+    fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985, keep=(sun[0], sun[1], 110))
+    fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 600, sun, rim_w=1.6, rim_amt=0.9)
+    fr = dust_kick(fr, t, STRONG34[1:], [(fx - 50, fy - 6, 1.3), (fx + 60, fy - 4, 1.2), (fx - 380, fy - 18, 1.1), (fx + 420, fy - 14, 1.0),
+                                         (fx - 800, fy - 30, 0.9)], 7350, r0=110, rise=80, amt=1.2, n_spark=36, spark_v=(160, 460))
+    fr = E.dust_motes(fr, t, 1394, n=50, amt=0.26, drift=(-22, -12))
+    z = step_zoom(t, [(7072 / 30, 0.03)]) * (1 + 0.006 * u)
+    return K.cam(fr, z, center=(fx, 600))
+
+
+def _e26_render_c(self, t):
+    """评审 a200f95 E26：恢复暖色日出——天顶深靛→暮紫→地平线金橙→日旁暖白；压过曝『面积』不压整体亮度；
+    日面与 #50 同一套（软边、临边变暗、两层辉光，下沿被地平线吃掉）；路光保留，两侧地面加暖色反光。"""
+    u = self.u(t)
+    hy = 600
+    if not hasattr(self, 'sky7'):
+        yy, xx = E.grid()
+        y = yy[..., None]
+        zen, pur, gold, hor = [np.array(c, np.float32) for c in ((0.07, 0.06, 0.19), (0.34, 0.18, 0.34), (0.88, 0.45, 0.22), (1.0, 0.70, 0.36))]
+        a1 = sstep(BAR, 330, y); a2 = sstep(300, 520, y); a3 = sstep(500, hy, y)
+        col = zen * (1 - a1) + pur * a1
+        col = col * (1 - a2) + gold * a2
+        col = col * (1 - a3) + hor * a3
+        wide = np.exp(-((xx - 960) / 760) ** 2 - ((yy - hy) / 150) ** 2)[..., None]       # 地平线横向暖晕
+        col = col + wide * np.array([0.10, 0.10, 0.07], np.float32)
+        base = cv2.GaussianBlur(self.sky, (0, 0), 30)
+        det = np.clip(self.sky / np.maximum(base, 0.02), 0.45, 1.5)                         # 借原天空的云纹细节
+        det = 1 + (det - 1) * (1 - sstep(hy - 60, hy, y)) * 0.9
+        self.sky7 = (col * det).astype(np.float32)
+    fr = self.sky7.copy()
+    sun = (960, hy + 90 - 170 * eout(u, 2))
+    fr = sun_atmo(fr, sun, 110, amt=1.0, inner=60, outer=240, a_in=0.75, a_out=0.32, core=SUNC)
+    yy, xx = E.grid()
+    hg = np.clip(np.exp(-((xx - sun[0]) / 300) ** 2 - ((yy - hy) / 55) ** 2) * 0.55, 0, 0.9)[..., None] * np.array([1.0, 0.86, 0.62], np.float32)
+    fr = 1 - (1 - np.clip(fr, 0, 1)) * (1 - hg)                                          # 日出处地平线上的暖白晕（只在日旁一小片）
+    fr = fx2.god_rays(fr, sun, strength=0.30, length=1.0, t=t)
+    fr, z = self.g.render(fr, hy, f=900, camh=1.0, dz=-6 * u, line=1.0, fog=(1.0, 0.72, 0.42))
+    below = (yy > hy + 0.5)[..., None]
+    dy = np.maximum(yy - hy, 0.5)
+    refl = (np.exp(-dy / 140.0) * 0.42 + np.exp(-dy / 420.0) * 0.12) * (0.55 + 0.45 * np.exp(-((xx - sun[0]) / 520) ** 2))
+    gnd = fr * np.array([1.12, 0.92, 0.78], np.float32) + refl[..., None] * np.array([0.95, 0.52, 0.22], np.float32)   # 暖色反光，不再死灰
+    fr = np.where(below, gnd, fr)
+    fr = fr + np.exp(-((yy - hy) / 1.5) ** 2)[..., None] * GOLDW * 0.45 + np.exp(-((yy - hy) / 10) ** 2)[..., None] * GOLD * 0.18
+    fr = RS.fx_embers(fr, t, 1312, amt=0.6, n=40)
+    fr = M.bloom(fr, 0.90, 0.25)
+    return _tone_cap(fr, 0.80, 0.97)                                                  # 亮部挤进 230–249 一档（≥250 只剩颗粒噪点），不压中间调
+
 # ================================================================== 挂载
 def _cls(name, body, base):
     c = type(name, (base,), {k: v for k, v in body.__dict__.items() if not k.startswith('__') or k == '__init__'})
@@ -833,7 +1025,7 @@ def apply(mod):
         shots = [s for s in shots if s[1] < 7037] + tail + [s for s in shots if s[1] >= 7174]
     if R6B:
         _guard_frames()
-        M.E26.render = _e26_render; M.E27a.render = _e27a_render
+        M.E26.render = _e26_render_c if R6C else _e26_render; M.E27a.render = _e27a_render
         if KEEPTXT or not ON['text']: _wrap_init(M.E26, _e26_text_init)
     for k, c in rep.items(): setattr(M, k, c)                               # E18/E36 按全局名取 E16/E17/E35
     M.SHOTS[:] = shots
