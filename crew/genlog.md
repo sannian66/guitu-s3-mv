@@ -638,3 +638,11 @@
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `emp_mian_b`（48s）→ `assets/gen/R6_F/emp_mian_b_cut.png`
 - ✔ `emp_mian_a`（50s，F组 r6 #21，同批前一次调用；日志因调用超时未自动写入，补记）→ `assets/gen/R6_F/emp_mian_a_cut.png`
+
+## 2026-11-10 05:21 · OpenAI 协议渠道批量生图（cal_wodezhuzhang.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `cal_wodezhuzhang`（40s）→ `assets/gen/R6_A/cal_wodezhuzhang.png`
+
+## 2026-11-10 05:21 · OpenAI 协议渠道批量生图（rise_end_a.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `rise_end_a`（46s）→ `assets/gen/R6_A/rise_end_a_cut.png`

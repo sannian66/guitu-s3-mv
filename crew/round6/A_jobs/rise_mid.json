@@ -1,0 +1,11 @@
+[
+ {
+  "name": "rise_mid",
+  "out": "assets/gen/R6_A",
+  "refs": [
+   "assets/characters/png/男主_鬼屠.png",
+   "assets/gen/R5_A/slash_rise_coil_v2_raw.png"
+  ],
+  "prompt": "Same character as the reference images: young wuxia swordsman 'Gui Tu' — high ponytail, center-parted messy bangs, amber eyes, pale lean face, no headband, natural unpainted lips, black layered robe with dark-red inner collar and dark-red sash, black leather bracers, black boots, single-edged slightly curved long dao with plain dark hilt. Photorealistic cinematic CG, dramatic cold rim light from upper right, consistent with reference outfit. Solid pure chroma green background #00FF00, no shadow on background, no ground plane, no text, no watermark. Full body fully in frame: generous empty space above the head, both boots completely visible, the ENTIRE sword from pommel to tip inside the frame. POSE: mid-swing of a rising diagonal upward slash: both hands on the hilt in front of the right hip-to-chest, blade sweeping upward from low-left, now roughly horizontal pointing right and slightly up, body uncoiling from a low crouch, weight driving forward onto the right leg, knees bent, torso turning right, eyes locked forward-up. Robe and ponytail trailing behind the motion. Three-quarter front view, slightly low camera angle."
+ }
+]
