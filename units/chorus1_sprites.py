@@ -247,7 +247,8 @@ def install(G):
                 fr = fr * (1 - (0.16 * band * (1 - op * eyeL))[..., None])
             else:
                 fr = fr * (1 - (0.30 * band * (1 - op * eyeL))[..., None])
-            fr = fr * (1 + (self.EYE_GAIN * op * eyeL)[..., None]) + (self.EYE_ADD * op * eyeL)[..., None] * np.array([0.80, 0.86, 0.94], np.float32)
+            eg = 0.12 if self.E else self.EYE_GAIN          # 第六棒：脸已整体抬结构，眼窝只再提一点（不读成发光眼）
+            fr = fr * (1 + (eg * op * eyeL)[..., None]) + (self.EYE_ADD * op * eyeL)[..., None] * np.array([0.80, 0.86, 0.94], np.float32)
             # 云层只在胸口以下流过（天幕感），不遮脸
             cl = cv2.resize(K.tile_crop(self.cloud, t * 40, 0, H // 4, W // 4), (W, H))
             ca_ = np.clip((cl - 0.5) * 2.2, 0, 1) * 0.40 * sstep(ay + 380, ay + 560, y)

@@ -118,6 +118,17 @@ plate = np.clip(plate + rimm[..., None] * np.array([0.16, 0.18, 0.21], np.float3
 
 # ---- alpha 同 F_r6c：收边羽化
 A = cv2.erode(A0, np.ones((3, 3), np.uint8)); A = cv2.GaussianBlur(A, (0, 0), 1.6)
+# 第六棒：原抠图把玉珠当半透明（alpha 0.76–0.95），底板上原珠位留下一串串「透明孔」→ 成片里透出月光/背景 = 评审说的鬼珠串。
+# 头像内部一律补实：内部填洞 + 珠子位置 alpha=1（只在轮廓内 6px 以里，外轮廓不动）
+ins = (A0 > 0.3).astype(np.uint8)
+ff = ins.copy(); cv2.floodFill(ff, np.zeros((h + 2, w + 2), np.uint8), (0, 0), 1)
+ins = np.maximum(ins, 1 - ff)                                          # 填洞
+ins_e = cv2.erode(ins, np.ones((13, 13), np.uint8)).astype(np.float32)
+hole = np.clip(cv2.GaussianBlur(cv2.dilate(bead, np.ones((9, 9), np.uint8)), (0, 0), 2) * 2, 0, 1) * ins_e
+A = np.maximum(A, hole)
+Af = cv2.GaussianBlur(cv2.erode(F4[..., 3], np.ones((3, 3), np.uint8)), (0, 0), 1.6)   # 同人无旒图的 alpha（脸部全实）
+A = np.maximum(A, Af * ins_e)
+print('plate alpha inside-head p1 after fix', np.percentile(A[ins_e > 0.5], 1).round(3))
 sv = lambda a, n: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8)).save(R + n)
 sv(np.dstack([plate, A]), 'emp_liu_e_plate_cut.png')
 for x0 in XS:
