@@ -33,10 +33,10 @@ save('C_r6_compare_3_42.jpg', [head('#42 C23 铜牌去倒角边 + 墙画框补�
                                pair(142.6, 'C23'), pair(143.0, 'C23'), pair(147.9, 'C28 2:27.9')])
 save('C_r6_compare_4_43.jpg', [head('#43 2:37–2:42：C37「判」全去（a9e96b1）/ C38 年轻手（1fd5f6b）/ C39 左半幅补天平（ace4f0d）'),
                                pair(156.6, 'C37 无判'), pair(157.6, 'C38 手'), pair(158.9, 'C39 左半幅')])
-S = [125.3, 127.0, 128.9, 130.7, 132.5, 134.3, 136.1, 137.9, 139.7]
+S = [125.3, 127.0, 128.9, 130.7, 132.5, 135.0, 136.9, 137.9, 139.7]
 def grid(tag):
     c = [label(im(tag, s, 266), f'{s}') for s in S]
     return np.vstack([np.hstack(c[i:i + 3]) for i in (0, 3, 6)])
 g0, g1 = grid('old'), grid('new')
-save('C_r6_compare_5_39strip.jpg', [head('#39 2:05–2:20 九帧条：左 改前 / 右 改后——只留水中「血」（13bd49f）'),
+save('C_r6_compare_5_39strip.jpg', [head('#39 2:05–2:20 九帧条 左改前/右改后：只留水中「血」（135.0；13bd49f；多数字 r5 已去）'),
                                     np.hstack([g0, np.zeros((g0.shape[0], 1600 - 2 * g0.shape[1], 3), np.uint8), g1])])
