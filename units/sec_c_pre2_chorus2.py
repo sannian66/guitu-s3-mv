@@ -26,6 +26,10 @@ READY = True
 R5 = os.environ.get('C_R5', '1') != '0'
 # 第六轮（crew/round6/C_r6.md：#35 #36 #39–#43 返工）。C_R6=0 退回第六轮开工时的状态（=第五轮返工版），用于改前/改后对比。
 R6 = R5 and os.environ.get('C_R6', '1') != '0'
+# r6 第二棒（用户 15:28 拍板）：C23 铜牌去自身倒角边、城墙底板去三块画框浮雕（补成连续砖墙）。默认都开，=0 单独关。
+R6_NOBEVEL = R6 and os.environ.get('C_R6_NOBEVEL', '1') != '0'
+R6_NOWALLFRAME = R6 and os.environ.get('C_R6_NOWALLFRAME', '1') != '0'
+WALLP = 'R6_C/c22_wall_noframe' if R6_NOWALLFRAME else 'C5/c22_wall'   # tools/c_r6/wall_noframe.py 生成
 if R5:   # 第五轮通用：人物精灵 wind_amp 统一 5–8px（0 = 道具/手/刀/影子，保持不动）
     _put0 = put
     def put(fr, t, name, *a, wind=6.0, **kw):
@@ -1497,8 +1501,8 @@ class C22(Shot):
         tb = V(141.32)
         fl = bolt_env(t, tb) + 0.7 * bolt_env(t, V(141.94))
         cy = lerp(0.60, 0.54, eio(u)) if R5 else lerp(0.56, 0.47, eio(u))   # 第五轮 #41：起幅压低、摇幅收小，人始终在画内
-        fr = plate_view('C5/c22_wall', 0.5, cy, 1.0 + 0.04 * u) * (0.85 + 0.75 * fl)
-        oy = (cy - 0.5) * plate('C5/c22_wall').shape[0]
+        fr = plate_view(WALLP, 0.5, cy, 1.0 + 0.04 * u) * (0.85 + 0.75 * fl)
+        oy = (cy - 0.5) * plate(WALLP).shape[0]
         fr = bolt(fr, t, tb, 221, (1400, 40), (1250, 420), inten=0.9)
         for i in range(0 if R5 else 4):           # 第五轮 #39/#42：去「若规则是」
             ti = V(CT(34, i))
@@ -1507,7 +1511,7 @@ class C22(Shot):
             fr = paste_glyph(fr, '若规则是'[i], 960, 250 + i * 128 - oy * 0.0, 104, (0.95, 0.97, 1.0) if i != 1 else RED_T,
                              glow=0.8, glow_c=(0.7, 0.8, 1.0) if i != 1 else (0.9, 0.1, 0.05), scale=lerp(1.5, 1, e), alpha=e, font='serif_b')
         if R5:   # 第五轮 #41：人钉在底板上（墙脚礁石 py=0.845），随底板一起被上摇带下去，不再跟着镜头飘起来
-            z = 1.0 + 0.04 * u; ph = plate('C5/c22_wall').shape[0]
+            z = 1.0 + 0.04 * u; ph = plate(WALLP).shape[0]
             px, py, ph_ = 930, 540 + (0.845 - cy) * ph * z, 200 * z
             px = 960 + (px - 960) * z
         else:
@@ -1569,7 +1573,7 @@ class C23(Shot):
         u = self.u(t)
         ks = (4, 5, 6)
         fl = sum(0.6 * bolt_env(t, V(CT(34, k))) for k in ks)
-        fr = plate_view('C5/c22_wall', lerp(0.46, 0.54, eio(u)), 0.62, 2.3 + 0.15 * u) * (0.9 + 0.7 * fl)
+        fr = plate_view(WALLP, lerp(0.46, 0.54, eio(u)), 0.62, 2.3 + 0.15 * u) * (0.9 + 0.7 * fl)
         pos = [(520, 450), (980, 640), (1420, 420)]
         for i, k in enumerate(ks):
             ti = V(CT(34, k))
@@ -1581,13 +1585,24 @@ class C23(Shot):
             cv2.rectangle(hole, (int((x - 120) / 2), int((y - 120) / 2)), (int((x + 120) / 2), int((y + 120) / 2)), 1.0, -1)
             fr = fr * (1 - cv2.resize(cv2.GaussianBlur(hole, (0, 0), 6), (W, H))[..., None] * 0.85 * e)
             dx, dy = (x - 960) * 0.08 * e, (y - 540) * 0.08 * e
-            fr, _ = put(fr, t, 'C5/c23_bronze', x + dx, y + dy, sz, anchor='src', src=(0.5, 0.5), rim=COLD, rim_amt=1.4, rim_dir=(-0.6, -0.8),
-                        flash=fl, expo=1.0, sat=0.8, tint=(1.0, 0.98, 0.95), wind=0, breathe=0.0)
+            if R6:   # r6 #42：换生图阴刻铜牌（R6_C/c23_tool{0,1,2}：圆规 / 曲尺 / 天平，刻槽积黑 + 槽口磨亮），不再用代码画线；
+                     # NOBEVEL 时用内缩 5.5% 的平板牌面（无倒角框边），边缘轮廓光减弱，靠墙上投影交代厚度
+                nm = f'R6_C/c23_tool{i}' + ('_nb' if R6_NOBEVEL else '')
+                sh = np.zeros((H // 2, W // 2), np.float32); hs = sz * (0.47 if R6_NOBEVEL else 0.5)
+                cx_, cy_ = x + dx + 14 + 10 * e, y + dy + 18 + 12 * e
+                cv2.rectangle(sh, (int((cx_ - hs) / 2), int((cy_ - hs) / 2)), (int((cx_ + hs) / 2), int((cy_ + hs) / 2)), 1.0, -1)
+                fr = fr * (1 - cv2.resize(cv2.GaussianBlur(sh, (0, 0), 9), (W, H))[..., None] * 0.7 * e)
+                fr, _ = put(fr, t, nm, x + dx, y + dy, sz * (0.94 if R6_NOBEVEL else 1.0), anchor='src', src=(0.5, 0.5), rim=COLD,
+                            rim_amt=0.5 if R6_NOBEVEL else 1.0, rim_dir=(-0.6, -0.8),
+                            flash=fl, expo=1.0, sat=0.8, tint=(1.10, 0.98, 0.86), wind=0, breathe=0.0)
+            else:
+                fr, _ = put(fr, t, 'C5/c23_bronze', x + dx, y + dy, sz, anchor='src', src=(0.5, 0.5), rim=COLD, rim_amt=1.4, rim_dir=(-0.6, -0.8),
+                            flash=fl, expo=1.0, sat=0.8, tint=(1.0, 0.98, 0.95), wind=0, breathe=0.0)
             gs = sz * 0.55
             continue_glyph = not R5              # 第五轮 #39/#42：铜牌照推、字不刻
             if continue_glyph: fr = paste_glyph(fr, '铁壁铜'[i], x + dx + 2, y + dy + 3, gs, (0.85, 0.75, 0.55), glow=0.0, shadow=0.0, alpha=0.55)
             if continue_glyph: fr = paste_glyph(fr, '铁壁铜'[i], x + dx, y + dy, gs, (0.07, 0.06, 0.05), glow=0.25, glow_c=(0.6, 0.45, 0.2), shadow=0.3)
-            if R5: fr = _engrave_tool(fr, i, x + dx, y + dy, gs, amt=e, fl=fl)   # r5 返工 #42：空白铜牌刻上规（圆规）/矩（曲尺）/天平图形
+            if R5 and not R6: fr = _engrave_tool(fr, i, x + dx, y + dy, gs, amt=e, fl=fl)   # r6：刻纹已在生图铜牌里   # r5 返工 #42：空白铜牌刻上规（圆规）/矩（曲尺）/天平图形
             fr = dust(fr, t, 230 + i, n=70, amt=0.8 * e * (1 - sm(0.2, 0.8, t - ti)), drift=(0, 220),
                       region=(int(x - 150), int(y - 40), int(x + 150), int(y + 280)), size=(1, 5))
         fr = rain(fr, t, 230, inten=0.7, angle=4)
@@ -1601,7 +1616,7 @@ class C24(Shot):
         u = self.u(t)
         ox = 900 * u
         # 第五棒：墙换成 C22/C23 同一面生图城墙（横移跟拍墙根），不再用程序字砖墙
-        fr = plate_view('C5/c22_wall', lerp(0.62, 0.40, u), 0.70, 2.0) * (0.75 + 0.6 * bolt_env(t, V(143.94)))
+        fr = plate_view(WALLP, lerp(0.62, 0.40, u), 0.70, 2.0) * (0.75 + 0.6 * bolt_env(t, V(143.94)))
         x = 1250 - 80 * u; y = 990
         tip = (x + 370, y - 158)      # 第五棒：火星对准拖在身后的真实刀尖（原来在身前，刀尖与火星脱节）
         # 火星长线（墙面上灼痕：从刀尖拖向他跑来的右侧画外）
@@ -1652,7 +1667,7 @@ class C25(Shot):
         k = t - ts
         fl = 1.1 * pulse(t, ts, 0.14) + 0.5 * bolt_env(t, V(144.86))
         cy = lerp(0.60, 0.50, eio(u))
-        base = plate_view('C5/c22_wall', 0.52, cy, 2.7 + 0.12 * u)
+        base = plate_view(WALLP, 0.52, cy, 2.7 + 0.12 * u)
         base = cv2.warpAffine(base, cv2.getRotationMatrix2D((960, 540), -6 + 2 * u, 1.0), (W, H), borderMode=cv2.BORDER_REFLECT)
         base = base * (0.75 + 0.45 * fl)
         # 石刻「劈」：刻槽积暗 + 上左倒角冷光 + 下右暗边
@@ -1745,7 +1760,7 @@ class C26(Shot):
             tris.append((q, c, d, r.uniform(-1, 1), r.uniform(0.6, 1.3), r.uniform(0.72, 1.12), int(r.integers(0, h)), int(r.integers(0, w)),
                          (r.uniform(0.94, 1.06), 1.0, r.uniform(0.92, 1.05))))   # 第十二棒：每块自己的明暗 / 纹理偏移 / 微色偏
         self.tris = tris; self.S = S
-        self.wall = cv2.resize(plate_view('C5/c22_wall', 0.5, 0.62, 2.0), (w, h))
+        self.wall = cv2.resize(plate_view(WALLP, 0.5, 0.62, 2.0), (w, h))
         self.nz = cv2.GaussianBlur(r.random((h, w)).astype(np.float32), (0, 0), 2.5)
         self.nz = (self.nz - self.nz.mean()) / (self.nz.std() + 1e-6)          # 石片断口：噪声扰动边缘，不是干净三角
         n2 = K.tex('c26s', seed=262, base=24, octaves=4)
@@ -1971,7 +1986,7 @@ class C29(Shot):
             m_ = np.zeros((H, W), np.float32); cv2.fillPoly(m_, [poly], 1.0, cv2.LINE_AA)
             x0_, y0_ = max(0, int(x - sz - 2)), max(0, int(y - sz - 2)); x1_, y1_ = min(W, int(x + sz + 2)), min(H, int(y + sz + 2))
             if x1_ <= x0_ or y1_ <= y0_: continue
-            tex = plate('C5/c22_wall')[200 + i * 37:200 + i * 37 + (y1_ - y0_), 300 + i * 53:300 + i * 53 + (x1_ - x0_)]
+            tex = plate(WALLP)[200 + i * 37:200 + i * 37 + (y1_ - y0_), 300 + i * 53:300 + i * 53 + (x1_ - x0_)]
             if tex.shape[:2] != (y1_ - y0_, x1_ - x0_): continue
             sh_ = np.clip(1.2 - (np.arange(y0_, y1_)[:, None] - (y - sz)) / (2 * sz), 0.25, 1.2)[..., None]
             mm = m_[y0_:y1_, x0_:x1_, None]
