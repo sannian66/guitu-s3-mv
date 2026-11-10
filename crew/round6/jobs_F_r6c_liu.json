@@ -1,0 +1,20 @@
+[
+ {
+  "name": "emp_liu_a",
+  "out": "assets/gen/R6_F",
+  "refs": [
+   "assets/gen/R6_F/emp_flat_a_raw.png",
+   "assets/characters/png/最终boss_太上皇.png"
+  ],
+  "prompt": "Edit the reference image (same aged emperor, same face, same pose, same framing, same scale, same lighting, same dragon robe, same pure chroma green #00FF00 background). Only change the crown: keep the thin flat black lacquered mian crown board, but show it in slight perspective from slightly below: its front edge a little lower than its back edge, a visible thin dark underside and finger-thick edge, soft natural edges, the board NOT wider than the shoulders. From the FRONT edge of the board hang 8 natural strands of small polished white jade beads (mianliu, imperial bead curtain) in front of the face. Strands are slightly uneven in spacing, each bead a slightly different size, translucent milky white-green jade with only a soft highlight on the top of each bead, NOT black, NOT perfect circles in a grid, some beads slightly out of focus (shallow depth of field). The strands are sparse and short: they end at about the level of the tip of the nose, the mouth and jaw are uncovered. There is a clear natural gap between two strands exactly in front of his LEFT eye (the eye on the viewer's left side of the image), so that eye is fully visible looking at the viewer; the other eye is partly behind the beads. Cold pale grey eyes, not glowing. Photorealistic cinematic dark fantasy wuxia film still. Flat solid pure chroma green #00FF00 background, nothing else, no text."
+ },
+ {
+  "name": "emp_liu_b",
+  "out": "assets/gen/R6_F",
+  "refs": [
+   "assets/gen/R6_F/emp_flat_a_raw.png",
+   "assets/characters/png/最终boss_太上皇.png"
+  ],
+  "prompt": "Edit the reference image (same aged emperor, same face, same pose, same framing, same scale, same lighting, same dragon robe, same pure chroma green #00FF00 background). Only change the crown: keep the thin flat black lacquered mian crown board, but show it in slight perspective from slightly below: its front edge a little lower than its back edge, a visible thin dark underside and finger-thick edge, soft natural edges, the board NOT wider than the shoulders. From the FRONT edge of the board hang 9 natural strands of small polished white jade beads (mianliu, imperial bead curtain) in front of the face. Strands are slightly uneven in spacing, each bead a slightly different size, translucent milky white-green jade with only a soft highlight on the top of each bead, NOT black, NOT perfect circles in a grid, some beads slightly out of focus (shallow depth of field). The strands are sparse and short: they end at about the level of the tip of the nose, the mouth and jaw are uncovered. The strands gently sway; between strands both eyes are partly visible; a wider gap in front of the eye on the viewer's left side so that eye is clearly visible. Cold pale grey eyes, not glowing. Photorealistic cinematic dark fantasy wuxia film still. Flat solid pure chroma green #00FF00 background, nothing else, no text."
+ }
+]

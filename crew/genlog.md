@@ -671,3 +671,7 @@
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（`/images/edits`，refs：原 S18 构图 s18_draw_xb_raw、S22 源图 S105/charge_front_raw 上半身、184.3 渲帧截取、男主定妆照）
 - ✔ `s18_s22style_a`（61s）→ `assets/gen/R6_D/s18_s22style_a_cut.png`（第一次进程被 shell 超时杀掉前已存盘，日志手补）
 - ✔ `s18_s22style_b`（53s）→ `assets/gen/R6_D/s18_s22style_b_cut.png`
+
+## 2026-11-10 06:37 · OpenAI 协议渠道批量生图（slash_pass.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `slash_pass`（59s）→ `assets/gen/R6_A/slash_pass_cut.png`
