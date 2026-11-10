@@ -2360,12 +2360,33 @@ class C38(Shot):
 class C39(Shot):
     """MCU 蓄力：鬼屠把刀拉到身后（S090），镜头推近 + 慢放；第五棒（评审 P0「量」缺失）：158.56「量」随刀刃出鞘
     被一刀刻在画面左侧空区（朱红大字、赤热刃口沿刀势斜向划过，余烬闪烁），刀身一道冷光扫过；159.01 底鼓暗角收紧。"""
+    def __init__(self): self.B = CP.BronzeBalance(seed=40)
+    def _bal(self, fr, t, tq):
+        tl = V(159.01)
+        fl = bolt_env(t, tl)
+        src = fr.copy()
+        tb = 4 * math.sin(t * 1.6) + 3          # 与 C40 同频轻摆，偏左盘下沉
+        lay, _ = self.B.draw(fr.copy(), t, 470, 330, 600, tilt=tb, rim=(0.80, 0.86, 1.0), rim_amt=0.5 + 1.4 * fl, light=(0.5, -0.9),
+                             fill_l=fill_people(14, 391, 34), fill_r=fill_seal(70, 1.0, 0.0), base=False, post_len=900)
+        lay = cv2.GaussianBlur(lay, (0, 0), 2.2)                     # 焦外（焦点在人）
+        d = np.abs(lay - src).max(-1)
+        m = cv2.GaussianBlur((d > 0.004).astype(np.float32), (0, 0), 1.5)[..., None]
+        haze = np.array([0.30, 0.33, 0.40], np.float32) * (0.55 + 0.6 * fl)
+        far = lay * 0.55 + haze * 0.45                                  # 大气透视：压对比、染雾色
+        fr = src * (1 - 0.85 * m) + far * 0.85 * m
+        fr = bolt(fr, t, tl, 392, (300, 0), (520, 300), inten=0.8, branches=5)
+        fr = fog(fr, t, 391, density=0.6, y0=520, y1=960, color=(0.36, 0.39, 0.46), speed=(30, 0))
+        return fr
+
     def render(self, t):
         u = self.u(t)
         tq = V(158.56)
         fr = storm(t, 39, horizon=1300, flash=0.3 + 0.5 * pulse(t, V(159.01), 0.2) + 0.5 * pulse(t, tq, 0.15), ground=False, fc=(500, 200))
         if not R5:                               # 第五轮 #43：去「量」（连同它的红光、刻字火星）；出鞘冷光保留
             fr = K.vol_light(fr, (520, 520), 420, (1.0, 0.35, 0.15), 0.45 * sm(tq - 0.02, tq + 0.12, t) * (1 - 0.4 * sm(tq + 0.3, self.t1, t)))
+        if R6_C39L:   # r6-C3 #43：左半幅不空——远处雷暴里那架青铜天平（C40 要被斩断的同一架）剪影，雾里焦外；159.01 落雷从它背后劈下照出轮廓
+            fb = self._bal(fr, t, tq)
+            fr = fb
         fr, _ = put(fr, t, 'S090/wind_up', 1180, 1110, 900 * (1.0 + 0.04 * eout(u)), rim=COLD, rim_amt=2.6, rim_dir=(-0.8, -0.6), expo=1.0,
                     wind=7, flash=0.4 * pulse(t, V(159.01), 0.2) + 0.5 * pulse(t, tq, 0.12))
         gq = clamp((t - tq) / 0.30)                # 第五棒（评审 P1 C39 近静止）：出鞘冷光沿刀身从护手扫到刀尖
