@@ -41,3 +41,5 @@
 - 同步保底：post-commit 推送（core.hooksPath=tools/hooks）✅；3 分钟 autosync 循环 ✅ 15:08；30 分钟定时任务（5415161d）保留 ✅；Wentoken 生图 Key 已由代理注入（api.wentoken.si /v1/models 200）。
 - 沙箱依赖重装中（numpy/cv2 丢失）。
 - 15:12 依赖重装完成（rf_sb.sh 出帧 OK）。派出：r6-A3（#7 #9 #10 #12 + 复核 #3/片名层）、r6-F4（#21 生图冕旒、#22、#28、横排句、复核 #23）、r6-DE4（D #45/192.3 复核，E #50 #51 E26，229.0 定种子）、audit-qp（feat/quality-pass 10 个游离提交逐条审计 → AUDIT_quality_pass.md）。B（8 条已提交待交付/评审，#32 105.9 断碑硬边）与 C（#41 #42 C39 左半幅）等渲染空位。
+- 15:15 audit-qp 交付 38b106e：feat/quality-pass 实为 64 个提交（11-09 17:36 分叉）。已审 10 项：8 项 main 已覆盖/有意不移植；需移植 C23 铜牌去外框（并入 C 组 #42）；待用户拍板：22s「寒光」留/去、黑白红整片调色、铜牌「画框」指哪个。另 54 个提交未审（grade_unify 统一调色、转场去重 67→43、A 段加 3 刀、tools/render_film.sh、tools/film_audit.py）→ 派 audit-qp2。
+- 15:15 沙箱 git 全局身份已设（sannian66），子代理提交不再失败。
