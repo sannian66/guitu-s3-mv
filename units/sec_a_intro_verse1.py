@@ -30,6 +30,7 @@ READY = True
 #   V14 火星竖排一列「每一次拔刀都是」（火星本身保留）。镜内互动字（五百重甲、寒光、罪状、里/称量、殺/放、我的主张、正、锋芒）与诏文乱码不动。
 def _on(k, d='1'): return os.environ.get(k, d) != '0'
 def R6B_OFF(k): return k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'   # r6 第二棒开关（改前对比用）
+def R6C_OFF(k): return k in os.environ.get('A_R6C_OFF', '').split(',') or os.environ.get('A_R6C_OFF', '') == 'all'   # r6 第三棒开关（改前对比用）：sf7 / stele / …
 
 
 NOVLYR = _on('R5_NOVLYR')
@@ -1453,6 +1454,9 @@ class V12(Shot):
         self.vill = crowd.soldier_sprite(None, arm=0.6, view='front', seed=2) if hasattr(crowd, 'soldier_sprite') else None
         T.warm('杀', 'kai', 360)
     def render(self, t):
+        if R5.ON['sha_fang'] and not R6C_OFF('sf7'):                               # r6 第三棒 #7：殺/放 一镜到底（见 _sf_sha_world / V13.r6c）
+            fr = _sf_sha_world(t)
+            return _sf_word(fr, t), (5 if 0 <= t - CT(4, 1) < 0.1 else 0)
         u = self.u(t); ts = CT(4, 1)
         fr = night((0.04, 0.008, 0.008), (0.12, 0.02, 0.02))
         fr = A.glow(fr, (1400, 420), 500, 0.35, (0.9, 0.2, 0.12))
@@ -1475,6 +1479,145 @@ class V12(Shot):
 # 第五轮 7：殺/放 同位同构图（V12 → V13 只换一笔：人物同位置同大小、右侧恶徒 → 跪地混账、字形 殺 → 放 原位变换）
 SF_SHA, SF_FANG = ('cal_sha_v1', 420), ('cal_fang_v1', 420)
 SF_AT, SF_RED, SF_COLD = (330, 400), (0.88, 0.10, 0.07), (0.72, 0.80, 0.94)
+
+# ---- r6 第三棒 #7（评审 2ce318b 打回 7 分）：殺/放 一镜到底 ----
+#   用户原话：「杀」「放」同一位置、用繁体、人物构图一致，文字做转变动画，凸显反差。
+#   · V12/V13 之间不再切镜（CUTS 'cont'：无转场、无冲击帧、机位连续）；29.83–31.07「殺」世界不动（鬼屠斩后定势、恶徒两断倒下沉进雾里）。
+#   · 唯一的变化 = 31.07 起一线冷刀光（近竖直的擦除前沿）：先随距离场流变一起扫过「殺」（31.07→31.33，与字同速），再甩过全画面（→31.43「放」字拍）；
+#     前沿左边是「放」世界（冷光、同位同大的鬼屠收刀、恶徒位上跪地混账），右边仍是「殺」世界。不在殺字静止时换人。
+#   · 脚点 990→900（有效区下沿 960 之内）；恶徒断口羽化 + 血雾，下半身随后屈膝沉入地雾，不留硬边黑块。
+SF_FEET = 900                                     # 两个世界共用脚点（屏幕 y）
+SF_HERO_X, SF_OPP_X = 720, 1330
+def _sf_k():
+    tm = CT(4, 6); return tm, tm - 0.40                                     # 「放」字拍、变换起点（31.03）
+def _sf_edge(t):
+    """擦除前沿 x（屏幕顶端 y=120 处）：None = 尚未开始；随字形流变同速扫过字（120→560），再加速甩出画面。"""
+    tm, k0 = _sf_k()
+    a = t - (k0 + 0.04)
+    if a < 0: return None
+    if a < 0.26: return 90 + 470 * (a / 0.26)
+    b = (a - 0.26) / 0.13
+    return 560 + 1700 * ein(min(1.0, b)) + (0 if b <= 1 else 4000)
+SF_TILT = math.tan(math.radians(9))                                         # 前沿上端偏右 9°（刀势）
+def _sf_mask(xe):
+    """1 = 已在前沿左侧（放世界）；前沿 24px 羽化。"""
+    yy = np.arange(H, dtype=np.float32)[:, None]; xx = np.arange(W, dtype=np.float32)[None, :]
+    xl = xe - (yy - 120) * SF_TILT
+    return np.clip((xl - xx) / 24 + 0.5, 0, 1)
+def _sf_edge_glow(fr, xe, amt=1.0):
+    """前沿刀光：3px 冷白芯 + 14px/50px 冷辉，上下两端收尖；不画实心头。"""
+    if xe is None or xe > W + 200: return fr
+    yy = np.arange(H, dtype=np.float32)[:, None]; xx = np.arange(W, dtype=np.float32)[None, :]
+    d = np.abs(xx - (xe - (yy - 120) * SF_TILT))
+    taper = np.clip((yy - 110) / 260, 0, 1) * np.clip((970 - yy) / 260, 0, 1)
+    core = np.exp(-(d / 1.6) ** 2) * taper
+    g = core * 1.3 + np.exp(-(d / 14) ** 2) * taper * 0.35 + np.exp(-(d / 60) ** 2) * taper * 0.12
+    return fr + g[..., None] * np.array([0.80, 0.90, 1.0], np.float32) * amt
+
+
+def _sf_sha_world(t):
+    """「殺」世界（无字）：红雨幕、斩后定势的鬼屠、被斩两断倒下的恶徒。V12 全镜 + V13 擦除前沿右侧共用。"""
+    ts = CT(4, 1); a = t - ts
+    fr = night((0.04, 0.008, 0.008), (0.12, 0.02, 0.02))
+    fr = A.glow(fr, (1400, 420), 500, 0.35, (0.9, 0.2, 0.12))
+    u = clamp01((t - V12.t0) / (V13.t1 - V12.t0))
+    fr = _rain_curtain(fr, t, u, ts)
+    fr = _sf_ground(fr, (0.30, 0.05, 0.04))
+    fr = _villain_spr6(fr, t, a, (SF_OPP_X, SF_FEET + 10), 640)
+    fr = _sf_contact(fr, SF_HERO_X + 10, SF_FEET)
+    fr, info = A.place(fr, t, S('S014/slash_diag'), (SF_HERO_X, SF_FEET), h=640, rim=REDR, rim_amt=3.0, wind=10, grade=dict(expo=0.85, sat=0.6))
+    if a >= 0:
+        fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
+        fr = K.sparks(fr, t, 31, (1200, 620), n=60, life=0.6, speed=(200, 800), dirc=(1, -0.4), spread=1.0, grav=1200, area=(60, 60), amt=0.8, t0=ts, burst=True)
+    return fr
+
+
+def _sf_fang_world(t):
+    """「放」世界（无字）：同光位冷调、同位同大的鬼屠收刀、恶徒位上跪地混账。"""
+    u = clamp01((t - V13.t0) / (V13.t1 - V13.t0))
+    fr = night((0.012, 0.016, 0.03), (0.05, 0.06, 0.08))
+    fr = A.glow(fr, (1400, 420), 520, 0.3, (0.55, 0.62, 0.85))
+    fr = fog(fr, t, 0, 200, 900, 0.35, (0.18, 0.21, 0.28), speed=(-30, 0), light=(1400, 420))
+    fr = RAIN.draw(fr, t, 0.9, angle=4, light=(1400, 420), layers=(0, 1))
+    fr = _sf_ground(fr, (0.20, 0.23, 0.30))
+    fr = _sf_contact(fr, SF_HERO_X + 10, SF_FEET)
+    fr, _ = A.place(fr, t, os.path.join(R5._R5A, 'sheath_same_v1_cut.png'), (SF_HERO_X, SF_FEET), h=640, rim=COLD, rim_amt=3.0, wind=7,
+                    grade=dict(expo=0.85, sat=0.55))
+    bow = 1.0 + 6.0 * eio(u) + 1.6 * math.sin(t * 6.0)
+    trem = 2.5 * math.sin(t * 41) + 1.5 * math.sin(t * 67)
+    fr = _sf_contact(fr, SF_OPP_X + 10, SF_FEET + 4, rx=230)
+    fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (SF_OPP_X + 10 + trem, SF_FEET + 4), h=500, anc=(0.5, 1.0), rim=COLD, rim_amt=2.4,
+                    rim_dir=(-0.7, -0.6), grade=dict(expo=0.62, sat=0.3, gamma=1.2), wind=3, rot=-bow)
+    return fr
+
+
+_SFG = {}
+def _sf_ground(fr, col):
+    """脚下地面：脚点线下一片低雾地面 + 微弱反光，人物踩在实处（原脚点在黑边下，画面里没有地）。"""
+    k = tuple(col)
+    if k not in _SFG:
+        yy = np.arange(H, dtype=np.float32)[:, None, None]
+        _SFG[k] = (np.clip((yy - (SF_FEET - 40)) / 70, 0, 1) * np.exp(-np.clip(yy - SF_FEET, 0, None) / 160)).astype(np.float32)
+    return fr + _SFG[k] * np.array(col, np.float32) * 0.35
+
+
+def _sf_contact(fr, x, y, rx=200):
+    yy, xx = np.mgrid[0:H // 4, 0:W // 4].astype(np.float32) * 4
+    sh = np.exp(-(((xx - x) / rx) ** 2 + ((yy - y - 4) / 14) ** 2)) * 0.8 + np.exp(-(((xx - x) / (rx * 1.7)) ** 2 + ((yy - y - 6) / 34) ** 2)) * 0.35
+    return fr * (1 - 0.8 * cv2.resize(sh, (W, H))[..., None])
+
+
+def _villain_spr6(fr, t, a, at, h, deg=32):
+    """r6 第三棒：恶徒两断改版 —— 断口 3px 羽化 + 朱红血雾（不再是直红线 + 硬边黑块）；剪影带红色环境光（不读成纯黑块）；
+    上半沿斩线滑开后受重力坠落，下半身 0.2s 后屈膝后仰下沉，两片都沉进脚下地雾（无原地半透明淡出、无残影）。"""
+    z = np.zeros((H, W, 3), np.float32)
+    back = 0.0 if a < 0 else 40 * eout(a / 0.4)
+    P, info = A.place(z, t, A.bg_matte('A/villain_fall'), (at[0] + back, at[1]), h=h, anc=(0.5, 1.0), rim=REDR, rim_amt=2.6,
+                      rim_dir=(0.8, -0.5), grade=dict(expo=0.80, sat=0.12, tint=(1.08, 0.94, 0.90)), wind=8, rot=-6 * eout(max(0, a) / 0.5))
+    Al = info['A'][..., None]
+    col = P / np.maximum(Al, 1e-3); Al2 = np.clip((Al - 0.30) / 0.70, 0, 1)
+    Al2 = cv2.erode(Al2[..., 0], np.ones((3, 3), np.uint8))                                          # 收 matte 灰边（发外灰晕）
+    Al2 = cv2.GaussianBlur(Al2, (0, 0), 0.8)[..., None]                                               # 再 1px 羽化
+    col = col + np.array([0.09, 0.014, 0.011], np.float32)                                            # 红色环境光托起暗部
+    P = col * Al2; Al = Al2
+    if a > 0:
+        th = math.radians(deg); cy = at[1] - 0.55 * h
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        n = -(xx - (at[0] + back)) * math.sin(th) + (yy - cy) * math.cos(th)
+        side = np.clip(0.5 - n / 3.0, 0, 1)[..., None]                                               # 断口 3px 羽化（原 n<0 硬切）
+        sl = 240 * a ** 1.2
+        M = np.float32([[1, 0, sl * math.cos(th)], [0, 1, sl * math.sin(th) + 620 * a * a]])
+        Pu = cv2.warpAffine(P * side, M, (W, H)); Au = cv2.warpAffine(Al * side, M, (W, H))[..., None]
+        q = clamp01((a - 0.20) / 0.55)
+        Ml = cv2.getRotationMatrix2D((float(at[0] + back), float(at[1])), -24 * eio(q), 1.0); Ml[1, 2] += 420 * q * q
+        Pl = cv2.warpAffine(P * (1 - side), Ml, (W, H)); Alw = cv2.warpAffine(Al * (1 - side), Ml, (W, H))[..., None]
+        P = Pl * (1 - Au) + Pu; Al = Alw * (1 - Au) + Au
+        gm = np.clip((at[1] + 20 - yy) / 110, 0, 1)[..., None] * (clamp01((a - 0.20) / 0.05) > 0) + (1 - clamp01((a - 0.20) / 0.05))
+        fz = clamp01(1 - (a - 0.85) / 0.15)                                                            # 保险：1.0s 后无论如何退净
+        P = P * gm * fz; Al = Al * gm * fz
+        cut = np.exp(-(n / 4.0) ** 2) * cv2.GaussianBlur(info['A'], (0, 0), 4)                        # 血雾 + 断口余红（沿断面，不画孤立直线）
+        mist = cv2.GaussianBlur(cut, (0, 0), 10 + 60 * a) * (1.6 * math.exp(-a / 0.45))
+        fr = fr + (cut * 1.4 * math.exp(-a / 0.25) + mist)[..., None] * RED
+    fr = fr * (1 - Al) + P
+    if a > 0: fr = fog(fr, t, 2, 800, 960, 0.45 * clamp01(a / 0.3), (0.30, 0.05, 0.04), speed=(-40, 0))   # 脚下红地雾（吞下沉的两片）
+    return fr
+
+
+def _sf_word(fr, t, km=None):
+    """左上同位的「殺」→「放」：V12 内逐笔写出；变换期距离场流变（前沿 = 擦除刀光）。"""
+    if km is None:
+        L = T.Layer(); p = cprog(4, [1], t, 0.16)[0]
+        if p > 0: L.paste(R5.ink_write(R5.cal_alpha(*SF_SHA), p, seed=4), *SF_AT, SF_RED)
+        return T.compose(fr, L, shadow=0.6, glow=0.45, glow_color=(0.9, 0.1, 0.06))
+    al, w = R5.cal_morph(SF_SHA[0], SF_FANG[0], SF_SHA[1], km, spread=0.75)
+    Lr = T.Layer(); Lc = T.Layer()
+    Lr.paste(al * (1 - w), *SF_AT, SF_RED); Lc.paste(al * w, *SF_AT, SF_COLD)
+    fr = T.compose(fr, Lr, shadow=0.6, glow=0.45, glow_color=(0.9, 0.1, 0.06))
+    fr = T.compose(fr, Lc, shadow=0.7, glow=0.25, glow_color=(0.5, 0.6, 0.9))
+    if 0 < km < 1:
+        Le = T.Layer(); Le.paste(np.clip(4 * w * (1 - w) * al * 1.4, 0, 1), *SF_AT, (0.92, 0.96, 1.0))
+        fr = T.compose(fr, Le, shadow=0.0, glow=0.6, glow_color=(0.7, 0.8, 1.0))
+    return fr
 
 
 def _rain_curtain(fr, t, u, ts):
@@ -1565,6 +1708,7 @@ class V13(Shot):
     def __init__(self):
         T.warm('放', 'kai', 360)
     def render(self, t):
+        if R5.ON['sha_fang'] and not R6C_OFF('sf7'): return self.r6c(t)
         if R5.ON['sha_fang']: return self.r5(t)
         u = self.u(t)
         fr = night((0.012, 0.016, 0.03), (0.05, 0.06, 0.08))
@@ -1591,6 +1735,22 @@ class V13(Shot):
         fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (500 - 190 * eio(u) + trem, 1085 + 20 * eio(u)), h=780, anc=(0.55, 1.0), flip=True, rim=COLD, rim_amt=2.6,
                         rim_dir=(0.7, -0.6), grade=dict(expo=0.5 + 0.3 * (1 - fc), sat=0.4, gamma=1.3 - 0.2 * (1 - fc)), wind=3, rot=bow, defocus=0.3 + 5.5 * fc)
         fr = RAIN.draw(fr, t, 0.6, angle=-4, layers=(2,))
+        return fr, 0
+
+    def r6c(self, t):
+        """r6 第三棒 #7：殺世界延续到 31.07，冷刀光前沿扫过「殺」并甩过全画面，前沿左侧换成放世界（只换对手、只换刀势），字同步流变。"""
+        tm, k0 = _sf_k()
+        km = clamp01((t - k0) / 0.60)
+        xe = _sf_edge(t)
+        if xe is None: fr = _sf_sha_world(t)
+        elif xe > W + 400: fr = _sf_fang_world(t)
+        else:
+            m = _sf_mask(xe)[..., None]
+            A_ = _sf_sha_world(t); B_ = _sf_fang_world(t)
+            fr = A_ * (1 - m) + B_ * m
+        fr = _sf_word(fr, t, km if t >= k0 else None)
+        fr = _sf_edge_glow(fr, xe)
+        fr = RAIN.draw(fr, t, 0.6, angle=4, layers=(2,))
         return fr, 0
 
     def r5(self, t):
@@ -2280,7 +2440,7 @@ CUTS = {
     'V10': ('hard', 0, 0, {}),
     'V11': ('flash_red', 0.03, 0.10, {}),
     'V12': ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open')),     # 第七棒：一条斩线把 V11 劈成两块向两侧飞开，缝里露出 V12 的红（原 pre=0 时 A=B，精灵复制/倒置）
-    'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))),                # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
+    'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))) if (R6C_OFF('sf7') or not R5.ON['sha_fang']) else ('cont', 0, 0, {}),   # r6 第三棒 #7：殺/放一镜到底不切（'cont'：无转场无冲击、机位连续）  # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
     'V14': ('hard', 0, 0, {}),
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
     'V16': ('a_glyph', 0.08, 0.34, dict(ch='主', center=(750, 650), size=230)),   # 第九棒：post 0.24→0.34          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
@@ -2324,6 +2484,9 @@ MOVES3 = {
     'V20': M3('expo_out', None, y=(60, -20), pitch=(-5, 0), z=(1.06, 1.0), note='硬切冲击后仰摇'),
     'V21': M3('expo_out', None, z=(1.08, 1.0), rot=(2, 0), note='punch 后稳'),
 }
+if R5.ON['sha_fang'] and not R6C_OFF('sf7'):                                            # r6 第三棒 #7：V12+V13 机位连成一条匀速横移 + 极慢推（交界速度一致）
+    MOVES3['V12'] = M3('lin', None, x=(-30, -12), note='殺/放一镜：匀速横移（前半）')
+    MOVES3['V13'] = M3('lin', None, x=(-12, 24), note='殺/放一镜：匀速横移（后半）')
 FG = {'A02': ('ash', 0.3), 'A04': ('ash', 0.25), 'A06': ('ember', 0.5), 'A07a': ('rain', 0.4), 'A07b': ('rain', 0.35), 'A08': ('rain', 0.3), 'V01': ('ash', 0.3), 'V02': ('rain', 0.45),
       'V04': ('rain', 0.4), 'V06': ('rain', 0.35), 'V07': ('gold', 0.3), 'V09': ('gold', 0.3), 'V12': ('ember', 0.4), 'V13': ('ash', 0.3),
       'V14': ('ember', 0.4), 'V16': ('gold', 0.4), 'V17': ('ash', 0.5), 'V18': ('rain', 0.4), 'V19': ('rain', 0.3), 'V20': ('ember', 0.4), 'V21': ('ember', 0.5)}
@@ -2601,6 +2764,8 @@ INNER = {
     'V09': dict(z=(1.0, 1.09), c=(960, 400), d=(0, 10)),
     'V10': dict(z=(1.0, 1.12), c=(930, 880), rot=(-1.6, 1.4), wob=(0.4, 0.55)),       # 秤盘在链上摆：机位随盘倾
     'V13': dict(z=(1.0, 1.07), c=(1250, 560), d=(-50, 0)),
+    **({'V12': dict(z=(1.0, 1.012), c=(960, 540), ease='lin'), 'V13': dict(z=(1.012, 1.037), c=(960, 540), ease='lin')}
+       if (R5.ON['sha_fang'] and not R6C_OFF('sf7')) else {}),                                     # r6 第三棒 #7：一镜到底匀速极慢推（脚点留在有效区内）
     'V19': dict(z=(1.0, 1.07), c=(500, 380), d=(0, 25)),
     'V04': dict(z=(1.0, 1.10), c=(1180, 560), d=(0, -12)),
     'V02': dict(z=(1.0, 1.06), c=(1000, 760), d=(-30, 0)),                           # 第十一棒：低机位跟步轻推                           # 第十一棒：低机位前推 dolly-in（配合场景层侧移 truck）
@@ -2625,6 +2790,7 @@ def build_cam():
         cam.shot(S_.t0, S_.t1, MOVES3.get(S_.__name__))
         c = CUTS.get(S_.__name__)
         if c and c[0] == 'whip': cam.whip(S_.t0, c[3]['dir'], c[3].get('L', 400))
+        elif c and c[0] == 'cont': pass                                              # r6 第三棒：不切镜（机位连续）
         else: cam.cut(S_.t0)
     return cam
 
@@ -2682,7 +2848,11 @@ class Section:
         sid = self.ids[self.idx(t)]
         fr, st = self.cam.apply(np.clip(fr, 0, 4).astype(np.float32), t)
         kind, amt = FG.get(sid, (None, 0))
-        if kind: fr = self.fg.draw(fr, t, st, kind, amt)
+        if sid in ('V12', 'V13') and R5.ON['sha_fang'] and not R6C_OFF('sf7'):      # r6 第三棒 #7：前景粒子随擦除 余烬 → 灰（不在镜界跳变）
+            xe = _sf_edge(t); m = 0.0 if xe is None else clamp01(xe / W)
+            if m < 1: fr = self.fg.draw(fr, t, st, 'ember', 0.4 * (1 - m))
+            if m > 0: fr = self.fg.draw(fr, t, st, 'ash', 0.3 * m)
+        elif kind: fr = self.fg.draw(fr, t, st, kind, amt)
         fr = fr * (EXPO_ALL * EXPO.get(sid, 1.0))
         fr = fr + 0.012 * (1 - np.clip(fr, 0, 1))
         if TITLE_HIT <= t < V(13.35) + 0.5:                                     # 第四棒：片名 = 屏幕层（A06 → A07a → A07b 不动，13.35 化灰）
