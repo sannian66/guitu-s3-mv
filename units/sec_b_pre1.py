@@ -527,6 +527,20 @@ class P07(Shot):
             self.kr = sstep(0.8, 1.3, d)[..., None].astype(np.float32)
         else:
             self.kr = 1.0
+        if R6:
+            # r6 #15（评审：唇色仍偏红）：在精灵贴图本身把唇区彩度清零、唇的明度往周围肤色拉（不再是一块暗红），
+            #   独立副本，不污染其它镜共用的 look_up_low_pt；束发红绳保色降到 35%，画面里不再有「唯一一点红」抢眼
+            import copy
+            sp0 = self.sp; self.sp = copy.copy(sp0); F = sp0.F.copy()
+            hh, ww = F.shape[:2]
+            yy, xx = np.mgrid[0:hh, 0:ww].astype(np.float32)
+            dl = ((xx / ww - 0.514) / 0.030) ** 2 + ((yy / hh - 0.106) / 0.022) ** 2
+            ml = (1 - sstep(0.6, 1.4, dl))[..., None].astype(np.float32)
+            lum = (F * np.array([0.30, 0.59, 0.11], np.float32)).sum(-1, keepdims=True)
+            skin = cv2.GaussianBlur(lum, (0, 0), 18)[..., None] if lum.ndim == 2 else cv2.GaussianBlur(lum[..., 0], (0, 0), 18)[..., None]
+            grey = lum * 0.55 + skin * 0.45
+            self.sp.F = (F * (1 - ml) + np.repeat(grey, 3, -1) * ml).astype(np.float32)
+            self.kr = (self.kr * np.where((yy / hh < 0.06)[..., None], 0.35, 1.0)).astype(np.float32)
         self.tex = K.tile(1024, 907, 4, 6)
         T.warm('我不信', 'cao', 200); T.warm('不', 'xing', 150)
         import fx2; self.fx2 = fx2
