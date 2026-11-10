@@ -1,0 +1,74 @@
+[
+ {
+  "name": "S043_NB",
+  "body": {
+   "model": "nano-banana-pro",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Medium close-up, over-the-shoulder. Gui Tu, a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, turns his head to look back toward the viewer at night in heavy rain, rain streaks as sharp white pen lines, a huge blood-red moon behind him. Cold, dangerous stillness. His face is the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S015_NB",
+  "body": {
+   "model": "nano-banana-pro",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Close shot, chest up. Gui Tu, a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, draws a long sword horizontally across the frame toward the viewer, fierce glare, sparks off the blade, a blood-red background block behind him. Explosive tension. His eyes and the blade are the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S096_NB",
+  "body": {
+   "model": "nano-banana-pro",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Symbolic wide shot on white. A huge black balance scale centered; on the left pan stands one tiny blood-red figure, on the right pan a heap of a thousand tiny black figures, the beam perfectly level; a giant blood-red circle behind the scale. Weighty, judgmental silence. The level beam is the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S121_NB",
+  "body": {
+   "model": "nano-banana-pro",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Low-angle full shot. Gui Tu, a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, stands on a black rocky ridge at dawn, red sash and ponytail whipping in strong wind, a gigantic blood-red sun behind him, white sky with screentone clouds. Resolve before battle. His silhouette against the sun is the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S043_RH",
+  "body": {
+   "model": "RH_image2",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Medium close-up, over-the-shoulder. Gui Tu, a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, turns his head to look back toward the viewer at night in heavy rain, rain streaks as sharp white pen lines, a huge blood-red moon behind him. Cold, dangerous stillness. His face is the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S015_RH",
+  "body": {
+   "model": "RH_image2",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Close shot, chest up. Gui Tu, a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, draws a long sword horizontally across the frame toward the viewer, fierce glare, sparks off the blade, a blood-red background block behind him. Explosive tension. His eyes and the blade are the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S096_RH",
+  "body": {
+   "model": "RH_image2",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Symbolic wide shot on white. A huge black balance scale centered; on the left pan stands one tiny blood-red figure, on the right pan a heap of a thousand tiny black figures, the beam perfectly level; a giant blood-red circle behind the scale. Weighty, judgmental silence. The level beam is the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ },
+ {
+  "name": "S121_RH",
+  "body": {
+   "model": "RH_image2",
+   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Low-angle full shot. Gui Tu, a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, stands on a black rocky ridge at dawn, red sash and ponytail whipping in strong wind, a gigantic blood-red sun behind him, white sky with screentone clouds. Resolve before battle. His silhouette against the sun is the focal point.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+   "ratio": "16:9",
+   "size": "2K"
+  }
+ }
+]
