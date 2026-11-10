@@ -186,7 +186,7 @@ def install(G):
             back = cv2.GaussianBlur(fr.mean(-1), (0, 0), 6)                # 珠子背后的亮度：月面前 = 剪影 + 亮勾边
             Lb = cv2.GaussianBlur(Lb, (0, 0), 0.5)
             fr = fr * (1 - 0.9 * Lb[..., None]) + Lb[..., None] * np.array([0.018, 0.026, 0.024], np.float32)
-            rim = cv2.GaussianBlur(Lr, (0, 0), 0.6) * np.clip(Lb * 1.2, 0, 1) * np.clip(back * 1.6, 0.06, 1)
+            rim = cv2.GaussianBlur(Lr, (0, 0), 0.6) * np.clip(Lb * 1.2, 0, 1) * np.clip(back * 0.7, 0.05, 0.45)
             fr = fr + rim[..., None] * np.array([0.62, 0.68, 0.78], np.float32) * 0.7
             if glint:
                 fr = fr + (cv2.GaussianBlur(Lg, (0, 0), 0.9) * 5 + cv2.GaussianBlur(Lg, (0, 0), 4) * 8)[..., None] * np.array([0.85, 0.92, 1.0], np.float32)
