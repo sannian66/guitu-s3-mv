@@ -20,18 +20,18 @@ void main(){ vec4 c=texture2D(map,vUv); if(c.a<0.02) discard; gl_FragColor=vec4(
  #include <colorspace_fragment>
 }`;
 type L = {f: string; z: number; m?: number; dx?: number; dy?: number; amp?: number; freq?: number; s?: number; vx?: number; vy?: number; vs?: number};
-const Plane: React.FC<{tex: THREE.Texture; l: L; camZ: number; t: number}> = ({tex, l, camZ, t}) => {
-  const img = tex.image as HTMLImageElement; const w = fillW(l.z, camZ, l.m ?? 1.15) * (1 + (l.vs ?? 0) * t); const h = w * img.height / img.width;
+const Plane: React.FC<{tex: THREE.Texture; l: L; camZ: number; t: number; tc: number}> = ({tex, l, camZ, t, tc}) => {
+  const img = tex.image as HTMLImageElement; const w = fillW(l.z, camZ, l.m ?? 1.15) * (1 + (l.vs ?? 0) * tc); const h = w * img.height / img.width;
   const seg = l.amp ? 24 : 1;
   const mat = useMemo(() => new THREE.ShaderMaterial({vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false,
     uniforms: {map: {value: tex}, uT: {value: 0}, uAmp: {value: l.amp ?? 0}, uFreq: {value: l.freq ?? 4}, uOp: {value: 1}}}), [tex, l.amp, l.freq]);
   mat.uniforms.uT.value = t;
-  return <mesh position={[(l.dx ?? 0) + (l.vx ?? 0) * t, (l.dy ?? 0) + (l.vy ?? 0) * t, l.z]} material={mat}><planeGeometry args={[w, h, seg, seg]} /></mesh>;
+  return <mesh position={[(l.dx ?? 0) + (l.vx ?? 0) * tc, (l.dy ?? 0) + (l.vy ?? 0) * tc, l.z]} material={mat}><planeGeometry args={[w, h, seg, seg]} /></mesh>;
 };
 type CamF = (u: number, t: number) => {x: number; y: number; z: number; lx: number; ly: number; fov: number; roll: number};
 const Cam: React.FC<{c: ReturnType<CamF>}> = ({c}) => {
   const {camera} = useThree(); const pc = camera as THREE.PerspectiveCamera;
-  pc.position.set(c.x, c.y, c.z); pc.lookAt(c.lx, c.ly, -30); pc.rotateZ(c.roll); pc.fov = c.fov; pc.near = 0.1; pc.far = 200; pc.updateProjectionMatrix();
+  pc.position.set(c.x, c.y, c.z); pc.lookAt(c.lx, c.ly, 0); pc.rotateZ(c.roll); pc.fov = c.fov; pc.near = 0.1; pc.far = 200; pc.updateProjectionMatrix();
   return null;
 };
 const Shot: React.FC<{dir: string; layers: L[]; dur: number; cam: CamF; camZ: number}> = ({dir, layers, dur, cam, camZ}) => {
@@ -47,31 +47,34 @@ const Shot: React.FC<{dir: string; layers: L[]; dur: number; cam: CamF; camZ: nu
   if (!tex) return null;
   return <ThreeCanvas width={1920} height={1080} gl={{antialias: true, preserveDrawingBuffer: true}} onCreated={({gl}) => { gl.toneMapping = THREE.NoToneMapping; }}>
     <Cam c={cam(u, t)} />
-    {layers.map((l, i) => <Plane key={i} tex={tex[i]} l={l} camZ={camZ} t={t} />)}
+    {layers.map((l, i) => <Plane key={i} tex={tex[i]} l={l} camZ={camZ} t={t} tc={t - (dur - 1) / 60} />)}
   </ThreeCanvas>;
 };
 
-// S028 ECU 刃上滴血：push 1.00→1.06，慢放（0.4x 质感：运动极慢 + 血珠向镜头缓飘）
-const S028: CamF = (u, t) => ({x: 0.15 * eio(u), y: -0.05 * eio(u), z: 10 - 0.6 * eio(u), lx: 0.1, ly: 0, fov: FOV, roll: 0});
-// S029 MCU 握刀手：handheld 0.3 + push 1.05→1.12
-const S029: CamF = (u, t) => ({x: nz(t * 3, 1) * 0.06, y: nz(t * 3, 4) * 0.05, z: 9.5 - 0.65 * eio(u), lx: nz(t * 3, 2) * 0.03, ly: 0, fov: FOV, roll: nz(t * 3, 7) * 0.006});
-// S030 LS 举刀指月：crane up + 开头 punch-zoom 1.08 回落
-const S030: CamF = (u, t) => ({x: -0.2 + 0.3 * eio(u), y: -1.4 + 2.0 * eio(u), z: 10, lx: 0, ly: -0.6 + 1.6 * eio(u), fov: FOV / (1 + 0.08 * (1 - eo(u * 6))), roll: 0});
+// 相机规则：镜头中点（u=0.5）相机正对 (0,0,camZ)，各层严格按构图对齐；其余时刻相机平移/推拉、始终盯住主体层（z=0）。
+const m0 = (u: number) => eio(u) - 0.5; // -0.5→+0.5，中点为 0
+// S028 ECU 刃上滴血：慢推 + 轻微横移
+const S028: CamF = (u, t) => ({x: 0.25 * m0(u), y: -0.08 * m0(u), z: 10 - 0.6 * m0(u), lx: 0, ly: 0, fov: FOV, roll: 0});
+// S029 MCU 握刀手：手持 + 推近（手持抖动以主体为中心）
+const S029: CamF = (u, t) => { const hx = nz(t * 3, 1) * 0.05, hy = nz(t * 3, 4) * 0.04;
+  return {x: hx, y: hy, z: 9.5 - 0.65 * m0(u), lx: hx * 0.3, ly: hy * 0.3, fov: FOV, roll: nz(t * 3, 7) * 0.005}; };
+// S030 LS 升镜 + 开头冲推回落：相机升，视线始终盯住人物胸口
+const S030: CamF = (u, t) => ({x: 0.3 * m0(u), y: 1.2 * m0(u), z: 10, lx: 0, ly: 0, fov: FOV / (1 + 0.08 * (1 - eo(u * 6))), roll: 0});
 
 const SHOTS = [
   {id: 'S028', from: 0, dur: 32, cam: S028, camZ: 10, layers: [
     {f: 'S028_L1.png', z: -22, m: 1.2},
     {f: 'S028_L2_cut.png', z: 0, m: 1.12},
-    {f: 'S028_L3_cut.png', z: 4, m: 1.15, vs: 0.25, vy: 0.05}]},
+    {f: 'S028_L3_cut.png', z: 3, m: 1.15, vs: 0.15}]},
   {id: 'S029', from: 32, dur: 28, cam: S029, camZ: 9.5, layers: [
     {f: 'S029_L1.png', z: -18, m: 1.2},
     {f: 'S029_L2_cut.png', z: 0, m: 1.02, dy: 0.55},
     {f: 'S029_L3_cut.png', z: 3, m: 0.85, dx: -0.6, dy: -0.9, vx: 1.6, vy: 0.6}]},
   {id: 'S030', from: 60, dur: 41, cam: S030, camZ: 10, layers: [
-    {f: 'S030_L1.png', z: -45, m: 1.35, dy: 2},
-    {f: 'S030_L2_cut.png', z: -16, m: 1.3, dy: 0.6, vx: 0.5, amp: 0.05, freq: 3},
+    {f: 'S030_L1.png', z: -45, m: 1.25},
+    {f: 'S030_L2_cut.png', z: -16, m: 1.25, vx: 0.4, amp: 0.05, freq: 3},
     {f: 'S030_L3_cut.png', z: 0, m: 0.72, dy: -0.35},
-    {f: 'S030_L4_cut.png', z: 4, m: 1.35, dy: -0.9}]},
+    {f: 'S030_L4_cut.png', z: 3, m: 1.25, dy: -0.25}]},
 ] as const;
 
 export const R8Chorus: React.FC<{sub?: boolean}> = ({sub = true}) => {
