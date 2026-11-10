@@ -2376,6 +2376,19 @@ def a_zoom2(A_, B_, p, center=(960, 540), seed=0):
     return A2 * (1 - m) + B2 * m + rim * np.array([0.5, 0.6, 0.85], np.float32) * 0.8
 
 
+def a_zoom3(A_, B_, p, center=(960, 430), seed=0):
+    """r6 #4（用户：撕纸转场 → 拉近 zoom）：纯推镜。A 向高处剪影加速推近（×1→×3.4，径向拖影，宫灯拉成放射光），
+    镜头钻进黑色剪影 → 画面被衣袍的暗部吞满的那一刻接 B；B 从 ×1.45 继续推近的余势里落定到 ×1（同一推进方向、同一中心）。
+    不再有窗口/圆框/冷光描边（旧 a_zoom2 的蓝色电光边读成闪电圈）。"""
+    e = TR.ease_in(clamp01(p / 0.62), 2.4)
+    A2 = TR._radial_blur(TR._zoom(A_, 1 + 3.6 * e, center), center, 0.18 * e)
+    A2 = A2 * (1 - 0.55 * e)                                                       # 钻进剪影的暗部
+    q = 1 - TR.ease_out(clamp01((p - 0.38) / 0.62), 2.6)
+    B2 = TR._radial_blur(TR._zoom(B_, 1 + 0.45 * q, center), center, 0.12 * q)
+    m = clamp01((p - 0.40) / 0.22); m = m * m * (3 - 2 * m)
+    return A2 * (1 - m) + B2 * (0.55 + 0.45 * m) * m
+
+
 def a_glint(A_, B_, p, angle=-12.0, center=(960, 560)):
     """第六棒（critic_A_r3 P1-12：中点读成灰黑巨型斜板）：只有一根 ≤12px 的冷钢细光沿 -12° 斜线（=山脊线/刀身线）扫过；
     光头过画中点那一帧硬切到 B，光线在 B 上继续扫完并衰减。无板体、无白场。"""
@@ -2554,7 +2567,9 @@ class Section:
             if pre == 0: p = 0.5 + 0.5 * p
             Af = np.clip(Af, 0, 4).astype(np.float32); B = np.clip(B, 0, 4).astype(np.float32)
             if name == 'a_zoom': return a_zoom(Af, B, p, **kw), max(ca1, ca2)
-            if name == 'a_zoom2': return a_zoom2(Af, B, p, **kw), max(ca1, ca2)
+            if name == 'a_zoom2':
+                if 'zoom3' in os.environ.get('A_R6_OFF', ''): return a_zoom2(Af, B, p, **kw), max(ca1, ca2)
+                return a_zoom3(Af, B, p, center=(960, 470)), max(ca1, ca2)      # r6 #4：纯推镜（A_R6_OFF=zoom3 回旧版）
             if name == 'a_glint': return a_glint(Af, B, p, **kw), max(ca1, ca2)
             if name == 'a_brush': return a_brush(Af, B, p, **kw), max(ca1, ca2)
             if name == 'a_cloud': return a_cloud(Af, B, p, **kw), max(ca1, ca2)

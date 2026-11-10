@@ -158,6 +158,16 @@ def install(G):
         def __init__(self):
             super().__init__()
             self.P = {k: L(p) for k, (p, h) in self.POSES.items()}
+            # 刻字那片墙去掉原有的小楷律令字（同 seed 重建一面无字墙，只在刻字区羽化替换），免得底纹字和刻字打架
+            cw0 = PR.CharWall(seed=35, cols=16, rows=18, brick=(170, 72), fname='kai', chars_ratio=0.0,
+                              text='顾全大局理所应当规矩方圆不得僭越')
+            yy = np.linspace(0, 1, cw0.tex.shape[0], dtype=np.float32)[:, None, None]
+            warm = (0.75 + 1.1 * np.clip((yy - 0.45) / 0.55, 0, 1) ** 1.5) * np.array([1.12, 0.92, 0.72], np.float32)
+            clean = (cw0.tex * warm).astype(np.float32)
+            m = np.zeros(self.wall.shape[:2], np.float32)
+            m[200 + 170:200 + 335, 200 + 150:200 + 800] = 1.0
+            m = cv2.GaussianBlur(m, (0, 0), 14)[..., None]
+            self.wall = self.wall * (1 - m) + clean * m
             # 刀弧路径：字上直线段 → 三次曲线弯向右下（命中时刀尖处）
             c0, c1 = np.array(self.C0), np.array(self.C1); d = (c1 - c0) / np.linalg.norm(c1 - c0)
             q1, q2, q3 = c1 + d * 380, np.array([1430.0, 560.0]), np.array([1560.0, 800.0])
@@ -221,12 +231,17 @@ def install(G):
             else:
                 M = np.float32([[1, 0, shift], [0, 1, 0]])
                 MA = cv2.warpAffine(self.MA, M, (W, H)); MR = cv2.warpAffine(self.MR, M, (W, H))
+            x, y = K.grid()
+            pool = np.exp(-(((x - self.TX - shift) / 420) ** 2 + ((y - self.TY - 10) / 110) ** 2)).astype(np.float32)
+            fr = fr * (1 + 0.9 * pool[..., None] * np.array([1.0, 0.9, 0.78], np.float32))            # 斜掠火光照亮刻字那片墙
             Mb = cv2.GaussianBlur(MA, (0, 0), 0.8)
-            dn2 = np.roll(Mb, 3, axis=0); up2 = np.roll(Mb, -3, axis=0)
+            dn2 = np.roll(Mb, 4, axis=0); up2 = np.roll(Mb, -3, axis=0)
             top = np.clip(Mb - dn2, 0, 1); bot = np.clip(Mb - up2, 0, 1)
             lum = fr.mean(-1, keepdims=True)
-            fr = fr * (1 - 0.34 * Mb[..., None]) * (1 - 0.45 * top[..., None])
-            fr = fr + bot[..., None] * (0.05 + 0.5 * lum) * np.array([1.0, 0.86, 0.68], np.float32)   # 下沿内侧受火光
+            fr = fr * (1 - 0.42 * Mb[..., None]) * (1 - 0.85 * top[..., None])
+            fr = fr + np.clip(bot * 1.6, 0, 1)[..., None] * (0.10 + 1.8 * lum) * np.array([1.0, 0.82, 0.60], np.float32)   # 下沿内侧受火光
+            lip = np.clip(np.roll(Mb, -2, axis=0) - Mb, 0, 1)                                       # 字口上沿外棱（未凿的砖面）一线微光
+            fr = fr + lip[..., None] * (0.03 + 0.5 * lum) * np.array([1.0, 0.86, 0.7], np.float32)
             outl = np.clip(cv2.GaussianBlur(MA, (0, 0), 2.2) - Mb, 0, 1)                              # 刻口外缘一圈微压暗
             fr = fr * (1 - 0.18 * outl[..., None])
             mr = cv2.GaussianBlur(MR, (0, 0), 0.6)[..., None]
@@ -243,7 +258,7 @@ def install(G):
                 col = np.array([1.0, 0.42, 0.12], np.float32) * hot + np.array([0.42, 0.05, 0.03], np.float32) * (1 - hot)
                 fr = fr * (1 - 0.85 * Ls[..., None])
                 rim = np.clip(cv2.GaussianBlur(Ls, (0, 0), 2.0) * 1.6 - Ls, 0, 1)
-                fr = fr + rim[..., None] * col * (0.35 + 1.4 * hot) + cv2.GaussianBlur(Ls, (0, 0), 6)[..., None] * col * 0.8 * hot
+                fr = fr + rim[..., None] * col * (0.30 + 0.55 * hot) + cv2.GaussianBlur(Ls, (0, 0), 5)[..., None] * col * 0.25 * hot
             return fr
         def _trail(self, fr, t, shift):
             """人物刀弧：69.967 起从字腰切入，命中帧到刀尖；字上那段 2 帧内熄灭，刀尖段 0.16s 衰减"""
@@ -256,7 +271,7 @@ def install(G):
             tt = max(0.0, t - self.T_HIT)
             for i in range(i1 - 1):
                 u = i / n
-                f = math.exp(-tt / (0.045 if u < 0.33 else 0.16)) * (0.35 if u < 0.33 else 1.0)
+                f = math.exp(-tt / (0.045 if u < 0.33 else 0.12)) * (0.35 if u < 0.33 else 1.0)
                 w = max(1, int((3 + 14 * math.sin(math.pi * min(1.0, u / max(head, 1e-3))) ** 0.8) / 2))
                 p0 = self.path[i] + [shift, 0]; p1 = self.path[i + 1] + [shift, 0]
                 cv2.line(Lb, tuple((p0 / 2 * 4).astype(int)), tuple((p1 / 2 * 4).astype(int)), float(f), w, cv2.LINE_AA, 2)
