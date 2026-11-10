@@ -520,7 +520,7 @@ def fx_slam(g, ch, x, y, z, col, tau, kw, S, ko):
         for _ in range(int(7 * kw.get('k', 1.0))):
             sd = r.choice([-1, 1]); v = r.uniform(30, 90)
             px = x + sd * (z * 0.30 + v * _eo(a, 2)); py = y + z * 0.40 - r.uniform(4, 16) * _eo(a, 2)
-            S.add_light(_puff(r.uniform(5, 9) * (1 + 0.8 * a)), px, py, (0.50, 0.47, 0.44), 0.32 * (1 - a) ** 1.6 * ko)
+            S.add_light(_puff(r.uniform(5, 9) * (1 + 0.8 * a)), px, py, (0.58, 0.54, 0.50), 0.55 * (1 - a) ** 1.4 * ko)
         if tau < 0.08: S.add_light(g * (1 - tau / 0.08), x, y, (1.0, 0.95, 0.85), 0.6 * ko)   # 落地一闪
     return g, col
 
