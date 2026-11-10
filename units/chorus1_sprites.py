@@ -374,20 +374,31 @@ def install(G):
             add = (core[..., None] * np.array([1.4, 1.38, 1.34], np.float32) + glow[..., None] * np.array([0.55, 0.68, 0.95], np.float32)
                    + edge[..., None] * np.array([0.9, 0.08, 0.05], np.float32) * 0.6)
             return fr + cv2.resize(add, (W, H)) * fade
+        # r6 F组（评审 #27 7 分）：脚入画（脚底线 925 → 868，离 2.39 黑边 ≥ 70px）；蓄势/收刀两张按「头一样大、
+        #   双脚落同一点」对齐（windup 包围盒高 557 / follow 640，脚心都在 x≈960），切换时姿势接得上；
+        #   闪白只留 2 帧（0.45 → 0.15），第 3 帧人物完全复原；剑光命中后 0.12s 衰减不再糊在人身上
+        FY = 868
+        WFOOT = (0.50, 1393 / 1440); FFOOT = (0.57, 1948 / 2048)          # 两张精灵的双脚中点（归一化）
+        WTIP = (2410 / 2560, 579 / 1440)                                  # windup 刀尖
+        HW, HF = 557, 640                                                  # 包围盒高：两张头同大
         def render(self, t):
             fr = self.bg * (1 - self.gm[..., None] * 0.75)
             rim = dict(col=(0.75, 0.84, 1.0), amt=1.8, dir=(0.5, -0.8))
-            gr = dict(expo=0.70, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.2)
-            fy = 925
+            gr = dict(expo=0.74, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.2)
+            fy = self.FY
             if t < self.T_HIT:
                 k = clamp01((t - self.t0) / (self.T_HIT - self.t0))
                 kk = clamp01((t - self.T_GO) / (self.T_HIT - self.T_GO))          # 最后 2 帧：拧身发力
-                fr, _ = put(fr, self.w1, t, 640 + 30 * eio(k), (930 + 20 * k, fy), rim=rim, grade=gr, shade=None,
-                            rot=-2 * k - 3 * kk, mblur=(-26 * kk, 0), wind_amp=6)
+                sc = self.w1.fit(self.HW)[1] * (1 + 0.03 * eio(k))
+                fx = 950 + 10 * k
+                fr, _ = self.w1.draw(fr, t, self.WFOOT, (fx, fy), sc, rim=rim, grade=gr, shade=None,
+                                     rot=-1.5 * k - 2.5 * kk, mblur=(-22 * kk, 0), wind_amp=6)
                 # 刀尖星芒：蓄势
                 g = clamp01((t - V(84.22)) / 0.2) * (1 - 0.6 * kk)
                 if g > 0:
-                    st = np.zeros((H // 2, W // 2), np.float32); c = self.TIP
+                    tx = fx + (self.WTIP[0] - self.WFOOT[0]) * self.w1.w * sc
+                    ty = fy + (self.WTIP[1] - self.WFOOT[1]) * self.w1.h * sc
+                    st = np.zeros((H // 2, W // 2), np.float32); c = (int(tx / 2), int(ty / 2))
                     cv2.line(st, (c[0] - 70, c[1]), (c[0] + 70, c[1]), 1.0, 1, cv2.LINE_AA)
                     cv2.line(st, (c[0], c[1] - 26), (c[0], c[1] + 26), 0.7, 1, cv2.LINE_AA)
                     st = cv2.GaussianBlur(st, (0, 0), 1.2) * 1.6 + cv2.GaussianBlur(st, (0, 0), 6) * 2.0
@@ -395,17 +406,19 @@ def install(G):
             else:
                 a = t - self.T_HIT
                 k = eout(clamp01(a / 0.12), 2)
-                fr, _ = put(fr, self.w3, t, 600 + 14 * k, (1000 - 30 * (1 - k), fy), rim=dict(col=(0.85, 0.9, 1.0), amt=2.4, dir=(-0.6, -0.8)),
-                            grade=gr, shade=None, mblur=(-48 * (1 - k), 0), wind_amp=7)
+                fr, _ = self.w3.draw(fr, t, self.FFOOT, (960 + 10 * k, fy), self.w3.fit(self.HF)[1] * (0.985 + 0.015 * k),
+                                     rim=dict(col=(0.85, 0.9, 1.0), amt=2.4, dir=(-0.6, -0.8)),
+                                     grade=gr, shade=None, mblur=(-36 * (1 - k), 0), wind_amp=7)
             # 剑光：命中前 1 帧光头从右下划出，命中帧贯穿全画面，之后收尾余辉
             if t >= self.T_GO:
                 q = (t - self.T_GO) / (self.T_HIT - self.T_GO)
                 head = clamp01(0.08 + 0.92 * q); tail = clamp01((t - self.T_HIT) / 0.22) ** 0.6
-                fade = 1.0 if t < self.T_HIT else math.exp(-(t - self.T_HIT) / 0.20)
+                fade = 1.0 if t < self.T_HIT else math.exp(-(t - self.T_HIT) / 0.12)
                 fr = self.streak(fr, head, min(tail, head - 1e-3), fade, 18 if t >= self.T_HIT else 12)
             # 闪白（命中帧满白，随后约 2 帧收）
-            wv = white(t, self.T_HIT, 0.05)
-            fr = fr * (1 - 0.55 * wv) + wv * 1.15
+            nf = int(round((t - self.T_HIT) * 30))
+            wv = (0.45, 0.15)[nf] if 0 <= nf < 2 else 0.0
+            fr = fr * (1 - wv) + wv * 1.1
             band = 1 - np.exp(-(self.dist / 20) ** 2) * (t >= self.T_HIT)                  # 雨丝沿剑光被斩开
             fr = K.rain(fr, t, 451, n=320, amt=0.4, speed=2000 if t > 84.36 else 600, angle=6, region=band)
             if t >= self.T_HIT:
@@ -414,7 +427,6 @@ def install(G):
                                   grav=900, burst=True, t0=self.T_HIT, area=(120, 8), color=(0.78, 0.84, 0.96), amt=0.7)
             sh = 10 * pulse(t, self.T_HIT, 0.08)
             return cam(fr, 1.02, sh * math.sin(97 * t), sh * math.cos(71 * t)), 0
-        TIP = (1428 // 2, 540 // 2)                       # windup 刀尖（半分辨率）
 
     # ---------------------------------------------------------------- S046 MCU 刀遮半脸（r5 #28：去刀身刻字「这里就是我的回答」+ 代码刀身 → 生图 bladeface_a）
     class S046Sprite(S046):
