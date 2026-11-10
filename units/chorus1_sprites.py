@@ -637,8 +637,9 @@ def install(G):
                 self.inkm = np.clip(0.5 - (x - edge_x) / bw, 0, 1).astype(np.float32)
                 self.inkm = cv2.GaussianBlur(self.inkm, (0, 0), 3)
             nt = lf(4, 7, 1.0) * 0.7 + lf(13, 22, 1.0) * 0.3
-            med = float(np.median(nt[150:930, :600]))                                       # 以墨爆所在左下区的中位数分浓淡 → 各占约一半
-            self.inkt = sstep(med - 0.06, med + 0.06, nt).astype(np.float32)[..., None]       # 0 = 浓、1 = 淡
+            mb = K.ink_blot(0.15, seed=46, center=(150, 950)) * self.inkm > 0.5
+            med = float(np.median(nt[mb])) if mb.any() else 0.5                             # 以墨爆实际覆盖区的中位数分浓淡 → 各占约一半
+            self.inkt = sstep(med - 0.20, med + 0.08, nt).astype(np.float32)[..., None]       # 0 = 浓、1 = 淡（宽过渡＝墨色浓淡渐变，不成斑块）
         def render(self, t):
             tr = REAL_T[0] if REAL_T[0] is not None else t     # 画面定格慢放；风/刀光/闪光/墨爆按真实时间
             x, y = self.x, self.y
@@ -688,7 +689,7 @@ def install(G):
                 # r6 F组第二棒（评审 #28 可选）：颗粒/飞白版试过像毛毡（见 F_r6.md 第二棒），回退形状，只把平涂橙压成朱砂墨色
                 edge = np.clip(K.blur_ds(m, 6) - m * 0.85, 0, 1)
                 if os.environ.get('R6F_INK', '1') != '0':
-                    col = np.array([0.30, 0.040, 0.030], np.float32) * (1 - self.inkt) + np.array([0.62, 0.135, 0.095], np.float32) * self.inkt
+                    col = np.array([0.30, 0.040, 0.030], np.float32) * (1 - self.inkt) + np.array([0.58, 0.150, 0.110], np.float32) * self.inkt
                     fr = fr * (1 - m[..., None]) + col * m[..., None]
                 else:
                     fr = over(fr, m, np.array([0.30, 0.040, 0.030], np.float32))
