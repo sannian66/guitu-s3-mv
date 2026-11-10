@@ -1421,6 +1421,7 @@ class C20(Shot):
 class C21(Shot):
     """对角分屏：左鬼屠（朱红边光）右太上皇（金边光），斜刀线隔开、两半反向滑；「正」在金侧、「邪」在红侧。"""
     def render(self, t):
+        if R6: return self.render_r6(t)
         if R5: return self.render_r5(t)
         u = self.u(t)
         tx = V(139.48)
@@ -1443,6 +1444,27 @@ class C21(Shot):
             e = eout((t - (tx - 0.12)) / 0.12)
             fr = paste_glyph(fr, '邪', 330, 330, 230, RED_T, glow=0.9, glow_c=(0.9, 0.08, 0.04), scale=lerp(1.8, 1, e), alpha=min(1, e * 2))
         self.ca = 4 if 0 <= t - tx < 0.1 else 0
+        return fr
+
+    def render_r6(self, t):
+        """r6 #40：重新构图——两人都朝分屏线对视。鬼屠缩到三分之二身（头顶留白 ~10%、刀尖完整在画内、右手不碰分屏线），
+        太上皇半身缩小左移（抬起的手整只入画、头顶留白）；分屏线改陡并右移让开鬼屠右手；「邪」「正」各放在自己半场的外侧天幕里
+        （邪在鬼屠身后左上、正在太上皇身后右上，被飘发遮一点），先画字后画人、低饱和融进雷云，不卡点、不闪；分屏线去掉刺眼白芯。"""
+        u = self.u(t)
+        A = storm(t, 211, horizon=1300, flash=0.3, ground=False) * np.array([1.1, 0.75, 0.72], np.float32)
+        A = paste_glyph(A, '邪', 300 - 10 * u, 440, 300, (0.24, 0.04, 0.03), alpha=0.78, glow=0.25, glow_c=(0.30, 0.04, 0.02), shadow=0, blur=1.4)
+        A, _ = put(A, t, 'S072/rise_draw', 560 - 20 * u, 215 + 1083, 1083, rim=RED * 0.8, rim_amt=1.1, rim_dir=(0.9, -0.4), expo=0.85, wind=7)
+        A = rain(A, t, 211, inten=0.7, angle=10, color=np.array([1.0, 0.5, 0.45], np.float32))
+        B = storm(t, 212, horizon=1300, flash=0.3, ground=False) * np.array([1.08, 0.98, 0.82], np.float32)
+        B = paste_glyph(B, '正', 1730 + 10 * u, 300, 250, (0.42, 0.33, 0.16), alpha=0.82, glow=0.22, glow_c=(0.40, 0.30, 0.14), shadow=0, blur=1.2)
+        B, _ = put(B, t, 'S074/head_turn', 1440 + 15 * u, 240 + 820, 820, flip=True, rim=GOLD, rim_amt=2.4, rim_dir=(-0.9, -0.4), expo=0.7, wind=6)
+        B = rain(B, t, 212, inten=0.7, angle=10, color=np.array([1.0, 0.85, 0.6], np.float32))
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        d = (xx - 1110) * 0.88 + (yy - 540) * 0.47
+        m = np.clip(d / 2 + 0.5, 0, 1)[..., None]
+        fr = A * (1 - m) + B * m
+        line = 0.55 * np.exp(-(d / 2.2) ** 2) + 0.30 * np.exp(-(d / 24) ** 2)
+        fr = fr + line[..., None] * np.array([0.95, 0.90, 0.86], np.float32) * (0.75 + 0.35 * pulse(t, V(139.48), 0.2))
         return fr
 
     def render_r5(self, t):
