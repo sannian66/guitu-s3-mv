@@ -2511,6 +2511,18 @@ if R5:
     SENTS = [s for s in SENTS if s.li in (36, 37, 38)]
 
 
+def _on(k, d='1'): return os.environ.get(k, d) != '0'
+
+
+# 第六轮 #53（2026-11-10 用户：「竖排歌词要全部去掉，因为我们改成横排了」）：屏幕层竖排歌词（layout='v'）全去，
+# 歌词统一走底部横排字幕 units/subtitle.py。R5_NOVLYR=0 回滚到第五轮现状。
+# 本段 C_R5=1 时只剩 2:30「血未冷」一条竖排；横排屏幕字「骨未凉 / 我自己扛 / 天不」与画内字（谁定好规矩、剧本提纲/纲、
+# 大局为上、水中血、正邪、是非对错、判）一律不动——横排的是否也去，待问用户（crew/round6/VLYR_cde.md）。
+NOVLYR = _on('R5_NOVLYR')
+if NOVLYR:
+    SENTS = [s for s in SENTS if s.layout != 'v']
+
+
 # 第四棒：碎裂/故障出场不许跨切点（评审：切点帧上的碎字残片像出错）——出场在下一切点前收完，最短 0.12s
 _CUTS_S = [f / FPS for f in CUT_F[1:-1]]
 for _s in SENTS:
