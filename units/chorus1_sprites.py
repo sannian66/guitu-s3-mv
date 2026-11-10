@@ -145,13 +145,17 @@ def install(G):
         SW = SH_ = 2048
         ANC = (1042 / 2048, 655 / 2048)                   # 两眼中点（源图像素 / 源图边长）
         EYE_L = (935.0, 655.0)                            # 旒缝里露出的那只眼（画面左眼）
-        T_OPEN, T_HOLD = 63.235, 63.262                   # 63.267 起 ≥8 帧到镜尾
-        EYE_GAIN, EYE_ADD = 1.2, 0.05
+        # r6 第四棒（评审 #21=6：代码冕旒被否）：冕旒 = 生图玉珠（emp_liu_a 生图前旒），F_r6d_prep_liu.py 把左眼两侧两串、右眼一串
+        # 抠成图层按「冕板前沿为支点的摆」挪位，出 c0 合旒（双眼沉在旒后）→ c1/c2 风起 → c3 分旒（露画面左眼）四档精灵
+        T_OPEN, T_HOLD = 63.20, 63.30                     # 63.233 / 63.267 过渡两帧，63.30 起分旒到镜尾（≥8 帧）
+        EYE_GAIN, EYE_ADD = 0.45, 0.0                     # 只一缕冷月光提眼窝，不加色、不发光
         def __init__(self):
-            super().__init__(); self.sp = L('R6_F/emp_liu_a_f')
+            super().__init__()
+            self.sps = [L(f'R6_F/emp_liu_c{k}') for k in range(4)]
+            self.sp = self.sps[0]
         def _open(self, t):
             if t < self.T_OPEN: return 0.0
-            return eio(clamp01((t - self.T_OPEN) / (self.T_HOLD - self.T_OPEN)))
+            return clamp01((t - self.T_OPEN) / (self.T_HOLD - self.T_OPEN))
         def render(self, t):
             u = self.u(t)
             cr = 60 * (1 - eio(u))                       # 巨像从地平线后缓缓升起 60px 落定
@@ -165,12 +169,13 @@ def install(G):
             halo = np.exp(-((x - mx) ** 2 + (y - my) ** 2) / (2 * 380.0 ** 2)).astype(np.float32)
             fr = fr + halo[..., None] * np.array([0.08, 0.09, 0.11], np.float32)
             fade = np.clip(1.0 - (y - (ay + 420)) / 360, 0.2, 1.0).astype(np.float32)   # 胸以下渐隐入云
-            fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=2.0, breathe=0.0,
+            op = self._open(t)
+            sp = self.sps[min(3, int(round(op * 3)))] if os.environ.get('R6F_LIU', '1') != '0' else L('R6_F/emp_liu_a_f')
+            fr, _ = sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=2.0, breathe=0.0,
                                  grade=dict(expo=0.40, sat=0.62, tint=(0.88, 0.93, 1.07), lift=0.0, gamma=1.3),
                                  rim=dict(col=(0.88, 0.92, 1.0), amt=2.2, dir=(0, -1)), wrap=0.9,
                                  shade=None, alpha=0.97, extra_A=fade)
             # 冕板在眼部的柔和投影（渐变，无硬上沿）；戏眼时画面左眼窝被一缕冷月光提亮（不发光）
-            op = self._open(t)
             ex0, ey0 = S2(*self.EYE_L); ex1, ey1 = S2(1155, 655)
             band = np.exp(-((y - ey0 + 10) / (95 * s / 0.42)) ** 2) * np.exp(-((x - (ex0 + ex1) / 2) / (260 * s / 0.42)) ** 4)
             eyeL = np.exp(-(((x - ex0) / (40 * s / 0.42)) ** 2 + ((y - ey0) / (24 * s / 0.42)) ** 2)).astype(np.float32)
