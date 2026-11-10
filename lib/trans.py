@@ -766,7 +766,7 @@ def punch(t, beats_list, amt=0.05, decay=0.12):
 
 @lru_cache(1)
 def _beats():
-    return np.load('/workspace/work/mv/analysis.npz')['beats'].astype(np.float64)
+    return np.load(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/analysis.npz')['beats'].astype(np.float64)
 
 
 def camera(fr, t, spec):

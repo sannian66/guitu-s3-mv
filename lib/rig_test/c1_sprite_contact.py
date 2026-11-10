@@ -2,7 +2,7 @@
 默认每个人物镜头一帧（动作镜头每姿势一帧），左上角标镜号。"""
 import sys, os, time
 os.environ.setdefault('SPRITE_MODE', '1')
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'): sys.path.insert(0, p)
 import chorus1 as C
 from PIL import Image, ImageDraw, ImageFont

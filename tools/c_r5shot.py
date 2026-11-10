@@ -2,7 +2,7 @@
 用法：tools/cpu_slot.sh python3 tools/c_r5shot.py PREFIX t1 t2 ...  → PREFIX_<t>.png
       加 --grid OUT.jpg 再拼一张 2 列缩略联系图（每格 960 宽，左上角标秒数）。"""
 import os, sys
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT); os.chdir(ROOT)
 from PIL import Image, ImageDraw
 import render_sprite_full as R

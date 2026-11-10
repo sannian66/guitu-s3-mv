@@ -7,7 +7,7 @@
 import os, sys, subprocess, time, random
 os.environ['SPRITE_MODE'] = '1'
 os.environ.setdefault('OMP_NUM_THREADS', '1')
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 os.chdir(ROOT)
 sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib'); sys.path.insert(0, ROOT)
 import numpy as np, cv2
@@ -32,7 +32,7 @@ def _gcut_install():
     cv2.imread = lambda fp, *a, **k: _imread(sub(fp), *a, **k)
     try:
         import a_kit as AK, a_r6, rest_sprites as RSP
-        AK.CACHE = a_r6.CACHE = '/tmp/a_spr_g'; RSP.CACHE = '/tmp/spr_cache_g'
+        AK.CACHE = a_r6.CACHE = __import__('os').environ.get('MV_TMP', '/tmp') + '/a_spr_g'; RSP.CACHE = __import__('os').environ.get('MV_TMP', '/tmp') + '/spr_cache_g'
         for fn in ('diff_matte', 'bg_matte'):
             orig = getattr(AK, fn)
             def wrap(key, *a, _o=orig, **k):

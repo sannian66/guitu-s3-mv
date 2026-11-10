@@ -1,7 +1,7 @@
 #!/bin/bash
 # 副歌一精灵版（SPRITE_MODE=1）渲染：帧 1784–2586（59.47–86.20s），2 进程分块（90 帧/块）先写 /tmp 再拷 out/chorus1_sprite/，断点续跑
 # → 混音（audio/谁定正邪.mp3 同段）→ CRF18 母版 + CRF23 小文件
-cd /workspace/work/mv; export SPRITE_MODE=1 OMP_NUM_THREADS=1; d=out/chorus1_sprite; mkdir -p $d/chunks
+cd "${MV_ROOT:-/workspace/work/mv}"; export SPRITE_MODE=1 OMP_NUM_THREADS=1; d=out/chorus1_sprite; mkdir -p $d/chunks
 F0=1784; F1=2586; MID=2186
 run() { for a in $(seq $1 90 $(($2-1))); do b=$((a+90)); [ $b -gt $2 ] && b=$2
   [ -s $d/chunks/c_$a.mp4 ] || (python3 units/render_chorus1.py seg $a $b /tmp/cs_$a.mp4 > $d/chunks/log_$a.txt 2>&1 && cp /tmp/cs_$a.mp4 $d/chunks/c_$a.mp4); done; }

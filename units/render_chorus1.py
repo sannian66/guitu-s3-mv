@@ -3,7 +3,7 @@ contact: 每镜关键帧联系表 out/chorus1_contact.jpg
 all: 58.5–89.5s 两进程分段并行 + 混音 → out/sample_chorus1.mp4"""
 import sys, os, subprocess, time
 os.environ.setdefault('OMP_NUM_THREADS', '1')
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib'); sys.path.insert(0, ROOT)
 import numpy as np, cv2
 cv2.setNumThreads(1)

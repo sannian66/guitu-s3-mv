@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, crowd, fx2
 from crowd import W,H
 # 1) sprite sheet
@@ -18,4 +18,4 @@ for b in (0,0.5,1.0):
     C=B+R[...,None]*crowd.GOLD; h,w=A.shape; y0=740-int(sp['foot'][1]); x0=260-int(sp['foot'][0])
     a=A[...,None]; cell[y0:y0+h,x0:x0+w]=cell[y0:y0+h,x0:x0+w]*(1-a)+C*a; cells.append(cell)
 img=np.vstack([np.hstack(cells[i:i+6]) for i in range(0,12,6)])
-cv2.imwrite('/workspace/work/mv/lib/rig_test/crowd_sprites.jpg',np.clip(img[:,:,::-1]*255,0,255).astype(np.uint8))
+cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/crowd_sprites.jpg',np.clip(img[:,:,::-1]*255,0,255).astype(np.uint8))

@@ -1,6 +1,6 @@
 """tools/e_check.py — E 组核查小样：渲若干帧拼成网格（每格 640 宽）。用法：python3 tools/e_check.py out.jpg f1 f2 ...（多帧须 cpu_slot）"""
 import sys, os, time
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT)
 os.environ.setdefault('V4_FORCE', 'e_final_outro')
 import numpy as np

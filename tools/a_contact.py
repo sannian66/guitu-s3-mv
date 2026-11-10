@@ -3,7 +3,7 @@
   tools/cpu_slot.sh python3 tools/a_contact.py keys out/round4/A_keys_vN.jpg            转场中间帧 + 歌词/冲击关键帧
   python3 tools/a_contact.py times out.jpg 1.0 2.5 ...                                 指定秒"""
 import os, sys, time
-ROOT = '/workspace/work/mv'; sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path.insert(0, ROOT); sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT + '/lib')
 os.chdir(ROOT)
 from PIL import Image, ImageDraw, ImageFont
 import sec_a_intro_verse1 as M

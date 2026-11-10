@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, fx2
 from fx2 import W,H
 def bg(top=0.10,bot=0.03):
@@ -41,5 +41,5 @@ for name,fn in [
     fr=tm(name,fn,fr)
     cells.append(cv2.resize(lab(fr,name),(640,360),interpolation=cv2.INTER_AREA))
 rows=[np.hstack(cells[i:i+3]) for i in range(0,len(cells),3)]
-img=np.vstack(rows); cv2.imwrite('/workspace/work/mv/lib/rig_test/fx2_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,88])
+img=np.vstack(rows); cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/fx2_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,88])
 for k,v in T.items(): print('%-22s %.3f'%(k,np.mean(v)))

@@ -3,7 +3,7 @@
 import math, os, hashlib, json
 import numpy as np, cv2
 from PIL import Image
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 import sys
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
@@ -16,7 +16,7 @@ W, H, BAR = 1920, 1080, 120
 COLD = (0.62, 0.74, 1.0); GOLD = (1.0, 0.78, 0.45); REDR = (1.0, 0.32, 0.22); WARM = (1.0, 0.85, 0.62)
 RED = np.array([0.72, 0.06, 0.05], np.float32)
 G_COLD = dict(expo=0.80, sat=0.55, tint=(0.90, 0.96, 1.06), lift=0.0, gamma=1.12)
-CACHE = '/tmp/a_spr'
+CACHE = __import__('os').environ.get('MV_TMP', '/tmp') + '/a_spr'
 GEN = ROOT + '/assets/gen/'
 
 

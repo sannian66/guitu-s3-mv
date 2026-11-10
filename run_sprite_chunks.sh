@@ -2,7 +2,7 @@
 # 全片精灵版分块渲染（SPRITE_MODE=1）：帧 0–7239（0–241.3s），每块 240 帧，2 进程并行（2 核沙箱）。
 # 先写 /tmp/sfc/，完成后拷一份到 out/full_sprite/chunks/（断点续跑：两处任一已有即跳过）。
 # 用法：nohup setsid ./run_sprite_chunks.sh > /tmp/sfc/run.log 2>&1 &
-cd /workspace/work/mv
+cd "${MV_ROOT:-/workspace/work/mv}"
 export SPRITE_MODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 T=/tmp/sfc; D=out/full_sprite/chunks; mkdir -p $T $D
 F1=7239; STEP=240

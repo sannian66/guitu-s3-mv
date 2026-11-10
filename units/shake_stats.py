@@ -1,10 +1,10 @@
 """v2 vs v3 卡点震动量化：python3 units/shake_stats.py → crew/shake_v2_v3.json"""
 import sys, json, math
-sys.path[:0] = ['/workspace/work/mv/units', '/workspace/work/mv/lib', '/workspace/work/mv']
+sys.path[:0] = [__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/units', __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib', __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')]
 import numpy as np
 import vcam as V2, vcam3 as V3
 import chorus1 as C
-HM = '/workspace/work/mv/crew/hitmap_c1.json'
+HM = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/crew/hitmap_c1.json'
 c2 = V2.VCam(HM, energy=C.energy); c3 = V3.VCam3(HM, energy=C.energy)
 for c in (c2, c3):
     c.hold(C.V(59.13), 59.267); c.hold(84.80, C.V(85.69))
@@ -26,5 +26,5 @@ n2['total'] = sum(n2.values())
 from collections import Counter
 n3 = dict(Counter(e[1] for e in c3.events)); n3['total'] = len(c3.events)
 out = dict(window='58.5-89.5s', v2=dict(events=n2, **s2), v3=dict(events=n3, candidates_before_refractory=len(c3.cand_events), **s3))
-json.dump(out, open('/workspace/work/mv/crew/shake_v2_v3.json', 'w'), ensure_ascii=False, indent=1)
+json.dump(out, open(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/crew/shake_v2_v3.json', 'w'), ensure_ascii=False, indent=1)
 print(json.dumps(out, ensure_ascii=False, indent=1))

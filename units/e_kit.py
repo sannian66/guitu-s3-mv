@@ -1,7 +1,7 @@
 """units/e_kit.py — E 组（副歌终「定」+ 尾奏）场景/字幕/精灵工具。全部纯代码；人物 = assets/gen 精灵。
 破晓色板：墨黑 → 暖灰 → 金 → 白；朱红只给血/印/关键字。"""
 import math, os, sys
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

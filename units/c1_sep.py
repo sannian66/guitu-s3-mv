@@ -6,7 +6,7 @@ sys.modules["torchaudio"].transforms = sys.modules["torchaudio.transforms"]
 import torch, soundfile as sf, numpy as np, subprocess
 from demucs.pretrained import get_model
 from demucs.apply import apply_model
-R='/workspace/work/mv'
+R=__import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 subprocess.run(['ffmpeg','-y','-v','error','-ss','56','-t','36','-i',R+'/song.mp3','-ar','44100','-ac','2','/tmp/c1.wav'],check=True)
 wav,sr=sf.read('/tmp/c1.wav',dtype='float32'); wav=torch.tensor(wav.T)
 torch.set_num_threads(2)

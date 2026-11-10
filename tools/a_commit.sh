@@ -1,6 +1,6 @@
 #!/bin/bash
 # A 组提交：只提交 A 组自己的路径（index.lock 被别组占用时重试）。用法 tools/a_commit.sh "说明"
-cd /workspace/work/mv
+cd "${MV_ROOT:-/workspace/work/mv}"
 P=$(ls units/sec_a_intro_verse1.py units/a_*.py tools/a_*.py tools/a_commit.sh crew/round4/A_* out/round4/A_* assets/gen/A/* crew/genlog.md 2>/dev/null)
 for i in $(seq 1 20); do
   [ -e .git/index.lock ] && { sleep 2; continue; }

@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, crowd, fx2
 from crowd import W,H
 def sky(t, moon=(1500,260)):
@@ -37,5 +37,5 @@ a=time.time(); fr=K.draw(fr,1.0,bow=0.6,rim_color=fx2.GOLD); dt=time.time()-a
 f8=np.clip(fr*255,0,255).astype(np.uint8); cv2.putText(f8,'kneelers %.2fs'%dt,(30,160),cv2.FONT_HERSHEY_SIMPLEX,2,(255,255,255),3)
 cells.append(cv2.resize(f8,(960,540),interpolation=cv2.INTER_AREA))
 img=np.vstack([np.hstack(cells[i:i+2]) for i in range(0,8,2)])
-cv2.imwrite('/workspace/work/mv/lib/rig_test/army_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,88])
+cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/army_sheet.jpg',img[:,:,::-1],[cv2.IMWRITE_JPEG_QUALITY,88])
 print(T)

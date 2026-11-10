@@ -2,7 +2,7 @@
 做法：每块框一个多边形遮罩；在同一面墙上搜一块平移来源（砖缝行对齐 = 环带 SSD 最小、来源不碰任何框），
 拷来源的高频纹理 + 原图周边 Telea 修补的低频明暗，羽化边缘。输出 assets/gen/R6_C/c22_wall_noframe_raw.png。"""
 import cv2, numpy as np
-ROOT = '/workspace/work/mv/assets/gen/'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/'
 im = cv2.imread(ROOT + 'C5/c22_wall_raw.png', cv2.IMREAD_COLOR).astype(np.float32)
 H, W = im.shape[:2]
 POLY = {

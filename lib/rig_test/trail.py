@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, rig
 outs=[]
 for act,view,ph in [('slash_h','3q',0.46),('slash_diag','side',0.47),('spin_slash','back',0.55),('slash_up','side',0.5)]:
@@ -22,4 +22,4 @@ for act,view,ph in [('slash_h','3q',0.46),('slash_diag','side',0.47),('spin_slas
     print(act,'trail+draw',time.time()-t0)
     outs.append(fr)
 img=np.hstack(outs)
-cv2.imwrite('/workspace/work/mv/lib/rig_test/trail.png',np.clip(img[:,:,::-1]*255,0,255).astype(np.uint8))
+cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/trail.png',np.clip(img[:,:,::-1]*255,0,255).astype(np.uint8))

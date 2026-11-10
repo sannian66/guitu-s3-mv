@@ -4,7 +4,7 @@
 - 道具：blade_prop()（从 blade_face 生图里裁出的真实刀身贴图，用于烧红/横刀特写，取代矢量刀）
 - 收尾：Section（CUTS 表驱动转场、切点冲击、前景粒子、曝光、c1kit.finish 与副歌一同一套调色）"""
 import sys, math, os, json
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

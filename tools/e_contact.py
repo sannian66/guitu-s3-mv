@@ -4,7 +4,7 @@
   tools/cpu_slot.sh python3 tools/e_contact.py keys    out/round4/E_keys_v1.jpg        # 转场中间帧 + 歌词关键帧
   python3 tools/e_contact.py list                                                     # 打印帧号不渲染"""
 import sys, os, time
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path.insert(0, ROOT + '/units'); sys.path.insert(0, ROOT)
 os.environ.setdefault('V4_FORCE', 'e_final_outro')
 import numpy as np

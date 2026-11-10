@@ -1,7 +1,7 @@
 """units/c_kit.py — C 组（预副歌二 + 副歌二「破」）工具箱：雷暴环境、精灵摆放、C 组字幕体系、相机。
 只被 units/sec_c_pre2_chorus2.py 使用；不改任何共享库（只 import）。"""
 import os, sys, math, json
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

@@ -2,7 +2,7 @@
 分镜：crew/round4/B_storyboard.md 第 1 节。14 镜 + 副歌一 S028 开头 5 帧（直接调用 chorus1，接缝逐像素一致）。
 接口：READY / frame(f, cache) -> uint8 (1080,1920,3)"""
 import sys, math, os
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

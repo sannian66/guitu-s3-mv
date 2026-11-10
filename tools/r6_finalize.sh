@@ -1,6 +1,6 @@
 #!/bin/bash
 # tools/r6_finalize.sh — 拼接 34 块字幕层成品 + 音轨 → out/render_r6/guitu_s3_mv_r6.mp4，并 ffprobe 校验
-cd /workspace/work/mv
+cd "${MV_ROOT:-/workspace/work/mv}"
 R=out/render_r6; OUTF=$R/guitu_s3_mv_r6.mp4
 python3 -c "
 import json

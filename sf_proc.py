@@ -2,7 +2,7 @@ import numpy as np, cv2, math, random, os
 from fx import *
 from proc import *
 random.seed(3); np.random.seed(3)
-out = '/workspace/work/mv/sfp/'; os.makedirs(out, exist_ok=True)
+out = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/sfp/'; os.makedirs(out, exist_ok=True)
 def save(fr, name): cv2.imwrite(out + name, to8(fr)[:, :, ::-1], [cv2.IMWRITE_JPEG_QUALITY, 92])
 
 def night_sky(seed=1):

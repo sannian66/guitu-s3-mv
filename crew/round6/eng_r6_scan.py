@@ -1,7 +1,7 @@
 """r6-SPRITE 全片冒烟：一个进程按镜头表逐镜取中点渲一帧（SPRITE_FAST 取环境变量），记每帧 SpriteLayer.draw 次数/耗时/异常。
 python3 crew/round6/eng_r6_scan.py <shots.json> <out.jsonl> [i0 i1]（按镜头表下标切片，分段跑免得单进程缓存堆满内存）   （外包 tools/cpu_slot.sh）"""
 import os, sys, time, json, random, traceback
-sys.path.insert(0, '/workspace/work/mv')
+sys.path.insert(0, __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'))
 import numpy as np
 import render_sprite_full as R
 import sprite as SP

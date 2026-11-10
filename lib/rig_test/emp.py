@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, rig
 cells=[]
 def bgf(w=480,h=540,glow=True):
@@ -19,4 +19,4 @@ for act,view,kw in [('stand_backlit','front',{}),('raise_hand_decree','front',{}
             row.append(f8)
     rows.append(np.hstack(row))
 img=np.vstack([np.hstack(rows[i:i+2]) for i in range(0,6,2)])
-cv2.imwrite('/workspace/work/mv/lib/rig_test/emperor.png',img[:,:,::-1])
+cv2.imwrite(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib/rig_test/emperor.png',img[:,:,::-1])

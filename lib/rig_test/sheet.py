@@ -1,4 +1,4 @@
-import sys,time; sys.path.insert(0,'/workspace/work/mv/lib')
+import sys,time; sys.path.insert(0,__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/lib')
 import numpy as np, cv2, rig
 def sheet(actions, out, view="side", n=6, dur=1.4, cw=320, ch=420, scale=330, wind=-150, flip=False):
     rows=[]

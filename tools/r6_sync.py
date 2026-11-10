@@ -1,6 +1,6 @@
 """tools/r6_sync.py — 把 out/render_r6/done_base.tsv / done_sub.tsv 同步进 crew/round6/RENDER_r6.md 的块完成记录表。"""
 import json, os
-ROOT = '/workspace/work/mv'; R = ROOT + '/out/render_r6'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); R = ROOT + '/out/render_r6'
 md = ROOT + '/crew/round6/RENDER_r6.md'
 plan = {c['name']: c for c in json.load(open(ROOT + '/crew/round6/render_r6_chunks.json'))}
 def rd(p):

@@ -2,7 +2,7 @@
 FULL=1 另存全尺寸 /tmp/d5_<秒>.png。时间按成片秒数，帧 = round(秒×30)。"""
 import os, sys
 sys.argv[0] = 'x'
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 os.chdir(ROOT); sys.path.insert(0, ROOT)
 import numpy as np, cv2
 import render_sprite_full as R

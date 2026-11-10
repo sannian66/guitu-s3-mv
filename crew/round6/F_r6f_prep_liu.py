@@ -8,7 +8,7 @@
 """
 import numpy as np, cv2
 from PIL import Image
-R = '/workspace/work/mv/assets/gen/R6_F/'
+R = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/R6_F/'
 ld = lambda n: np.asarray(Image.open(R + n).convert('RGBA')).astype(np.float32) / 255
 L4 = ld('emp_liu_a_cut.png'); F4 = ld('emp_flat_a_cut.png')
 h, w = L4.shape[:2]

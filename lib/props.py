@@ -21,8 +21,8 @@ RED = np.array([0.72, 0.06, 0.05], np.float32)
 GOLD = np.array([1.0, 0.76, 0.40], np.float32)
 INK = np.array([0.03, 0.03, 0.035], np.float32)
 EMBER = np.array([1.0, 0.55, 0.18], np.float32)
-FONTS = {'song': '/workspace/work/mv/fonts/NotoSerifSC.otf', 'kai': '/workspace/work/mv/fonts/MaShanZheng-Regular.ttf',
-         'xing': '/workspace/work/mv/fonts/ZhiMangXing-Regular.ttf', 'cao': '/workspace/work/mv/fonts/LiuJianMaoCao-Regular.ttf'}
+FONTS = {'song': __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/NotoSerifSC.otf', 'kai': __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/MaShanZheng-Regular.ttf',
+         'xing': __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/ZhiMangXing-Regular.ttf', 'cao': __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/LiuJianMaoCao-Regular.ttf'}
 _TF = {}
 def font(name='song', size=40):
     if name not in _TF: _TF[name] = skia.Typeface.MakeFromFile(FONTS.get(name, name))

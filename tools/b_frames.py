@@ -1,6 +1,6 @@
 """[B组] 按秒渲若干帧拼图：python3 tools/b_frames.py <pre1|verse2> out.jpg t1 t2 ...（>1 帧须 tools/cpu_slot.sh 包裹）"""
 import sys, os, time
-ROOT = '/workspace/work/mv'; sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
 os.environ.setdefault('SPRITE_MODE', '1')
 import importlib
 from PIL import Image, ImageDraw, ImageFont

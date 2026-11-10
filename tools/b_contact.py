@@ -3,7 +3,7 @@
   python3 tools/b_contact.py sheet  <tag> out.jpg   拼图
 tag: rhythm（每镜起/中/止三帧）| contact（每镜中点帧，预副歌一 14 + 主歌二 25） | keys（转场中间帧 + 歌词关键帧）"""
 import sys, os, json
-ROOT = '/workspace/work/mv'; sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']; os.chdir(ROOT)
 os.environ.setdefault('SPRITE_MODE', '1')
 from PIL import Image, ImageDraw, ImageFont
 import sec_b_pre1 as P1, sec_b_verse2 as V2

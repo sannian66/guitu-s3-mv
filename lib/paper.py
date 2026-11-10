@@ -612,7 +612,7 @@ class PaperCurtain:
         self.text = None
         if text:
             try:
-                tf = skia.Typeface.MakeFromFile('/workspace/work/mv/fonts/NotoSerifSC.otf')
+                tf = skia.Typeface.MakeFromFile(__import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/fonts/NotoSerifSC.otf')
                 self.font = skia.Font(tf, 40)
                 RULES = '天理昭彰顾全大局理所应当法度森严尊卑有序上令下行'
                 self.text = [''.join(r.choice(list(RULES), 14)) for _ in range(n)]

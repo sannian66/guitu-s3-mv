@@ -2,7 +2,7 @@
 宣纸世界：水墨精灵（把生图人物按亮度换算成墨量、乘进纸里，暗红保留为朱）、墨字（乘法合成，纸纹透出、边缘洇墨）；
 暗世界：风暴云涡、闪电、余烬、金光；统一收尾 d_finish（纸面暖白不被冷灰调色吃掉）。粒子全部无状态。"""
 import sys, math, os
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

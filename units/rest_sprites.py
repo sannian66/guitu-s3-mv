@@ -15,9 +15,9 @@ import numpy as np, cv2
 from PIL import Image, ImageOps
 import sprite as SP
 
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 GEN = ROOT + '/assets/gen/'
-CACHE = '/tmp/spr_cache'
+CACHE = __import__('os').environ.get('MV_TMP', '/tmp') + '/spr_cache'
 W, H, BAR = 1920, 1080, 120
 GOLD = (1.0, 0.80, 0.45); COLD = (0.62, 0.74, 1.0); REDR = (1.0, 0.35, 0.25); WARM = (1.0, 0.85, 0.6)
 SH = {x['id']: x for x in json.load(open(ROOT + '/crew/shots.json'))}

@@ -31,7 +31,7 @@ from PIL import Image, ImageDraw, ImageFont
 W, H = 1920, 1080
 BAR = 120
 SAFE = (60, BAR + 30, W - 60, H - BAR - 30)   # x0,y0,x1,y1 安全框（含留白）
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 FD = ROOT + '/fonts/'
 FONTS = {
     'kai': FD + 'MaShanZheng-Regular.ttf',     # 马善政楷（端正）

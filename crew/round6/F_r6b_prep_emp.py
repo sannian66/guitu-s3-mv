@@ -1,7 +1,7 @@
 """F组 r6 第二棒 #21：emp_flat_a_cut → emp_flat_a_f_cut（冕板压薄、alpha 收边羽化、脸压暗、龙纹提饱和与局部对比）"""
 import numpy as np, cv2
 from PIL import Image
-R = '/workspace/work/mv/assets/gen/R6_F/'
+R = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/R6_F/'
 im = np.asarray(Image.open(R + 'emp_flat_a_cut.png').convert('RGBA')).astype(np.float32) / 255
 h, w = im.shape[:2]
 # 1) 冕板（y 60–126，约 66px 厚）纵向压到 44px：板厚上屏 ≈18px

@@ -2,7 +2,7 @@
   tools/cpu_slot.sh python3 units/a_contact6.py part <contact|keys|triple> <i0> <i1>   → /tmp/acon6/<kind>_<i>.jpg
   python3 units/a_contact6.py assemble <kind> <out.jpg> [每块行数]                        → 整图 + _p<n>.jpg 分块（≤1920×1400）"""
 import os, sys, time
-ROOT = '/workspace/work/mv'; sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv'); sys.path[:0] = [ROOT, ROOT + '/units', ROOT + '/lib']
 os.chdir(ROOT)
 from PIL import Image, ImageDraw, ImageFont
 FPS = 30

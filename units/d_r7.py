@@ -8,7 +8,7 @@
 - torn_slit：纸被刀从背面刺穿的裂口：参差撕边 + 纤维白边 + 两片翻起的纸舌（受光/背光）+ 投影 + 洞内暗。
 全部无状态（静态场缓存），按 t 计算。"""
 import sys, math
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 for p in (ROOT, ROOT + '/lib', ROOT + '/units'):
     if p not in sys.path: sys.path.insert(0, p)
 import numpy as np, cv2

@@ -2,7 +2,7 @@
 不再压冕板（板厚、底面暗边、透视都由生图自带）；alpha 轻收边羽化（≈2px）；脸压暗（逆光）但玉珠少压，保住玉白；龙纹提饱和与局部对比"""
 import numpy as np, cv2
 from PIL import Image
-R = '/workspace/work/mv/assets/gen/R6_F/'
+R = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv') + '/assets/gen/R6_F/'
 im = np.asarray(Image.open(R + 'emp_liu_a_cut.png').convert('RGBA')).astype(np.float32) / 255
 h, w = im.shape[:2]
 rgb, A = im[..., :3], im[..., 3]

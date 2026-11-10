@@ -5,7 +5,7 @@
 #   tools/r6_drive.sh status   已完成块数
 # 完成记录：out/render_r6/done_base.tsv / done_sub.tsv（块名 f0 f1 耗时s md5 字节）；已完成块（文件在、帧数对）自动跳过。
 # 只重渲某几块：删掉 out/render_r6/base/<块名>.mkv（及 sub/<块名>.mp4）再跑。
-cd /workspace/work/mv
+cd "${MV_ROOT:-/workspace/work/mv}"
 R=out/render_r6; W=${W:-2}
 mkdir -p $R/base $R/sub $R/logs
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 R

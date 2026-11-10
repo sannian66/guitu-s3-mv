@@ -3,7 +3,7 @@
 import os, sys, subprocess
 os.environ['SPRITE_MODE'] = '1'; os.environ['STYLE_D'] = os.environ.get('STYLE_D', '1')
 os.environ.setdefault('OMP_NUM_THREADS', '2')
-ROOT = '/workspace/work/mv'
+ROOT = __import__('os').environ.get('MV_ROOT', '/workspace/work/mv')
 sys.path[:0] = [ROOT + '/units', ROOT + '/lib', ROOT]
 import numpy as np, cv2
 import chorus1 as C, subtitle as SUB
