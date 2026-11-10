@@ -1577,7 +1577,8 @@ SENTENCES = [
 #   用户点名的「骨未凉」原为右侧竖排 → 改成 S039 镜内右上横排行书。R6F_HLYR=0 回滚到整层不画。
 HLYR = _on('R6F_HLYR')
 # r6 第四棒（评审横排句 7.5）：三句各自挪到不和画面主体打架的位置（R6F_HPOS=0 回到 y=850 居中、天不判「判」朱红）
-#   · 血未冷 74.62：S038 巨「血」包围盒 (378–792, 413–835) 的正上方，字心 (585, 300)，与巨「血」上沿相距 ≥80px
+#   · 血未冷 74.62：S038 巨「血」随镜头上移（74.4 包围盒 378–792×413–835 → 74.8 307–788×185–627），挪到刀身左下方
+#     字心 (1030, 850)：与巨「血」包围盒横向 ≥130px、与刀身 ≥100px；字头不早于 S038 入镜（不落在 S037 墙面上）
 #   · 天不判 81.68：S042 红月 + 血晕上「判」红字读不出 → 整句暖白（对比 ≥3:1）
 #   · 我来量 83.68：S044 原压在手指关节上 → 挪到刀鞘下方左侧暗区，字心 (500, 850)
 HPOS = _on('R6F_HPOS')
@@ -1587,7 +1588,7 @@ def _h_sentences():
         moved = []
         for s_ in out:
             if s_.text == '血未冷':
-                s_ = SL('血未冷', 16, [0, 1, 2], 'bottom', 74.62, red='血'); cx, cy = 585, 300
+                s_ = SL('血未冷', 16, [0, 1, 2], 'bottom', 74.62, red='血'); cx, cy = 1030, 850
             elif s_.text == '天不判':
                 s_ = SL('天不判', 18, [0, 1, 2], 'bottom', 81.68, red=''); cx, cy = 960, 850
             elif s_.text == '我来量':
@@ -1650,6 +1651,12 @@ class Chorus1:
             g = self.lyr_h.S[-1]
             g.tin = [max(ti, 75.42 + 0.14 * i) for i, ti in enumerate(g.tin)]
             g.t_on = g.tin[0] - LY.IN_DUR
+            for s_ in self.lyr_h.S:                      # r6 第四棒：「血未冷」字头不早于 S038 入镜（74.10 起擦入）
+                if s_.text == '血未冷' and HPOS:
+                    s_.tin = [max(ti, S038.t0 + LY.IN_DUR + 0.04 * i) for i, ti in enumerate(s_.tin)]
+                    s_.t_on = s_.tin[0] - LY.IN_DUR
+                    s_.out_t = 74.66                     # 晚入镜 → 停留补到 74.66 再墨散（S039 右甩 ≈74.95 起，前散完）
+                    s_.t_off = s_.out_t + LY.OUT_STAG * (len(s_.P) - 1) + LY.OUT_DUR
         self.occ = {k: V3.FGOcc(a, b, d, seed=int(k[1:]), rim=r) for k, (a, b, d, r) in OCC.items()}
 
     def idx(self, t):
