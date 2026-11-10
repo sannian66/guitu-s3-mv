@@ -303,7 +303,7 @@ class E25n:
         m = sstep(hy - 2, hy + 20, np.arange(H, dtype=np.float32))[:, None, None]
         fr = fr * (1 - m) + self.ground * m
         ts = M.CT(55, 6)
-        mb = (90, 0) if t < ts + 0.04 else (0, 0)
+        mb = (90, 0) if (t < ts + 0.04 and not R6FIX) else (0, 0)            # r6：硬切后不再留 2 帧动态模糊残影
         z, info = M.put(np.zeros((H, W, 3), np.float32), t, 'S130/hslash', (930, hy - 6) if R6FIX else (930, 1200), h=760 if R6FIX else 1040,   # r6：脚落地平线入画、头顶留白 rim=(1.0, 0.7, 0.4), rim_amt=3.4,
                         rim_dir=(-0.9, -0.3), wind=6, mblur=mb, grade=self.GR)
         A = np.clip(info['A'], 0, 1)
