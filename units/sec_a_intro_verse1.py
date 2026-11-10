@@ -2380,12 +2380,12 @@ def a_zoom3(A_, B_, p, center=(960, 430), seed=0):
     """r6 #4（用户：撕纸转场 → 拉近 zoom）：纯推镜。A 向高处剪影加速推近（×1→×3.4，径向拖影，宫灯拉成放射光），
     镜头钻进黑色剪影 → 画面被衣袍的暗部吞满的那一刻接 B；B 从 ×1.45 继续推近的余势里落定到 ×1（同一推进方向、同一中心）。
     不再有窗口/圆框/冷光描边（旧 a_zoom2 的蓝色电光边读成闪电圈）。"""
-    e = TR.ease_in(clamp01(p / 0.62), 2.4)
+    e = TR.ease_in(clamp01(p / 0.56), 1.9)
     A2 = TR._radial_blur(TR._zoom(A_, 1 + 3.6 * e, center), center, 0.18 * e)
     A2 = A2 * (1 - 0.55 * e)                                                       # 钻进剪影的暗部
-    q = 1 - TR.ease_out(clamp01((p - 0.38) / 0.62), 2.6)
+    q = 1 - TR.ease_out(clamp01((p - 0.44) / 0.56), 2.6)
     B2 = TR._radial_blur(TR._zoom(B_, 1 + 0.45 * q, center), center, 0.12 * q)
-    m = clamp01((p - 0.40) / 0.22); m = m * m * (3 - 2 * m)
+    m = clamp01((p - 0.47) / 0.16); m = m * m * (3 - 2 * m)
     return A2 * (1 - m) + B2 * (0.55 + 0.45 * m) * m
 
 
