@@ -1035,8 +1035,8 @@ class V06(Shot):
             wv = min(1.0, s_ / 0.25) ** 1.2 * (min(1.0, (1 - s_) / 0.12) if hd >= 1 else 1.0)
             cv2.line(Ls, (int(xa), int(Y(xa))), (int(xb), int(Y(xb))), float(wv), 2, cv2.LINE_AA)
         core = cv2.GaussianBlur(Ls, (0, 0), 0.8)
-        h1 = cv2.GaussianBlur(Ls, (0, 0), 4) * 1.6
-        h2 = cv2.GaussianBlur(Ls, (0, 0), 20) * 1.5
+        h1 = cv2.GaussianBlur(Ls, (0, 0), 6) * 4.2
+        h2 = cv2.GaussianBlur(Ls, (0, 0), 24) * 4.0
         add = (core[..., None] * np.array([0.80, 0.86, 0.90], np.float32) + h1[..., None] * np.array([0.42, 0.55, 0.78], np.float32)
                + h2[..., None] * np.array([0.16, 0.24, 0.42], np.float32)) * f
         out = fr + add
