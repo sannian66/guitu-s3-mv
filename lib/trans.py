@@ -145,7 +145,7 @@ def _slash_streak(fr, c, d, q, length=2600, width=3, color=(1, 0.97, 0.92), amt=
     return fr + cv2.resize(s, (W, H))[..., None] * np.array(color, np.float32) * amt * (1 - tail)
 
 
-def slash_wipe(A, B, p, angle=-30.0, center=(W / 2, H / 2), circle=False, radius=330, gap_glow=True, seed=0):
+def slash_wipe(A, B, p, angle=-30.0, center=(W / 2, H / 2), circle=False, radius=330, gap_glow=True, seed=0, soft_edges=False):
     """刀光擦除。直线版：0–0.25 刀光沿斜线划过，随后 A 沿斩线一分为二、两半反向滑出，B 从缝中露出。
     angle=90/-90 为竖斩，0 为横斩。circle=True：圆形刀光（spin_slash）——刀光沿圆周旋一圈，圆内换成 B 并向外扩到全屏。"""
     x, y = _grid()
@@ -178,12 +178,27 @@ def slash_wipe(A, B, p, angle=-30.0, center=(W / 2, H / 2), circle=False, radius
     s1 = _zoom(A, 1, tx=-dv[0] * shift * 0.5 - nv[0] * e * 60, ty=-dv[1] * shift * 0.5 - nv[1] * e * 60, border=cv2.BORDER_CONSTANT)
     s2 = _zoom(A, 1, tx=dv[0] * shift * 0.5 + nv[0] * e * 60, ty=dv[1] * shift * 0.5 + nv[1] * e * 60, border=cv2.BORDER_CONSTANT)
     # 两半的掩膜随各自位移
-    m1 = cv2.warpAffine(((sd < 0)).astype(np.float32), np.float32([[1, 0, -dv[0] * shift * 0.5 - nv[0] * e * 60], [0, 1, -dv[1] * shift * 0.5 - nv[1] * e * 60]]), (W, H))
-    m2 = cv2.warpAffine(((sd >= 0)).astype(np.float32), np.float32([[1, 0, dv[0] * shift * 0.5 + nv[0] * e * 60], [0, 1, dv[1] * shift * 0.5 + nv[1] * e * 60]]), (W, H))
+    M1 = np.float32([[1, 0, -dv[0] * shift * 0.5 - nv[0] * e * 60], [0, 1, -dv[1] * shift * 0.5 - nv[1] * e * 60]])
+    M2 = np.float32([[1, 0, dv[0] * shift * 0.5 + nv[0] * e * 60], [0, 1, dv[1] * shift * 0.5 + nv[1] * e * 60]])
+    if soft_edges:
+        # r6-B3（#32 105.9）：两半滑开时 A 自身画布的四条边会跟着滑进画面，成了带橙色描边的硬边方框。
+        # 改：半片掩膜用 REPLICATE 平移（只剩斩线一条边）；画布边改 220px 羽化淡出到 B；橙色缝光只沿斩线、不描画布边。
+        sm = cv2.GaussianBlur((sd < 0).astype(np.float32), (0, 0), 1.2)
+        h1 = cv2.warpAffine(sm, M1, (W, H), borderMode=cv2.BORDER_REPLICATE)
+        h2 = cv2.warpAffine(1 - sm, M2, (W, H), borderMode=cv2.BORDER_REPLICATE)
+        fx = np.clip(np.minimum(x, W - 1 - x) / 220, 0, 1); fy = np.clip(np.minimum(y, H - 1 - y) / 220, 0, 1)
+        F = (fx * fy) ** 1.5
+        f1 = cv2.warpAffine(F, M1, (W, H)); f2 = cv2.warpAffine(F, M2, (W, H))
+        m1 = h1 * f1; m2 = h2 * f2
+        seam = np.clip(h1 + h2, 0, 1)
+    else:
+        m1 = cv2.warpAffine(((sd < 0)).astype(np.float32), M1, (W, H))
+        m2 = cv2.warpAffine(((sd >= 0)).astype(np.float32), M2, (W, H))
+        seam = m1 + m2
     Bz = _zoom(B, 1.08 - 0.08 * ease_out(q))
     out = _lerp(Bz, s1, m1); out = _lerp(out, s2, m2)
     if gap_glow:
-        rim = np.clip(np.abs(cv2.Sobel(m1 + m2, cv2.CV_32F, 0, 1)) + np.abs(cv2.Sobel(m1 + m2, cv2.CV_32F, 1, 0)), 0, 1)
+        rim = np.clip(np.abs(cv2.Sobel(seam, cv2.CV_32F, 0, 1)) + np.abs(cv2.Sobel(seam, cv2.CV_32F, 1, 0)), 0, 1)
         rim = cv2.GaussianBlur(rim, (0, 0), 3) * 2 * (1 - q)
         out += rim[..., None] * np.array([1, 0.6, 0.25], np.float32)
     return _slash_streak(out, center, dv, 0.6 + q * 0.4, amt=1 - q)
