@@ -12,6 +12,12 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 R
 # 依赖装在 JuiceFS（沙箱重启不丢、不占内存盘）：pip install --target /workspace/work/.pydeps -r requirements.txt
 [ -d /workspace/work/.pydeps ] && export PYTHONPATH=/workspace/work/.pydeps${PYTHONPATH:+:$PYTHONPATH}
 
+# 守卫（11-10 第十二任）：沙箱重启会丢 libEGL，skia 静默回退 cv2 → 画质不同。缺就自动装，装不上就拒绝开渲。
+if ! python3 -c "import skia" 2>/dev/null; then
+  (sudo apt-get update -qq && sudo apt-get install -y -qq libegl1 libgl1) >/dev/null 2>&1
+  python3 -c "import skia" 2>/dev/null || { echo "!!! skia 不可用，拒绝渲染" | tee -a $R/logs/fail.log; exit 2; }
+fi
+
 nframes() { ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 "$1" 2>/dev/null || echo 0; }
 export -f nframes
 
