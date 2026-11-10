@@ -929,6 +929,12 @@ class V06(Shot):
         if 0 <= a < 0.07: fr = fr * 1.55 + 0.06 * COLDV          # 第三棒：冲击改冷色曝光脉冲（不再白闪）
         if R5.ON['slash_keys'] and not HG_ON() and not R6E_OFF('slash2'):
             fr = self.slash2(fr, t, ts2)
+        if not R6F_OFF('slash2c') and int(round(t * 30)) - int(round(ts2 * 30)) in (-2, -1):
+            # r6 POLISH1：第二刀起刀/过身帧（653/654f）刀弧星芒峰值 255 → 整帧按亮度软肩（>0.78 渐压，顶 0.90），只削死白尖峰，
+            # 刀身扫光仍是全帧最亮（不削横扫读感）。开关 A_R6F_OFF=slash2c 回滚
+            lum = fr.max(axis=2, keepdims=True); kn, cp = 0.78, 0.90
+            lc = np.where(lum > kn, kn + (cp - kn) * np.tanh((lum - kn) / (cp - kn)), lum)
+            fr = fr * (lc / np.maximum(lum, 1e-4))
         # 「寒光」斩开：字在屏幕下方，被同一刀切开两半错位
         p = cprog(1, [9], t, 0.25)[0]
         if not HG_ON():                                                  # r6 第四棒：寒光字层、逐字点亮、刀光扫字、斩字火星全部不出；刀身扫光/斩击/裂线保留
