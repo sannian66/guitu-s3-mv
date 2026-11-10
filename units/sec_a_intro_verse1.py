@@ -1922,8 +1922,103 @@ class V15(Shot):
         return x, y, cur, pr
 
     def render(self, t):
+        if R5.ON['carve'] and not R6C_OFF('stele'): return self.render7(t)
         if R5.ON['carve']: return self.render6(t)
         return self.render5(t)
+
+    # ---- r6 第三棒 #9（评审 2ce318b 打回 7 分：碑像湿布、人平移漂移 600px、右肘贴边）----
+    #   碑：生图青石碑面 stele_stone_v1（真石材颗粒 + 风化斑）贴进直边碑形（左/右/顶直边，两处顶角崩口、边沿 ≤3px 风化毛口），
+    #       顶面受左上冷光一条倒角亮边、右侧背光厚度面、碑后投影；碑底出画（下沿被地雾吃掉）；去掉竖向流痕。
+    #   人：刀尖仍是凿刻前沿，但改成「镜头跟刀」——碑（及字、碎屑、火星）整体在画里向左走，人锁在屏幕右侧（刀尖屏幕 x 790→900、
+    #       人体右沿 ≤1800，右留白 ≥120px），每凿一字上身随刀微转（±1.4°）；刻完刀尖下沉离碑。
+    def _stele7(self):
+        if hasattr(self, 'st7'): return
+        from PIL import Image as _I
+        x0, x1, y0 = 110, 1100, 250
+        rs = np.random.RandomState(77)
+        nzx = cv2.resize(rs.rand(1, 64).astype(np.float32), (W, 1), interpolation=cv2.INTER_CUBIC)[0]
+        nzy = cv2.resize(rs.rand(64, 1).astype(np.float32), (1, H), interpolation=cv2.INTER_CUBIC)[:, 0]
+        fine = cv2.resize(rs.rand(H // 3, W // 3).astype(np.float32), (W, H), interpolation=cv2.INTER_LINEAR)
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        top = y0 + (nzx[None, :] - 0.5) * 3 + (fine - 0.5) * 1.5
+        left = x0 + (nzy[:, None] - 0.5) * 3 + (fine - 0.5) * 1.5
+        right = x1 + (nzy[::-1][:, None] - 0.5) * 3 + (fine - 0.5) * 1.5
+        d = np.minimum.reduce([xx - left, right - xx, yy - top])
+        # 顶角崩口：左上一块斜缺、右上一个小缺口
+        d = np.minimum(d, (xx - x0) + (yy - y0) - 46 + (fine - 0.5) * 6)
+        cR = np.hypot(xx - (x1 - 210), yy - y0) - 22 + (fine - 0.5) * 5
+        d = np.minimum(d, cR)
+        self.st7 = np.clip(d / 1.2 + 0.5, 0, 1).astype(np.float32)
+        im = np.asarray(_I.open(os.path.join(R5._R6A, 'stele_stone_v1.png')).convert('RGB'), np.float32) / 255
+        bw, bh = x1 - x0 + 60, H - y0 + 40
+        sc = max(bw / im.shape[1], bh / im.shape[0])
+        im = cv2.resize(im, (int(im.shape[1] * sc) + 1, int(im.shape[0] * sc) + 1), interpolation=cv2.INTER_AREA)[:bh, :bw]
+        alb = np.zeros((H, W, 3), np.float32); alb[y0 - 20:y0 - 20 + bh, x0 - 30:x0 - 30 + bw][:H - (y0 - 20)] = im[:H - (y0 - 20)]
+        lum = alb.mean(2, keepdims=True)
+        alb = alb / max(1e-3, float(lum[self.st7 > 0.5].mean())) * 0.12                          # 夜里碑面平均亮度 ≈0.12（与原碑同档）
+        lit = np.clip(1.25 - (xx - x0) / 1250 - (yy - y0) / 1500, 0.30, 1.15)[..., None]
+        self.stone7 = (alb * lit * np.array([0.92, 0.97, 1.08], np.float32)).astype(np.float32)
+        s0 = self.st7
+        self.side7 = np.clip(cv2.warpAffine(s0, np.float32([[1, 0, 24], [0, 1, 5]]), (W, H)) - s0, 0, 1)
+        self.bevel7 = np.clip(s0 - cv2.warpAffine(s0, np.float32([[1, 0, 0], [0, 1, 7]]), (W, H)), 0, 1) * (0.7 + 0.6 * fine)
+        self.lbevel7 = np.clip(s0 - cv2.warpAffine(s0, np.float32([[1, 0, 6], [0, 1, 0]]), (W, H)), 0, 1) * (0.5 + 0.5 * fine)
+        self.cast7 = np.clip(cv2.GaussianBlur(cv2.warpAffine(s0, np.float32([[1, 0, 70], [0, 1, 30]]), (W, H)), (0, 0), 30) - s0 - self.side7, 0, 1)
+        self.alpha7 = np.clip(s0 + self.side7, 0, 1)
+
+    def _tipx_smooth(self, t):
+        xs = [self.tip6(t + d)[0] for d in (-0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.15)]
+        return float(np.mean(xs))
+
+    def render7(self, t):
+        self._stele7()
+        u = self.u(t)
+        bg = night((0.012, 0.014, 0.024), (0.04, 0.045, 0.06))
+        bg = A.glow(bg, (200, 60), 800, 0.35, (0.55, 0.62, 0.82))
+        bg = RAIN.draw(bg, t, 0.7, angle=8, light=(200, 60), layers=(0,))
+        # 世界层（碑 + 刻字 + 碎屑/火星）：先在世界坐标画，再按镜头平移贴到屏幕
+        wl = self.stone7.copy()
+        side_c = np.array([0.040, 0.042, 0.050], np.float32) * (0.8 + 0.4 * self.stone7.mean(2, keepdims=True) / 0.12)
+        wl = wl * (1 - self.side7[..., None]) + side_c * self.side7[..., None]
+        wl = wl + (self.bevel7 * 0.30)[..., None] * np.array([0.50, 0.56, 0.70], np.float32) + (self.lbevel7 * 0.12)[..., None] * np.array([0.5, 0.56, 0.7], np.float32)
+        tx, ty, cur, pr = self.tip6(t)
+        wl = self.CV.draw(wl, pr, mask=self.st7)
+        wl = wl * self.alpha7[..., None]
+        add = np.zeros((H, W, 3), np.float32)
+        for i, (c, k, gx, gy, sz) in enumerate(self.GL):
+            a0 = CT(5, k) - 0.10
+            if -0.05 <= t - a0 < 0.9:
+                add = K.sparks(add, t, 150 + k, (self.CV.bounds(i)[0] + 60, 670), n=46, life=0.7, speed=(120, 420), dirc=(0.5, -0.6), spread=1.5, grav=1300,
+                               area=(80, 70), amt=0.55, t0=a0, burst=True, color=(0.55, 0.55, 0.58))
+        if cur is not None:
+            add = K.sparks(add, t, 159, (tx, ty), n=18, life=0.22, speed=(150, 480), dirc=(0.4, -0.9), spread=1.4, grav=900, area=(6, 6),
+                           amt=0.75, t0=self.t0, burst=False, color=(1.0, 0.82, 0.55))
+            pq = np.zeros((H // 4, W // 4), np.float32)
+            cv2.circle(pq, (int(tx / 4), int(ty / 4)), 9, 1.0, -1)
+            pq = cv2.resize(cv2.GaussianBlur(pq, (0, 0), 6), (W, H)) * cv2.resize(A.tex(int(t * 30) % 40 + 500, 256, 12, 3), (W, H))
+            add = add + pq[..., None] * np.array([0.10, 0.10, 0.10], np.float32)
+        # 镜头跟刀：屏幕刀尖 790 → 900（缓），世界层平移 sx
+        txs = self._tipx_smooth(t)
+        scr = 790 + 110 * eio(u)
+        sx = scr - txs
+        M = np.float32([[1, 0, sx], [0, 1, 0]])
+        wlS = cv2.warpAffine(wl, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        aS = cv2.warpAffine(self.alpha7, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)[..., None]
+        cS = cv2.warpAffine(self.cast7, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)[..., None]
+        addS = cv2.warpAffine(add, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        fr = bg * (1 - 0.55 * cS)
+        fr = fr * (1 - aS) + wlS
+        fr = fx2.god_rays(fr, (200, 40), strength=0.35, length=1.0, color=(0.65, 0.72, 0.9), t=t, src_r=180)
+        fr = fr + addS
+        # 人：刀尖 = 凿刻前沿的屏幕位置；每字上身随刀微转
+        hx = tx + sx
+        lean = sum(-1.4 * math.sin(math.pi * p) for p in pr if 0 < p < 1)
+        jit = 2.5 * math.sin(t * 47) if cur is not None else 0
+        fr, info = A.place(fr, t, self.spr, (hx + jit, ty), w=860, anc=self.anc, rim=COLD, rim_amt=2.6,
+                           rim_dir=(-0.7, -0.6), wind=8, grade=dict(expo=0.88, sat=0.55, gamma=1.08), breathe=0.0, rot=lean)
+        fr = A.glow(fr, (hx, ty), 40, 0.5 if cur is not None else 0.1, (0.9, 0.9, 1.0))
+        fr = fog(fr, t, 0, 820, 1000, 0.40, (0.22, 0.25, 0.32), speed=(-50, 0))
+        fr = RAIN.draw(fr, t, 0.8, angle=8, light=(200, 60), layers=(1, 2))
+        return fr, 0
 
     def render6(self, t):
         u = self.u(t)

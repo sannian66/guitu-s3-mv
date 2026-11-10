@@ -686,3 +686,7 @@
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `c23_tools_v1`（51s）→ `assets/gen/R6_C/c23_tools_v1_cut.png`
 - ✔ `c22_feet_v1`（75s）→ `assets/gen/R6_C/c22_feet_v1.png`
+
+## 2026-11-10 07:18 · OpenAI 协议渠道批量生图（stele_stone.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `stele_stone_v1`（40s）→ `assets/gen/R6_A/stele_stone_v1.png`

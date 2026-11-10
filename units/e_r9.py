@@ -913,9 +913,9 @@ def _e26_render_c(self, t):
         self.sky7 = (col * det).astype(np.float32)
     fr = self.sky7.copy()
     sun = (960, hy + 90 - 170 * eout(u, 2))
-    fr = sun_atmo(fr, sun, 110, amt=1.0, inner=60, outer=240, a_in=0.75, a_out=0.32, core=SUNC)
+    fr = sun_atmo(fr, sun, 110, amt=1.0, inner=80, outer=240, a_in=0.85, a_out=0.32, core=SUNC)
     yy, xx = E.grid()
-    hg = np.clip(np.exp(-((xx - sun[0]) / 300) ** 2 - ((yy - hy) / 55) ** 2) * 0.55, 0, 0.9)[..., None] * np.array([1.0, 0.86, 0.62], np.float32)
+    hg = np.clip(np.exp(-((xx - sun[0]) / 520) ** 2 - ((yy - hy) / 70) ** 2) * 0.88, 0, 0.92)[..., None] * np.array([1.0, 0.86, 0.62], np.float32)
     fr = 1 - (1 - np.clip(fr, 0, 1)) * (1 - hg)                                          # 日出处地平线上的暖白晕（只在日旁一小片）
     fr = fx2.god_rays(fr, sun, strength=0.30, length=1.0, t=t)
     fr, z = self.g.render(fr, hy, f=900, camh=1.0, dz=-6 * u, line=1.0, fog=(1.0, 0.72, 0.42))
@@ -927,7 +927,7 @@ def _e26_render_c(self, t):
     fr = fr + np.exp(-((yy - hy) / 1.5) ** 2)[..., None] * GOLDW * 0.45 + np.exp(-((yy - hy) / 10) ** 2)[..., None] * GOLD * 0.18
     fr = RS.fx_embers(fr, t, 1312, amt=0.6, n=40)
     fr = M.bloom(fr, 0.90, 0.25)
-    return _tone_cap(fr, 0.80, 0.97)                                                  # 亮部挤进 230–249 一档（≥250 只剩颗粒噪点），不压中间调
+    return _tone_cap(fr, 0.85, 1.30)                                                  # 亮部软压到 ≤1.30（过 finish 高光柔肩 ≈ 248）：压的是 ≥250 的面积，不压中间调
 
 # ================================================================== 挂载
 def _cls(name, body, base):

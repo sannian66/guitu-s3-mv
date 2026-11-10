@@ -1576,8 +1576,28 @@ SENTENCES = [
 #   NOVLYR 时仍画 lyric3 的横排句（血未冷 74.62 / 天不判 81.68 / 我来量 83.68，y=850 在画内、不进下黑边字幕区），
 #   用户点名的「骨未凉」原为右侧竖排 → 改成 S039 镜内右上横排行书。R6F_HLYR=0 回滚到整层不画。
 HLYR = _on('R6F_HLYR')
+# r6 第四棒（评审横排句 7.5）：三句各自挪到不和画面主体打架的位置（R6F_HPOS=0 回到 y=850 居中、天不判「判」朱红）
+#   · 血未冷 74.62：S038 巨「血」包围盒 (378–792, 413–835) 的正上方，字心 (585, 300)，与巨「血」上沿相距 ≥80px
+#   · 天不判 81.68：S042 红月 + 血晕上「判」红字读不出 → 整句暖白（对比 ≥3:1）
+#   · 我来量 83.68：S044 原压在手指关节上 → 挪到刀鞘下方左侧暗区，字心 (500, 850)
+HPOS = _on('R6F_HPOS')
 def _h_sentences():
     out = [s_ for s_ in SENTENCES if s_.layout == 'bottom' and not s_.skip]
+    if HPOS:
+        moved = []
+        for s_ in out:
+            if s_.text == '血未冷':
+                s_ = SL('血未冷', 16, [0, 1, 2], 'bottom', 74.62, red='血'); cx, cy = 585, 300
+            elif s_.text == '天不判':
+                s_ = SL('天不判', 18, [0, 1, 2], 'bottom', 81.68, red=''); cx, cy = 960, 850
+            elif s_.text == '我来量':
+                s_ = SL('我来量', 18, [3, 4, 5], 'bottom', 83.68, red='量'); cx, cy = 500, 850
+            else:
+                moved.append(s_); continue
+            dx = cx - W / 2
+            for q in s_.P: q.update(x=q['x'] + dx, y=cy)
+            moved.append(s_)
+        out = moved
     g = SL('骨未凉', 16, [3, 4, 5], 'bottom', 76.30, red='骨')     # 镜内字：在 S039（75.19–76.58）里写出、停住，切镜前散
     sz, adv = 104, 104 * 1.12
     for i, q in enumerate(g.P):
@@ -1710,6 +1730,14 @@ class Chorus1:
         if os.environ.get('C1_LYR', '3') == '3' and not NOVLYR:          # r6 #53：NOVLYR 时整层不画
             fr = self.lyr.draw(fr, t)                       # 统一字幕层（屏幕层，不随镜头）
         elif self.lyr_h is not None:
+            ca = max(ca, int(round(4 * min(1.0, st['punch']))))
+            if ca and self.lyr_h.active(t) and HPOS:     # r6 第四棒：镜内横排句不吃整帧色差（评审：天不判 RGB 色散）
+                base = fr
+                fr = self.lyr_h.draw(fr, t)
+                tm = np.clip(np.abs(fr - base).max(-1) * 8, 0, 1)
+                tm = cv2.GaussianBlur(cv2.dilate(tm, np.ones((9, 9), np.uint8)), (0, 0), 3)[..., None]
+                kw = dict(t=t, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0)
+                return finish(base, ca=ca, **kw) * (1 - tm) + finish(fr, ca=0, **kw) * tm, 0
             fr = self.lyr_h.draw(fr, t)                     # r6 #55：只留横排句
         ca = max(ca, int(round(4 * min(1.0, st['punch']))))
         return finish(fr, t, ca=ca, vig=0.42, red_keep=1.0 if SPRITE_MODE else 0.0), 0
