@@ -24,3 +24,6 @@ out/r6tmp/
 # 绿幕重抠中间产物 / 各组对比图工作目录（只有 out/round5/*.jpg 联系表入库）
 out/gcut/
 out/round5/*/
+
+# r6-RENDER 出片中间层 / 成片（>50MB 不入库）
+out/render_r6/
