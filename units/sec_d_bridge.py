@@ -1312,6 +1312,7 @@ class S21_Charge(Shot):
         for ch, x_, y_, sz, on, sd in (('我', 1460, 430, 330, O[45][5], 31), ('偏', 1500, 770, 200, O[45][6], 32)):
             tv = V(on)
             pq = cl((t - (tv - 0.24)) / 0.24)
+            if ch == '我' and R6D_KEEPTXT: pq = cl((t - (self.TC + 0.03)) / 0.2)   # [D组 r6 #55/#46] 木屑「我」等「规矩」被斩后才聚拢，斩点前不抢「规矩」
             if pq > 0 and not TXTCUT: fr = D.shard_glyph(fr, ch, x_, y_, sz, pq, seed=sd, spread=620, col=(0.86, 0.64, 0.38), rim=(0.85, 0.9, 1.0))   # [r7] 提亮，压过木牌
         return K.cam(fr, 1.03 + 0.05 * u, *K.shake(t, 4 + 10 * impact(t, self.TC, 0.15), 3, 21)[:2], rot=1.0 - 2.0 * u), 0.0
 
