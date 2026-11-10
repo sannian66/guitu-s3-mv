@@ -518,6 +518,12 @@ def install(G):
         GAP = (0.434, 0.57)
         def __init__(self):
             super().__init__(); self.sp = L('S044/thumb')
+            # r6 F组第二棒（评审「83.6 袖口/衣襟抠像白描边」）：alpha 腐蚀 2px 再羽化，轮廓环带重算，去 halo
+            sp = self.sp
+            sp.A = cv2.GaussianBlur(cv2.erode(sp.A, np.ones((5, 5), np.uint8)), (0, 0), 1.2)
+            sp.F = sp.F * np.clip(sp.A * 1.5, 0, 1)[..., None] + sp.F * 0                   # 边缘残留亮色随 alpha 一起收掉
+            ring = sp.A - cv2.erode(sp.A, np.ones((5, 5), np.uint8))
+            sp.ring = cv2.GaussianBlur(np.clip(ring, 0, 1), (0, 0), 1.5)
         def render(self, t):
             u = self.u(t)
             fr = self.bg.copy()
@@ -525,8 +531,8 @@ def install(G):
             s = W / self.sp.w * 1.02
             ax, ay = 960 - 12 * prog, 560
             fr, _ = self.sp.draw(fr, t, (0.5, 0.5), (ax, ay), s, wind_amp=0.0, breathe=0.002,
-                                 rim=dict(col=(0.80, 0.86, 1.0), amt=1.6, dir=(-0.3, -1.0)),
-                                 grade=dict(expo=0.80, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.15), shade=None, wrap=0.2)
+                                 rim=dict(col=(0.80, 0.86, 1.0), amt=0.7, dir=(-0.3, -1.0)),
+                                 grade=dict(expo=0.80, sat=0.55, tint=(0.9, 0.96, 1.06), lift=0.0, gamma=1.15), shade=None, wrap=0.0)
             gx = ax + (self.GAP[0] - 0.5) * self.sp.w * s; gy = ay + (self.GAP[1] - 0.5) * self.sp.h * s
             Lg = np.zeros((H, W), np.float32)
             cv2.line(Lg, (int(gx), int(gy - 55)), (int(gx), int(gy + 55)), 1.0, 3, cv2.LINE_AA)
