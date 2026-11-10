@@ -1,0 +1,106 @@
+[
+ {
+  "name": "S043_C2",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/src/S043.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. He turns to look back over his shoulder at night in rain; rain as thin cream lines on blue."
+ },
+ {
+  "name": "S015_C2",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/src/S015.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. Close shot drawing a sword, vermilion flame-shaped sparks, blue night."
+ },
+ {
+  "name": "S096_C2",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/src/S096.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. A balance scale in black on cream; one tiny vermilion figure on the left pan balances a heap of tiny black figures on the right; big blue circle behind."
+ },
+ {
+  "name": "S121_C2",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/S121_r7.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. Standing on a ridge at dawn, sash and ponytail whipping in wind, huge vermilion sun, flat blue mountains, cream clouds."
+ },
+ {
+  "name": "S043_C25",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2.5-flare",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/src/S043.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. He turns to look back over his shoulder at night in rain; rain as thin cream lines on blue."
+ },
+ {
+  "name": "S015_C25",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2.5-flare",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/src/S015.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. Close shot drawing a sword, vermilion flame-shaped sparks, blue night."
+ },
+ {
+  "name": "S096_C25",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2.5-flare",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/src/S096.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. A balance scale in black on cream; one tiny vermilion figure on the left pan balances a heap of tiny black figures on the right; big blue circle behind."
+ },
+ {
+  "name": "S121_C25",
+  "nocut": true,
+  "out": "out/round7/styleC2",
+  "model": "gpt-image-2.5-flare",
+  "refs": [
+   "assets/ref_user/style_C_print_1.png",
+   "assets/ref_user/style_C_print_2.png",
+   "assets/ref_user/style_C_print_3.png",
+   "out/round7/test/S121_r7.png"
+  ],
+  "prompt": "The FIRST THREE images define the art style exactly; copy their rendering, NOT their subjects (no crane, no girl, no cat, no arch, no papers). Style: mid-century screen-print poster / risograph, large flat silhouette shapes, almost no linework or hatching, figures and faces reduced to a few flat cream and black shapes with minimal features, big fields of flat ultramarine blue and black, vermilion used for sun, flames, sash; cream paper border; visible paper grain and slightly rough ink edges; graphic, calm, poster-like. No manga lines, no anime face, no detailed hair strands, no shading gradients, no realism. No text. The LAST image is only a composition guide (framing and pose); ignore its drawing style. Subject: a lone swordsman, black robe, red sash, long black ponytail. Standing on a ridge at dawn, sash and ponytail whipping in wind, huge vermilion sun, flat blue mountains, cream clouds."
+ }
+]
