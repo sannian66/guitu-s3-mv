@@ -319,9 +319,9 @@ def _band_rim(A, by):
     gn = np.sqrt(gx * gx + gy * gy) + 1e-6
     nx, ny = -gx / gn, -gy / gn                                            # 外法向
     yy = np.arange(H, dtype=np.float32)[:, None]
-    face = np.clip(0.55 * np.abs(nx) + np.maximum(0, ny * np.sign(by - yy)) + 0.15, 0, 1)
+    face = np.clip(0.5 * np.abs(nx) + np.maximum(0, ny * np.sign(by - yy)), 0, 1)       # r6b 补：去掉常亮底（原 +0.15 让下摆/腿也一圈白边）
     band = np.clip(A - cv2.erode(A, np.ones((5, 5), np.uint8)), 0, 1)
-    near = 0.25 + 0.75 * np.exp(-((yy - by) / 230) ** 2)
+    near = 0.04 + 0.96 * np.exp(-((yy - by) / 190) ** 2)                                  # 只在光带上下 ~200px 内（头、肩、刀臂）
     return cv2.GaussianBlur(band * face * near, (0, 0), 0.8)
 
 
@@ -366,7 +366,11 @@ class E25n:
         A = np.clip(info['A'], 0, 1)
         if R6B:                                                             # r6b #49：抠像边内缩 1px + 羽化 1.5px（去硬边贴纸感）
             A2 = cv2.GaussianBlur(cv2.erode(A, np.ones((3, 3), np.uint8)), (0, 0), 1.5)
-            z = np.clip(z / np.maximum(A, 1e-3)[..., None], 0, 4) * A2[..., None]; A = A2
+            Ae = cv2.erode(A, np.ones((5, 5), np.uint8)); Ae = (Ae > 0.9).astype(np.float32)   # 边缘颜色取内侧实色（半透明边直接除 A 会放大成一圈白边）
+            C = z / np.maximum(A, 1e-3)[..., None]
+            Cf = cv2.GaussianBlur(C * Ae[..., None], (0, 0), 2.0) / np.maximum(cv2.GaussianBlur(Ae, (0, 0), 2.0), 1e-3)[..., None]
+            C = np.where((Ae > 0.5)[..., None], C, Cf)
+            z = np.clip(C, 0, 1.5) * A2[..., None]; A = A2
             if not hasattr(self, 'feet'): self.feet = _feet(A)
         by = info['tip'][1] if info['tip'] else 520
         q = t - ts
