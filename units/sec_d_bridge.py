@@ -35,6 +35,7 @@ R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S2
 #   仍去：竖排宋体歌词列（S22「我偏要」、S24「天」「不」、S26「我来」、S27「不答」，同 #53 竖排全去）；「判」全去（S24 + S26，用户「判字不留了」）。
 #   R6D_KEEPTXT=0 回滚到第五轮去字状态。#46 复审的「规矩」同时砸出 / 刀光落点 / 头顶锚点 / 189.71 闪白硬切不受此开关影响。
 R6D_KEEPTXT = _on('R6D_KEEPTXT')
+R6D_S18 = _on('R6D_S18')    # [D组 r6 #45] S18 头顶留白加大 + 鞘尾红穗去掉（R6D_S18=0 回滚到 r5 复审版）
 TXTCUT = R5D_TEXT_CUT and not R6D_KEEPTXT   # 镜内横排/刻/写/印字：r6 默认保留
 VCUT = R5D_TEXT_CUT                        # 竖排宋体歌词列：继续去
 F0, F1 = 4839, 5797
@@ -1052,6 +1053,7 @@ class S18_Draw(Shot):
         if R5D_S18_V2:                                   # [D r5 复审 #45] 人缩小一点：发髻上方留 ~140px（黑边内），腰部切线仍压在下黑边里
             cx = 1080 + 30 * u
             sc = 735 / sp.h * (1 + 0.035 * eo(u, 2))
+            if R6D_S18: sc = 705 / sp.h * (1 + 0.035 * eo(u, 2))     # [D组 r6 #45] 发髻顶到上黑边内沿 ≥140px（整镜推近后仍满足）
         fr = D.night(t, 181, top=(0.045, 0.05, 0.068), bot=(0.012, 0.012, 0.018), glow=(cx + 60, 260, 560, (0.45, 0.52, 0.72), 0.42), clouds=0.6)
         fr = K.rain(fr, t, 181, n=380, amt=0.22, angle=6, length=(30, 80))            # 人后远雨（细、暗）
         fr = K.fog(fr, t, 44, amt=0.32, speed=(60, 0), y0=0.55, y1=1.0, color=(0.2, 0.22, 0.28))
@@ -1104,6 +1106,13 @@ def _s18_face_fix(sp, RW=1672):
     dist = cv2.distanceTransform((A > 0.5).astype(np.uint8), cv2.DIST_L2, 5)
     k = ss(7, 2, dist) * (A > 0.02) * ss(0.0, 0.08, F[..., 2] - F[..., 0]) * ss(0.12, 0.3, F.mean(-1))
     F = F * (1 - 0.65 * k[..., None]) + (F.mean(-1, keepdims=True) - F) * 0.6 * k[..., None]
+    if R6D_S18:                                          # [D组 r6 #45] 素面黑漆长鞘：鞘尾红穗/红箍去色压成黑漆，垂下的穗子整条去掉
+        sh = ss(1180, 1240, xx) * ss(640, 690, yy)
+        red = sh * np.maximum(ss(24, 10, H2), ss(330, 345, Hh)) * ss(0.12, 0.25, S)
+        F = F * (1 - red[..., None]) + (F.mean(-1, keepdims=True) * 0.45) * red[..., None]
+        tas = ss(1350, 1370, xx) * ss(1480, 1460, xx) * ss(775, 800, yy)
+        sp.A = (A * (1 - tas)).astype(np.float32)
+        sp.ring = cv2.GaussianBlur(np.clip(sp.A - cv2.erode(sp.A, np.ones((5, 5), np.uint8)), 0, 1), (0, 0), 1.5)
     sp.F = np.clip(F, 0, 1).astype(np.float32)
 
 
