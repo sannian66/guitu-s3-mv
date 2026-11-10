@@ -658,3 +658,7 @@
 ## 2026-11-10 06:18 · OpenAI 协议渠道批量生图（jobs_F_r6b_a.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `emp_flat_a`（50s）→ `assets/gen/R6_F/emp_flat_a_cut.png`
+
+## 2026-11-10 06:32 · OpenAI 协议渠道批量生图（blade_face4_a.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `blade_face4_a`（61s）→ `assets/gen/R6_B/blade_face4_a_cut.png`

@@ -861,6 +861,7 @@ class P12(Shot):
     def __init__(self):
         # 第五轮 #18：0:56 刀尖出画被裁——重新出图（blade_face3_a：同姿势拉远，整把刀含刀尖、束发结都在画内）
         self.sp = spr('R5_B/blade_face3_a') if R5 else spr('B_r4/blade_face2_pt')
+        if R6: self.sp = spr('R6_B/blade_face4_a')    # r6 #18：腰部以上取景、宽刃大刀竖在面前遮半脸，刀首→刀尖整把在画内（生图 blade_face4_a）
         self.bg = BK.dark_bg(912, 0.015, 0.05)
         T.warm('只信这柄', 'kai', 96)
 
@@ -869,20 +870,25 @@ class P12(Shot):
         fr = self.bg.copy()
         x, y = K.grid()
         fr += np.exp(-(((x - 960) / 500) ** 2 + ((y - 380) / 300) ** 2))[..., None] * np.array([0.10, 0.11, 0.14], np.float32)
-        fr, _ = put_at(fr, self.sp, t, (0.5, 0.36), (960, 452) if R5 else (960, 614), 1400 if R5 else 1900,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
+        _src, _dst, _w = ((0.5, 0.5), (960, 548), 690) if R6 else ((0.5, 0.36), (960, 452) if R5 else (960, 614), 1400 if R5 else 1900)
+        fr, _ = put_at(fr, self.sp, t, _src, _dst, _w,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
                        grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
                        rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4))
         # 刀刃上一线寒光自上而下
         q = clamp01((t - self.t0 - 0.1) / 0.6)
         yy = (185 + 470 * eio(q)) if R5 else (120 + 600 * eio(q))
-        g = np.exp(-(((x - 960) / 26) ** 2 + ((y - yy) / 60) ** 2))
+        gx, gw = 960, 26
+        if R6:                                                             # r6：寒光沿新刀身（刀尖 y≈195 → 护手 y≈600）；腰下沉进暗部（生图下沿不露硬边）
+            yy, gx, gw = 200 + 380 * eio(q), 951, 28
+            fr = fr * (1 - 0.8 * sstep(870, 975, y))[..., None]
+        g = np.exp(-(((x - gx) / gw) ** 2 + ((y - yy) / 60) ** 2))
         fr += g[..., None] * np.array([0.9, 0.95, 1.0], np.float32) * 0.8 * (1 - q * 0.5)
         fr = K.sparks(fr, t, 1212, (960, 980), n=30, life=1.2, speed=(60, 200), dirc=(0, -1), spread=0.8, grav=-60, area=(900, 40), amt=0.6)
         pr = [0.0] * 4 if NOVLYR else tp(11, [0, 1, 2, 3], t, 0.2)          # r6 #53：去竖排「只信这柄」
         fr = T.ink_bleed_in(fr, '只信这柄', pr, places=[dict(ch=c, x=1420, y=300 + i * 130, size=104, rot=0, font='kai', idx=i, emph=False)
                                                         for i, c in enumerate('只信这柄')],
                             color='white', style_kw=dict(shadow=0.85, glow=0.12))
-        fr = cam(fr, 1.0 + 0.08 * eio(u), 0, 0)
+        fr = cam(fr, 1.0 + (0.04 if R6 else 0.08) * eio(u), 0, 0)      # r6：推镜 8%→4%，推到底刀尖/刀首仍在画内
         return fr, 0
 
 
