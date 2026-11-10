@@ -140,48 +140,135 @@ def install(G):
     # ---------------------------------------------------------------- S035 MS 蓄力 → 腾空举刀 → 俯冲斜劈（命中）→ 落地收刀
     class S035Sprite(S035):
         # r5 F组（用户 #23「跳斩姿势丑 → 帅气，多张图让动作顺畅」）：生图关键姿势按节拍串接
-        # r6 F组（评审 4 分：姿势一闪而过不可辨、人太小、歌词被刀光打碎）：
-        #   · 4 个清楚姿势，每个至少停 3 帧：蓄力 js1_crouch_b（3 帧）→ 腾空举刀 js3_apex_b（3 帧，含 1 帧上升甩动）
-        #     → 俯冲斜劈 js4_strike_a（命中 70.00，停 ~10 帧随势慢推）→ 落地收刀 js5_land_a（~20 帧）
-        #   · 人物包围盒高 600–640px（≈ 画面 1080 的 56–60%），脚底统一落在 y≈900（2.39 黑边内）
-        #   · 命中闪白降到 0.45（命中帧仍看得见劈刀姿势），去掉起跳闪
-        #   · 镜内字「那就劈开它」按用户 #55 保留：移到左上墙面（刻字位），斩开只演 3 帧，随后合拢复原并留一道红热斩痕，整句始终可读；
-        #     底部横排字幕区不再压任何刀光/碎砖
+        # r6 F组第二棒（评审 6.5：69.867 糊团、跳不高、70.1 独立白光横穿字、字像标题不像刻）：
+        #   · 4 姿势沿一条看得见的抛物线：蓄力脚底 y900 → 腾空 apex 脚底 ≈y712（头顶 ≥ y150）→ 俯冲斜劈右下斜落 → 落地 y900
+        #   · 腾空首帧 = js3_apex_b 清晰版（运动模糊 ≤4px、残影 ≤0.25）；落地首帧残影减半
+        #   · 「那就劈开它」= 墙面阴刻（字内压暗 ~30%、上沿内侧压暗、下沿内侧提亮、砖纹穿过笔画、「劈」填朱）
+        #   · 斩痕 = 人物刀弧本身：一条从字腰斜切入、弯向右下刀尖的刀弧（不再有独立白带）；字沿刀弧被切开，
+        #     上下两半沿法线错开 12px 后不合拢，切口红热 0.8s 冷却成暗红；火星不进字的包围盒
         T_APEX = 69.865
         T_STRK = 69.955         # 命中前一帧（69.967）先见俯冲斜劈姿势
         T_LAND = 70.30
         GY = 900                # 脚底线
-        POSES = {'crouch': ('R5_F/js1_crouch_b', 600), 'apex': ('R5_F/js3_apex_b', 640),
+        POSES = {'crouch': ('R5_F/js1_crouch_b', 600), 'apex': ('R5_F/js3_apex_b', 560),
                  'strike': ('R5_F/js4_strike_a', 600), 'land': ('R5_F/js5_land_a', 600)}
+        TXT, TX, TY, TS = '那就劈开它', 470.0, 252.0, 88      # 刻字：整句中心、字号
+        C0, C1 = (150.0, 226.0), (790.0, 282.0)                # 字上的切线（≈5°，穿过五字中腰），刀弧由此弯向右下
+        GAP = 12.0                                             # 劈开后上下两半沿法线错开
         def __init__(self):
             super().__init__()
             self.P = {k: L(p) for k, (p, h) in self.POSES.items()}
+            # 刀弧路径：字上直线段 → 三次曲线弯向右下（命中时刀尖处）
+            c0, c1 = np.array(self.C0), np.array(self.C1); d = (c1 - c0) / np.linalg.norm(c1 - c0)
+            q1, q2, q3 = c1 + d * 380, np.array([1430.0, 560.0]), np.array([1560.0, 800.0])
+            seg = [c0 + (c1 - c0) * u for u in np.linspace(0, 1, 30)]
+            seg += [(1 - u) ** 3 * c1 + 3 * (1 - u) ** 2 * u * q1 + 3 * (1 - u) * u * u * q2 + u ** 3 * q3 for u in np.linspace(0, 1, 60)[1:]]
+            self.path = np.array(seg, np.float32)
+            self.d = d; self.n = np.array([-d[1], d[0]])                 # n 指向切线下方
+            # 刻字蒙版（整句 / 朱红「劈」）
+            La, Lr = T.Layer(), T.Layer()
+            adv = self.TS * (1 + LY.TRACK_H)
+            for i, ch in enumerate(self.TXT):
+                g = T.glyph(ch, LY.F_MAIN, self.TS, False)
+                cx = self.TX + (i - 2) * adv
+                La.paste(g, cx, self.TY, (1, 1, 1))
+                if ch == '劈': Lr.paste(g, cx, self.TY, (1, 1, 1))
+            x, y = K.grid()
+            side = ((x - c0[0]) * self.n[0] + (y - c0[1]) * self.n[1]).astype(np.float32)
+            self.side = side
+            self.MA, self.MR = La.A.copy(), Lr.A.copy()
+            bb = np.argwhere(La.A > 0.02); (yy0, xx0), (yy1, xx1) = bb.min(0), bb.max(0)
+            self.tbox = (xx0 - 40, yy0 - 40, xx1 + 40, yy1 + 40)          # 火星禁区（字包围盒外扩，含错开余量）
         def _pose(self, t):
-            """→ (姿势名, 包围盒中心屏幕位置, 旋转, mblur, 残影 (名, 位置, alpha) | None)"""
-            hb = lambda n: self.POSES[n][1] / 2
+            """→ (姿势名, 脚底屏幕位置 (x, y), 旋转, mblur, 残影 (名, 脚底位置, alpha) | None)"""
+            fps = 1 / 30
             if t < self.T_APEX:                                            # 蓄力：压低重心向右滑步
                 k = eio(clamp01((t - self.t0) / (self.T_APEX - self.t0)))
-                return 'crouch', (620 + 70 * k, self.GY - hb('crouch')), 0.0, (8 * k, 0), None
-            if t < self.T_STRK:                                            # 腾空举刀：第 1 帧带上升甩动，随后滞空
-                k = eout(clamp01((t - self.T_APEX) / (self.T_STRK - self.T_APEX)), 2)
-                g = ('crouch', (690, self.GY - hb('crouch')), 0.35 * (1 - k))
-                return 'apex', (880 + 70 * k, 540 - 50 * k), -3 * (1 - k), (10 * (1 - k), -40 * (1 - k)), g
-            if t < self.T_LAND:                                            # 俯冲斜劈：刀从左上劈向右下（过裂缝）
-                k = eout(clamp01((t - self.T_STRK) / (self.T_LAND - self.T_STRK)), 2)
-                g = ('apex', (950, 490), 0.3 * (1 - clamp01((t - self.T_STRK) / 0.07)))
-                return 'strike', (1060 + 90 * k, 470 + 80 * k), 0.0, (12 * (1 - k), 10 * (1 - k)), g
+                return 'crouch', (620 + 70 * k, self.GY), 0.0, (6 * k, 0), None
+            if t < self.T_STRK:                                            # 腾空：抛物线顶点附近，清晰，几乎不糊
+                i = int(round((t - self.T_APEX) / fps))                    # 0,1,2
+                fx = (845, 885, 915)[min(i, 2)]; fy = (738, 718, 712)[min(i, 2)]
+                g = ('crouch', (690, self.GY), 0.22) if i == 0 else None
+                return 'apex', (fx, fy), (-2.0, -1.0, 0.0)[min(i, 2)], ((4, -3), (2, -1), (0, 0))[min(i, 2)], g
+            if t < self.T_LAND:                                            # 俯冲斜劈：沿抛物线右下斜落
+                k = clamp01((t - self.T_STRK) / (self.T_LAND - self.T_STRK))
+                kk = eout(k, 2)
+                fx = 990 + 170 * kk; fy = 752 + 140 * k ** 1.4
+                g = ('apex', (915, 712), 0.22 * (1 - clamp01((t - self.T_STRK) / 0.07)))
+                return 'strike', (fx, fy), 0.0, (8 * (1 - kk), 8 * (1 - kk)), g
             a = t - self.T_LAND                                            # 落地收刀：沉身
             k = eout(clamp01(a / 0.2), 2)
-            g = ('strike', (1150, 550), 0.3 * (1 - clamp01(a / 0.07)))
-            return 'land', (1250 + 40 * clamp01(a / 0.65), self.GY - hb('land') - 26 * (1 - k)), 0.0, (16 * (1 - k), 18 * (1 - k)), g
-        def _put(self, fr, t, name, pos, rot=0.0, mblur=(0, 0), alpha=1.0, rim=None, gr=None):
+            g = ('strike', (1160, 892), 0.12 * (1 - clamp01(a / 0.05)))
+            return 'land', (1250 + 40 * clamp01(a / 0.65), self.GY + 14 * (1 - k) - 14), 0.0, (6 * (1 - k), 6 * (1 - k)), g
+        def _put(self, fr, t, name, foot, rot=0.0, mblur=(0, 0), alpha=1.0, rim=None, gr=None):
             sp = self.P[name]; th = self.POSES[name][1]
             x0, y0, x1, y1 = sp.bbox
             s = th / ((y1 - y0) * sp.h)
-            return sp.draw(fr, t, ((x0 + x1) / 2, (y0 + y1) / 2), pos, s, rot=rot, mblur=mblur, rim=rim, grade=gr,
+            return sp.draw(fr, t, ((x0 + x1) / 2, y1), foot, s, rot=rot, mblur=mblur, rim=rim, grade=gr,
                            shade=None, wind_amp=6.5, alpha=alpha, wrap=0.4)[0]
+        def _carve(self, fr, t, shift):
+            """墙面阴刻「那就劈开它」；命中后沿刀弧切开，上下两半错开 GAP（不合拢）"""
+            a = t - self.T_HIT
+            off = self.GAP * eout(clamp01(a / 0.07), 2) if a >= 0 else 0.0
+            sd = self.side
+            if off > 0:
+                up = np.clip(0.5 - sd / 1.2, 0, 1); dn = 1 - up
+                def mv(m, k):
+                    M = np.float32([[1, 0, shift + self.n[0] * k + self.d[0] * k * 0.3], [0, 1, self.n[1] * k + self.d[1] * k * 0.3]])
+                    return cv2.warpAffine(m, M, (W, H), flags=cv2.INTER_LINEAR)
+                MA = mv(self.MA * up, -off / 2) + mv(self.MA * dn, off / 2)
+                MR = mv(self.MR * up, -off / 2) + mv(self.MR * dn, off / 2)
+            else:
+                M = np.float32([[1, 0, shift], [0, 1, 0]])
+                MA = cv2.warpAffine(self.MA, M, (W, H)); MR = cv2.warpAffine(self.MR, M, (W, H))
+            Mb = cv2.GaussianBlur(MA, (0, 0), 0.8)
+            dn2 = np.roll(Mb, 3, axis=0); up2 = np.roll(Mb, -3, axis=0)
+            top = np.clip(Mb - dn2, 0, 1); bot = np.clip(Mb - up2, 0, 1)
+            lum = fr.mean(-1, keepdims=True)
+            fr = fr * (1 - 0.34 * Mb[..., None]) * (1 - 0.45 * top[..., None])
+            fr = fr + bot[..., None] * (0.05 + 0.5 * lum) * np.array([1.0, 0.86, 0.68], np.float32)   # 下沿内侧受火光
+            outl = np.clip(cv2.GaussianBlur(MA, (0, 0), 2.2) - Mb, 0, 1)                              # 刻口外缘一圈微压暗
+            fr = fr * (1 - 0.18 * outl[..., None])
+            mr = cv2.GaussianBlur(MR, (0, 0), 0.6)[..., None]
+            red = np.array(LY.RED_T, np.float32) * (0.55 + 2.2 * lum)                                 # 朱砂填色，砖纹透出
+            fr = fr * (1 - 0.82 * mr) + red * 0.82 * mr
+            if off > 0:                                                    # 切口：沿切线一道深槽 + 红热边，0.8s 冷却成暗红
+                Ls = np.zeros((H, W), np.float32)
+                c0 = np.array(self.C0) + [shift, 0]; c1 = np.array(self.C1) + [shift, 0]
+                cv2.line(Ls, tuple((c0 * 4).astype(int)), tuple((c1 * 4).astype(int)), 1.0, max(2, int(off * 0.5)), cv2.LINE_AA, 2)
+                Ls = cv2.GaussianBlur(Ls, (0, 0), 0.8)
+                inside = cv2.GaussianBlur(cv2.dilate(MA, np.ones((7, 7), np.uint8)), (0, 0), 3)
+                Ls = Ls * np.clip(inside * 1.5, 0.35, 1)
+                hot = math.exp(-a / 0.28)
+                col = np.array([1.0, 0.42, 0.12], np.float32) * hot + np.array([0.42, 0.05, 0.03], np.float32) * (1 - hot)
+                fr = fr * (1 - 0.85 * Ls[..., None])
+                rim = np.clip(cv2.GaussianBlur(Ls, (0, 0), 2.0) * 1.6 - Ls, 0, 1)
+                fr = fr + rim[..., None] * col * (0.35 + 1.4 * hot) + cv2.GaussianBlur(Ls, (0, 0), 6)[..., None] * col * 0.8 * hot
+            return fr
+        def _trail(self, fr, t, shift):
+            """人物刀弧：69.967 起从字腰切入，命中帧到刀尖；字上那段 2 帧内熄灭，刀尖段 0.16s 衰减"""
+            a = t - self.T_STRK
+            if a < 0: return fr
+            head = clamp01(0.55 + 0.45 * a / max(self.T_HIT - self.T_STRK, 1e-3))
+            if t < self.T_HIT: head = 0.55
+            n = len(self.path); i1 = max(2, int(head * n))
+            Lb = np.zeros((H // 2, W // 2), np.float32)
+            tt = max(0.0, t - self.T_HIT)
+            for i in range(i1 - 1):
+                u = i / n
+                f = math.exp(-tt / (0.045 if u < 0.33 else 0.16)) * (0.35 if u < 0.33 else 1.0)
+                w = max(1, int((3 + 14 * math.sin(math.pi * min(1.0, u / max(head, 1e-3))) ** 0.8) / 2))
+                p0 = self.path[i] + [shift, 0]; p1 = self.path[i + 1] + [shift, 0]
+                cv2.line(Lb, tuple((p0 / 2 * 4).astype(int)), tuple((p1 / 2 * 4).astype(int)), float(f), w, cv2.LINE_AA, 2)
+            if Lb.max() < 0.01: return fr
+            Lb = cv2.resize(Lb, (W, H))
+            core = cv2.GaussianBlur(Lb, (0, 0), 1.0)
+            fr = fr + core[..., None] * np.array([1.2, 1.15, 1.08], np.float32) + cv2.GaussianBlur(Lb, (0, 0), 10)[..., None] * np.array([0.8, 0.55, 0.35], np.float32)
+            edge = np.clip(cv2.GaussianBlur(Lb, (0, 0), 4) - core, 0, 1)
+            return fr + edge[..., None] * RED * 1.2
         def render(self, t):
             camx = 0.0 if t < self.T_HIT else 40 * clamp01((t - self.T_HIT) / 0.6)
+            sh = -camx * 0.6                                               # 墙面（含刻字）跟随视差
             src = self.wall[200:1280, int(200 + camx * 0.6) % 400: int(200 + camx * 0.6) % 400 + 1920]
             fr = src * 0.8
             x, y = K.grid()
@@ -191,29 +278,31 @@ def install(G):
                 cm = K.draw_crack((H, W), self.crack - [camx * 0.6, 0], 6, branches=14, seed=352, prog=pc)
                 fr = over(fr, cm, (0, 0, 0))
                 fr += K.blur_ds(cm, 6)[..., None] * 1.5 * GOLD * 0.5 * (0.4 + 0.6 * math.exp(-(t - self.T_HIT) / 0.4))
+            fr = self._carve(fr, t, sh)
             rim = dict(col=(1.0, 0.78, 0.5), amt=1.8, dir=(0.0, 1.0))     # 底部金红火光逆打
             gr = dict(expo=0.80, sat=0.6, tint=(1.0, 0.95, 0.9), lift=0.0, gamma=1.18)
             name, pos, rot, mb, ghost = self._pose(t)
             pos = (pos[0] - camx, pos[1])
-            if name == 'apex':
-                fr = speed_lines(fr, t, 352, 0.6, 0.22)
-            elif name == 'crouch':
-                fr = speed_lines(fr, t, 351, 1.0, 0.18 * clamp01((t - self.t0) / 0.1))
+            if name == 'crouch':
+                fr = speed_lines(fr, t, 351, 1.0, 0.14 * clamp01((t - self.t0) / 0.1), y0=500, y1=880)
             if ghost and ghost[2] > 0.02:                                  # 前一姿势残影（冷灰半透，动作连贯）
                 fr = self._put(fr, t, ghost[0], (ghost[1][0] - camx, ghost[1][1]), alpha=ghost[2],
                                rim=dict(col=(0.7, 0.78, 0.95), amt=1.0, dir=(0, -1)),
                                gr=dict(expo=0.45, sat=0.2, tint=(0.85, 0.92, 1.05), lift=0.04, gamma=1.0))
-            if name == 'strike' or (name == 'land' and t - self.T_LAND < 0.3):   # 斜劈刀弧（左上 → 右下），在人物身后
-                a = t - self.T_STRK
-                fr = arc_trail(fr, (1120 - camx, 520), 560, 120, -175, 5, eout(clamp01(a / 0.06)),
-                               math.exp(-max(0.0, t - self.T_HIT) / 0.16), w=18, rot=50)
+            fr = self._trail(fr, t, 0.0)                                   # 刀弧在人物身后
             fr = self._put(fr, t, name, pos, rot, mb, rim=rim, gr=gr)
+            if name == 'crouch' or name == 'land':                         # 接触阴影
+                cs = np.exp(-(((x - pos[0]) / 230) ** 2 + ((y - self.GY - 4) / 14) ** 2)).astype(np.float32)
+                fr = fr * (1 - 0.5 * cs[..., None])
+            xa, ya, xb, yb = self.tbox
+            keep = np.ones((H, W), np.float32); keep[max(0, ya):yb, max(0, xa):xb] = 0
+            keep = cv2.GaussianBlur(keep, (0, 0), 8)[..., None]
             if t >= self.T_HIT:
                 a = t - self.T_HIT
                 r = np.random.default_rng(3530)
                 Lb = np.zeros((H // 2, W // 2), np.float32)
                 for i in range(22):
-                    ox, oy = r.uniform(1050, 1500), r.uniform(250, 700)
+                    ox, oy = r.uniform(1100, 1500), r.uniform(380, 720)
                     vx, vy = r.normal(250, 500), r.normal(-250, 300)
                     s = (r.uniform(18, 60)) * (1 + 2 * a)
                     px, py = ox + vx * a - camx * 0.6, oy + vy * a + 500 * a * a
@@ -221,8 +310,10 @@ def install(G):
                     box = cv2.boxPoints(((px / 2, py / 2), (s / 2, s * 0.45 / 2), r.uniform(0, 180) + 300 * a))
                     cv2.fillConvexPoly(Lb, box.astype(np.int32), 1.0, cv2.LINE_AA)
                 fr = over(fr, cv2.resize(cv2.GaussianBlur(Lb, (0, 0), 2), (W, H)), (0.03, 0.03, 0.035))
-                fr = K.sparks(fr, t, 3540, (1180, 520), n=70, life=0.5, speed=(400, 1200), dirc=(0.3, -0.6), spread=1.2,
-                              grav=800, burst=True, t0=self.T_HIT, area=(150, 220))
+                base = fr
+                fr = K.sparks(fr, t, 3540, (1250, 600), n=70, life=0.5, speed=(400, 1200), dirc=(0.5, -0.5), spread=0.9,
+                              grav=900, burst=True, t0=self.T_HIT, area=(150, 200))
+                fr = base + (fr - base) * keep                             # 火星不进字的包围盒
             if self.T_LAND <= t < self.T_LAND + 0.5:                       # 落地扬尘
                 fr = K.sparks(fr, t, 3550, (1250 - camx, self.GY - 8), n=40, life=0.5, speed=(150, 450), dirc=(1, -0.2), spread=1.4,
                               grav=300, burst=True, t0=self.T_LAND, area=(260, 10), color=(0.6, 0.58, 0.55), amt=0.5)
@@ -230,22 +321,6 @@ def install(G):
             sk = pulse(t, self.T_HIT, 0.12) * (t >= self.T_HIT)
             dx, dy, dr = shake(t, 12 * sk, 16, 35)
             fr = cam(fr * (1 - 0.2 * fl) + fl * 0.32, 1.02 + 0.025 * sk, dx, dy, dr)
-            p = clamp01((t - 69.60) / 0.9)
-            pl = [dict(q, x=470 + (i - 2) * 86 * 1.12, y=250, size=86) for i, q in enumerate(LY.places('那就劈开它', 'bottom', red=('劈',)))]
-            cut = (self.T_HIT - 69.60) / 0.9
-            a = t - self.T_HIT
-            # 斩开只演 3 帧（刀光掠过 + 两半一错），随后字合拢复原、留一道刻进墙里的斩痕 —— 字始终整句可读
-            pp = p if 0 <= a < 0.1 else min(p, cut - 1e-3)
-            fr = T.slash_cut(fr, '那就劈开它', pp, places=pl, color=LY.WHITE, angle=12,
-                             cut_at=cut, emph=('劈',), emph_color=LY.RED_T, slide=0.10, seed=35,
-                             style_kw=dict(LY.STYLE))
-            if a >= 0.1:
-                th = math.radians(12); d = np.array([math.cos(th), math.sin(th)])
-                c = np.array([470.0, 250.0]); L_ = 330
-                Ls = np.zeros((H, W), np.float32)
-                cv2.line(Ls, tuple((c - d * L_).astype(int)), tuple((c + d * L_).astype(int)), 1.0, 2, cv2.LINE_AA)
-                hot = math.exp(-(a - 0.1) / 0.35)
-                fr = fr * (1 - 0.6 * Ls[..., None]) + (cv2.GaussianBlur(Ls, (0, 0), 3) * (0.25 + 0.9 * hot))[..., None] * np.array([1.0, 0.35, 0.12], np.float32)
             return fr, 0
 
     # ---------------------------------------------------------------- S037 ELS 背影站在金缝前（小人，金 rim）

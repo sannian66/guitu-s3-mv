@@ -2111,6 +2111,30 @@ class S29_Thrust(Shot):
         return shake_cam(fr, t, [V(O[47][4])], 6, z=1.0 + 0.05 * u, oy=-20 * u), 0.0
 
 
+def _blade_sil(fr, sp, feet, sc, src=((1124, 214), (1126, 24))):
+    """[D组 r6 第二棒] S30 剪影刀身：暗芯 + 朝光一侧 1px 金白刃光（源图刀身细且亮，金光里会被吃掉）。"""
+    fx, fy = D.feet(sp)
+    P = [(feet[0] + (a / sp.w - fx) * sp.w * sc, feet[1] + (b / sp.h - fy) * sp.h * sc) for a, b in src]
+    L = np.zeros((H * 4 // 4, W), np.float32); G = np.zeros_like(L)
+    p0 = (int(P[0][0] * 4), int(P[0][1] * 4)); p1 = (int(P[1][0] * 4), int(P[1][1] * 4))
+    cv2.line(L, p0, p1, 1.0, max(1, int(5 * sc / 0.3)), cv2.LINE_AA, 2)
+    cv2.line(G, (p0[0] - 8, p0[1]), (p1[0] - 6, p1[1]), 1.0, 1, cv2.LINE_AA, 2)
+    L = cv2.GaussianBlur(L, (0, 0), 0.6); G = cv2.GaussianBlur(G, (0, 0), 0.5)
+    fr = fr * (1 - 0.85 * L[..., None]) + L[..., None] * np.array([0.03, 0.025, 0.02], np.float32) * 0.85
+    return fr + G[..., None] * np.array([1.0, 0.85, 0.55], np.float32) * 0.9
+
+
+DA_Y, DA_S = 330, 420      # [D组 r6 第二棒] S30 金「答」新位置/字号（原 470 / 640）
+
+
+def _knee(fr, knee=0.80, top=0.92):
+    """亮部软压：最大通道超过 knee 的部分平滑压到 top 以下（色相不变）。"""
+    m = fr.max(-1, keepdims=True)
+    over = np.clip(m - knee, 0, None)
+    nm = knee + (top - knee) * (1 - np.exp(-over / (top - knee)))
+    return fr * np.where(m > knee, nm / np.maximum(m, 1e-6), 1.0)
+
+
 def gold_tip(A, B, p, tip=(960, 345), seed=0):
     """[D组] S29→S30：「答」的金光从刀尖射出、以刀尖为圆心铺开，圆内是下一镜（裂开的云），圆缘一圈金焰；中间帧不是纯白"""
     x, y = K.grid()
@@ -2125,7 +2149,8 @@ def gold_tip(A, B, p, tip=(960, 345), seed=0):
     out = out + D.rays(tip, p, seed=7, n=40)[..., None] * GOLD * 0.35 * math.sin(math.pi * p)
     a = math.sin(math.pi * cl((p - 0.15) / 0.7))
     if a > 0.02 and not TXTCUT:
-        L = D.text_layer([('答', 960, 470, 680, a * 0.45, 1.25 - 0.25 * p, 0.0, GOLD)], fname='serif_black')
+        ay, asz = (DA_Y, DA_S * 1.06) if R6D_B else (470, 680)
+        L = D.text_layer([('答', 960, ay, asz, a * 0.45, 1.25 - 0.25 * p, 0.0, GOLD)], fname='serif_black')
         out = T.compose(out, L, shadow=0.0, glow=0.6 * a, glow_color=(1.0, 0.6, 0.2), glow_sigma=40)
     return out
 
@@ -2146,24 +2171,33 @@ class S30_Da(Shot):
         gap = 20 + 520 * op
         open_ = np.clip((gap - np.abs(x - 960 - (n - 0.5) * 120)) / 60, 0, 1) * (1 - K.sstep(700, 1000, y))
         sky = np.array([1.2, 0.95, 0.6], np.float32) * (0.8 + 0.5 * (1 - y / H))[..., None]
+        if R6D_B:                                              # [D组 r6 第二棒] 192.3 光柱不再一团纯白：压亮度 + 保留云纹
+            cn = cv2.resize(D._tile(305)[:H // 4, :W // 4], (W, H)); cn = cv2.GaussianBlur(cn, (0, 0), 6)
+            cn = (cn - cn.mean()) / (cn.std() + 1e-6)
+            sky = np.array([0.95, 0.72, 0.42], np.float32) * (0.50 + 0.26 * (1 - y / H) + 0.09 * cn)[..., None]
         fr = fr * (1 - open_[..., None]) + sky * open_[..., None]
         edge = np.clip(1 - np.abs(np.abs(x - 960 - (n - 0.5) * 120) - gap) / 30, 0, 1) * (1 - K.sstep(700, 1000, y))
         fr = fr + edge[..., None] * GOLD * 1.5
         fr = D.godrays(fr, open_ + edge, (960, 200), amt=0.9)
-        fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), (960, 1000 + 160 * eo(u, 2)), D.fit_scale(self.sp, 420), expo=0.5, sat=0.5,
+        if R6D_B: feet, fh = (960, 890 - 10 * eo(u, 2)), 300     # [D组 r6 第二棒] 人整身入画（脚在下黑边内），刀尖上探留给「答」
+        else: feet, fh = (960, 1000 + 160 * eo(u, 2)), 420
+        fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), feet, D.fit_scale(self.sp, fh), expo=0.5, sat=0.5,
                               tint=(1.05, 0.95, 0.85), rim=GOLDR, rim_amt=5.0, rim_dir=(0.0, -1.0), wind=12, look='sil')
+        if R6D_B: fr = _blade_sil(fr, self.sp, feet, D.fit_scale(self.sp, fh))   # 刀身在金光里读得出
         p = cp(t, O[47][5], 0.1)
         if p > 0:
             if not TXTCUT:                                      # [D r5 #46] 去「答」；[r6 #55] 金「答」保留（金光、火星照旧）
-                L = D.text_layer([('答', 960, 470, 640, min(1, p * 2), 1 + 0.35 * (1 - eo(p)) + 0.05 * u, 0.0, GOLD)], fname='serif_black')
+                ay, asz = (DA_Y, DA_S) if R6D_B else (470, 640)       # [D组 r6 第二棒] 「答」上移缩小，字脚离刀尖 ≥30px
+                L = D.text_layer([('答', 960, ay, asz, min(1, p * 2), 1 + 0.35 * (1 - eo(p)) + 0.05 * u, 0.0, GOLD)], fname='serif_black')
                 fr = T.compose(fr, L, shadow=0.85, shadow_sigma=40, glow=0.5, glow_color=(1.0, 0.55, 0.2), glow_sigma=30)
             fr = K.sparks(fr, t, 3001, (960, 470), n=220, life=1.0, speed=(500, 1600), dirc=(0, -1), spread=3.1, grav=150, burst=True,
                           t0=td, color=tuple(GOLD), amt=1.5)
         fr = fr + impact(t, td, 0.12) * GOLD * 0.8
+        if R6D_B: fr = _knee(fr, 0.80, 0.92)                    # 高光软压到 ≤235/255（出画白金前）
         wo = ei(cl((t - (self.t1 - 0.5)) / 0.5), 2)        # 白金出画（接 E 组 flash_white）
         fr = fr * (1 + 1.0 * wo) + wo * np.array([1.0, 0.92, 0.75], np.float32) * 0.55   # 金白出画但「答」轮廓仍在
         z = 1.0 + 0.04 * u + 0.1 * impact(t, td, 0.15)
-        return shake_cam(fr, t, [td], 10, z=z, oy=-60 * eo(u, 2)), 0.0
+        return shake_cam(fr, t, [td], 10, z=z, oy=(-25 if R6D_B else -60) * eo(u, 2)), 0.0
 
 
 SHOTS = [S01_Drop, S02_Steles, S03_TypeSlam, S04_Snow, S05_Ren, S06_Scale, S07_Heap, S08_Seals, S09_Brush, S10_Giant,
