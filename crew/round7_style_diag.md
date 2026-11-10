@@ -16,3 +16,9 @@ AI 味：皮肤过光、对比塑料、背景糊；缺水墨笔触与纸纹。
 ## 4 镜试做（11-11 03:57）
 用户要求加入红色 → 定调：黑墨 + 宣纸白 + 朱红（唯一彩色），尾段金色夕阳改朱红日轮。
 母版 assets/gen/R7_style/S043_master.png；S015/S096/S121 以「原帧 + 母版」双参考重绘（gpt-image-2 edits，api.wentoken.si，每张约 45s）。对比 crew/round7_style_test.jpg。jobs/r7_*.json。
+
+## 风格 B + 分层 3D 试做（11-11 04:05）
+- 用户给参考图（assets/ref_user/style_B_manga_red.png）：漫画钢笔排线 + 大块平涂朱红。B 版 4 镜 assets/gen/R7_styleB/，A/B 对比 crew/round7_styleAB.jpg。
+- S121 分层：天空红日 / 墨云带 / 鬼屠 MCU / 前景红绸，A 版 assets/gen/R7_layersA，B 版 R7_layersB（绿幕生图 + tools/cutout_green.py）。
+- Remotion：remotion_test/src/S121Layers.tsx，平面按深度 z=-32/-13/0/4.2 摆放，ShaderMaterial 做云/绸飘动，机位推近 + 横移环绕 + 手持噪声。35 帧约 40s（swangle）。对比 out/round7/S121_分层3D对比.mp4（不入库）。
+- 已知：前景红绸层跑出画外，待调位置。
