@@ -65,8 +65,8 @@ const SHOTS = [
     {f: 'S028_L3_cut.png', z: 4, m: 1.15, vs: 0.25, vy: 0.05}]},
   {id: 'S029', from: 32, dur: 28, cam: S029, camZ: 9.5, layers: [
     {f: 'S029_L1.png', z: -18, m: 1.2},
-    {f: 'S029_L2_cut.png', z: 0, m: 1.12},
-    {f: 'S029_L3_cut.png', z: 3, m: 1.2, vx: 1.2, vy: 0.5}]},
+    {f: 'S029_L2_cut.png', z: 0, m: 1.02, dy: 0.55},
+    {f: 'S029_L3_cut.png', z: 3, m: 0.85, dx: -0.6, dy: -0.9, vx: 1.6, vy: 0.6}]},
   {id: 'S030', from: 60, dur: 41, cam: S030, camZ: 10, layers: [
     {f: 'S030_L1.png', z: -45, m: 1.35, dy: 2},
     {f: 'S030_L2_cut.png', z: -16, m: 1.3, dy: 0.6, vx: 0.5, amp: 0.05, freq: 3},
