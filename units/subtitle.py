@@ -128,10 +128,12 @@ def _reds(s):
 
 
 def _line_info(t):
+    hit = None
     for t0, t1, s in LINES:
         if t0 - 0.3 <= t < t1 + 0.6:
-            return t0, t1, s
-    return None
+            if hit is None: hit = (t0, t1, s)
+            elif t >= t0 - 0.12: hit = (t0, t1, s)      # r6-SUB3：后句首字起笔即切到后句（原先前句尾巴 0.6s 会把后句前几个字压住不出）
+    return hit
 
 
 def _plan(s, mode):
@@ -463,7 +465,7 @@ class _FXS:
         import cv2
         L = np.zeros((FX_Y1 - FX_Y0, 1920), np.float32)
         cv2.line(L, (int(p0[0] * 4), int((p0[1] - FX_Y0) * 4)), (int(p1[0] * 4), int((p1[1] - FX_Y0) * 4)), 1.0, max(1, int(w)), cv2.LINE_AA, shift=2)
-        if blur > 0: L = cv2.GaussianBlur(L, (0, 0), blur) * (1 + blur)
+        if blur > 0: L = cv2.GaussianBlur(L, (0, 0), blur) * (1 + 0.5 * blur)
         self.light += L[..., None] * np.array(color, np.float32) * amt
 
 
@@ -512,16 +514,25 @@ def fx_slam(g, ch, x, y, z, col, tau, kw, S, ko):
         M = cv2.getRotationMatrix2D((G / 2, G / 2), 0, sc); M[:, 2] += (D - G) / 2
         g2 = cv2.warpAffine(g, M, (D, D)) * (0.35 + 0.65 * q)
         return g2, col
-    if 0 <= tau < 0.45:                                              # 墨尘：字脚两侧
+    if 0 <= tau < 0.45:                                              # 墨尘：字脚两侧翻起的灰雾团（软边、上扬、散开）
         r = _rngf('slam', ch, int(x))
         a = tau / 0.45
-        for _ in range(int(16 * kw.get('k', 1.0))):
-            sd = r.choice([-1, 1]); v = r.uniform(80, 260)
-            px = x + sd * (z * 0.35 + v * _eo(a, 2)); py = y + z * 0.42 - r.uniform(0, 10) * a
-            rr = r.uniform(1.5, 4.0) * (1 + a)
-            S.add_light(_dot(rr), px, py, (0.55, 0.50, 0.46), 0.55 * (1 - a) ** 1.5 * ko)
+        for _ in range(int(7 * kw.get('k', 1.0))):
+            sd = r.choice([-1, 1]); v = r.uniform(30, 90)
+            px = x + sd * (z * 0.30 + v * _eo(a, 2)); py = y + z * 0.40 - r.uniform(4, 16) * _eo(a, 2)
+            S.add_light(_puff(r.uniform(5, 9) * (1 + 0.8 * a)), px, py, (0.50, 0.47, 0.44), 0.32 * (1 - a) ** 1.6 * ko)
         if tau < 0.08: S.add_light(g * (1 - tau / 0.08), x, y, (1.0, 0.95, 0.85), 0.6 * ko)   # 落地一闪
     return g, col
+
+
+_PUFC = {}
+def _puff(r):
+    import cv2
+    k = int(round(r))
+    if k not in _PUFC:
+        n = 6 * k + 3; a = np.zeros((n, n), np.float32); a[n // 2, n // 2] = 1
+        a = cv2.GaussianBlur(a, (0, 0), k); _PUFC[k] = a / a.max()
+    return _PUFC[k]
 
 
 _DOTC = {}
@@ -555,11 +566,11 @@ def fx_slash(g, ch, x, y, z, col, tau, kw, S, ko):
     hot = np.exp(-np.abs(sd) / 2.0) * (g > 0.3) * (1 - _ss(0.0, 0.8, q)) * min(1.0, q / 0.03)
     if hot.max() > 0: S.add_light(cv2.GaussianBlur(hot, (0, 0), 2.5) * 2 + hot, x, y, HOT, 1.2 * ko)
     if q < 0.30:                                                      # 刀光：光头 0.07s 横贯，余辉 0.3s
-        ln = z * 1.35; head = _eo(q / 0.07, 2); tail = _ss(0.04, 0.30, q)
+        ln = z * 0.95; head = _eo(q / 0.07, 2); tail = _ss(0.04, 0.30, q)
         p0 = np.array([x, y]) + d * ln * (tail * 2 - 1); p1 = np.array([x, y]) + d * ln * (head * 2 - 1)
         f = (1 - q / 0.30) * ko
-        S.line(p0, p1, (1.0, 0.97, 0.92), w=2, amt=1.6 * f, blur=0.0)
-        S.line(p0, p1, (1.0, 0.90, 0.75), w=3, amt=1.0 * f, blur=5.0)
+        S.line(p0, p1, (1.0, 0.97, 0.92), w=2, amt=1.3 * f, blur=0.0)
+        S.line(p0, p1, (1.0, 0.85, 0.65), w=2, amt=0.6 * f, blur=4.0)
     if q < 0.45:                                                      # 火星：从断口两端迸出，落在黑边内
         r = _rngf('slash', ch, int(x)); a = q / 0.45
         for _ in range(14):
@@ -613,10 +624,10 @@ def fx_drip(g, ch, x, y, z, col, tau, kw, S, ko):
         st = k * 0.16 + r.uniform(0, 0.08); a = q - st
         if a <= 0: continue
         sx, sy = x - G / 2 + px, y - G / 2 + py
-        Lmax = max(4.0, FX_Y1 - 6 - sy) * r.uniform(0.70, 1.0)
+        Lmax = max(4.0, FX_Y1 - 8 - sy) * r.uniform(0.45, 1.0)
         ln = Lmax * _eo(a / 0.75, 2)
-        w = 2.6 if not kw.get('melt') else 3.2
-        br = w * 0.55 + 0.9 * min(1.0, a / 0.5)
+        w = 1.6 if not kw.get('melt') else 2.4
+        br = 1.6 + 1.4 * min(1.0, a / 0.5)
         canvas = np.zeros((int(ln + br) + 8, 14), np.float32)
         cv2.line(canvas, (28, 0), (28, int(ln * 4)), 1.0, max(1, int(round(w))), cv2.LINE_AA, shift=2)
         cv2.circle(canvas, (28, int(ln * 4)), int(br * 4), 1.0, -1, cv2.LINE_AA, shift=2)
@@ -752,8 +763,8 @@ def fx_bolt(g, ch, x, y, z, col, tau, kw, S, ko):
     for yy in np.linspace(FX_Y0 + 3, FX_Y1 - 3, 9):
         pts.append((px, yy)); px += r.uniform(-14, 14)
     for i in range(len(pts) - 1):
-        S.line(pts[i], pts[i + 1], (1.0, 1.0, 1.0), w=2, amt=1.6 * fl * ko)
-        S.line(pts[i], pts[i + 1], cc, w=3, amt=1.2 * fl * ko, blur=5.0)
+        S.line(pts[i], pts[i + 1], (1.0, 1.0, 1.0), w=1, amt=1.6 * fl * ko)
+        S.line(pts[i], pts[i + 1], cc, w=2, amt=0.8 * fl * ko, blur=4.0)
     b0 = pts[3]; b1 = (b0[0] + r.choice([-1, 1]) * 30, b0[1] + 26)
     S.line(b0, b1, cc, w=1, amt=1.0 * fl * ko)
     S.add_light(g, x, y, cc, 1.1 * fl * ko)
@@ -793,9 +804,9 @@ def fx_crack(g, ch, x, y, z, col, tau, kw, S, ko):
         _FXC[key] = cv2.resize(C, (G, G), interpolation=cv2.INTER_AREA)
     C = _FXC[key] * _ss(0.0, 0.06, q) * (g > 0.2)
     k = kw.get('k', 1.0)
-    glow = C * (1 - _ss(0.05, 0.9, q))
+    glow = C * (1 - 0.75 * _ss(0.10, 1.2, q))
     cc = kw.get('col', (1.0, 0.55, 0.22))
-    S.add_light(glow * 1.8 + cv2.GaussianBlur(glow, (0, 0), 2.5), x, y, cc, ko)
+    S.add_light(glow * 2.6 + cv2.GaussianBlur(glow, (0, 0), 2.5) * 1.5, x, y, cc, ko)
     if q < 0.6:
         r = _rngf('crack', ch, int(x))
         for _ in range(int(5 * k)):
