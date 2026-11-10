@@ -8,6 +8,10 @@ out = sys.argv[3] if len(sys.argv) > 3 else 'out/round6/eng_r6'
 os.environ['SPRITE_FAST'] = fast
 sys.path.insert(0, '/workspace/work/mv')
 import numpy as np
+if os.environ.get('BENCH_OLD'):            # 对照：用 main 旧版 sprite.py（BENCH_OLD=文件路径），验证 SPRITE_FAST=0 与旧实现逐像素相同
+    import importlib.util
+    _sp = importlib.util.spec_from_file_location('sprite', os.environ['BENCH_OLD'])
+    _m = importlib.util.module_from_spec(_sp); sys.modules['sprite'] = _m; _sp.loader.exec_module(_m); _m.FAST = False
 import render_sprite_full as R            # 会 chdir 到仓库根、装好路径
 import sprite as SP
 n = [0]
@@ -22,8 +26,8 @@ t0 = time.time()
 img = R.frame(int(round(sec * R.FPS)), {})
 dt = time.time() - t0
 from PIL import Image
-p = os.path.join(out, f'{sec:g}_fast{fast}.png')
+p = os.path.join(out, f'{sec:g}_fast{fast}' + ('_old' if os.environ.get('BENCH_OLD') else '') + '.png')
 Image.fromarray(img).save(p)
-rec = dict(sec=sec, fast=int(fast), secs=round(dt, 2), draws=n[0], png=p)
+rec = dict(sec=sec, fast=int(fast), old=bool(os.environ.get('BENCH_OLD')), secs=round(dt, 2), draws=n[0], png=p)
 print(json.dumps(rec, ensure_ascii=False))
 with open(os.path.join(out, 'bench.jsonl'), 'a') as f: f.write(json.dumps(rec, ensure_ascii=False) + '\n')

@@ -93,6 +93,17 @@ def _key(v):
     return v
 
 
+def _is_scalar(v):
+    return np.ndim(v) == 0
+
+
+def _kr_key(keep_red):
+    """keep_red 可以是标量，也可以是精灵空间逐像素数组（main B1 #15 唇红去色：sec_b_pre1 的 self.kr，(h,w,1)）。"""
+    if _is_scalar(keep_red):
+        return float(keep_red)
+    return ('kr', id(keep_red), np.shape(keep_red))
+
+
 def _build(path, work_w=2048):
     """一张 PNG 的预处理（与 R1 逐点相同，只是少了几次整幅拷贝 / 用 cv2 的 SIMD 逐点算子）。"""
     im = Image.open(path).convert('RGBA')
@@ -221,7 +232,7 @@ class SpriteLayer:
 
     # ---- 精灵空间：风吹 + 调色 + rim + look（同参数可复用；同镜多精灵只算一次）
     def _front(self, t, wind_amp, grade, rim, look, keep_red):
-        key = (self._uid, id(self.F), id(self.A), id(self.ring), id(self.wind_w), round(t, 5), float(wind_amp), _key(grade), _key(rim), look, float(keep_red))
+        key = (self._uid, id(self.F), id(self.A), id(self.ring), id(self.wind_w), round(t, 5), float(wind_amp), _key(grade), _key(rim), look, _kr_key(keep_red))
         got = _SCACHE.get(key)
         if got is not None:
             return got
@@ -251,7 +262,12 @@ class SpriteLayer:
         # 逐点运算全部走「连续三通道」数组（numpy 对 (h,w,1)/(3,) 广播会退化到 stride-0 内层循环，慢 2~3 倍）
         lum = cv2.transform(F, _LUMW3)                              # (h,w,3)：三通道都是亮度
         red = red_mask(F)                                           # (h,w)
-        if keep_red != 1.0:
+        if not _is_scalar(keep_red):                                # 逐像素保色（精灵空间数组）：按裁剪窗口取
+            kr = np.asarray(keep_red, np.float32)
+            kr = kr[..., 0] if kr.ndim == 3 else kr
+            cx, cy, cw, ch = box
+            red *= kr[cy:cy + ch, cx:cx + cw]
+        elif keep_red != 1.0:
             red *= np.float32(keep_red)
         sat = cv2.add(_scale_to3(red, np.float32(1.25) - np.float32(satv)), _scalar3(satv))
         tint = cv2.add(_scale_to3(red, np.float32([1.08, 0.96, 0.96]) - np.asarray(tintv, np.float32)),
@@ -281,14 +297,19 @@ class SpriteLayer:
         """返回 (A0, A, rimm, box, k0, k1, krim)，使精灵空间 F = A0·k0 + rimm·krim + k1；不支持的 look 返回 None。"""
         if look not in (None, 'sil'):
             return None
+        if not all(_is_scalar(v) for v in (grade['expo'], grade['lift'], grade['sat'], grade.get('gamma', 1.0), rim['amt'])) \
+                or np.ndim(grade['tint']) > 1 or np.ndim(rim['col']) > 1:
+            return None                                             # 逐像素调色参数：走整幅精灵空间回退路径
+        if not _is_scalar(keep_red) and np.shape(keep_red)[:2] != (self.h, self.w):
+            return None
         rk = (float(rim['dir'][0]), float(rim['dir'][1]))
         tintv = tuple(float(v) for v in grade['tint'])
         bkey = (self._uid, id(self.F), id(self.A), id(self.ring), id(self.wind_w), round(t, 5), float(wind_amp),
-                float(grade['sat']), float(grade.get('gamma', 1.0)), tintv, float(keep_red), rk)
+                float(grade['sat']), float(grade.get('gamma', 1.0)), tintv, _kr_key(keep_red), rk)
         got = _BCACHE.get(bkey)
         if got is None:
             got = self._make_basis(rk, t, wind_amp, float(grade['sat']), float(grade.get('gamma', 1.0)),
-                                   tintv, float(keep_red))
+                                   tintv, keep_red if not _is_scalar(keep_red) else float(keep_red))
             if len(_BCACHE) >= _BCACHE_MAX:
                 for k in list(_BCACHE)[:len(_BCACHE) - _BCACHE_MAX + 1]:
                     _BCACHE.pop(k, None)
