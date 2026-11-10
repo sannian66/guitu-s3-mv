@@ -29,6 +29,7 @@ def _on(k, d='1'): return os.environ.get(k, d) != '0'
 
 ON = dict(wind=_on('E_R5_WIND'), text=_on('E_R5_TEXT'), mark=_on('E_R5_MARK'), e19=_on('E_R5_E19'), e22=_on('E_R5_E22'),
           e23=_on('E_R5_E23'), e25=_on('E_R5_E25'), e34=_on('E_R5_E34'), beat=_on('E_R5_BEAT'), notitle=_on('E_R5_NOTITLE', '0'))
+R6FIX = _on('E_R6_FIX')       # r6 #47/#49/#50/#51 构图与卡点修正（'0' 回到 r5 画面，出对比图用）
 KEEPTXT = _on('E_R6_KEEPTXT')   # r6 #55：镜内横排/刻/写/印歌词字保留（'0' 回到 r5 #46 全去）
 M = None
 
@@ -215,12 +216,12 @@ def _pad_top(img, pad):
 
 
 class E22n:
-    def __init__(self): self.img = _pad_top(plate('scale_b'), PAD22)
+    def __init__(self): self.img = _pad_top(plate('scale_b'), PAD22) if R6FIX else plate('scale_b')
 
     def render(self, t):
         e = eio(self.u(t))
         s = 1.06 + 0.04 * e                                                   # 头顶（底板 y≈26）稳定在屏幕 y≈200，留白 ≈80px
-        fr = warp_plate(self.img, s, 959, PAD22 + 26 + (540 - 200) / s)
+        fr = warp_plate(self.img, s, 959, PAD22 + 26 + (540 - 200) / s) if R6FIX else warp_plate(self.img, 1.06 + 0.04 * e, 959, 410 - 10 * e)
         fr = E.dust_motes(fr, t, 1281, n=60, amt=0.3, drift=(14, -10), depth=True)
         return M.bloom(fr, 0.85, 0.25)
 
@@ -303,7 +304,7 @@ class E25n:
         fr = fr * (1 - m) + self.ground * m
         ts = M.CT(55, 6)
         mb = (90, 0) if t < ts + 0.04 else (0, 0)
-        z, info = M.put(np.zeros((H, W, 3), np.float32), t, 'S130/hslash', (930, hy - 6), h=760,   # r6：脚落地平线入画、头顶留白 rim=(1.0, 0.7, 0.4), rim_amt=3.4,
+        z, info = M.put(np.zeros((H, W, 3), np.float32), t, 'S130/hslash', (930, hy - 6) if R6FIX else (930, 1200), h=760 if R6FIX else 1040,   # r6：脚落地平线入画、头顶留白 rim=(1.0, 0.7, 0.4), rim_amt=3.4,
                         rim_dir=(-0.9, -0.3), wind=6, mblur=mb, grade=self.GR)
         A = np.clip(info['A'], 0, 1)
         by = info['tip'][1] if info['tip'] else 520
@@ -365,9 +366,9 @@ class E34n:   # ELS：日在左、人在右 1/3，头不压日面；写实背影
         u = self.u(t)
         fr = self.sky.copy()
         sun = (820, 690 - 40 * u)
-        k = beat_pulse(t, HITS34)                                            # r6 #51：低频鼓点 → 日轮/光柱随拍呼吸
-        fr = E.sun_disc(fr, sun, 130, amt=0.82 + 0.30 * k)                   # r6：1.15 → 0.82，日面不再糊成一大块白团
-        fr = fx2.god_rays(fr, sun, strength=0.55 + 0.45 * k, length=1.1, t=t)
+        k = beat_pulse(t, HITS34) if R6FIX else 0.0                                            # r6 #51：低频鼓点 → 日轮/光柱随拍呼吸
+        fr = E.sun_disc(fr, sun, 130, amt=(0.82 + 0.30 * k) if R6FIX else 1.15)                   # r6：1.15 → 0.82，日面不再糊成一大块白团
+        fr = fx2.god_rays(fr, sun, strength=(0.55 + 0.45 * k) if R6FIX else 0.8, length=1.1, t=t)
         fr = E.place_layer(fr, self.rd, self.ra, z=1.05 - 0.05 * eio(u))
         bob = 3 * abs(math.sin(t * 5.5))
         fx, fy = 1190 - 30 * u, 872
@@ -375,7 +376,7 @@ class E34n:   # ELS：日在左、人在右 1/3，头不压日面；写实背影
         fr = M.bloom(fr, 0.85, 0.45)
         fr, info = M.put(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), h=330 - 24 * u, rim=GOLDW, rim_amt=4.0, rim_dir=(-0.9, -0.35),
                          grade=G_BACK, wind=6)
-        return fr * (1 + 0.07 * beat_pulse(t, HITS34))
+        return fr * (1 + 0.07 * beat_pulse(t, HITS34)) if R6FIX else fr
 
 
 class E34b:   # MS 背影上半身：日在头侧（不在头后），金边发丝在风里
@@ -531,14 +532,14 @@ def apply(mod):
         rep['E19'] = _cls('E19', E19n, M.Shot); M.MOVE['E19'] = ('sine', 1.0, 1.04, 0, 0, 0, 0, 0, 0)
     if ON['e22']:
         rep['E22'] = _cls('E22', E22n, M.Shot); M.MOVE.pop('E22', None)
-        M.CUTS['E22'] = ('match_cut', 0.0, 0.18, dict(shape='circle', center=(960, 352), radius=120))
+        M.CUTS['E22'] = ('match_cut', 0.0, 0.18, dict(shape='circle', center=(960, 352 if R6FIX else 286), radius=120))
     if ON['e23']:
         rep['E23'] = _cls('E23', E23n, M.Shot); M.MOVE.pop('E23', None)
         rep['E24'] = type('E24', (rep['E23'],), dict(__init__=E24n.__init__, render=E24n.render)); M.MOVE.pop('E24', None)
     if ON['e25']:
         rep['E25'] = _cls('E25', E25n, M.Shot)
-        M.MOVE['E25'] = ('expo_out', 1.05, 1.0, 0, 0, 0, 0, 0, 0)             # r6：1.12 起推会把头/脚推出画
-        M.CUTS['E25'] = ('impact', 0, 0, dict(col=(1.0, 0.8, 0.5), amp=8, soft=True))   # r6：slash_wipe 在 218.97–219.1 出 4 帧错位方块坏帧 → 硬切冲击，刀光在 6571 自己劈
+        if R6FIX: M.MOVE['E25'] = ('expo_out', 1.05, 1.0, 0, 0, 0, 0, 0, 0)             # r6：1.12 起推会把头/脚推出画
+        if R6FIX: M.CUTS['E25'] = ('impact', 0, 0, dict(col=(1.0, 0.8, 0.5), amp=8, soft=True))   # r6：slash_wipe 在 218.97–219.1 出 4 帧错位方块坏帧 → 硬切冲击，刀光在 6571 自己劈
     if ON['e34']:
         rep['E34'] = _cls('E34', E34n, M.Credits)
     shots = [(rep.get(c.__name__, c), f, a, b) for (c, f, a, b) in M.SHOTS]
@@ -553,7 +554,7 @@ def apply(mod):
             M.MOVE['E34c'] = ('expo_out', 1.08, 1.0, 0, 0, 0, 0, 0, 0)
             M.MOVE['E34d'] = ('expo_out', 1.06, 1.0, 0, 0, 0, 0, 0, 0)
             M.SHAKE['E34b'] = [(7098 / 30, 3)]
-            M.SHAKE['E34'] = [(7040 / 30, 2), (7061 / 30, 2), (7072 / 30, 2)]          # r6 #51
+            if R6FIX: M.SHAKE['E34'] = [(7040 / 30, 2), (7061 / 30, 2), (7072 / 30, 2)]          # r6 #51
         e35 = _cls('E35', E35n, M.Shot)
         tail += [(e35, 7126, 'S137', 'ECU')]
         M.SHAKE['E35'] = [(7133 / 30, 3), (7143 / 30, 3), (7153 / 30, 7), (7160 / 30, 4), (7167 / 30, 3)]

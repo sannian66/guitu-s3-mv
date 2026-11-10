@@ -137,101 +137,106 @@ def install(G):
             fr, _ = self.sw.draw(fr, 960, rg[960] + 6, 46, rim_color=(0.8, 0.85, 0.95), rim_dir=(0, -1))
             return cam(fr, 1.0 + 0.03 * u, 0, 0), 0
 
-    # ---------------------------------------------------------------- S035 MS 疾跑 → 腾空举刀 → 落地斜劈（命中闪白）
+    # ---------------------------------------------------------------- S035 MS 蓄力 → 腾空举刀 → 俯冲斜劈（命中）→ 落地收刀
     class S035Sprite(S035):
-        # r5 F组（用户 #23「跳斩姿势丑 → 帅气，多张图让动作顺畅」）：5 张生图关键姿势按节拍硬切 + 残影 + 甩动模糊
-        #   蓄力下蹲 → 蹬地腾起（69.83）→ 空中举刀顶点 → 俯冲斜劈（命中 70.00 闪白）→ 落地收刀（慢放随势）
-        T_LEAP = V(69.86)
-        T_APEX = 69.90
-        T_STRK = 69.95          # 命中前一帧（69.967）先见俯冲斜劈姿势
-        T_LAND = 70.17
-        POSES = (('crouch', 'R5_F/js1_crouch_b', 0.34), ('rise', 'R5_F/js2_rise_a', 0.215), ('apex', 'R5_F/js3_apex_a', 0.265),
-                 ('strike', 'R5_F/js4_strike_a', 0.33), ('land', 'R5_F/js5_land_a', 0.37))
-        # 画面安全区：2.39 黑边内 y 140–940，且 S035 运镜/前景碎砖约 ×1.1 放大 → 地面线取 ≈ 860
+        # r5 F组（用户 #23「跳斩姿势丑 → 帅气，多张图让动作顺畅」）：生图关键姿势按节拍串接
+        # r6 F组（评审 4 分：姿势一闪而过不可辨、人太小、歌词被刀光打碎）：
+        #   · 4 个清楚姿势，每个至少停 3 帧：蓄力 js1_crouch_b（3 帧）→ 腾空举刀 js3_apex_b（3 帧，含 1 帧上升甩动）
+        #     → 俯冲斜劈 js4_strike_a（命中 70.00，停 ~10 帧随势慢推）→ 落地收刀 js5_land_a（~20 帧）
+        #   · 人物包围盒高 600–640px（≈ 画面 1080 的 56–60%），脚底统一落在 y≈900（2.39 黑边内）
+        #   · 命中闪白降到 0.45（命中帧仍看得见劈刀姿势），去掉起跳闪
+        #   · 镜内字「那就劈开它」按用户 #55 保留：移到左上墙面（刻字位），刀痕斩开后两半只错开 0.10 字高，始终可读；
+        #     底部横排字幕区不再压任何刀光/碎砖
+        T_APEX = 69.865
+        T_STRK = 69.955         # 命中前一帧（69.967）先见俯冲斜劈姿势
+        T_LAND = 70.30
+        GY = 900                # 脚底线
+        POSES = {'crouch': ('R5_F/js1_crouch_b', 600), 'apex': ('R5_F/js3_apex_b', 640),
+                 'strike': ('R5_F/js4_strike_a', 600), 'land': ('R5_F/js5_land_a', 600)}
         def __init__(self):
             super().__init__()
-            self.P = {k: (L(p), s) for k, p, s in self.POSES}
+            self.P = {k: L(p) for k, (p, h) in self.POSES.items()}
         def _pose(self, t):
-            """→ (姿势名, 包围盒中心屏幕位置, 旋转, mblur, 前一姿势残影 (名, 位置, alpha) | None)"""
-            if t < self.T_LEAP:                                            # 蓄力：压低重心向右滑步
-                k = eio(clamp01((t - self.t0) / (self.T_LEAP - self.t0)))
-                return 'crouch', (580 + 80 * k, 650 + 10 * k), 0.0, (10 * k, 0), None
-            if t < self.T_APEX:                                            # 蹬地腾起：斜向右上
-                k = eout(clamp01((t - self.T_LEAP) / (self.T_APEX - self.T_LEAP)), 2)
-                g = ('crouch', (660, 660), 0.35 * (1 - k)) if k < 0.9 else None
-                return 'rise', (800 + 110 * k, 580 - 50 * k), -4 * (1 - k), (18 * (1 - k), -34 * (1 - k)), g
-            if t < self.T_STRK:                                            # 顶点：举刀滞空
-                k = clamp01((t - self.T_APEX) / (self.T_STRK - self.T_APEX))
-                g = ('rise', (910, 530), 0.25 * (1 - k))
-                return 'apex', (970 + 40 * k, 500 - 10 * k), 2 * k, (6, -4 * (1 - k)), g
+            """→ (姿势名, 包围盒中心屏幕位置, 旋转, mblur, 残影 (名, 位置, alpha) | None)"""
+            hb = lambda n: self.POSES[n][1] / 2
+            if t < self.T_APEX:                                            # 蓄力：压低重心向右滑步
+                k = eio(clamp01((t - self.t0) / (self.T_APEX - self.t0)))
+                return 'crouch', (620 + 70 * k, self.GY - hb('crouch')), 0.0, (8 * k, 0), None
+            if t < self.T_STRK:                                            # 腾空举刀：第 1 帧带上升甩动，随后滞空
+                k = eout(clamp01((t - self.T_APEX) / (self.T_STRK - self.T_APEX)), 2)
+                g = ('crouch', (690, self.GY - hb('crouch')), 0.35 * (1 - k))
+                return 'apex', (880 + 70 * k, 540 - 50 * k), -3 * (1 - k), (10 * (1 - k), -40 * (1 - k)), g
             if t < self.T_LAND:                                            # 俯冲斜劈：刀从左上劈向右下（过裂缝）
                 k = eout(clamp01((t - self.T_STRK) / (self.T_LAND - self.T_STRK)), 2)
-                g = ('apex', (1010, 490), 0.3 * (1 - clamp01((t - self.T_STRK) / 0.07)))
-                return 'strike', (1090 + 80 * k, 470 + 80 * k), 0.0, (24 * (1 - k), 20 * (1 - k)), g
-            a = t - self.T_LAND                                            # 落地收刀：慢放沉身
-            k = eout(clamp01(a / 0.25), 2)
-            g = ('strike', (1170, 530), 0.3 * (1 - clamp01(a / 0.07)))
-            return 'land', (1330 + 40 * clamp01(a / 0.8), 690 - 30 * (1 - k)), 0.0, (18 * (1 - k), 22 * (1 - k)), g
+                g = ('apex', (950, 490), 0.3 * (1 - clamp01((t - self.T_STRK) / 0.07)))
+                return 'strike', (1060 + 90 * k, 470 + 80 * k), 0.0, (12 * (1 - k), 10 * (1 - k)), g
+            a = t - self.T_LAND                                            # 落地收刀：沉身
+            k = eout(clamp01(a / 0.2), 2)
+            g = ('strike', (1150, 550), 0.3 * (1 - clamp01(a / 0.07)))
+            return 'land', (1250 + 40 * clamp01(a / 0.65), self.GY - hb('land') - 26 * (1 - k)), 0.0, (16 * (1 - k), 18 * (1 - k)), g
         def _put(self, fr, t, name, pos, rot=0.0, mblur=(0, 0), alpha=1.0, rim=None, gr=None):
-            sp, s = self.P[name]
+            sp = self.P[name]; th = self.POSES[name][1]
             x0, y0, x1, y1 = sp.bbox
+            s = th / ((y1 - y0) * sp.h)
             return sp.draw(fr, t, ((x0 + x1) / 2, (y0 + y1) / 2), pos, s, rot=rot, mblur=mblur, rim=rim, grade=gr,
                            shade=None, wind_amp=6.5, alpha=alpha, wrap=0.4)[0]
         def render(self, t):
-            tt = t + self.SH
             camx = 0.0 if t < self.T_HIT else 40 * clamp01((t - self.T_HIT) / 0.6)
             src = self.wall[200:1280, int(200 + camx * 0.6) % 400: int(200 + camx * 0.6) % 400 + 1920]
             fr = src * 0.8
             x, y = K.grid()
-            fr = fr * (0.55 + 0.6 * np.exp(-(((x - 1100) / 900) ** 2 + ((y - 400) / 600) ** 2)))[..., None]
+            fr = fr * (0.55 + 0.6 * np.exp(-(((x - 1050) / 900) ** 2 + ((y - 450) / 600) ** 2)))[..., None]
             if t >= self.T_HIT:
                 pc = eout((t - self.T_HIT) / 0.15, 2)
                 cm = K.draw_crack((H, W), self.crack - [camx * 0.6, 0], 6, branches=14, seed=352, prog=pc)
                 fr = over(fr, cm, (0, 0, 0))
                 fr += K.blur_ds(cm, 6)[..., None] * 1.5 * GOLD * 0.5 * (0.4 + 0.6 * math.exp(-(t - self.T_HIT) / 0.4))
             rim = dict(col=(1.0, 0.78, 0.5), amt=1.8, dir=(0.0, 1.0))     # 底部金红火光逆打
-            gr = dict(expo=0.74, sat=0.6, tint=(1.0, 0.95, 0.9), lift=0.0, gamma=1.2)
+            gr = dict(expo=0.80, sat=0.6, tint=(1.0, 0.95, 0.9), lift=0.0, gamma=1.18)
             name, pos, rot, mb, ghost = self._pose(t)
             pos = (pos[0] - camx, pos[1])
-            if name in ('rise', 'apex'):
-                fr = speed_lines(fr, t, 352, 0.6, 0.30)
+            if name == 'apex':
+                fr = speed_lines(fr, t, 352, 0.6, 0.22)
             elif name == 'crouch':
-                fr = speed_lines(fr, t, 351, 1.0, 0.25 * clamp01((t - self.t0) / 0.15))
+                fr = speed_lines(fr, t, 351, 1.0, 0.18 * clamp01((t - self.t0) / 0.1))
             if ghost and ghost[2] > 0.02:                                  # 前一姿势残影（冷灰半透，动作连贯）
                 fr = self._put(fr, t, ghost[0], (ghost[1][0] - camx, ghost[1][1]), alpha=ghost[2],
                                rim=dict(col=(0.7, 0.78, 0.95), amt=1.0, dir=(0, -1)),
                                gr=dict(expo=0.45, sat=0.2, tint=(0.85, 0.92, 1.05), lift=0.04, gamma=1.0))
-            if name == 'strike' or (name == 'land' and t - self.T_LAND < 0.4):   # 斜劈刀弧（左上 → 右下）
+            if name == 'strike' or (name == 'land' and t - self.T_LAND < 0.3):   # 斜劈刀弧（左上 → 右下），在人物身后
                 a = t - self.T_STRK
-                fr = arc_trail(fr, (1170 - camx, 540), 600, 130, -175, 5, eout(clamp01(a / 0.06)),        # 沿裂缝的斜月牙刀痕
-                               math.exp(-max(0.0, t - self.T_HIT) / 0.16), w=20, rot=50)
+                fr = arc_trail(fr, (1120 - camx, 520), 560, 120, -175, 5, eout(clamp01(a / 0.06)),
+                               math.exp(-max(0.0, t - self.T_HIT) / 0.16), w=18, rot=50)
             fr = self._put(fr, t, name, pos, rot, mb, rim=rim, gr=gr)
             if t >= self.T_HIT:
                 a = t - self.T_HIT
                 r = np.random.default_rng(3530)
                 Lb = np.zeros((H // 2, W // 2), np.float32)
-                for i in range(26):
-                    ox, oy = r.uniform(950, 1450), r.uniform(250, 900)
-                    vx, vy = r.normal(0, 600), r.normal(-200, 400)
-                    s = (r.uniform(20, 70)) * (1 + 3 * a)
-                    px, py = ox + vx * a - camx * 0.6, oy + vy * a + 600 * a * a
+                for i in range(22):
+                    ox, oy = r.uniform(1050, 1500), r.uniform(250, 700)
+                    vx, vy = r.normal(250, 500), r.normal(-250, 300)
+                    s = (r.uniform(18, 60)) * (1 + 2 * a)
+                    px, py = ox + vx * a - camx * 0.6, oy + vy * a + 500 * a * a
+                    if py > 860: continue                                   # 碎砖不落进底部字幕区
                     box = cv2.boxPoints(((px / 2, py / 2), (s / 2, s * 0.45 / 2), r.uniform(0, 180) + 300 * a))
                     cv2.fillConvexPoly(Lb, box.astype(np.int32), 1.0, cv2.LINE_AA)
                 fr = over(fr, cv2.resize(cv2.GaussianBlur(Lb, (0, 0), 2), (W, H)), (0.03, 0.03, 0.035))
-                fr = K.sparks(fr, t, 3540, (1200, 560), n=90, life=0.6, speed=(400, 1400), dirc=(-1, -0.3), spread=1.2,
-                              grav=800, burst=True, t0=self.T_HIT, area=(150, 300))
+                fr = K.sparks(fr, t, 3540, (1180, 520), n=70, life=0.5, speed=(400, 1200), dirc=(0.3, -0.6), spread=1.2,
+                              grav=800, burst=True, t0=self.T_HIT, area=(150, 220))
             if self.T_LAND <= t < self.T_LAND + 0.5:                       # 落地扬尘
-                fr = K.sparks(fr, t, 3550, (1340 - camx, 865), n=40, life=0.5, speed=(150, 500), dirc=(1, -0.2), spread=1.4,
-                              grav=300, burst=True, t0=self.T_LAND, area=(220, 10), color=(0.6, 0.58, 0.55), amt=0.6)
-            fl = white(t, self.T_HIT, 0.035) + 0.4 * white(t, self.T_LEAP, 0.03)
+                fr = K.sparks(fr, t, 3550, (1250 - camx, self.GY - 8), n=40, life=0.5, speed=(150, 450), dirc=(1, -0.2), spread=1.4,
+                              grav=300, burst=True, t0=self.T_LAND, area=(260, 10), color=(0.6, 0.58, 0.55), amt=0.5)
+            fl = white(t, self.T_HIT, 0.035)
             sk = pulse(t, self.T_HIT, 0.12) * (t >= self.T_HIT)
-            dx, dy, dr = shake(t, 14 * sk, 16, 35)
-            fr = cam(fr + fl * 0.8, 1.03 + 0.03 * sk, dx, dy, dr)
+            dx, dy, dr = shake(t, 12 * sk, 16, 35)
+            fr = cam(fr * (1 - 0.2 * fl) + fl * 0.32, 1.02 + 0.025 * sk, dx, dy, dr)
             p = clamp01((t - 69.60) / 0.9)
-            fr = T.slash_cut(fr, '那就劈开它', p, places=LY.places('那就劈开它', 'bottom', red=('劈',)), color=LY.WHITE, angle=12,
-                             cut_at=(self.T_HIT - 69.60) / 0.9, emph=('劈',), emph_color=LY.RED_T, slide=0.5, seed=35,
+            pl = [dict(q, x=q['x'] - 960 + 470, y=250, size=86) for q in LY.places('那就劈开它', 'bottom', red=('劈',))]
+            for i, q in enumerate(pl): q['x'] = 470 + (i - 2) * 86 * 1.12
+            fr = T.slash_cut(fr, '那就劈开它', p, places=pl, color=LY.WHITE, angle=12,
+                             cut_at=(self.T_HIT - 69.60) / 0.9, emph=('劈',), emph_color=LY.RED_T, slide=0.10, seed=35,
                              style_kw=dict(LY.STYLE))
-            return fr, (3 if fl > 0.3 else 0)
+            return fr, 0
 
     # ---------------------------------------------------------------- S037 ELS 背影站在金缝前（小人，金 rim）
     class S037Sprite(S037):
