@@ -23,6 +23,11 @@ READY = True
 R5D_S18_NEW = True      # #45 3:00 主角重新出图（S18_Draw 换新生图 + 中景构图）
 R5D_S18_V2 = True       # #45 复审：换 s18_draw_xb（素鞘、更长）+ 脸部去红（唇/眼周/耳）+ 琥珀瞳 + 发梢冷白描边压掉 + 头顶留白 + 弱轮廓光
 R5D_NO_PAN = True       # #46 复审追加（用户：「判字不留了」）：S26 3:08 天平上的「判」也去掉，炸开后不再退成空的暗红夜，而是劈成两半的天平留在朱红余烬里
+def _on(k, d='1'): return os.environ.get(k, d) != '0'
+# 第六轮 #53（2026-11-10 用户：「竖排歌词要全部去掉，因为我们改成横排了」）：2:58–3:01 画内竖排歌词去掉——
+# S16「从今往后」、S17「我的刀」、S18「只听」（歌词统一走底部横排字幕 units/subtitle.py）。R5_NOVLYR=0 回滚。
+# 不动：#44 2:42–2:58 红「什」到「陪葬」全段（S01–S15）、#46 3:02「规矩」(S21)、S19 横排「主张」与朱印「我」（待问用户）。
+NOVLYR = _on('R5_NOVLYR')
 R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S21) 与「判」(S26)，其余画内字去掉
 F0, F1 = 4839, 5797
 T0, T1 = F0 / 30, F1 / 30
@@ -951,7 +956,7 @@ class S16_Closed(Shot):
         P = O[44]
         its = [(c, 300, 255 + k * 140, 120, cp(t, P[k], 0.18), 'w') for k, c in enumerate('从今往')]
         its.append(('后', 320, 740, 250, cp(t, P[3], 0.14), 'w'))
-        fr = D.song(fr, its)
+        if not NOVLYR: fr = D.song(fr, its)                          # [r6 #53] 去竖排「从今往后」
         return K.cam(fr, 1.0 + 0.06 * u), 0.0
 
 
@@ -978,7 +983,7 @@ class S17_Eye(Shot):
         tk = V(O[44][6])
         its = [('我', 1330, 300, 125, cp(t, O[44][4], 0.16), 'w'), ('的', 1330, 440, 125, cp(t, O[44][5], 0.16), 'w'),
                ('刀', 1490, 600, 340, cp(t, O[44][6], 0.1), 'r')]
-        fr = D.song(fr, its)
+        if not NOVLYR: fr = D.song(fr, its)                          # [r6 #53] 去竖排「我的刀」（白刃寒光横扫保留）
         if tk - 0.02 <= t < tk + 0.2:   # 白刃寒光横扫
             q = (t - tk + 0.02) / 0.22
             fr = TR._slash_streak(fr, (lerp(-200, 2100, eo(q, 2)), 520), np.array((math.cos(math.radians(-12)), math.sin(math.radians(-12)))), q, length=2600, width=4)
@@ -1023,8 +1028,9 @@ class S18_Draw(Shot):
         fr = K.rain(fr, t, 18, n=500, amt=0.3, angle=6)
         fr = K.fog(fr, t, 44, amt=0.35, speed=(60, 0), y0=0.72, y1=1.0, color=(0.25, 0.27, 0.32))
         # [r4] 「只」「听」= 冷钢字：与刃上同一道寒光同步扫过（字和刀是同一块钢），不再是白宋体
-        fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
-                           sweep_x=lerp(-200, 900, eo(u, 2)))
+        if not NOVLYR:                                               # [r6 #53] 去竖排「只听」
+            fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
+                               sweep_x=lerp(-200, 900, eo(u, 2)))
         return K.cam(fr, 1.03, -20 + 40 * u, 0), 0.0
 
     def render_r5(self, t):
@@ -1054,8 +1060,9 @@ class S18_Draw(Shot):
         metal = A2 * np.clip((lum - 0.35) * 3, 0, 1) * (sat < 0.12)
         fr = D.metal_sheen(fr, metal, np.ones_like(lum), t, (600, 0), 0, speed=lerp(500, 1500, eo(u, 2)), width=90, amt=2.0)
         fr = K.rain(fr, t, 18, n=420, amt=0.3, angle=6)                                    # 人前近雨
-        fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
-                           sweep_x=lerp(-200, 900, eo(u, 2)))
+        if not NOVLYR:                                               # [r6 #53] 去竖排「只听」
+            fr = D.steel_glyph(fr, [('只', 330, 300, 140, cp(t, O[44][7], 0.16)), ('听', 360, 600, 310, cp(t, O[44][8], 0.12))], t,
+                               sweep_x=lerp(-200, 900, eo(u, 2)))
         return K.cam(fr, 1.03, -10 + 20 * u, 0), 0.0
 
 
