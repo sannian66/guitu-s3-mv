@@ -2262,7 +2262,9 @@ class S30_Da(Shot):
         cx = 960 + (n2[:, 960:961] - 0.5) * 50                                                         # 柱轴随高度轻微摆动
         dx = np.abs(x - cx)
         gap = 20 + 470 * op                                                                            # 柱半宽
-        ed = gap - dx + en * 75 + (n - 0.5) * 60                                                                        # 云纹侵蚀后的柱边距离
+        nm = cv2.resize(D._tile(313)[:H // 3, :W // 3], (W, H), interpolation=cv2.INTER_CUBIC)                # 中频云团（波长 ~100–200px）
+        nm = (nm - nm.mean()) / (nm.std() + 1e-6)
+        ed = gap - dx + en * 50 + nm * 38 + (n3 - 0.5) * 30                                                                        # 云纹侵蚀后的柱边距离
         vfade = 1 - K.sstep(720, 1010, y)
         open_ = K.sstep(-30, 30, ed) * vfade                                                           # 60px 羽化带
         s_ = K.sstep(60, max(61.0, gap), dx)                                                           # 热芯 ±60 平台 → S 曲线到边

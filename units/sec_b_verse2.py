@@ -25,6 +25,8 @@ T_IN = 86.192                       # 副歌一 S047 的起点（墨退时间基
 R5 = os.environ.get('B_R5', '1') != '0'
 # 第六轮返工（B_R6=0 回滚到第五轮 B 组版本；需 R5 同时开）
 R6 = R5 and os.environ.get('B_R6', '1') != '0'
+QUAN_STAFF = os.environ.get('B_R6_QUAN', '1') != '0'      # r6 #30：「权」刻在杖身（=0 回到窗棂投影「权」）
+QUAN_WALL = os.environ.get('B_R6_QUANWALL', '0') != '0'   # =1：杖身刻字的同时保留墙上窗棂投影「权」
 
 
 # 第六轮 #53（用户 2026-11-10「竖排歌词要全部去掉，因为我们改成横排了呀」）：画内竖排歌词列去掉，歌词只走底部横排字幕。
@@ -938,10 +940,38 @@ class V07(Shot):
     T_QUAN = 94.02
     def __init__(self):
         self.sp = spr('B_r4/grip_scepter_hi', work_w=3072)      # 第九棒：原图 3840 直接抠（原 2560 抠图 → 2048 工作宽 → 2700 放大，手指糊成团）
+        if R6 and QUAN_STAFF: self.sp = self.carve_quan(self.sp)
         self.bg = BK.dark_bg(5201, 0.02, 0.06, tint=(1.2, 1.0, 0.85))
         wall = cv2.resize(K.fbm(H // 4, W // 4, 5202, 8, 5), (W, H))[..., None]
         self.bg = self.bg * (0.7 + 0.6 * wall)
         T.warm('权', 'serif_black', 620)
+
+    @staticmethod
+    def carve_quan(sp0):
+        """r6 #30：「权」刻在杖身上（拳头上方那段杖杆）——先把雕花磨出一块素面乌木开光（圆角竖框），再阴刻宋体「权」+ 槽里嵌暗金；
+        刻在精灵贴图里，随手/杖一起抖、一起转。屏幕位置 ≈ (738, 300)、字高 ≈ 185px（推镜后仍在安全区内）。"""
+        import copy
+        sp = copy.copy(sp0); F = sp0.F.copy(); A = sp0.A
+        h, w = A.shape
+        sc = w / 2808.0                                              # 屏幕像素 → 贴图像素（put_at 宽 2700×1.04）
+        def s2t(X, Y): return (0.24 * w + (X - 820) * sc, 0.30 * h + (Y - 560) * sc)
+        cx, cy = s2t(738, 300)
+        pw, ph = 120 * sc, 150 * sc
+        pm = np.zeros((h, w), np.float32)
+        cv2.rectangle(pm, (int(cx - pw), int(cy - ph)), (int(cx + pw), int(cy + ph)), 1.0, -1)
+        pm = cv2.GaussianBlur(pm, (0, 0), 6 * sc) * (A > 0.5)
+        sm = cv2.GaussianBlur(F, (0, 0), 7 * sc)
+        lum = (sm * np.array([0.3, 0.59, 0.11], np.float32)).sum(-1, keepdims=True)
+        lac = lum * 0.75 + np.array([0.03, 0.022, 0.016], np.float32)        # 素面乌木（磨平雕花，略带暖）
+        F = F * (1 - pm[..., None]) + lac * pm[..., None]
+        edge = np.clip(pm - cv2.erode(pm, np.ones((5, 5), np.uint8)), 0, 1)
+        F = F + cv2.GaussianBlur(edge, (0, 0), 1.5)[..., None] * np.array([0.30, 0.22, 0.10], np.float32)   # 开光一圈金线
+        L = T.Layer(); T.place(L, '权', cx, cy, 185 * sc, color='white', fname='serif_black', alpha=1.0, rot=-3, texture=False)
+        Am = np.clip(L.A, 0, 1).astype(np.float32)[:h, :w]
+        F = BV.engrave(F, Am, light=(0.9, -0.4), depth=4 * sc, groove=0.7, fill=(0.62, 0.44, 0.16), fill_k=0.7,
+                       hl_col=(1.0, 0.85, 0.55), hl=0.6, surface=pm, glow=0.0)
+        sp.F = np.clip(F, 0, None).astype(np.float32)
+        return sp
 
     def render(self, t):
         u = self.u(t)
@@ -960,7 +990,7 @@ class V07(Shot):
         # 第十棒：字不再是发光金字——窗洞的光斑投在墙与手上，「权」是窗上镂刻的木花投下的**影**（光里一个黑字）
         wdx = 50 * math.sin(t * 6.1) + 25 * math.sin(t * 15.7)                   # 第十一棒：烛焰摇 → 窗光斑在手背上来回扫
         win = np.clip(1 - np.maximum(np.abs((x - 1180 - wdx - 0.14 * (y - 540)) / 430), np.abs((y - 540) / 400)) ** 8, 0, 1)
-        Lm = np.clip(win * (1 - lat) * (1 - 0.92 * np.clip(L.A, 0, 1)), 0, 1)
+        Lm = np.clip(win * (1 - lat) * (1 - (0.0 if (R6 and QUAN_STAFF and not QUAN_WALL) else 0.92) * np.clip(L.A, 0, 1)), 0, 1)   # r6 #30：「权」改刻在杖身，墙上窗光只剩窗棂
         Lm = cv2.GaussianBlur(Lm, (0, 0), 5)
         light = Lm * pq * fl * (1 + 0.8 * pulse(t, V(self.T_QUAN), 0.15))
         amb = 0.55 + 0.45 * (1 - pq)
