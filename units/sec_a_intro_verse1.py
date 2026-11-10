@@ -2122,6 +2122,15 @@ class V21(Shot):
         tf = CT(7, 8)
         if t < tf - 0.14:                                                               # 第十一棒（P0-1）：斩缝里不再露半截「锋」（缝里残块读不出字）→ 42.70 前不出字
             pass
+        elif R5.ON['fengmang']:                                                         # r6 #12（用户：锋芒两字不好看）→ 生图狂草书法 cal_feng_v1 / cal_mang_v1
+            s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))          #   飞白、枯笔、墨点俱全；位置/节奏/斩开与原版一致
+            if t < tf or p > 0:
+                g = R5.cal_alpha('cal_feng_v1', 600)
+                bl = 10 * math.sin(math.pi * s_) if t < tf else 0.0
+                sc = 1.0 if t < tf else 1 + 0.08 * (1 - eout(p))
+                if sc > 1.001: g = cv2.resize(g, None, fx=sc, fy=sc)
+                if bl > 0.5: g = cv2.blur(g, (int(bl * 3) | 1, 1))
+                L.paste(g, 690 + 980 * (1 - eout(s_)), 530, (0.97, 0.94, 0.88), 0.95 if t < tf else max(0.95, eout(p)))
         elif t < tf:                                                                    # 第八棒（P1-6）：转场斩缝里就露出「锋」——随刀势自右滑入，42.80 落定
             s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
             T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=0.9, blur=10 * math.sin(math.pi * s_))
@@ -2129,7 +2138,11 @@ class V21(Shot):
             s_ = clamp01((t - (self.t0 + 0.08)) / (tf + 0.10 - (self.t0 + 0.08)))
             T.place(L, '锋', 690 + 980 * (1 - eout(s_)), 530, 500, (0.97, 0.94, 0.88), 'xing', alpha=max(0.9, eout(p)), scale=1 + 0.08 * (1 - eout(p)))
         p2 = cprog(7, [9], t, 0.12)[0]
-        if p2 > 0: T.place(L, '芒', 1240, 530, 500, (0.86, 0.12, 0.08), 'xing', alpha=eout(p2), scale=1 + 0.3 * (1 - eout(p2)))
+        if p2 > 0 and R5.ON['fengmang']:
+            g = R5.cal_alpha('cal_mang_v1', 600); sc = 1 + 0.3 * (1 - eout(p2))
+            if sc > 1.001: g = cv2.resize(g, None, fx=sc, fy=sc)
+            L.paste(g, 1250, 530, (0.86, 0.12, 0.08), eout(p2))
+        elif p2 > 0: T.place(L, '芒', 1240, 530, 500, (0.86, 0.12, 0.08), 'xing', alpha=eout(p2), scale=1 + 0.3 * (1 - eout(p2)))
         if a < 0:
             fr = T.compose(fr, L, shadow=0.7, glow=0.25)
         else:
