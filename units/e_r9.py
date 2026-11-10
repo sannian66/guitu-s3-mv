@@ -438,6 +438,7 @@ class E34n:   # ELS：日在左、人在右 1/3，头不压日面；写实背影
         self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]
 
     def render(self, t):
+        if R6C and R6F: return _els_r6f(self, t)
         if R6C: return _els_r6c(self, t)
         if R6B: return _els_r6b(self, t)
         u = self.u(t)
@@ -561,6 +562,7 @@ class E34L:   # r6b：7061 强拍硬切 LS（人高 ≈600px），头肩轮廓�
         self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]                       # 署名④ 延续（p=1，不重新出场）
 
     def render(self, t):
+        if R6C and R6F: return _ls_r6f(self, t)
         if R6C: return _ls_r6c(self, t)
         u = self.u(t)
         fr = self.sky.copy()
@@ -806,7 +808,7 @@ class AtmoRidges:
         return fr
 
 
-def dust_kick(fr, t, hits, puffs, seed, r0=40.0, rise=50.0, life=0.5, amt=0.55, n_spark=60, spark_v=(80, 320)):
+def dust_kick(fr, t, hits, puffs, seed, r0=40.0, rise=50.0, life=0.5, amt=0.55, n_spark=60, spark_v=(80, 320), spark_spread=0.0, dl_max=0.06):
     """强拍扬尘：不规则尘雾团（低频噪声塑形）在拍点扬起、0.4–0.6s 内散掉（不常驻）；火星 = 随机方向的 2–5px 点粒子 + 重力。"""
     k4 = 4; hs, ws = H // k4, W // k4
     D = np.zeros((hs, ws), np.float32); S = np.zeros((H // 2, W // 2), np.float32); any_ = False
@@ -830,12 +832,13 @@ def dust_kick(fr, t, hits, puffs, seed, r0=40.0, rise=50.0, life=0.5, amt=0.55, 
         nn = int(n_spark * min(1.5, len(puffs) / 4))
         pj = r.integers(0, len(puffs), nn)
         ang = r.uniform(-math.pi * 0.95, -math.pi * 0.05, nn)                      # 上半平面随机方向
-        v = r.uniform(*spark_v, nn); sz = r.uniform(2.0, 5.0, nn); lf = r.uniform(0.25, 0.6, nn); dl = r.uniform(0, 0.06, nn)
+        v = r.uniform(*spark_v, nn); sz = r.uniform(2.0, 5.0, nn); lf = r.uniform(0.25, 0.6, nn); dl = r.uniform(0, dl_max, nn)
+        sx0 = r.uniform(-spark_spread, spark_spread, nn); sy0 = r.uniform(-spark_spread, spark_spread, nn) * 0.5
         for i in range(nn):
             qi = q - dl[i]
             if qi < 0 or qi > lf[i]: continue
             bx, by, sc = puffs[pj[i]]; bx = bx + (hash((i * 7919) % 104729) % 61 - 30) * sc
-            x = bx + math.cos(ang[i]) * v[i] * sc * qi; y = by - 10 * sc + math.sin(ang[i]) * v[i] * sc * qi + 520 * qi * qi
+            x = bx + sx0[i] + math.cos(ang[i]) * v[i] * sc * qi; y = by + sy0[i] - 10 * sc + math.sin(ang[i]) * v[i] * sc * qi + 520 * qi * qi
             a = (1 - qi / lf[i]) ** 1.3
             cv2.circle(S, (int(x / 2), int(y / 2)), max(1, int(round(sz[i] / 4))), float(a), -1, cv2.LINE_AA)
     if not any_: return fr
@@ -974,6 +977,171 @@ def _ridge_cov(rg):
     cov = np.zeros((H, W), np.float32)
     for m, k, ref, f in rg.L: cov = 1 - (1 - cov) * (1 - m)
     return cov
+
+
+# ================================================================== r6 第六棒（E_R6F）：#50 日面去暗环 + 柔边层次 + 扬尘随机非等距
+# 第五棒卡点：成片里日旁天空已 ≈220，盘心 233 时临边变暗到 85%≈198 < 天 → 盘边必然一圈暗环；且日面颜色被 finish 去饱和成灰紫。
+# 做法：① ELS/LS 天空整体压到日旁 ≈170–185（像 E34b 那样暗天 + 暖辉光，取其一半的柔散度），盘外辉光加强，
+#       让「盘心 > 盘内 85% > 盘边 > 辉光 > 天」单调递减；② 反解时把 finish 的暗角也算进去，盘面用足够饱和的暖色（不被冷灰去饱和）；
+#       ③ 盘内加 ±2–3% 横向大气薄霾层次（贴近地平线的落日真有），不是平盘；④ 扬尘位置按种子随机、不对称不等距、贴各自山脊/地面高度。
+R6F = R6E and _on('E_R6F')
+SUN6F_FC = 232.0                       # 成片日心（强拍 +3 → ≤237，<238）
+SUN6F_SKYK = 0.70                      # ELS/LS 天空整体压暗系数
+SUN6F_GLOW = dict(disc=False, inner=60, outer=240, a_in=0.16, a_out=0.20, col_in=(1.0, 0.68, 0.34), col_out=(1.0, 0.50, 0.20))
+SUN6F_GLOW_L = dict(SUN6F_GLOW, inner=80, outer=270)
+_SUNC6F = np.asarray((1.0, 0.84, 0.56), np.float32)
+_SUNC6F_N = _SUNC6F / float(0.299 * _SUNC6F[0] + 0.587 * _SUNC6F[1] + 0.114 * _SUNC6F[2])
+_SUNE6F = np.asarray((1.0, 0.70, 0.38), np.float32)                                    # 盘缘色
+_SUNE6F_N = _SUNE6F / float(0.299 * _SUNE6F[0] + 0.587 * _SUNE6F[1] + 0.114 * _SUNE6F[2])
+
+
+def _fin_lite6(cr, vig):
+    fr = _fin_lite_pre(cr) * vig[..., None]
+    fr = np.where(fr > 0.85, 0.85 + (1 - np.exp(-(fr - 0.85) * 4)) * 0.15, fr)
+    return np.clip(fr, 0, 1)
+
+
+def _fin_lite_pre(cr):
+    fr = np.clip(cr, 0, 4)
+    r, g, b = fr[..., 0], fr[..., 1], fr[..., 2]
+    lum = 0.3 * r + 0.59 * g + 0.11 * b
+    sat = np.clip((np.maximum(r, np.maximum(g, b)) - np.minimum(r, np.minimum(g, b))) * 3.0, 0, 1)
+    ratio = (r - np.maximum(g, b)) / (r + 1e-3)
+    sat = np.maximum(sat, np.clip((ratio - 0.38) / 0.24, 0, 1) * np.clip((r - 0.03) / 0.06, 0, 1))
+    fr = np.stack([lum * 0.96, lum * 0.99, lum * 1.05], -1) * (1 - sat[..., None]) + fr * sat[..., None]
+    return K.bloom(fr, 0.72, 0.25, 26)
+
+
+def sun_final6(fr, c, r, cov=None, Fc=234.0, k85=0.85, feather=14.0, iters=4, margin=190, seed=0, zc=None, z=1.0):
+    """成片亮度上定日盘（第六棒）：盘心 Fc，ρ=0.85 处暗 15%，盘边再缓降；外缘 feather px 化进辉光；
+    目标与盘外成片亮度取单调（盘边永远 ≥ 辉光，不会出暗环）。zc/z：之后 K.cam 的缩放，用来对准成片里暗角的位置。"""
+    x0, x1 = int(max(0, c[0] - r - margin)), int(min(W, c[0] + r + margin))
+    y0, y1 = int(max(0, c[1] - r - margin)), int(min(H, c[1] + r + margin))
+    cr = fr[y0:y1, x0:x1].astype(np.float32).copy()
+    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    if zc is not None:                                   # 暗角在成片坐标；这一块经 cam 缩放后落在 (p-zc)*z+zc
+        vx, vy = (xx - zc[0]) * z + zc[0], (yy - zc[1]) * z + zc[1]
+    else: vx, vy = xx, yy
+    vig = _vig_crop(0.38, vx, vy)                         # 成片 finish(vig=0.38) 的暗角
+    d = np.hypot(xx - c[0], yy - c[1]); rho = d / r
+    G = _luma8(_fin_lite6(cr, vig))
+    rng = np.random.default_rng(seed)
+    hz = cv2.resize(rng.standard_normal((6, 3)).astype(np.float32), (x1 - x0, y1 - y0), interpolation=cv2.INTER_CUBIC)
+    band = np.sin((yy - c[1]) / r * 5.5 + rng.uniform(0, 6.28)) * 0.5 + 0.5 * hz / 2.5     # 横向薄霾（盘下半更明显）
+    band = band * (0.4 + 0.6 * np.clip((yy - c[1]) / r + 0.5, 0, 1))
+    ul = (1 - k85) / (1 - math.sqrt(1 - 0.85 ** 2))                       # 真实临边变暗 I=1-u(1-μ)：ρ=0.85 处 = k85，越近边缘掉得越快
+    mu = np.sqrt(np.clip(1 - rho ** 2, 0, 1))
+    Td = Fc * (1 - ul * (1 - mu)) * (1 - 0.025 * np.clip(band, -1, 1))
+    s = np.clip((d - (r - feather * 0.7)) / feather, 0, 1); s = s * s * (3 - 2 * s)
+    Te = Td * (1 - s) + G * s
+    T = np.maximum(Te, G)                                # 单调：盘内任何地方都不低于盘外成片亮度
+    sky = 1.0 if cov is None else (1 - cov[y0:y1, x0:x1])
+    w = ((1 - s) * sky).astype(np.float32)
+    q = _sinv(T).astype(np.float32) / np.maximum(vig, 0.3)
+    a = np.clip((rho - 0.35) / 0.65, 0, 1)[..., None]; a = a * a * (3 - 2 * a)            # 临边同时变红（盘心奶白 → 盘缘橙），不在盘缘出一圈灰
+    col = _SUNC6F_N * (1 - a) + _SUNE6F_N * a
+    base = cr.copy()
+    for _ in range(iters):
+        cr = base * (1 - w[..., None]) + (q[..., None] * col) * w[..., None]
+        L = _luma8(_fin_lite6(cr, vig))
+        q = np.clip(q + (_sinv(T) - _sinv(L)) / np.maximum(vig, 0.3) / np.maximum(w, 0.25), 0, 2.2).astype(np.float32)
+    cr = base * (1 - w[..., None]) + (q[..., None] * col) * w[..., None]
+    out = fr.copy(); out[y0:y1, x0:x1] = cr
+    return out
+
+
+def _vig_crop(strength, vx, vy):
+    """K.vignette_mask(strength) 在任意（可非整数）坐标上的取值。"""
+    vm = K.vignette_mask(strength)[..., 0]
+    return cv2.remap(vm.astype(np.float32), vx.astype(np.float32), vy.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+
+def _ridge_y(rg, i, x):
+    """第 i 层山脊在列 x 的高度（遮罩过半的第一行）。"""
+    m = rg.L[i][0][:, int(np.clip(x, 0, W - 1))]
+    k = np.argmax(m > 0.5)
+    return float(k) if m[k] > 0.5 else float(H)
+
+
+def _puffs6(rg, fx, fy, seed, n, sc0, far=2):
+    """随机、不对称、不等距的扬尘点：x 偏移 ±(150–700)，最多 far 处离脚较远（>450）；y 贴各自所在山脊/地面 ±10–25；
+    越远越小（大小远近）。脚边两团保留（落脚扬起）。"""
+    r = np.random.default_rng(seed)
+    out = [(fx + r.uniform(-50, -15), fy - r.uniform(2, 8), sc0 * r.uniform(0.9, 1.1)),
+           (fx + r.uniform(20, 70), fy - r.uniform(0, 6), sc0 * r.uniform(0.75, 0.95))]
+    used = [fx]; nfar = 0; tries = 0
+    while len(out) < n and tries < 200:
+        tries += 1
+        side = r.choice([-1, 1], p=[0.62, 0.38])
+        dx = r.uniform(150, 700)
+        if dx > 450:
+            if nfar >= far: dx = r.uniform(150, 450)
+            else: nfar += 1
+        x = fx + side * dx
+        if not (60 < x < W - 60) or min(abs(x - u) for u in used) < 110: continue
+        used.append(x)
+        lay = 2 if dx < 330 else 1                                       # 近处在脚下那层地面，远处在后一层山脊上
+        yb = min(fy + 6, _ridge_y(rg, lay, x))
+        y = yb + r.uniform(-25, -10) if r.uniform() < 0.5 else yb + r.uniform(4, 14)
+        sc = sc0 * (1.05 - 0.75 * dx / 700) * r.uniform(0.75, 1.15) * (0.8 if lay == 1 else 1.0)
+        out.append((x, y, max(0.25, sc)))
+    return out
+
+
+def dust_kick6(fr, t, hits, rg, fx, fy, seed, n, sc0, **kw):
+    """每个强拍各自一组随机扬尘位置；火星起点 ±40 散布、首帧火星减半；尘团柔光减半。"""
+    for hk, th in enumerate(hits):
+        if not (0 <= t - th + 1 / 30 <= 0.75): continue
+        pf = _puffs6(rg, fx, fy, seed + 101 * hk, n, sc0)
+        fr = dust_kick(fr, t, [th], pf, seed + 7 * hk, spark_spread=40, dl_max=0.13, **kw)
+    return fr
+
+
+def _els_r6f(self, t):
+    if not hasattr(self, 'rg6'):
+        self.sky6 = E.dawn_sky(1380, horizon=0.68, top=(0.20, 0.15, 0.10), mid=(0.58, 0.42, 0.25), hor=(0.95, 0.74, 0.48), cloud=0.7, sun=(640, 660))
+        self.rg6 = AtmoRidges(1366, [742, 806, 866], [30, 40, 22], [0.70, 0.36, 0.07], bumps=[(735, 48, 150), (420, 22, 120)])
+    u = self.u(t)
+    fr = self.sky6 * SUN6F_SKYK
+    sun = (640, 700 - 30 * u)
+    kw = beat_pulse(t, HITS34W) + beat_pulse(t, [(x, 1.0) for x in STRONG34])
+    src = fr = sun_atmo(fr, sun, 92, amt=1.0 + 0.10 * kw, **SUN6F_GLOW)
+    fr = fx2.god_rays(fr, sun, strength=0.30 + 0.35 * kw, length=1.1, t=t)
+    fr = self.rg6.paint(fr, src)
+    bob = 3 * abs(math.sin(t * 5.5))
+    fx, fy = 1200 - 24 * u, 872
+    fr = _shadow(fr, fx, fy, L=90, lean=0.9, wmax=26)
+    fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985)
+    if not hasattr(self, 'cov6'): self.cov6 = _ridge_cov(self.rg6)
+    z = step_zoom(t, [(7040 / 30, 0.025)]) * (1 + 0.004 * u)
+    fr = sun_final6(fr, sun, 92, self.cov6, k85=0.86, Fc=SUN6F_FC + 3 * min(1.0, kw), seed=37, zc=(fx, 640), z=z)
+    fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 340, sun, rim_w=1.2, rim_amt=0.85)
+    fr = dust_kick6(fr, t, STRONG34[:1], self.rg6, fx, fy, 7340, 6, 0.85, r0=85, rise=60, amt=0.6, n_spark=30, spark_v=(140, 380))
+    fr = E.dust_motes(fr, t, 1381, n=40, amt=0.22, drift=(-18, -10))
+    return K.cam(fr, z, center=(fx, 640))
+
+
+def _ls_r6f(self, t):
+    if not hasattr(self, 'rg6'):
+        self.rg6 = AtmoRidges(1396, [786, 852, 918], [28, 34, 18], [0.68, 0.34, 0.06], soft=2.2, bumps=[(705, 52, 170), (380, 24, 130)])
+    u = self.u(t)
+    fr = self.sky * SUN6F_SKYK
+    sun = (600, 700 - 20 * u)
+    kw = beat_pulse(t, [(x, 1.0) for x in STRONG34[1:]])
+    src = fr = sun_atmo(fr, sun, 110, amt=1.0 + 0.10 * kw, **SUN6F_GLOW_L)
+    fr = fx2.god_rays(fr, sun, strength=0.28 + 0.35 * kw, length=1.0, t=t)
+    fr = self.rg6.paint(fr, src)
+    bob = 4 * abs(math.sin(t * 5.5))
+    fx, fy = 1250 - 30 * u, 936
+    fr = _shadow(fr, fx, fy, L=60, lean=0.9, wmax=40, amt=0.6)
+    fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985)
+    if not hasattr(self, 'cov6'): self.cov6 = _ridge_cov(self.rg6)
+    z = step_zoom(t, [(7072 / 30, 0.03)]) * (1 + 0.006 * u)
+    fr = sun_final6(fr, sun, 110, self.cov6, k85=0.86, Fc=SUN6F_FC + 3 * min(1.0, kw), seed=41, zc=(fx, 600), z=z)
+    fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 600, sun, rim_w=1.6, rim_amt=0.9)
+    fr = dust_kick6(fr, t, STRONG34[1:], self.rg6, fx, fy, 7350, 5, 1.25, r0=110, rise=80, amt=0.6, n_spark=36, spark_v=(160, 460))
+    fr = E.dust_motes(fr, t, 1394, n=50, amt=0.26, drift=(-22, -12))
+    return K.cam(fr, z, center=(fx, 600))
 
 
 def _e26_render_c(self, t):
