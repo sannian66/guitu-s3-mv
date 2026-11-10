@@ -1789,10 +1789,18 @@ class V16(Shot):
         k = eio(clamp01((t - V(36.9)) / 1.0))
         if k > 0:
             import a_r6
-            if not hasattr(self, 'seal'): self.seal = a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
-            fr, _ = A.place(fr, t, self.seal, (c[0] + 20, 470 + 90 * k), w=520 + 80 * k, anc=(0.5, 1.0), look='sil', rim=GOLD,
-                            rim_amt=5.0 * k, rim_dir=(0.2, -1.0), alpha=0.92 * k, wind=0, breathe=0.0,
-                            grade=dict(expo=0.2, sat=0.3))
+            if R5.ON['jade']:                                                    # r6 #10：玉玺重生成（jade_seal_v2：羊脂白玉、九龙钮、云纹浮雕、金镶缺角）——
+                if not hasattr(self, 'seal'): self.seal = a_r6.clean('R5_A/jade_seal_v2', lo=0.2, erode=3)   # 不再是平涂剪影：受金光照亮，有体积与材质
+                fr = A.glow(fr, (c[0] + 20, 300 + 90 * k), 300, 0.45 * k, (1.0, 0.82, 0.55))                 # 玉透光的暖晕
+                fr, si = A.place(fr, t, self.seal, (c[0] + 20, 500 + 90 * k), w=400 + 70 * k, anc=(0.5, 1.0), rim=GOLD,
+                                rim_amt=3.0 * k, rim_dir=(0.2, -1.0), alpha=min(1.0, 1.3 * k), wind=0, breathe=0.0, defocus=2.0 * (1 - k),
+                                grade=dict(expo=0.30 + 0.38 * k, sat=0.75, gamma=1.08, tint=(1.04, 1.0, 0.92)))
+                fr = R5.under_shade(fr, si['A'], si['box'], amt=0.55, start=0.35)
+            else:
+                if not hasattr(self, 'seal'): self.seal = a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
+                fr, _ = A.place(fr, t, self.seal, (c[0] + 20, 470 + 90 * k), w=520 + 80 * k, anc=(0.5, 1.0), look='sil', rim=GOLD,
+                                rim_amt=5.0 * k, rim_dir=(0.2, -1.0), alpha=0.92 * k, wind=0, breathe=0.0,
+                                grade=dict(expo=0.2, sat=0.3))
             fr = A.clouds(fr, t, 61, speed=(60, -20), y0=120, y1=520, amt=0.55, col=(0.16, 0.12, 0.08), dark=0.3, thr=0.52,
                           light=c, light_r=500, light_col=(1.0, 0.75, 0.4))
         # 第十一棒（critic_A_r7 P1-6 人物身份）：召印的是白发太上皇（权势一方），构图上点明 —— 站上丹陛高台（三级玉阶，阶沿金边），
@@ -1822,7 +1830,7 @@ class V17(Shot):
     def __init__(self):
         import a_r6
         self.R = a_r6
-        self.seal = a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
+        self.seal = a_r6.clean('R5_A/jade_seal_v2', lo=0.2, erode=3) if R5.ON['jade'] else a_r6.clean('A_r6/giant_seal', lo=0.2, erode=3)
         r = np.random.default_rng(17)
         self.cracks = [K.crack_path((960 + math.cos(a) * 300, 540 + math.sin(a) * 260), (960 + math.cos(a) * 1400, 540 + math.sin(a) * 800), 17 + i)
                        for i, a in enumerate(r.uniform(0, 2 * math.pi, 9))] if hasattr(K, 'crack_path') else []
@@ -1857,9 +1865,15 @@ class V17(Shot):
         sh = cv2.resize(cv2.GaussianBlur(sh, (0, 0), 4 + 22 * (1 - q)), (W, H))[..., None] * gm
         fr = fr * (1 - (0.25 + 0.6 * q) * sh)
         fr = RAIN.draw(fr, t, 0.7, angle=6, light=(960, 200), layers=(0, 1))
-        fr, info = A.place(fr, t, self.seal, (960, by), w=1150 * (0.92 + 0.08 * q), anc=(0.5, 1.0), rim=GOLD, rim_amt=2.2, rim_dir=(0.3, -1.0),
-                           grade=dict(expo=0.82, sat=0.55, tint=(1.04, 1.0, 0.95), gamma=1.05), wind=0, breathe=0.0,
-                           mblur=(0, 4 + 22 * q * q))
+        if R5.ON['jade']:                                                                   # r6 #10：立体玉玺（3/4 侧俯，两个侧面 + 九龙钮都看得见）
+            fr, info = A.place(fr, t, self.seal, (960, by), w=880 * (0.92 + 0.08 * q), anc=(0.5, 1.0), rim=GOLD, rim_amt=2.6, rim_dir=(0.3, -1.0),
+                               grade=dict(expo=0.62, sat=0.70, tint=(1.05, 1.0, 0.92), gamma=1.10), wind=0, breathe=0.0,
+                               mblur=(0, 3 + 20 * q * q))
+            fr = R5.under_shade(fr, info['A'], info['box'], amt=0.5, start=0.4)
+        else:
+            fr, info = A.place(fr, t, self.seal, (960, by), w=1150 * (0.92 + 0.08 * q), anc=(0.5, 1.0), rim=GOLD, rim_amt=2.2, rim_dir=(0.3, -1.0),
+                               grade=dict(expo=0.82, sat=0.55, tint=(1.04, 1.0, 0.95), gamma=1.05), wind=0, breathe=0.0,
+                               mblur=(0, 4 + 22 * q * q))
         fr = fx2.god_rays(fr, (960, 130), strength=0.15, length=1.0, color=(1.0, 0.78, 0.45), t=t, src_r=200)
         # 第十一棒（P1-7）：下落速度线 —— 印身两侧被压开的气流/雨线，竖向拉长、随下落加速
         Lv = np.zeros((H // 2, W // 2), np.float32); rr_ = np.random.default_rng(171)

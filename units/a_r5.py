@@ -313,3 +313,15 @@ class Carve:
             R = R * (1 - m[..., None]) + it['col'] * m[..., None]
             fr[y0:y0 + h_, x0:x0 + w_] = R
         return fr
+
+
+def under_shade(fr, Aw, box, amt=0.45, start=0.45, col=None):
+    """玉玺等实体：精灵下部背光一侧压暗（包围盒内自 start 起向下渐暗），去掉「贴纸」平亮感。Aw = place() 返回的屏幕 alpha。"""
+    import numpy as np
+    (x0, y0), (x1, y1) = box
+    yy = np.arange(fr.shape[0], dtype=np.float32)[:, None]
+    g = np.clip((yy - (y0 + start * (y1 - y0))) / max(1.0, (1 - start) * (y1 - y0)), 0, 1)
+    k = (Aw * g * amt)[..., None]
+    out = fr * (1 - k)
+    if col is not None: out = out + k * np.asarray(col, np.float32) * 0.1
+    return out
