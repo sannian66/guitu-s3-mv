@@ -145,7 +145,7 @@ def install(G):
         #     → 俯冲斜劈 js4_strike_a（命中 70.00，停 ~10 帧随势慢推）→ 落地收刀 js5_land_a（~20 帧）
         #   · 人物包围盒高 600–640px（≈ 画面 1080 的 56–60%），脚底统一落在 y≈900（2.39 黑边内）
         #   · 命中闪白降到 0.45（命中帧仍看得见劈刀姿势），去掉起跳闪
-        #   · 镜内字「那就劈开它」按用户 #55 保留：移到左上墙面（刻字位），刀痕斩开后两半只错开 0.10 字高，始终可读；
+        #   · 镜内字「那就劈开它」按用户 #55 保留：移到左上墙面（刻字位），斩开只演 3 帧，随后合拢复原并留一道红热斩痕，整句始终可读；
         #     底部横排字幕区不再压任何刀光/碎砖
         T_APEX = 69.865
         T_STRK = 69.955         # 命中前一帧（69.967）先见俯冲斜劈姿势
@@ -231,11 +231,21 @@ def install(G):
             dx, dy, dr = shake(t, 12 * sk, 16, 35)
             fr = cam(fr * (1 - 0.2 * fl) + fl * 0.32, 1.02 + 0.025 * sk, dx, dy, dr)
             p = clamp01((t - 69.60) / 0.9)
-            pl = [dict(q, x=q['x'] - 960 + 470, y=250, size=86) for q in LY.places('那就劈开它', 'bottom', red=('劈',))]
-            for i, q in enumerate(pl): q['x'] = 470 + (i - 2) * 86 * 1.12
-            fr = T.slash_cut(fr, '那就劈开它', p, places=pl, color=LY.WHITE, angle=12,
-                             cut_at=(self.T_HIT - 69.60) / 0.9, emph=('劈',), emph_color=LY.RED_T, slide=0.10, seed=35,
+            pl = [dict(q, x=470 + (i - 2) * 86 * 1.12, y=250, size=86) for i, q in enumerate(LY.places('那就劈开它', 'bottom', red=('劈',)))]
+            cut = (self.T_HIT - 69.60) / 0.9
+            a = t - self.T_HIT
+            # 斩开只演 3 帧（刀光掠过 + 两半一错），随后字合拢复原、留一道刻进墙里的斩痕 —— 字始终整句可读
+            pp = p if 0 <= a < 0.1 else min(p, cut - 1e-3)
+            fr = T.slash_cut(fr, '那就劈开它', pp, places=pl, color=LY.WHITE, angle=12,
+                             cut_at=cut, emph=('劈',), emph_color=LY.RED_T, slide=0.10, seed=35,
                              style_kw=dict(LY.STYLE))
+            if a >= 0.1:
+                th = math.radians(12); d = np.array([math.cos(th), math.sin(th)])
+                c = np.array([470.0, 250.0]); L_ = 330
+                Ls = np.zeros((H, W), np.float32)
+                cv2.line(Ls, tuple((c - d * L_).astype(int)), tuple((c + d * L_).astype(int)), 1.0, 2, cv2.LINE_AA)
+                hot = math.exp(-(a - 0.1) / 0.35)
+                fr = fr * (1 - 0.6 * Ls[..., None]) + (cv2.GaussianBlur(Ls, (0, 0), 3) * (0.25 + 0.9 * hot))[..., None] * np.array([1.0, 0.35, 0.12], np.float32)
             return fr, 0
 
     # ---------------------------------------------------------------- S037 ELS 背影站在金缝前（小人，金 rim）
