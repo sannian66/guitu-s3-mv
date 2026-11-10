@@ -87,3 +87,16 @@ Reminder — art style: high-contrast Japanese manga ink illustration; color sch
 - S028 去掉巨字「血」，血滴改墨线描边；火星改白 + 血红。
 - 渲染：`python3 tools/r8_route1.py 1779 1869 out.mp4`（单帧 `still <f> out.png`），90 帧约 2 分钟。
 - 成果：crew/round8/S028-030_风格D_现管线.mp4、..._对比.mp4。
+
+## 结论（11-11 05:03 用户通过）
+- 用户：「可以的，很棒，我很喜欢」。**路线 1 定稿**：现管线 + STYLE_D，路线 2（Remotion）不再推进，无需商用许可。
+- 试做提交 f1838a1；成片 crew/round8/S028-030_风格D_现管线.mp4，对比 ..._对比.mp4。
+- 素材：route1/ 下 D028_bg、D028_blade(_cut)、D029_bg、D030_ready(_cut) 为新生图；D029_grip_cut、D030_raise_cut、D030_bg 拷自 layers/（S029_L2_cut、S030_L3_cut、S030_L1）。提示词 jobs/r8_D_route1_sprites.json。
+- 小瑕疵（已问用户，未答）：S029 新图看不到刀身，现版能看到；如需，重生一张「握刀手 + 半脸 + 刀身斜出画」。
+
+## 铺开全片的做法（下一步，待用户说开工）
+1. 按段：副歌一其余镜（S031–S048）→ 主歌/前奏（sections/sec_*.py）→ 后段。每段先列「镜号 → 需要的精灵/背景」表。
+2. 每张图用风格 D 模板（头段 + Scene + 尾段 + Reminder），人物加定妆照参考；单体一律纯绿幕 + cutout_green；背景加 no moon/no sun/no buildings 视需要。
+3. 代码只加 `*D` 子类换素材，grade=NEU、rim=NORIM、wrap=0、shade=None；切点/运镜/特效不动；去掉所有字体叠加的巨字，画进场景的字保留。
+4. 每段渲完与第六轮同段左右对比交用户；全片通过后走 r6 出片流程（底层块 → 字幕 → 拼接音轨 → ffprobe → 联系表）。
+5. 预算：每段约 30–40 张图（RH_image2 3 积分/张）；90 帧渲染约 2 分钟。
