@@ -29,6 +29,14 @@ def _on(k, d='1'): return os.environ.get(k, d) != '0'
 # 不动：#44 2:42–2:58 红「什」到「陪葬」全段（S01–S15）、#46 3:02「规矩」(S21)、S19 横排「主张」与朱印「我」（待问用户）。
 NOVLYR = _on('R5_NOVLYR')
 R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S21) 与「判」(S26)，其余画内字去掉
+# [D组 r6 #55] 用户 2026-11-10 13:01：「镜里那些横排或刻、写、印出来的歌词字，保留」——R5D_TEXT_CUT 去掉的镜内字恢复：
+#   竹简墨书 +「谁定的」(S20)、木牌刻字 +「我」「偏」木屑字(S21)、木牌字 + 朱红「闯」(S22)、云眼「天」(S23)、光刻「我」(S25)、
+#   纸上残句 + 飘落「人」+ 朱红「人」(S26)、刀身烙「刀」(S27)、回声「我」(S28)、倒碑碑文 + 裂字「来」(S29)、金「答」(S30/gold_tip)。
+#   仍去：竖排宋体歌词列（S22「我偏要」、S24「天」「不」、S26「我来」、S27「不答」，同 #53 竖排全去）；「判」全去（S24 + S26，用户「判字不留了」）。
+#   R6D_KEEPTXT=0 回滚到第五轮去字状态。#46 复审的「规矩」同时砸出 / 刀光落点 / 头顶锚点 / 189.71 闪白硬切不受此开关影响。
+R6D_KEEPTXT = _on('R6D_KEEPTXT')
+TXTCUT = R5D_TEXT_CUT and not R6D_KEEPTXT   # 镜内横排/刻/写/印字：r6 默认保留
+VCUT = R5D_TEXT_CUT                        # 竖排宋体歌词列：继续去
 F0, F1 = 4839, 5797
 T0, T1 = F0 / 30, F1 / 30
 O = {i: D.onsets(i) for i in range(40, 48)}
@@ -1187,7 +1195,7 @@ class S20_Wall(Shot):
         dst = np.float32([[170, 0], [W - 170, 0], [W + 140, H], [-140, H]])
         self.Mp = cv2.getPerspectiveTransform(src, dst)
         self.rgb, self.gap, self.txt = R5.bamboo_scroll(4)
-        if R5D_TEXT_CUT:                                        # [D r5 #46] 竹简墨书去掉（rgb = 底色 ×(1-0.85·字) → 精确还原底色）
+        if TXTCUT:                                              # [D r5 #46] 竹简墨书去掉（rgb = 底色 ×(1-0.85·字) → 精确还原底色）
             self.rgb = (self.rgb / (1 - 0.85 * self.txt[..., None])).astype(np.float32)
         self.wet = np.clip((cv2.resize(D._tile(207)[:H // 4, :W // 4], (W, H)) - 0.5) * 3, 0, 1)
 
@@ -1222,7 +1230,7 @@ class S20_Wall(Shot):
         for k, c in enumerate('谁定的'):
             pk = cp(t, O[45][k], 0.16)
             if pk > 0: lit.append((c, 700 + 260 * k, 262, 150, pk, 'w'))
-        if not R5D_TEXT_CUT: fr = D.song(fr, lit, glow=0.3)        # [D r5 #46] 去「谁定的」
+        if not TXTCUT: fr = D.song(fr, lit, glow=0.3)              # [D r5 #46] 去「谁定的」；[r6 #55] 横排、竹简上亮起 → 保留
         h = lerp(560, 660, ei(u, 1.3))
         sc = D.fit_scale(self.sp, h); fa = D.feet(self.sp); fd = (960, 930 + 40 * u)
         M = cv2.getRotationMatrix2D((fa[0] * self.sp.w, fa[1] * self.sp.h), 0, sc)
@@ -1254,7 +1262,7 @@ class S21_Charge(Shot):
     def __init__(self):
         self.P = R5.Plaques(seed=21, n_far=13, n_mid=7, n_near=3, ytop=40, cut=(self.TC, (-100, 780), (2000, 330)), gold_chars=())     # [r7] 木牌不再有金字抢「矩」「我」
         for it in self.P.items:                                 # [r7b] P1-9：中/近景木牌去刻字（只留远景虚焦小字），不和「我」抢视线
-            if it['z'] >= 0.5 or R5D_TEXT_CUT: it['ch'] = ' '      # [D r5 #46] 远景小牌也去字
+            if it['z'] >= 0.5 or TXTCUT: it['ch'] = ' '            # [D r5 #46] 远景小牌也去字；[r6 #55] 刻字保留
 
     def render(self, t):
         u = self.u(t)
@@ -1295,7 +1303,7 @@ class S21_Charge(Shot):
         for ch, x_, y_, sz, on, sd in (('我', 1460, 430, 330, O[45][5], 31), ('偏', 1500, 770, 200, O[45][6], 32)):
             tv = V(on)
             pq = cl((t - (tv - 0.24)) / 0.24)
-            if pq > 0 and not R5D_TEXT_CUT: fr = D.shard_glyph(fr, ch, x_, y_, sz, pq, seed=sd, spread=620, col=(0.86, 0.64, 0.38), rim=(0.85, 0.9, 1.0))   # [r7] 提亮，压过木牌
+            if pq > 0 and not TXTCUT: fr = D.shard_glyph(fr, ch, x_, y_, sz, pq, seed=sd, spread=620, col=(0.86, 0.64, 0.38), rim=(0.85, 0.9, 1.0))   # [r7] 提亮，压过木牌
         return K.cam(fr, 1.03 + 0.05 * u, *K.shake(t, 4 + 10 * impact(t, self.TC, 0.15), 3, 21)[:2], rot=1.0 - 2.0 * u), 0.0
 
 
@@ -1306,7 +1314,7 @@ class S22_Chuang(Shot):
     def __init__(self):
         self.sp = D.spr('S105/charge_front')
         self.P = R5.Plaques(seed=22, n_far=12, n_mid=7, n_near=0, ytop=-40, cut=(183.45, (-100, 520), (2000, 420)))
-        if R5D_TEXT_CUT:                                        # [D r5 #46] 背景木牌去字
+        if TXTCUT:                                              # [D r5 #46] 背景木牌去字
             for it in self.P.items: it['ch'] = ' '
         self.P2 = [dict(ch='闯', x=1530, y=600, size=500, rot=-4.0, font='serif_black', idx=0, emph=True)]   # [r7b] P1-9：挪到人物右侧，露出冲刺
 
@@ -1331,7 +1339,7 @@ class S22_Chuang(Shot):
         x_, y_ = K.grid()
         red = (1.0, 0.26, 0.14)
         bounce = np.exp(-(((x_ - 1530) / 520) ** 2 + ((y_ - 640) / 420) ** 2)) * (0.35 + 0.65 * min(1.0, pin * 2))
-        if R5D_TEXT_CUT: bounce = bounce * 0.45                 # [D r5 #46] 没有朱红「闯」了：红反光减半（留木牌暖红光源）
+        if TXTCUT: bounce = bounce * 0.45                       # [D r5 #46] 没有朱红「闯」了：红反光减半（留木牌暖红光源）
         fr = fr + (Aw * bounce * 0.22)[..., None] * np.array(red, np.float32)
         if R5D_TEXT_CUT:                                         # [D r5 复审 #46-2] 去掉一侧红描边 / 一侧白描边（只留很淡的冷边）
             fr = R7.rim_edge(fr, Aw, (-0.75, -0.65), 2, 0.25, (0.70, 0.78, 0.95), glow=4, gamt=0.08)
@@ -1339,14 +1347,14 @@ class S22_Chuang(Shot):
             fr = R7.rim_edge(fr, Aw * np.clip(bounce * 1.6, 0, 1), (0.95, -0.25), 5, 1.3, red, glow=9, gamt=0.35)
             fr = R7.rim_edge(fr, Aw, (-0.75, -0.65), 3, 0.75, (0.80, 0.90, 1.0), glow=5, gamt=0.15)
         fr = K.radial_blur(fr, (1060, 520), 0.015 + 0.03 * q)
-        if R5D_TEXT_CUT: pass                                   # [D r5 #46] 去「闯」「我偏要」
+        if TXTCUT: pass                                         # [D r5 #46] 去「闯」；[r6 #55] 朱红「闯」保留
         elif t < th:
             p_in = cp(t, O[45][7], 0.25)
             L = D.text_layer([('闯', 1530 + 40 * (1 - ei(q, 2)), 700 - 100 * ei(q, 2), 380 + 120 * ei(q, 2), min(1, p_in * 2), 1.0, -4.0 * ei(q, 2), RED)], fname='serif_black')
             fr = T.compose(fr, L, **T.auto_style('red'))
         else:
             fr = T.shatter_out(fr, '闯', cl((t - th) / 0.5), places=self.P2, fname='serif_black', color='red', impact=(1330, 560), power=1.6, seed=7)
-        if not R5D_TEXT_CUT:
+        if not VCUT:                                            # 竖排「我偏要」继续去（#53）
             its = [('我', 250, 280, 120, 1.0, 'w'), ('偏', 250, 420, 120, 1.0, 'w'), ('要', 250, 600, 190, cp(t, O[45][7], 0.14), 'w')]
             fr = D.song(fr, its)
         fr = fr + impact(t, th, 0.08) * 0.7 * np.array([0.78, 0.86, 1.0], np.float32)   # [r8] 撞击闪改冷白，不把整帧洗灰
@@ -1371,7 +1379,7 @@ class S23_Eye(Shot):
         fr = D.lightning(fr, t, th, (1650, 120), (1240, 380), seed=12, amt=1.8, life=0.25)
         p = cl((t - th + 0.03) / 0.12)
         p = max(p, 0.8 * cl((t - self.t0) / 0.25) * (0.85 + 0.15 * math.sin(t * 17)))     # [r5] 闪电前「天」已在云眼里可读（≥0.6）
-        if p > 0 and not R5D_TEXT_CUT:                          # [D r5 #46] 去「天」
+        if p > 0 and not TXTCUT:                                # [D r5 #46] 去「天」；[r6 #55] 云眼「天」保留
             L = D.text_layer([('天', 1320, 410, 420, p * (0.9 + 0.1 * math.sin(t * 30)), 1.0 + 0.1 * (1 - p))], fname='serif_black', color=(0.92, 0.95, 1.0))
             fr = T.compose(fr, L, shadow=0.75, shadow_sigma=26, glow=0.9 + 0.8 * fl, glow_color=(0.6, 0.7, 1.0), glow_sigma=30)
             # [r8] P2-7：闪电前也有一圈冷白字缘（云眼背光），字从灰雾里分离出来；字整体右移让开人物后脑
@@ -1434,9 +1442,9 @@ class S24_Defy(Shot):
         fr = K.rain(fr, t, 24, n=600, amt=0.32, angle=4, length=(40, 120))
         # 「天」「不」冷白；「判」从云眼砸到刀尖
         pj = cl((t - (tj - 0.16)) / 0.16)
-        if not R5D_TEXT_CUT:                                     # [D r5 #46] 去「天」「不」与 3:06 的第一个「判」（只留 3:08 S26 的「判」）
+        if not VCUT:                                             # [D r5 #46] 去竖排「天」「不」（r6 继续去）与 3:06 的第一个「判」（只留 3:08 S26 的「判」）
             fr = D.song(fr, [('天', 300, 300, 150, 1.0, 'w'), ('不', 300, 470, 150, cp(t, O[46][1], 0.14), 'w')])
-        if pj > 0 and not R5D_TEXT_CUT:
+        if pj > 0 and not (R5D_TEXT_CUT or R5D_NO_PAN):          # 「判」全去
             e = ei(pj, 2)
             sz = lerp(90, 400, e)
             cy = lerp(self.EYE[1] + 20, tip[1] - 400 * 0.5 - 10, e)
@@ -1478,7 +1486,7 @@ class S25_Leap(Shot):
         # [r4] 「我」被刀光沿斩线方向刻出：空心白热描边 + 朱红外发光，斜放在刀光轨迹上（右上）
         tw = V(O[46][3])
         rv = cl((t - (tw - 0.12)) / 0.3)
-        if rv > 0 and not R5D_TEXT_CUT: fr = D.light_glyph(fr, '我', 1440, 360, 340, rv, rot=20.0, d=(0.8, -0.6))
+        if rv > 0 and not TXTCUT: fr = D.light_glyph(fr, '我', 1440, 360, 340, rv, rot=20.0, d=(0.8, -0.6))
         return shake_cam(fr, t, [ts], 8, z=1.02 + 0.05 * u, oy=-15 * u), 0.0
 
 
@@ -1501,8 +1509,8 @@ class S26_Judge(Shot):
         u = self.u(t)
         if self.sc is None: self.sc = S06_Scale()
         ts = V(O[46][4]); tj = V(O[46][5])
-        pap = self.sc.scene(t, sent_a=1 - cl((t - V(O[46][4])) / 0.2), ty=10, chars=not R5D_TEXT_CUT)    # [r7] 劈开错位前句子先隐去，不随半张纸滑出画
-        if not R5D_TEXT_CUT: pap = D.song(pap, [('我', 390, 440, 140, 1.0, 'k'), ('来', 390, 600, 140, cp(t, O[46][4], 0.1), 'k')])   # [r7b] 下移，让开顶行残句
+        pap = self.sc.scene(t, sent_a=1 - cl((t - V(O[46][4])) / 0.2), ty=10, chars=not TXTCUT)    # [r7] 劈开错位前句子先隐去，不随半张纸滑出画
+        if not VCUT: pap = D.song(pap, [('我', 390, 440, 140, 1.0, 'k'), ('来', 390, 600, 140, cp(t, O[46][4], 0.1), 'k')])   # [r7b] 下移，让开顶行残句
         s = eo(cl((t - ts - 0.04) / 0.45), 2)
         back = None
         if s <= 0:
@@ -1604,7 +1612,7 @@ class S27_Bullet(Shot):
         # 刀身上烙刻「刀」
         tk = V(O[47][0])
         p = cl((t - (tk - 0.22)) / 0.26)
-        if p > 0 and not R5D_TEXT_CUT:                          # [D r5 #46] 去刀身烙字「刀」
+        if p > 0 and not TXTCUT:                                # [D r5 #46] 去刀身烙字「刀」；[r6 #55] 烙字保留
             gy = dst[1] + 0.06 * self.sp.h * self.SC
             gx = dst[0] + self.slope * (gy - dst[1])
             A = T.brush_glyph('刀', 'serif_black', 175, p, 0, 0.0, 1.0, splatter=False)
@@ -1627,12 +1635,12 @@ class S27_Bullet(Shot):
         # 刻完推近：镜头压向刀身上的「刀」（ECU），字在画里变大
         gy = dst[1] + 0.06 * self.sp.h * self.SC; gx = dst[0] + self.slope * (gy - dst[1])
         zq = eo(cl((t - tk + 0.05) / 0.35), 2) + 0.08 * cl((t - tk - 0.3) / 0.45)
-        fr = shake_cam(fr, t, [tk], 6, z=1.0 + (0.3 if R5D_TEXT_CUT else 0.6) * zq, ox=(gx - 960) * 0.0 - 20 + 40 * u, center=(gx, gy))
+        fr = shake_cam(fr, t, [tk], 6, z=1.0 + (0.3 if TXTCUT else 0.6) * zq, ox=(gx - 960) * 0.0 - 20 + 40 * u, center=(gx, gy))
         return (self.text_only(fr, t) if text else fr), 0.0
 
     def text_only(self, fr, t):
         """「不答」：「答」随「不」一起以 35% 亮度入画（整句先读到），189.72 发声时提满；独立图层，不受入点故障影响"""
-        if R5D_TEXT_CUT: return fr                              # [D r5 #46] 去「不答」
+        if VCUT: return fr                                      # [D r5 #46] 去竖排「不答」（r6 继续去）
         pb = cp(t, O[47][1], 0.14)
         fr = D.song(fr, [('不', 1480, 430, 230, pb, 'w')])
         a = max(0.35 * pb, cp(t, O[47][2], 0.08))
@@ -1665,7 +1673,7 @@ class S28_Spin(Shot):
         fr = D.droplets(fr, t, 281, n=150, burst=(tw, (1000, 560)), focus=0.6)
         fade = math.exp(-max(0.0, t - self.t0 - 0.2) / 0.25)
         # [r4] 「我」在他身后：金色定格残影字（残影层随刀圈错位、慢慢收拢），被人物遮挡 → 字在画面空间里，不是贴片
-        if not R5D_TEXT_CUT: fr = D.echo_glyph(fr, '我', 640, 450, 480, cp(t, O[47][3], 0.12), n=5, step=(60, -14), fade=0.4 + 0.6 * math.exp(-max(0.0, t - V(O[47][3])) / 0.35))
+        if not TXTCUT: fr = D.echo_glyph(fr, '我', 640, 450, 480, cp(t, O[47][3], 0.12), n=5, step=(60, -14), fade=0.4 + 0.6 * math.exp(-max(0.0, t - V(O[47][3])) / 0.35))
         for k in range(5, 0, -1):          # 金色残影
             tk = t - k * 0.035
             a = 0.32 * (1 - k / 6) * fade
@@ -1713,7 +1721,7 @@ class S29_Thrust(Shot):
             sh = np.clip(1 - np.abs((np.arange(W) - x) / (w / 2)), 0, 1) ** 0.5
             Cv = Cv * (1 - m[..., None]) + m[..., None] * pal * (0.6 + 0.6 * sh[None, :, None])
             # 倒刻宋体
-            nc = 3 if (k < 2 and not R5D_TEXT_CUT) else 0          # [r4] 正中碑留白给「来」；[D r5 #46] 碑面去字
+            nc = 3 if (k < 2 and not TXTCUT) else 0          # [r4] 正中碑留白给「来」；[D r5 #46] 碑面去字
             cs = w * 0.55
             Lc = T.Layer()
             for j in range(nc):
@@ -1741,7 +1749,7 @@ class S29_Thrust(Shot):
                 # 碑底受金光（刀尖处）+ 金缝自刀尖向上裂开
                 rimg = np.exp(-((y - self.TIP[1]) / 18) ** 2) * a
                 cr = np.exp(-((self.cx) / (3 + 20 * u)) ** 2) * K.sstep(self.TIP[1] - 420 * eo(u), self.TIP[1] - 40, y) * (y < self.TIP[1] + 4) * a
-                dim = 1.0 if R5D_TEXT_CUT else 1.0 - 0.7 * cl((t - V(O[47][4]) + 0.1) / 0.25)      # [r4] 「来」裂出后金缝收光，让字可读
+                dim = 1.0 if TXTCUT else 1.0 - 0.7 * cl((t - V(O[47][4]) + 0.1) / 0.25)      # [r4] 「来」裂出后金缝收光，让字可读
                 fr = fr + (cr * 1.8 * dim + rimg * 0.6 * u)[..., None] * GOLD
                 fr = D.godrays(fr, cr, (960, 140), amt=0.6 * u * dim)
         sc = D.fit_scale(self.sp, 1060 - self.TIP[1])
@@ -1751,7 +1759,7 @@ class S29_Thrust(Shot):
         # [r4] 「来」被刀尖金光从正中碑里裂出来（金缝沿笔画推进 → 整字爆亮）
         tl = V(O[47][4])
         pq = cl((t - (tl - 0.15)) / 0.4)
-        if pq > 0 and not R5D_TEXT_CUT: fr = D.crack_glyph(fr, '来', 960, 285, 200, pq, seed=29)
+        if pq > 0 and not TXTCUT: fr = D.crack_glyph(fr, '来', 960, 285, 200, pq, seed=29)
         return shake_cam(fr, t, [V(O[47][4])], 6, z=1.0 + 0.05 * u, oy=-20 * u), 0.0
 
 
@@ -1768,7 +1776,7 @@ def gold_tip(A, B, p, tip=(960, 345), seed=0):
     out = out + (ring * 0.8 * (1 - p * 0.6) + core * 0.55 * math.sin(math.pi * p))[..., None] * GOLD
     out = out + D.rays(tip, p, seed=7, n=40)[..., None] * GOLD * 0.35 * math.sin(math.pi * p)
     a = math.sin(math.pi * cl((p - 0.15) / 0.7))
-    if a > 0.02 and not R5D_TEXT_CUT:
+    if a > 0.02 and not TXTCUT:
         L = D.text_layer([('答', 960, 470, 680, a * 0.45, 1.25 - 0.25 * p, 0.0, GOLD)], fname='serif_black')
         out = T.compose(out, L, shadow=0.0, glow=0.6 * a, glow_color=(1.0, 0.6, 0.2), glow_sigma=40)
     return out
@@ -1798,7 +1806,7 @@ class S30_Da(Shot):
                               tint=(1.05, 0.95, 0.85), rim=GOLDR, rim_amt=5.0, rim_dir=(0.0, -1.0), wind=12, look='sil')
         p = cp(t, O[47][5], 0.1)
         if p > 0:
-            if not R5D_TEXT_CUT:                                # [D r5 #46] 去「答」（金光、火星照旧）
+            if not TXTCUT:                                      # [D r5 #46] 去「答」；[r6 #55] 金「答」保留（金光、火星照旧）
                 L = D.text_layer([('答', 960, 470, 640, min(1, p * 2), 1 + 0.35 * (1 - eo(p)) + 0.05 * u, 0.0, GOLD)], fname='serif_black')
                 fr = T.compose(fr, L, shadow=0.85, shadow_sigma=40, glow=0.5, glow_color=(1.0, 0.55, 0.2), glow_sigma=30)
             fr = K.sparks(fr, t, 3001, (960, 470), n=220, life=1.0, speed=(500, 1600), dirc=(0, -1), spread=3.1, grav=150, burst=True,
