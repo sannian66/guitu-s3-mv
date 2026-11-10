@@ -1,0 +1,39 @@
+[
+ {
+  "name": "L1_sky",
+  "nocut": true,
+  "prompt": "Traditional Chinese ink-wash painting (shuimo) on aged xuan rice paper, visible brush strokes, dry-brush feibai, wet ink bleeds, five tones of ink, paper fibre texture. Palette strictly black ink, warm paper white and cinnabar red only; no gold, no glossy CG. Match the brushwork, paper colour and the swordsman's face of the reference images exactly. No text, no letters. Background plate only, NO people: wide xuan paper sky, a huge cinnabar red sun washed in the upper middle-right, faint distant ink mountain ridges along the bottom third. Empty foreground. Extend the scene wider than the reference so it can be used as a parallax background.",
+  "refs": [
+   "out/round7/test/S121_r7.png",
+   "out/round7/test/S043_master.png"
+  ],
+  "out": "out/round7/layers"
+ },
+ {
+  "name": "L2_clouds",
+  "prompt": "Traditional Chinese ink-wash painting (shuimo) on aged xuan rice paper, visible brush strokes, dry-brush feibai, wet ink bleeds, five tones of ink, paper fibre texture. Palette strictly black ink, warm paper white and cinnabar red only; no gold, no glossy CG. Match the brushwork, paper colour and the swordsman's face of the reference images exactly. No text, no letters. Only a long horizontal band of drifting ink-wash clouds and mist, grey and black wash with dry-brush edges, a few red ink flecks, spanning the full width, isolated on a flat pure #00FF00 green background. No sun, no people, no paper texture in the green area.",
+  "refs": [
+   "out/round7/test/S121_r7.png",
+   "out/round7/test/S043_master.png"
+  ],
+  "out": "out/round7/layers"
+ },
+ {
+  "name": "L3_hero",
+  "prompt": "Traditional Chinese ink-wash painting (shuimo) on aged xuan rice paper, visible brush strokes, dry-brush feibai, wet ink bleeds, five tones of ink, paper fibre texture. Palette strictly black ink, warm paper white and cinnabar red only; no gold, no glossy CG. Match the brushwork, paper colour and the swordsman's face of the reference images exactly. No text, no letters. Only the swordsman Gui Tu, medium close-up from the waist up, three-quarter back view turning his head to look over his shoulder, long black hair in a high ponytail blown by wind, black robe, dark red collar, exactly as in the first reference. Isolated on a flat pure #00FF00 green background, full figure edges clean, nothing else.",
+  "refs": [
+   "out/round7/test/S121_r7.png",
+   "out/round7/test/S043_master.png"
+  ],
+  "out": "out/round7/layers"
+ },
+ {
+  "name": "L4_fg",
+  "prompt": "Traditional Chinese ink-wash painting (shuimo) on aged xuan rice paper, visible brush strokes, dry-brush feibai, wet ink bleeds, five tones of ink, paper fibre texture. Palette strictly black ink, warm paper white and cinnabar red only; no gold, no glossy CG. Match the brushwork, paper colour and the swordsman's face of the reference images exactly. No text, no letters. Only foreground elements: a long flowing cinnabar red silk sash streaming diagonally across the lower part of the frame painted in red ink with dry-brush edges, plus scattered red and black ink splatter droplets. Isolated on a flat pure #00FF00 green background. No people.",
+  "refs": [
+   "out/round7/test/S121_r7.png",
+   "out/round7/test/S043_master.png"
+  ],
+  "out": "out/round7/layers"
+ }
+]

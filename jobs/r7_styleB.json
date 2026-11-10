@@ -1,0 +1,84 @@
+[
+ {
+  "name": "S043_B",
+  "nocut": true,
+  "out": "out/round7/styleB",
+  "refs": [
+   "out/round7/test/src/S043.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, dark red collar and sash; keep his face as in the character reference. Keep the composition, framing and pose of the FIRST reference image; the second reference is only for his face. Turning to stare into camera in the rain, rain as thin white streaks over black. Wide 2.39:1 framing."
+ },
+ {
+  "name": "S015_B",
+  "nocut": true,
+  "out": "out/round7/styleB",
+  "refs": [
+   "out/round7/test/src/S015.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, dark red collar and sash; keep his face as in the character reference. Keep the composition, framing and pose of the FIRST reference image; the second reference is only for his face. Close-up drawing the sword, sparks as red flecks. Wide 2.39:1 framing."
+ },
+ {
+  "name": "S096_B",
+  "nocut": true,
+  "out": "out/round7/styleB",
+  "refs": [
+   "out/round7/test/src/S096.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, dark red collar and sash; keep his face as in the character reference. Keep the composition, framing and pose of the FIRST reference image; the second reference is only for his face. White space, a balance scale; left pan one tiny red figure, right pan a heap of a thousand tiny black figures, balanced. No characters text. Wide 2.39:1 framing."
+ },
+ {
+  "name": "S121_B",
+  "nocut": true,
+  "out": "out/round7/styleB",
+  "refs": [
+   "out/round7/test/S121_r7.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, dark red collar and sash; keep his face as in the character reference. Keep the composition, framing and pose of the FIRST reference image; the second reference is only for his face. Dawn wind, ponytail and red sash whipping, a huge flat red sun behind him, jagged hatched mountains at the bottom. Wide 2.39:1 framing."
+ },
+ {
+  "name": "L1_sky",
+  "nocut": true,
+  "out": "out/round7/layersB",
+  "refs": [
+   "out/round7/layers/L1_sky.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. Repaint the first image in this style: background plate, NO people, huge flat red sun on a red-and-white sky, jagged mountain ridges with dense hatching along the bottom, sea of hatched clouds. Wider than reference."
+ },
+ {
+  "name": "L2_clouds",
+  "out": "out/round7/layersB",
+  "refs": [
+   "out/round7/layers/L2_clouds_cut.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. Only a long horizontal band of drifting clouds drawn with hatched manga linework, white with black hatching and a few red accents, isolated on flat pure #00FF00 green background."
+ },
+ {
+  "name": "L3_hero",
+  "out": "out/round7/layersB",
+  "refs": [
+   "out/round7/layers/L3_hero_cut.png",
+   "out/round7/test/S043_master.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. The swordsman Gui Tu: young man, long black hair in a high ponytail, sharp eyes, black robe, dark red collar and sash; keep his face as in the character reference. Only the swordsman, same pose as the first image (waist up, three-quarter back view looking over shoulder, ponytail blown by wind), isolated on flat pure #00FF00 green background."
+ },
+ {
+  "name": "L4_fg",
+  "out": "out/round7/layersB",
+  "refs": [
+   "out/round7/layers/L4_fg_cut.png",
+   "assets/ref_user/style_B_manga_red.png"
+  ],
+  "prompt": "Restyle into the art style of the LAST reference image ONLY (ignore its content, do not draw the woman or the cat or paper sheets): high-contrast Japanese manga ink illustration, crisp black pen linework with fine cross-hatching and stippling, pure white paper areas, solid black fills, and flat saturated vermilion red (#E0201B) used as large graphic shapes; strictly three colours black, white, red, no grey wash gradients, no gold, no glossy CG. Sharp, elegant, detailed hatching on hair and cloth. No text, no letters. Only a long flowing flat red silk sash streaming diagonally with black outline and hatched folds, plus black and red ink droplets, isolated on flat pure #00FF00 green background."
+ }
+]
