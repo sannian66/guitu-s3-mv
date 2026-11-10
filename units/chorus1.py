@@ -952,7 +952,7 @@ class S041(Shot):
 
 
 # =====================================================================================
-# S042 80.22–82.06 ELS 月被云吞没；「不」一道刀光划过月面，月洇成猩红之月（r5 去「天」字）
+# S042 80.22–82.06 ELS 满月（r6：云只在月外，月面干净）；「不」一道刀光划过月面，月洇成猩红之月（r5 去「天」字）
 class S042(Shot):
     t0, t1 = 80.225, 82.059
     T_SL = V(81.14)     # 「不」：一道刀光横过月面，月从刀痕处洇成猩红（r5 F组 用户 #26：去「天」字）
@@ -961,7 +961,7 @@ class S042(Shot):
     def __init__(self):
         sky = K.sky(seed=42, cloud=0.3, top=(0.01, 0.012, 0.018), bot=(0.05, 0.055, 0.065)).copy()
         rgb, A = K.moon_sprite(240)
-        self.bg = K.paste_sprite(sky.copy(), rgb, A, *self.MC)
+        self.bg = K.paste_sprite(sky.copy(), rgb * 0.74, A, *self.MC)     # r6：压月面亮度，满月不过曝成白饼、看得见月海
         # 猩红之月：同一月面纹理改色（月海更深）+ 血色晕；天幕近月处染一层暗红
         lum = rgb.mean(-1, keepdims=True)
         s_ = A.shape[0]; yy_, xx_ = np.mgrid[0:s_, 0:s_].astype(np.float32) - s_ / 2
@@ -969,12 +969,14 @@ class S042(Shot):
         dd_ = np.sqrt(xx_ ** 2 + yy_ ** 2)
         moon_r = np.clip((lum - 0.62) / 0.33, 0, 1)                  # 月面纹理归一（月海暗、高地亮）
         limb_r = np.clip(1 - 0.5 * (dd_ / 240) ** 3, 0, 1)[..., None]  # 红月边缘更沉（立体感）
-        rgb_r = (disc * limb_r * (np.array([0.60, 0.065, 0.05], np.float32) * (0.28 + 0.72 * moon_r) ** 1.2
-                                  + np.array([0.20, 0.07, 0.03], np.float32) * moon_r ** 3)
-                 + (1 - disc) * np.array([0.34, 0.02, 0.018], np.float32)).astype(np.float32)
+        # r6 F组（评审 #26 6 分）：猩红要饱和 ≈ #C8102E（成片实测月心 ≈ (200,16,46)），不发橙、不发黑
+        rgb_r = (disc * limb_r * (np.array([0.74, 0.040, 0.160], np.float32) * (0.40 + 0.60 * moon_r) ** 1.1
+                                  + np.array([0.16, 0.035, 0.05], np.float32) * moon_r ** 3)
+                 + (1 - disc) * np.array([0.40, 0.02, 0.06], np.float32)).astype(np.float32)
         x, y = K.grid()
         d = np.sqrt((x - self.MC[0]) ** 2 + (y - self.MC[1]) ** 2)
-        tint = (np.exp(-(d / 700) ** 2) * 0.10)[..., None] * np.array([1.0, 0.05, 0.03], np.float32)
+        tint = (np.exp(-(d / 700) ** 2) * 0.08)[..., None] * np.array([1.0, 0.05, 0.15], np.float32)
+        self.moon_m = sstep(300, 250, d).astype(np.float32)          # 月盘（含 50px 羽化）：云絮不压月面
         self.bg_r = K.paste_sprite(sky * np.array([1.05, 0.85, 0.85], np.float32) + tint, rgb_r, A, *self.MC)
         self.halo_r = (np.exp(-(np.maximum(d - 240, 0) / 110) ** 2) * np.clip((d - 236) / 6, 0, 1)).astype(np.float32)
         # 刀痕方向（沿用原「天」字被劈的 -32°）：点到刀线的有向距离
@@ -1000,16 +1002,16 @@ class S042(Shot):
         sh = 200 + 900 * eio(u)
         cl = cv2.resize(K.tile_crop(self.cl, sh, 100 - 80 * u, H // 2, W // 2), (W, H))
         x, y = K.grid()
-        cov = np.clip((cl - 0.62 + 0.25 * u - 0.18 * eout(rk)) * 3.5, 0, 1)
+        cov = np.clip((cl - 0.62 + 0.25 * u - 0.18 * eout(rk)) * 3.5, 0, 1) * (1 - self.moon_m)   # r6：满月干净，云只在月外天幕流过
         lit = np.exp(-((x - 960) ** 2 + (y - 520) ** 2) / (2 * 420 ** 2))
-        ccol = np.array([0.9, 0.93, 1.0], np.float32) * (1 - rk) + np.array([0.75, 0.13, 0.10], np.float32) * rk
+        ccol = np.array([0.9, 0.93, 1.0], np.float32) * (1 - rk) + np.array([0.70, 0.10, 0.16], np.float32) * rk
         fr = over(fr, cov * 0.9, (0.05 + 0.25 * lit)[..., None] * ccol)
         fr = fr * (1 - 0.35 * eio(u) * (1 - 0.5 * rk))
         # 刀光横过月面（卡点 T_SL 前 1 帧起划）
-        q = (t - self.T_SL + 0.03) / 0.3
-        if 0 <= q < 0.6:
+        q = (t - self.T_SL + 0.05) / 0.3
+        if 0 <= q < 0.24:                                    # r6：只留 2 帧（起划 + 命中），不拖白线残根
             fr = T._slash_light(fr, self.MC, self.dir, q, 1700)
-        if 0 <= a < 1 / 30 + 1e-3: fr = fr * 0.6 + RED * 0.35 + 0.15        # 变色那一帧红闪
+        if 0 <= a < 1 / 30 + 1e-3: fr = fr * 0.7 + RED * 0.30 + 0.05        # 变色那一帧红闪（r6：减白，避免粉）
         # 81.52「判」冲击
         k = pulse(t, self.T_PAN, 0.12) * (t >= self.T_PAN)
         z = (1.0 + 0.06 * eio(u)) * (1 + 0.10 * k)
