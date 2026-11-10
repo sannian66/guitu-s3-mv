@@ -181,7 +181,7 @@ def install(G):
             out = {}
             for i, x0 in enumerate(self.E_HOME):
                 d = self.E_CLOSE[x0] * (1 - e) + self.E_OPEN[x0] * e
-                sgn = np.sign(self.E_OPEN[x0] - self.E_CLOSE[x0]) or 1.0
+                sgn = float(np.sign(self.E_OPEN[x0] - self.E_CLOSE[x0])) or 1.0
                 if t > self.E_T1:                          # 余摆：先过冲再回，±4px 成片（≈10 源像素），两次衰减
                     tt = t - self.E_T1
                     d += sgn * 10.0 * math.exp(-tt / 0.22) * math.sin(2 * math.pi * tt / 0.30)
@@ -192,7 +192,7 @@ def install(G):
             F = self.epF.copy(); A = self.epA.copy()
             cs = []
             for x0, d in self._edisp(t).items():
-                mx = self.exx - d * self.epend
+                mx = (self.exx - float(d) * self.epend).astype(np.float32)
                 cs.append(cv2.remap(self.es[x0], mx, self.eyy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT))
             # 旒在脸前：珠串在脸上投一道柔影（右下 8/12 源像素、σ5），读出前后层次，不贴脸
             sh = np.clip(sum(c[..., 3] for c in cs), 0, 1)
