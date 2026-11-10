@@ -9,6 +9,10 @@ r6-SUB（用户 11-10 15:28「底部的字幕好丑，能做成之前竖版歌�
                    虚字缩小、大小错落、底边对齐；暖白字 + 墨色晕影；句尾墨散（淡出 + 晕开）。全部落在 y 960–1080 下黑边内。
   SUB_STYLE=ink_v  同上风格，改为画面右侧竖排（右起列，>8 字分两列，右列先唱），不画底部字幕。
   SUB_STYLE=old    = ink_h 的别名（「旧版风格」）。
+  SUB_STYLE=serif_h（r6-SUB2，用户 16:08 拍板，**默认**）「我要这种字体和大小，但是横向排版，并且保留之前做的那些文字动画，不需要排版，一行就行」：
+                   字形照 lyric3 整句规格（思源宋 SemiBold 62px、暖白、每句至多一个朱红关键字、金只给「天亮」、STYLE 阴影/辉光），
+                   全句同一字号、横排一行居中、字距 0.22em，全落在下黑边（y 960–1080）；动画沿用 ink_h（逐字按演唱时刻笔序书写 +
+                   整字淡墨影，提前 0.1s 起笔、0.32s 写完，写完收为干净宋体字形；句尾墨散淡出）。
 """
 import os, re, json, math, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -24,7 +28,7 @@ _C = {}
 
 
 def style():
-    s = os.environ.get('SUB_STYLE', 'cur').strip().lower()
+    s = os.environ.get('SUB_STYLE', 'serif_h').strip().lower()
     return 'ink_h' if s == 'old' else s
 
 
@@ -51,6 +55,7 @@ def apply(img, t):
     if os.environ.get('SUB_OFF'): return img
     st = style()
     if st in ('ink_h', 'ink_v'): return ink_apply(img, t, st)
+    if st == 'serif_h': return serif_apply(img, t)
     s, k = current(t)
     if not s or k <= 0: return img
     a, sh = _layer(s)
@@ -193,4 +198,112 @@ def ink_apply(img, t, mode):
     fr = img.astype(np.float32) * (1 / 255)
     fr = T.compose(fr, L, shadow=0.85, shadow_sigma=12, glow=0.15)
     fr = T.compose(fr, Lr, shadow=0.9, shadow_sigma=12, outline=2, outline_color=(1.0, 0.78, 0.40), glow=0.35, glow_color=(0.9, 0.15, 0.06))
+    return (fr.clip(0, 1) * 255 + 0.5).astype(np.uint8)
+
+
+# ===================================================================== r6-SUB2 宋体横排（serif_h，默认）
+# 字形/颜色/阴影 = units/lyric3.py 整句规格；动画 = ink_h 的笔序书写 + 墨散。
+SF_FONT, SF_SIZE, SF_TRACK = 'serif_sb', 62, 0.22                 # lyric3 F_SENT / S_SENT / TRACK_H
+SF_Y = 1020                                                        # 下黑边 960–1080 正中（62px 字墨 ≈992–1048）
+SF_WHITE = (0.97, 0.94, 0.88)                                      # lyric3 WHITE
+SF_RED = (0.84, 0.10, 0.07)                                        # lyric3 RED_T
+SF_GOLD = (1.0, 0.78, 0.42)                                        # lyric3 GOLD_T
+SF_STYLE = dict(shadow=0.72, shadow_sigma=20, outline=0, glow=0.20, glow_sigma=14)   # lyric3 STYLE
+SF_GOLDW = '天亮'                                                  # 金只给光字（「那就劈开它看个天亮」）
+SF_RED1 = {                     # RED_OVR 是两字词的句子：朱红只取 1 字（lyric3「每句至多一个朱红关键字」）
+    '五百重甲拦不住一道寒光': '寒',
+    '谁配写生死簿谁配画善恶框': '死',
+    '什么叫大局什么叫牺牲什么叫忍让': '牺',
+    '牺牲多少才算够分量': '牺',
+    '被牺牲的人可曾有机会反抗': '抗',
+    '谁的正义成了交易的暗箱': '暗',
+    '世人教我顾全大局退让': '退',
+    '血未冷 骨未凉': '骨',                                         # 用户 16:08 参考图：「骨未凉」骨字朱红
+}
+SF_MAXW = 1600                                                     # 左右安全边距 160；超宽则全片统一缩字号
+_SFC = {}
+
+
+def _sf_fonts():
+    import typo as T
+    for k, f in (('serif_sb', 'SemiBold'),):
+        if k not in T.FONTS: T.FONTS[k] = ROOT + f'/fonts/NotoSerifSC-{f}.otf'
+    return T
+
+
+def _sf_size():
+    """全片统一字号：62px，最长句放不下时统一缩小（现有 56 句最长 15 字 ≈1121px，不缩）。"""
+    if 'size' not in _SFC:
+        n = max(len(s) for _, _, s in LINES)
+        z = SF_SIZE
+        while z > 30 and z * (1 + SF_TRACK) * (n - 1) + z > SF_MAXW: z -= 2
+        _SFC['size'] = z
+    return _SFC['size']
+
+
+def _sf_red(s):
+    if s in SF_RED1: return SF_RED1[s]
+    g = SF_GOLDW if SF_GOLDW in s else ''
+    r = [c for c in s if c in _reds(s) and c not in g]
+    return r[0] if r else ''
+
+
+def _sf_plan(s):
+    """一行居中：[(ch, x, y, color, idx)]，字距 0.22em。"""
+    if s in _SFC: return _SFC[s]
+    z = _sf_size(); adv = z * (1 + SF_TRACK)
+    red = _sf_red(s); gold = SF_GOLDW if SF_GOLDW in s else ''
+    xs = []; x = 0.0                                                # 空格占 0.6 格（整格留白偏大，读成两句）
+    for c in s:
+        if c == ' ': x += adv * 0.6; continue
+        xs.append(x); x += adv
+    x0 = 960 - xs[-1] / 2; P = []
+    for i, (c, xx) in enumerate(zip(s.replace(' ', ''), xs)):
+        colr = SF_GOLD if c in gold else SF_RED if c == red else SF_WHITE
+        P.append((c, x0 + xx, SF_Y, colr, i))
+    _SFC[s] = P
+    return P
+
+
+def _sf_glyph(ch, z, p, seed):
+    """宋体字形上的笔序书写：笔序场取 typo.brush_glyph（湿墨前沿 + 轻飞白 + 落笔墨点），叠整字淡墨影防半笔错读，
+    p→1 收为干净 SemiBold 字形（静止时与 lyric3 整句一致，无飞白毛边）。返回与 T.glyph(z) 同画布的 alpha。"""
+    import typo as T, cv2
+    clean = T.glyph(ch, SF_FONT, z, False)
+    if p >= 0.999: return clean
+    g = clean.shape[0]
+    bz = int(round(z / 4) * 4)                                     # brush_prep 字号按 4 取整 → 缩回 z
+    b = T.brush_glyph(ch, SF_FONT, z, p, seed=seed, dry=0.45, wet=0.9)
+    G = int(round(b.shape[0] * z / bz))
+    b = cv2.resize(b, (G, G), interpolation=cv2.INTER_AREA)
+    o = (G - g) // 2
+    if o >= 0: b = b[o:o + g, o:o + g]
+    else: b = np.pad(b, ((-o, g - G + o), (-o, g - G + o)))[:g, :g]
+    if b.shape != clean.shape: b = cv2.resize(b, (g, g), interpolation=cv2.INTER_AREA)
+    ghost = clean * 0.55 * (1 - (1 - min(1.0, p * 3.0)) ** 3)    # 整字淡墨影（BG 写法）
+    w = min(1.0, max(0.0, (p - 0.72) / 0.27)); w = w * w * (3 - 2 * w)   # 末段收笔：书写态 → 干净字形
+    return np.maximum(b, ghost) * (1 - w) + clean * w
+
+
+def serif_apply(img, t):
+    info = _line_info(t)
+    if info is None: return img
+    T = _sf_fonts()
+    import cv2
+    t0, t1, s = info
+    wt = _wtimes().get(t0)
+    n = len(s.replace(' ', ''))
+    if wt is None: wt = [t0 + (t1 - t0) * 0.85 * i / max(1, n) for i in range(n)]
+    ko = 1.0 - min(1.0, max(0.0, (t - (t1 + 0.25)) / 0.3))          # 句尾墨散（同 ink_h）
+    if ko <= 0: return img
+    z = _sf_size(); L = T.Layer()
+    for ch, x, y, colr, i in _sf_plan(s):
+        p = min(1.0, max(0.0, (t - (wt[i] - 0.10)) / 0.32))       # 提前 0.1s 起笔、0.32s 写完
+        if p <= 0: continue
+        g = _sf_glyph(ch, z, p, 17 + i)
+        if ko < 1:
+            g = cv2.GaussianBlur(g, (0, 0), 0.5 + 3.0 * (1 - ko)) * ko
+        L.paste(g, x, y, colr)
+    fr = img.astype(np.float32) * (1 / 255)
+    fr = T.compose(fr, L, **SF_STYLE)
     return (fr.clip(0, 1) * 255 + 0.5).astype(np.uint8)
