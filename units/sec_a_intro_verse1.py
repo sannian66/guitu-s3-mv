@@ -2162,6 +2162,13 @@ class V16(Shot):
         fr = fr + (cv2.GaussianBlur(ed, (0, 0), 1.0) * 0.9 + cv2.GaussianBlur(ed, (0, 0), 8) * 0.35)[..., None] * np.array([1.0, 0.72, 0.36], np.float32) * 0.55
         fr, info = A.place(fr, t, S('A/tsh_raise', 'dm'), (1270, 845), h=740, look=None, rim=GOLD, rim_amt=6.0, rim_dir=(-0.6, -0.8),
                            grade=dict(expo=0.36, sat=0.35, tint=(1.05, 0.97, 0.9)), wind=7)
+        if R5.ON['jade'] and not R6C_OFF('jade') and k > 0:                             # r6 第三棒 #10：太上皇受左侧玉玺金光 —— 朝印一侧金色轮廓 + 身上暖色漫射（原灰冷剪影与金光不统一）
+            Ae = info['A']; sxy = (c[0] + 20, 300 + 90 * k)
+            edge = np.clip(Ae - cv2.warpAffine(Ae, np.float32([[1, 0, 10], [0, 1, 6]]), (W, H)), 0, 1)
+            edge = cv2.GaussianBlur(edge, (0, 0), 1.5) + cv2.GaussianBlur(edge, (0, 0), 7) * 0.6
+            yy4, xx4 = np.mgrid[0:H // 4, 0:W // 4].astype(np.float32) * 4
+            fall = cv2.resize(np.exp(-np.hypot(xx4 - sxy[0], yy4 - sxy[1]) / 650).astype(np.float32), (W, H))
+            fr = fr + ((edge * 1.1 + Ae * 0.10) * fall * k)[..., None] * np.array([1.0, 0.72, 0.38], np.float32)
         fr = fog(fr, t, 1, 820, 1000, 0.5, (0.25, 0.22, 0.2), speed=(40, 0))
         return fr, 0
 
@@ -2214,8 +2221,9 @@ class V17(Shot):
         if R5.ON['jade']:                                                                   # r6 #10：立体玉玺（3/4 侧俯，两个侧面 + 九龙钮都看得见）
             fr, info = A.place(fr, t, self.seal, (960, by), w=880 * (0.92 + 0.08 * q), anc=(0.5, 1.0), rim=GOLD, rim_amt=2.6, rim_dir=(0.3, -1.0),
                                grade=dict(expo=0.62, sat=0.70, tint=(1.05, 1.0, 0.92), gamma=1.10), wind=0, breathe=0.0,
-                               mblur=(0, 3 + 20 * q * q))
+                               mblur=(0, (3 + 20 * q * q) if R6C_OFF('jade') else (1.5 + 10 * q * q)))   # r6 第三棒 #10：竖向动态模糊减半（龙钮可读）
             fr = R5.under_shade(fr, info['A'], info['box'], amt=0.5, start=0.4)
+            self._sa = info['A']
         else:
             fr, info = A.place(fr, t, self.seal, (960, by), w=1150 * (0.92 + 0.08 * q), anc=(0.5, 1.0), rim=GOLD, rim_amt=2.2, rim_dir=(0.3, -1.0),
                                grade=dict(expo=0.82, sat=0.55, tint=(1.04, 1.0, 0.95), gamma=1.05), wind=0, breathe=0.0,
@@ -2259,6 +2267,10 @@ class V17(Shot):
         th = V(38.72); a = t - th
         if a < 0: return self.side(t, th), 0
         if a < 0.12:                                                                           # 落地：侧面画面压黑一拍（第七棒：去白色碎屑、去色散撕裂）
+            if R5.ON['jade'] and not R6C_OFF('jade'):                                       # r6 第三棒 #10：只压黑环境，玉玺本身保持白玉高光与暖透光（原整帧压到 30% → 灰糊一团）
+                fr = self.side(t, th); m = np.clip(cv2.GaussianBlur(self._sa, (0, 0), 3) * 1.2, 0, 1)[..., None]
+                k_ = 0.22 + 2.5 * max(0, a - 0.05)
+                return fr * (m * 1.06 + (1 - m) * k_), 0
             fr = self.side(t, th) * (0.30 + 2.5 * max(0, a - 0.05))
             return fr, 0
         fr = self.top(t, a)
@@ -2489,7 +2501,8 @@ class V21(Shot):
         if a < 0:
             fr = T.compose(fr, L, shadow=0.7, glow=0.25)
         else:
-            fr = T.slash_layer(fr, L, clamp01(a / 0.73), (960, 540), -62, slide=0.12, sz=560, length=1500, sparks=90,   # 第八棒：错开量 0.35→0.12，「锋芒」两半留在画里到末段
+            fr = T.slash_layer(fr, L, clamp01(a / 0.73), (960, 540), -62, slide=0.12, sz=560, length=1500,
+                               sparks=(0 if (a < 0.09 and not R6C_OFF('feng')) else 90),   # r6 第三棒 #12：斩下首帧火星全挤在刀光头上 → 锯齿白条（1299f），首帧只留平滑刀光   # 第八棒：错开量 0.35→0.12，「锋芒」两半留在画里到末段
                                style_kw=dict(shadow=0.7, glow=0.3))
             if a < 0.07: fr = fr * 1.5 + 0.07 * RED
             # 墨缝：斩线处渗出墨（给 B 组 ink_bleed 入口）
