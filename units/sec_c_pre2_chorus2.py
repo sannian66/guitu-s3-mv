@@ -24,6 +24,8 @@ from c1kit import finish, to8, sparks, dust, crack_path, draw_crack, paper_dark,
 READY = True
 # 第五轮（USER_NOTES_r5 #34–#43 前半）：去画内字 / 纲上线 / 大局为上做进匾 / C21·C22 人物位置。C_R5=0 回到第四轮效果。
 R5 = os.environ.get('C_R5', '1') != '0'
+# 第六轮（crew/round6/C_r6.md：#35 #36 #39–#43 返工）。C_R6=0 退回第六轮开工时的状态（=第五轮返工版），用于改前/改后对比。
+R6 = R5 and os.environ.get('C_R6', '1') != '0'
 if R5:   # 第五轮通用：人物精灵 wind_amp 统一 5–8px（0 = 道具/手/刀/影子，保持不动）
     _put0 = put
     def put(fr, t, name, *a, wind=6.0, **kw):
@@ -391,6 +393,7 @@ class C02(Shot):
         s = Sent(28, [5, 6, 7, 8, 9, 10, 11], 0, 0, size=70, mode='type', red='', glitch='剧本')
         n = len(s.text)
         td, tl = V(120.07) + 1 / FPS, V(120.33)   # r5 返工：「提」那拍(120.33)前落定，2:00.4 已与其余六字同排
+        if R6: td, tl = V(120.18) + 1 / FPS, V(120.36)   # r6 #35：「本」之后才从手里放线，正落在「提」那拍——「提纲」同拍落定，读序不乱（r5 版「纲」先于「提」出现）
         for i in range(n):
             x = 960 + (i - 3) * 200
             tip = (960 + (i - 3) * 64, hand_y + 300 + 40 * math.cos((i - 3) * 0.55) - 10)   # 指尖扇形对称分布
@@ -405,7 +408,12 @@ class C02(Shot):
             end = (x + sw, ly + jerk - 50 + drop)
             if i == 6 and t < td:
                 continue
-            fr = red_line(fr, tip, end, w=2, amt=0.9)
+            if R6:   # r6 #35：线一直拴到字头（原来线头停在字上方 ~25px，字像飘着而不是被吊着），线头打个小结
+                att = (end[0], end[1] + 30)
+                fr = red_line(fr, tip, att, w=2, amt=0.9)
+                if t >= ti: fr = _knot(fr, att)
+            else:
+                fr = red_line(fr, tip, end, w=2, amt=0.9)
             if t >= ti:
                 c = s.text[i]
                 if c == '纲':
@@ -424,6 +432,16 @@ class C02(Shot):
                         L2 = glyph_layer(c, end[0] + dx, end[1] + 74, 104, cc, font='serif_sb', rot=-sw * 0.6, alpha=0.16)
                         fr = T.compose(fr, L2, shadow=0, glow=0)
         return fr
+
+
+def _knot(fr, p, r=3.2, col=(0.62, 0.07, 0.05)):
+    """r6 #35：红线拴字处的小结（线头压进字头一点，读成「吊着」）。"""
+    x, y = int(round(p[0])), int(round(p[1]))
+    if not (0 < x < W - 1 and 0 < y < H - 1): return fr
+    m = np.zeros((H, W), np.float32)
+    cv2.circle(m, (x, y), int(r + 0.5), 1.0, -1, cv2.LINE_AA)
+    m = cv2.GaussianBlur(m, (0, 0), 0.7)[..., None]
+    return fr * (1 - 0.9 * m) + m * 0.9 * np.array(col, np.float32)
 
 
 def hand_shadow_mask(cx, cy, sc, t, tw=0.0, seed=0):
