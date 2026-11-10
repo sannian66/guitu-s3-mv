@@ -31,6 +31,7 @@ READY = True
 def _on(k, d='1'): return os.environ.get(k, d) != '0'
 def R6B_OFF(k): return k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'   # r6 第二棒开关（改前对比用）
 def HG_ON(): return os.environ.get('A_R6D_HANGUANG', '') == '1'   # r6 第四棒：用户 11-10 15:28 拍板 V05/V06 画内「寒光」字全去；=1 恢复（改前对比用）
+def R6F_OFF(k): return k in os.environ.get('A_R6F_OFF', '').split(',') or os.environ.get('A_R6F_OFF', '') == 'all'   # r6 第六棒开关：slash2b（第二刀刀光压曝光）/ sf7b（#7 双头+恶徒）
 def R6E_OFF(k): return k in os.environ.get('A_R6E_OFF', '').split(',') or os.environ.get('A_R6E_OFF', '') == 'all'   # r6 第五棒开关：slash2（第二刀无字刀光）/ lycut（LY2「拦不住一道」在 V05 切点前退净）
 def R6C_OFF(k): return k in os.environ.get('A_R6C_OFF', '').split(',') or os.environ.get('A_R6C_OFF', '') == 'all'   # r6 第三棒开关（改前对比用）：sf7 / stele / …
 
@@ -997,6 +998,7 @@ class V06(Shot):
         if not (0 <= k <= 4): return fr
         hd = 0.62 if k == 0 else 1.0                                              # 命中帧刀光头已过刀尖、扫到 62%；下一帧满长
         f = (1.0, 0.82, 0.55, 0.30, 0.12)[k]
+        if not R6F_OFF('slash2b'): return V06.slash2b(fr, k, hd, f)
         if k == 0: fr = fr * 1.30 + 0.04 * COLDV
         y0, ang, x0, x1 = 371.0, -2.0, 900.0, W + 80.0           # 起点在护手外（x≈900），不压脸、颈
         th = math.radians(ang); Y = lambda x: y0 + (x - 1286.0) * math.tan(th)
@@ -1017,6 +1019,37 @@ class V06(Shot):
         cap = 0.88
         soft = np.where(out > 0.8, 0.8 + (cap - 0.8) * np.tanh((out - 0.8) / (cap - 0.8)), out)
         return out * (1 - m) + soft * m
+
+    @staticmethod
+    def slash2b(fr, k, hd, f):
+        """r6 第六棒：655f 峰值 253、刀光是一条 ~24px 宽的平顶白板（刺眼）。改成有层次的三层：
+        细芯（≈2px，峰值软压到 ≈0.86）→ 窄冷晕（σ4，≈0.55）→ 宽冷晕（σ20，≈0.18），中间不再有平顶白板；
+        冷色脉冲 ×1.30 → ×1.15（第一刀 ×1.55 仍是主冲击）；软压按亮度（不是逐通道）以免压出色偏。"""
+        if k == 0: fr = fr * 1.15 + 0.025 * COLDV
+        y0, ang, x0, x1 = 371.0, -2.0, 900.0, W + 80.0
+        th = math.radians(ang); Y = lambda x: y0 + (x - 1286.0) * math.tan(th)
+        xe = x0 + (x1 - x0) * hd
+        Ls = np.zeros((H, W), np.float32); n = 48
+        for i in range(n):
+            xa = x0 + (xe - x0) * i / n; xb = x0 + (xe - x0) * (i + 1) / n; s_ = (i + 0.5) / n
+            wv = min(1.0, s_ / 0.25) ** 1.2 * (min(1.0, (1 - s_) / 0.12) if hd >= 1 else 1.0)
+            cv2.line(Ls, (int(xa), int(Y(xa))), (int(xb), int(Y(xb))), float(wv), 2, cv2.LINE_AA)
+        core = cv2.GaussianBlur(Ls, (0, 0), 0.8)
+        h1 = cv2.GaussianBlur(Ls, (0, 0), 4) * 1.6
+        h2 = cv2.GaussianBlur(Ls, (0, 0), 20) * 1.5
+        add = (core[..., None] * np.array([0.80, 0.86, 0.90], np.float32) + h1[..., None] * np.array([0.42, 0.55, 0.78], np.float32)
+               + h2[..., None] * np.array([0.16, 0.24, 0.42], np.float32)) * f
+        out = fr + add
+        lum = out.max(axis=2, keepdims=True)
+        knee, cap = 0.66, 0.86
+        lc = np.where(lum > knee, knee + (cap - knee) * np.tanh((lum - knee) / (cap - knee)), lum)
+        m = np.clip(cv2.GaussianBlur(Ls, (0, 0), 20) * 30, 0, 1)[..., None]
+        out = out * (1 - m) + out * (lc / np.maximum(lum, 1e-4)) * m
+        if k <= 1:                                                                # 命中帧 + 次帧：刀弧/星芒/枪尖等其余高光整帧软肩（>0.80 渐压，顶 ≈0.91），不出 250+ 死白
+            lum = out.max(axis=2, keepdims=True); kn, cp = 0.80, 0.91
+            lc = np.where(lum > kn, kn + (cp - kn) * np.tanh((lum - kn) / (cp - kn)), lum)
+            out = out * (lc / np.maximum(lum, 1e-4))
+        return out
 
     @staticmethod
     def cutline(fr, c, ang, x0, x1, a2):
