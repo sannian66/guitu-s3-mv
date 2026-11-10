@@ -842,3 +842,20 @@
 ## 2026-11-10 20:23 · OpenAI 协议渠道批量生图（S096_T2.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `S096_T2`（44s）→ `out/round7/styleC3/S096_T2.png`
+
+## 2026-11-11 05:40 · 第八轮风格 D 样镜 S035（nananobanana RH_image2 2K 16:9，6 张 × 3 = 18 积分；提示词 jobs/r8_D_S035.json）
+| 时间 | 组/名 | 模型 | 规格 | 积分 | task_id | 状态 | 文件 | 备注 |
+|---|---|---|---|---|---|---|---|---|
+| 11-11 05:40 | R8_D/S035/D035_bg | RH_image2 | 2K 16:9 | 3 | 5de19e18-7ac2-439b-a71a-3964a4032d72 | ✔ 采用 | assets/gen/R8_D/route1/D035_bg.png | 纯文生图 try1 |
+| 11-11 05:40 | R8_D/S035/D035_gap | RH_image2 | 2K 16:9 | 3 | 4dfa3902-b473-484b-8394-e9336dc4aa50 | ✔ 采用 | assets/gen/R8_D/route1/D035_gap.png | 纯文生图 try1 |
+| 11-11 05:40 | R8_D/S035/D035_slash | RH_image2 | 2K 16:9 | 3 | 31f4ff6f-2039-4cc6-8b03-3a6ae777ec39 | ✔ 采用 | assets/gen/R8_D/route1/D035_slash.png | 纯文生图 try1 |
+| 11-11 05:40 | R8_D/S035/D035_dash | RH_image2 | 2K 16:9 | 3 | 4b7676d4-df86-47b2-a0dc-0934e2280430 | ✔ 采用 | assets/gen/R8_D/route1/D035_dash.png | 定妆照参考 try1 |
+| 11-11 05:40 | R8_D/S035/D035_after | RH_image2 | 2K 16:9 | 3 | 35ef1928-d178-4740-b62f-0bbcbed39901 | ✔ 采用 | assets/gen/R8_D/route1/D035_after.png | 定妆照参考 try1 |
+| 11-11 05:40 | R8_D/S035/D035_fg | RH_image2 | 2K 16:9 | 3 | b1dc72a0-ab25-476f-87a5-3cdc469c2895 | ✔ 采用 | assets/gen/R8_D/route1/D035_fg.png | 纯文生图 try1 |
+
+## 2026-11-11 05:41 · 第八轮风格 D 样镜 V09（主歌二「牺牲多少」；nananobanana RH_image2 2K 16:9，3 张 × 3 = 9 积分；提示词 jobs/r8_D_V09.json）
+| 时间 | 组/名 | 模型 | 规格 | 积分 | task_id | 状态 | 文件 | 备注 |
+|---|---|---|---|---|---|---|---|---|
+| 11-11 05:41 | R8_D/V09/V09_abacus | RH_image2 | 2K 16:9 | 3 | 6f2aa63b-4d5d-4c1c-9eac-ac7a9cbe1e60 | ✔ 采用 | assets/gen/R8_D/B/V09_abacus.png（cut：V09_abacus_cut.png） | 纯文生图 try1；梁上 9 字「牺牲多少才算够分量」逐字核对全对 |
+| 11-11 05:41 | R8_D/V09/V09_bg | RH_image2 | 2K 16:9 | 3 | da7e7021-f95a-4859-8b30-2946817b1369 | ✔ 采用 | assets/gen/R8_D/B/V09_bg.png | 纯文生图 try1；背景板 |
+| 11-11 05:41 | R8_D/V09/V09_fg | RH_image2 | 2K 16:9 | 3 | b5b1c45d-f49e-42da-b9b6-15a8d9c2127c | ✔ 采用 | assets/gen/R8_D/B/V09_fg.png（cut：V09_fg_cut.png） | 纯文生图 try1；前景雨丝 + 血珠 |

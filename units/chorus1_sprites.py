@@ -891,10 +891,175 @@ def install(G):
             gm = self.grass.mask(t, 1.2, dy=crane * 1.2, blur=10)
             return over(fr, gm, (0.01, 0.01, 0.01)), 0
 
+    # ---------------------------------------------------------------- S035D 风格 D 样镜（用户 11-11：「跳斩不好看，换其他呈现方式，重做分镜」）
+    #   去掉跳斩四姿势串帧 + 墙上刻字「那就劈开它」（画面除底部字幕外不出字）；动作不靠肢体连续动作，靠两张关键姿势 + 代码分格斩切：
+    #   2089–2098 冲刺（D035_dash，背景板向左疾掠 + 黑白速度线）
+    #   2099 = T_STRK 69.967：反白冲击帧（全画面黑白反转、人物纯黑剪影、朱红斩痕划出 55%）
+    #   2100 = T_HIT V(70.02)「劈」：硬切斩后定姿（D035_after）；墙面沿斩痕直线被劈成两块错开，缝里露出血红爆光（D035_gap），
+    #        朱红笔刷斩痕（D035_slash）画在墙上、随墙一起被劈开成两道红边；白闪 + 火星（白 + 血红）+ 震屏 + 色差
+    #   2103 = T_LAND 70.10（底鼓 70.124）：二次冲击，缝再张开一档、碎石（D035_fg）扑向镜头、震屏峰值
+    #   2116 = V(70.582)（底鼓 + 军鼓「它」）：缝光一跳 + 轻震；2127 硬切 S036（斜向光缝，方向与本镜劈缝一致）
+    #   分层：背景板 D035_bg / 缝内层 D035_gap / 斩痕层 D035_slash / 主体 D035_dash、D035_after / 前景碎石 D035_fg
+    class S035D(S035Sprite):
+        P0, P1 = (740.0, 40.0), (1860.0, 1040.0)          # 劈缝直线（斜率 ≈0.89，与 S036 光缝同向）
+        T_K2 = V(70.582)
+        AFTER_FOOT, AFTER_H = (690.0, 975.0), 640          # 斩后定姿：脚底中点 / 包围盒高
+        DASH_FOOT, DASH_H = (700.0, 975.0), 620
+        def __init__(self):
+            im = cv2.cvtColor(cv2.imread(R1 + 'D035_bg.png'), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
+            lum = im.mean(-1, keepdims=True)
+            im = lum + (im - lum) * 0.22                     # 墙上原有血痕大幅降饱和（只剩暗红旧痕），红留给劈缝和斩痕
+            self.wallA = cv2.resize(im, (2496, 1404), interpolation=cv2.INTER_AREA) * 0.92      # 冲刺段：放大 1.3 供横向疾掠
+            self.wallC = cv2.resize(im, (W, H), interpolation=cv2.INTER_AREA) * 0.88
+            self.gapp = plate('D035_gap', 1.0)
+            self.dash = SP.layer(R1 + 'D035_dash_cut.png'); self.after = SP.layer(R1 + 'D035_after_cut.png')
+            self.fg = SP.layer(R1 + 'D035_fg_cut.png')
+            p0, p1 = np.array(self.P0), np.array(self.P1)
+            L = float(np.linalg.norm(p1 - p0)); d = (p1 - p0) / L; n = np.array([-d[1], d[0]])     # n 指向左下（主角那一侧）
+            self.d, self.n, self.L = d, n, L
+            x, y = K.grid(); self.x, self.y = x, y
+            self.side = ((x - p0[0]) * n[0] + (y - p0[1]) * n[1]).astype(np.float32)
+            # 斩痕笔刷：按 alpha 主轴把笔画两端映射到劈缝直线（两端各伸出画外）
+            sl = cv2.cvtColor(cv2.imread(R1 + 'D035_slash_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
+            ys, xs = np.nonzero(sl[..., 3] > 0.5)
+            P = np.stack([xs, ys], -1).astype(np.float64); c = P.mean(0)
+            e = np.linalg.eigh(np.cov((P - c).T))[1][:, -1]
+            if e[0] < 0: e = -e
+            pr = (P - c) @ e; A, B = c + e * pr.min(), c + e * pr.max()
+            cm = (p0 + p1) / 2; Q0, Q1 = cm - d * L * 0.62, cm + d * L * 0.62
+            s = np.linalg.norm(Q1 - Q0) / np.linalg.norm(B - A)
+            ep = np.array([-e[1], e[0]])
+            M2 = s * np.outer(d, e) + 0.6 * s * np.outer(n, ep)              # 沿缝拉到画外，横向压到 0.6（斩痕不压过劈缝）
+            M = np.hstack([M2, (Q0 - M2 @ A)[:, None]])
+            w_ = cv2.warpAffine(sl, M, (W, H), flags=cv2.INTER_LINEAR)
+            self.slF, self.slA = w_[..., :3], w_[..., 3]
+            self.sl_u = (((x - Q0[0]) * d[0] + (y - Q0[1]) * d[1]) / np.linalg.norm(Q1 - Q0)).astype(np.float32)
+            # 缝内层对位：爆光白芯放在劈缝上（画面中线处）
+            cy = 40.0; cx = p0[0] + (cy - p0[1]) * d[0] / d[1]                 # 白芯放在劈缝顶端（上黑边里），缝内是顺缝的血红速度线
+            self.gapp = cv2.warpAffine(self.gapp, np.float32([[2.0, 0, cx - 960 * 2.0], [0, 2.0, cy - 540 * 2.0]]), (W, H),
+                                       borderMode=cv2.BORDER_REFLECT)
+            self.gc = (p0[0] + (540 - p0[1]) * d[0] / d[1], 540.0)          # 劈缝与画面中线交点（闪白 / 火星中心）
+        # ---- 代码速度线（黑 + 白，漫画式横向）
+        def _speed(self, fr, t, amt):
+            if amt <= 0.01: return fr
+            r = np.random.default_rng(3561 + int(round(t * 30)))
+            Lk = np.zeros((H // 2, W // 2), np.float32); Lw = np.zeros_like(Lk)
+            for i in range(70):
+                yy = r.uniform(140, 940) / 2; xx = r.uniform(-200, W) / 2; ln = r.uniform(180, 700) / 2
+                tgt = Lk if i % 3 else Lw
+                cv2.line(tgt, (int(xx), int(yy)), (int(xx + ln), int(yy)), r.uniform(0.4, 1.0), 1 if i % 4 else 2, cv2.LINE_AA)
+            Lk = cv2.resize(cv2.GaussianBlur(Lk, (0, 0), 0.6), (W, H)); Lw = cv2.resize(cv2.GaussianBlur(Lw, (0, 0), 0.6), (W, H))
+            fr = fr * (1 - np.clip(Lk * 0.85 * amt, 0, 1))[..., None]
+            return fr + (Lw * 0.9 * amt)[..., None]
+        def _gapw(self, t):
+            """劈缝宽（px）与沿缝错开量"""
+            if t < self.T_HIT: return 0.0, 0.0
+            g = 56 + 18 * eout((t - self.T_HIT) / 0.09, 2)
+            if t >= self.T_LAND:
+                a = t - self.T_LAND
+                g = 74 + 76 * eout(a / 0.07, 2) + 40 * eio(a / 0.85)
+            return g, g * 0.45
+        def _panelA(self, t):
+            k = clamp01((t - self.t0) / (self.T_STRK - self.t0))
+            ox = 60 + 420 * k                                              # 背景向左疾掠（≈42px/帧）
+            src = self.wallA[170:170 + H, int(ox):int(ox) + W]
+            fr = K.motion_blur(src.copy(), 46, 0)
+            fr = self._speed(fr, t, 0.75)
+            a_, s_ = self.dash.fit(self.DASH_H * (1 + 0.04 * eio(k)))
+            fx = self.DASH_FOOT[0] + 70 * eout(k, 2)
+            fr, A = self.dash.draw(fr, t, a_, (fx, self.DASH_FOOT[1]), s_, rot=-1.0 * k, mblur=(10, 0), wind_amp=7.0,
+                                   breathe=0, grade=NEU, rim=NORIM, wrap=0, shade=None)
+            return fr, A
+        def _wall_split(self, t, head):
+            """墙 + 斩痕（画在墙上），沿劈缝劈开错开；缝里露血红爆光"""
+            wall = self.wallC.copy()
+            rev = np.clip((head - self.sl_u) / 0.03, 0, 1) * self.slA
+            wall = wall * (1 - rev[..., None]) + self.slF * rev[..., None]
+            g, sl = self._gapw(t)
+            if g <= 0: return wall, np.zeros((H, W), np.float32)
+            d, n = self.d, self.n
+            o = n * g / 2 + d * sl / 2                                      # 左下块位移 +o，右上块位移 −o
+            lo = cv2.warpAffine(wall, np.float32([[1, 0, o[0]], [0, 1, o[1]]]), (W, H), borderMode=cv2.BORDER_REFLECT)
+            up = cv2.warpAffine(wall, np.float32([[1, 0, -o[0]], [0, 1, -o[1]]]), (W, H), borderMode=cv2.BORDER_REFLECT)
+            sd = self.side
+            ml = np.clip((sd - g / 2) + 0.5, 0, 1); mu = np.clip((-sd - g / 2) + 0.5, 0, 1)
+            gm = np.clip(1 - ml - mu, 0, 1)
+            a = t - self.T_HIT
+            hot = 1.0 + 0.9 * math.exp(-a / 0.10) + 0.6 * pulse(t, self.T_LAND, 0.10) * (t >= self.T_LAND) \
+                  + 0.45 * pulse(t, self.T_K2, 0.10) * (t >= self.T_K2)
+            gp = self.gapp * (0.85 + 0.2 * math.sin(t * 23)) * hot
+            core = np.exp(-(sd / 5.0) ** 2)[..., None]                       # 缝心白热线：只在命中后 0.15s 内
+            gp = gp + core * np.array([1.0, 0.92, 0.88], np.float32) * 1.2 * math.exp(-a / 0.08)
+            fr = up * mu[..., None] + lo * ml[..., None] + gp * gm[..., None]
+            ink = np.exp(-((np.abs(sd) - g / 2) / 2.2) ** 2)                # 切口两沿：漫画墨线
+            fr = fr * (1 - 0.85 * ink)[..., None]
+            spill = K.blur_ds(gm, 24) * 1.2 + K.blur_ds(gm, 90) * 0.4       # 红光只在切口两沿漫出一点
+            fr = fr + np.clip(spill - gm, 0, None)[..., None] * RED * 0.22 * hot
+            return fr, gm
+        def _panelC(self, t):
+            fr, gm = self._wall_split(t, 1.0)
+            u = self.u(t)
+            par = 14 * (u - 0.5)                                           # 主体相对墙的视差（镜头中点为零）
+            a = t - self.T_HIT
+            k = eout(clamp01(a / 0.10), 2)
+            a_, s_ = self.after.fit(self.AFTER_H * (1.03 - 0.03 * k))
+            fx, fy = self.AFTER_FOOT
+            fr, A = self.after.draw(fr, t, a_, (fx + par - 10 * (1 - k), fy), s_, mblur=(-10 * (1 - k), 0), wind_amp=6.5,
+                                    breathe=0.003, grade=NEU, rim=NORIM, wrap=0, shade=None)
+            # 火星（白 + 血红）沿劈缝三处迸发，命中 / 二次冲击各一次
+            for i, s in enumerate((0.38, 0.55, 0.72)):
+                o = (self.P0[0] + self.d[0] * self.L * s, self.P0[1] + self.d[1] * self.L * s)
+                fr = K.sparks(fr, t, 3570 + i, o, n=28, life=0.5, speed=(400, 1300), dirc=(-self.n[0], -self.n[1]), spread=1.1,
+                              grav=900, burst=True, t0=self.T_HIT, area=(60, 20), color=(1.0, 0.96, 0.92), amt=0.9)
+                fr = K.sparks(fr, t, 3580 + i, o, n=16, life=0.45, speed=(300, 1000), dirc=(self.n[0], self.n[1]), spread=1.0,
+                              grav=900, burst=True, t0=self.T_HIT, area=(60, 20), color=(0.85, 0.04, 0.03), amt=1.0)
+            if t >= self.T_LAND:
+                fr = K.sparks(fr, t, 3590, self.gc, n=50, life=0.55, speed=(500, 1500), dirc=(0.4, -0.6), spread=1.4,
+                              grav=1000, burst=True, t0=self.T_LAND, area=(260, 220), color=(0.85, 0.04, 0.03), amt=1.1)
+            # 前景碎石：命中起扑向镜头（放大出画），0.45s 内出画/淡出
+            a2 = t - self.T_LAND                                           # 二次冲击（底鼓 70.124）才扑出，命中帧保持干净
+            if a2 >= 0:
+                q = clamp01(a2 / 0.4)
+                al = 0.95 * (1 - sstep(0.22, 0.36, a2))
+                if al > 0.01:
+                    sc = W / self.fg.w * (1.05 + 1.1 * eout(q, 2))
+                    fr, _ = self.fg.draw(fr, t, (0.5, 0.5), (960 + par * 2.5, 540), sc, breathe=0, wind_amp=0, grade=NEU, rim=NORIM,
+                                         wrap=0, shade=None, alpha=al, defocus=0.8 + 2.5 * q)
+            return fr
+        def render(self, t):
+            if t < self.T_STRK:
+                fr, _ = self._panelA(t)
+                z = 1.0 + 0.035 * eio(clamp01((t - self.t0) / (self.T_STRK - self.t0)))
+                dx, dy, dr = shake(t, 3, 9, 3561)
+                return cam(fr, z, dx, dy, dr), 0
+            if t < self.T_HIT:                                             # 反白冲击帧
+                fr, A = self._panelA(t)
+                lum = fr.mean(-1)
+                inv = np.clip(1.12 - lum * 1.05, 0, 1) ** 1.4
+                fr = np.repeat(inv[..., None], 3, -1) * 1.05
+                fr = fr * (1 - A[..., None]) + 0.02 * A[..., None]
+                rev = np.clip((0.55 - self.sl_u) / 0.03, 0, 1) * self.slA
+                fr = fr * (1 - rev[..., None]) + self.slF * 1.1 * rev[..., None]
+                return cam(fr, 1.05, 0, 0), 4
+            fr = self._panelC(t)
+            x, y = self.x, self.y
+            nf = int(round((t - self.T_HIT) * 30))
+            if nf == 0:                                                    # 命中帧：缝心一团白闪（四角不抬）
+                fl = np.exp(-((x - self.gc[0]) ** 2 + (y - self.gc[1]) ** 2) / (2 * 420.0 ** 2)).astype(np.float32)
+                fr = fr + (fl * 0.55)[..., None]
+            if int(round((t - self.T_LAND) * 30)) == 0:
+                fr = fr * 1.08 + 0.04
+            sk = pulse(t, self.T_HIT, 0.10) + 0.9 * pulse(t, self.T_LAND, 0.10) * (t >= self.T_LAND) \
+                 + 0.35 * pulse(t, self.T_K2, 0.08) * (t >= self.T_K2)
+            dx, dy, dr = shake(t, 14 * sk + 1.5, 16, 3562)
+            z = 1.0 + 0.04 * eio(clamp01((t - self.T_HIT) / (self.t1 - self.T_HIT))) + 0.03 * sk
+            ca = 3 if nf in (0, 1) or int(round((t - self.T_LAND) * 30)) == 0 else 0
+            return cam(fr, z, dx, dy, dr), ca
+
     out = {}
     for c in (S029Sprite, S030Sprite, S031Sprite, S035Sprite, S037Sprite, S038Sprite, S039Sprite, S041Sprite, S044Sprite, S045Sprite, S046Sprite):
         nm = c.__name__.replace('Sprite', ''); c.__name__ = nm; out[nm] = c
     if STYLE_D:
-        for c, nm in ((S028D, 'S028'), (S029D, 'S029'), (S030D, 'S030')):
+        for c, nm in ((S028D, 'S028'), (S029D, 'S029'), (S030D, 'S030'), (S035D, 'S035')):
             c.__name__ = nm; out[nm] = c
     return out
