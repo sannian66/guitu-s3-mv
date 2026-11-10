@@ -29,6 +29,7 @@ READY = True
 #   R5_NOVLYR=1（默认）删；R5_NOVLYR=0 回滚到第五轮现状。只掐歌词层：屏幕层 LY2 整句歌词、V09 梁下两列竖排「谁把人命/装进天平」、
 #   V14 火星竖排一列「每一次拔刀都是」（火星本身保留）。镜内互动字（五百重甲、寒光、罪状、里/称量、殺/放、我的主张、正、锋芒）与诏文乱码不动。
 def _on(k, d='1'): return os.environ.get(k, d) != '0'
+def R6B_OFF(k): return k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'   # r6 第二棒开关（改前对比用）
 
 
 NOVLYR = _on('R5_NOVLYR')
@@ -295,6 +296,7 @@ class Title:
             for LL in (L, L2):
                 nz = cv2.resize(A.ink_noise(77, 256), (W, H))
                 LL.A *= np.clip((nz - out * 1.15) * 5 + 0.5, 0, 1)
+                if not R6B_OFF('title'): LL.A *= (1 - out) ** 1.2      # r6 第二棒：主字/红点/副标题/金线同一条 alpha 曲线，out=1 全部归零（不留残笔）
         if sheen is not None and 0 <= sheen <= 1:
             xx = np.arange(W, dtype=np.float32)[None]
             band = np.exp(-((xx - (300 + 1350 * sheen)) / 45) ** 2)
@@ -304,7 +306,7 @@ class Title:
         ks = t - V(8.31)
         if ks > 0:
             px, py = Mx @ np.array([1665.0, 395.0, 1.0])
-            fr = T.stamp_seal(fr, '鬼屠', px, py, 78 * sc, min(1, ks / 0.5), style='yin', seed=3, alpha=0.95 * (1 - out))
+            fr = T.stamp_seal(fr, '鬼屠', px, py, 78 * sc, min(1, ks / 0.5), style='yin', seed=3, alpha=0.95 * ((1 - out) if R6B_OFF('title') else (1 - out) ** 2.6))   # 印无噪声溶解，用更陡曲线与主字视觉同步退
         return fr
 
 
@@ -2623,7 +2625,8 @@ class Section:
         fr = fr + 0.012 * (1 - np.clip(fr, 0, 1))
         if TITLE_HIT <= t < V(13.35) + 0.5:                                     # 第四棒：片名 = 屏幕层（A06 → A07a → A07b 不动，13.35 化灰）
             k = t - TITLE_HIT
-            fr = TITLE.draw(fr, t, out=clamp01((t - V(13.35)) / 0.45), sheen=clamp01((t - V(11.52)) / 0.7) if t >= V(11.52) else None,
+            _to = clamp01((t - V(13.35)) / 0.45) if R6B_OFF('title') else clamp01((t - V(13.25)) / 0.19)   # r6 第二棒：片名 13.23→13.42 退净（403f 前）
+            fr = TITLE.draw(fr, t, out=_to, sheen=clamp01((t - V(11.52)) / 0.7) if t >= V(11.52) else None,
                             glow=0.5 * math.exp(-max(0, k) / 0.3) + 0.22 * sum(math.exp(-max(0.0, t - V(b)) / 0.15) * (t >= V(b)) for b in (8.75, 9.22, 9.68, 10.15, 10.61, 11.05, 11.98, 12.45, 12.89)))
         if t < 7.9 and not R5.ON['credits_off']: fr = credits(fr, t)          # 第五轮 1：开头署名去掉（片尾已有）
         fr = lyrics(fr, t)
