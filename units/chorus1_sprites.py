@@ -776,7 +776,125 @@ def install(G):
                 fr += edge[..., None] * np.array([0.55, 0.16, 0.06], np.float32) * (1 - 0.5 * pb)
             return fr, (3 if k > 0.5 else 0)
 
+    # ================================================================ 第八轮 STYLE_D=1：风格 D（漫画墨线 + 网点 + 黑白血红）只换素材与调色
+    #   切点 / 转场 / 运镜 / 慢放 / 粒子 / 刀光 / 字幕全部沿用上面的代码；素材 = assets/gen/R8_D/route1/（nananobanana RH_image2）
+    #   去掉 S028 背景巨字「血」（用户 11-11 04:37：不要字体叠加、不融入画面的巨字）
+    STYLE_D = os.environ.get('STYLE_D', '0') == '1'
+    R1 = ROOT + '/assets/gen/R8_D/route1/'
+    NEU = dict(expo=1.0, sat=1.0, tint=(1.0, 1.0, 1.0), lift=0.0, gamma=1.0)
+    NORIM = dict(col=(1.0, 1.0, 1.0), amt=0.0, dir=(0.0, -1.0))
+    def plate(name, gain=1.0, blur=0):
+        im = cv2.cvtColor(cv2.imread(R1 + name + '.png'), cv2.COLOR_BGR2RGB)
+        im = cv2.resize(im, (W, H), interpolation=cv2.INTER_AREA).astype(np.float32) / 255
+        if blur: im = cv2.GaussianBlur(im, (0, 0), blur)
+        return im * gain
+
+    class S028D(S028):
+        def __init__(self):
+            self.bg = plate('D028_bg', 0.42)
+            self.blade = SP.layer(R1 + 'D028_blade_cut.png')
+        def render(self, t):
+            u = self.u(t)
+            fr, bm = self.blade.draw(self.bg.copy(), t, (0.5, 0.45), (960, 640), W / self.blade.w * 1.05, rot=-3, breathe=0, wind_amp=0,
+                                     grade=NEU, rim=NORIM, wrap=0, shade=None)
+            cx = 960
+            col = bm[:, cx]; ys = np.where(col > 0.5)[0]
+            hit_y = float(ys[0]) if len(ys) else 560.0
+            if t < self.T_HIT:
+                q = (t - (self.T_HIT - 0.5)) / 0.5
+                yy = 40 + (hit_y - 40) * clamp01(q) ** 1.6
+                lay = np.zeros((H, W), np.float32)
+                cv2.ellipse(lay, (cx * 4, int(yy * 4)), (22 * 4, 30 * 4), 0, 0, 360, 1.0, -1, cv2.LINE_AA, 2)
+                tri = np.array([[cx - 20, yy - 12], [cx + 20, yy - 12], [cx, yy - 78]]) * 4
+                cv2.fillConvexPoly(lay, tri.astype(np.int32), 1.0, cv2.LINE_AA, 2)
+                lay = cv2.GaussianBlur(lay, (0, 0), 1.0)
+                ink = cv2.dilate(lay, np.ones((7, 7), np.uint8)) - lay          # 墨线描边（漫画）
+                fr = over(fr, np.clip(ink, 0, 1), (0.01, 0.01, 0.01))
+                fr = over(fr, lay, RED * 1.1)
+                hl = np.zeros((H, W), np.float32); cv2.circle(hl, (cx - 8, int(yy - 6)), 6, 1.0, -1, cv2.LINE_AA)
+                fr += cv2.GaussianBlur(hl, (0, 0), 1.5)[..., None] * 0.9
+                fr = over(fr, K.blur_ds(lay, 6) * 0.3, RED)
+            else:
+                q = (t - self.T_HIT) * 0.4 * 3
+                st = np.zeros((H, W), np.float32)
+                rr = int(30 + 140 * eout(q / 0.8, 3))
+                cv2.ellipse(st, (cx, int(hit_y + 10)), (rr, max(4, rr // 6)), -3, 0, 360, 1.0, -1, cv2.LINE_AA)
+                nzz = cv2.resize(K.tile_crop(K.tile(512, 2803, 8, 4), 0, 0, H // 4, W // 4), (W, H))
+                st = np.clip(st * (nzz * 1.6), 0, 1) * bm
+                fr = over(fr, st * 0.95, RED * 0.9)
+                r = np.random.default_rng(2810)
+                Lsp = np.zeros((H // 2, W // 2), np.float32)
+                for i in range(46):
+                    ang = -math.pi / 2 + r.normal(0, 0.75); sp_ = r.uniform(250, 900)
+                    tt = q * 0.55
+                    px = cx + math.cos(ang) * sp_ * tt; py = hit_y + math.sin(ang) * sp_ * tt + 900 * tt * tt
+                    rad = r.uniform(2, 7) * (1 - 0.3 * tt)
+                    if py < hit_y + 30:
+                        cv2.circle(Lsp, (int(px * 2), int(py * 2)), max(1, int(rad)), 1.0, -1, cv2.LINE_AA, 2)
+                fr = over(fr, cv2.resize(Lsp, (W, H)), RED * 1.05)
+                fr += (np.exp(-q / 0.08) * 0.8) * cv2.GaussianBlur(st, (0, 0), 20)[..., None]
+            fr = K.dust(fr, t, 2812, n=40, amt=0.3, size=(3, 8), blur=4, color=(0.9, 0.9, 0.9))
+            z = (1.0 + 0.06 * eio(u)) * (1 + 0.06 * pulse(t, self.t0, 0.15))
+            fr = cam(fr, z, 0, 0)
+            ca = 3 if V(59.96) <= t < V(59.96) + 0.1 else 0
+            return fr, ca
+
+    class S029D(S029Sprite):
+        def __init__(self):
+            super().__init__()
+            self.bg = plate('D029_bg', 0.9, blur=3)
+            self.sp = SP.layer(R1 + 'D029_grip_cut.png')
+        def render(self, t):
+            u = self.u(t)
+            fr = self.bg.copy()
+            k = clamp01((t - self.t0) / 0.35)
+            clench = 1.0 + 0.015 * eout(k, 2) + 0.012 * pulse(t, self.T_DAO, 0.12) * (t >= self.T_DAO)
+            fr, _ = self.sp.draw(fr, t, (0.5, 0.5), (960 + 40, 560), W / self.sp.w * 1.04 * clench, rot=-2 + 2 * eout(k),
+                                 rim=NORIM, wind_amp=4.0, grade=NEU, wrap=0, shade=None)
+            fr = K.sparks(fr, t, 2901, (300, 760), n=55, life=0.8, speed=(600, 1300), dirc=(1, -0.25), spread=0.25,
+                          grav=120, area=(200, 120), amt=1.0, color=(1.0, 0.95, 0.92))
+            fr = K.sparks(fr, t, 2902, (300, 760), n=25, life=0.8, speed=(500, 1100), dirc=(1, -0.25), spread=0.3,
+                          grav=120, area=(200, 120), amt=1.0, color=(0.85, 0.05, 0.04))
+            kk = pulse(t, self.T_DAO, 0.06) * (t >= self.T_DAO - 0.04)
+            if kk > 0.02:
+                fr = T._slash_light(fr, (1210, 360), np.array([math.cos(-0.95), math.sin(-0.95)]), clamp01((t - self.T_DAO + 0.04) / 0.35), 1600)
+            z = 1.0 + 0.05 * eio(u)
+            dx, dy, dr = shake(t, 5 + 6 * kk * 3, 1.6, 29)
+            return cam(fr, z, dx, dy, dr), 0
+
+    class S030D(S030Sprite):
+        def __init__(self):
+            super().__init__()
+            self.bg = plate('D030_bg', 1.0)
+            self.a = SP.layer(R1 + 'D030_ready_cut.png'); self.b = SP.layer(R1 + 'D030_raise_cut.png')
+        def render(self, t):
+            u = self.u(t)
+            crane = -70 + 120 * eio(u)
+            fr = cam(self.bg, 1.04, 0, -crane * 0.3)
+            rm = K.ridge_mask(H, W, self.ridge - crane * 0.0 + crane * 0.6)
+            fr = over(fr, rm, (0.02, 0.02, 0.02))
+            fy = 935 + crane * 0.6
+            kw = dict(grade=NEU, wrap=0, shade=None)
+            if t < self.T_SW:
+                fr, _ = put(fr, self.a, t, 560, (905, fy), rim=NORIM, **kw); tip = None
+            else:
+                k = clamp01((t - self.T_SW) / 0.08)
+                fr, _ = put(fr, self.b, t, 690 + 10 * eout(k), (905, fy), rim=NORIM, mblur=(0, -50 * (1 - k)), **kw)
+                a_, s_ = self.b.fit(690 + 10 * eout(k))
+                tip = (905 + (self.b.top[0] - a_[0]) * self.b.w * s_, fy + (self.b.top[1] - a_[1]) * self.b.h * s_)
+            fr = fr + white(t, self.T_SW, 0.04) * 0.5
+            g = pulse(t, V(61.88), 0.12) * (t >= V(61.88))
+            if g > 0.01 and tip:
+                tx, ty = tip; x, y = K.grid()
+                st = np.exp(-(np.abs(x - tx) / 3 + np.abs(y - ty) / 60)) + np.exp(-(np.abs(y - ty) / 3 + np.abs(x - tx) / 90))
+                fr += (st * g * 1.6 + np.exp(-((x - tx) ** 2 + (y - ty) ** 2) / 900) * g)[..., None] * 1.0
+            gm = self.grass.mask(t, 1.2, dy=crane * 1.2, blur=10)
+            return over(fr, gm, (0.01, 0.01, 0.01)), 0
+
     out = {}
     for c in (S029Sprite, S030Sprite, S031Sprite, S035Sprite, S037Sprite, S038Sprite, S039Sprite, S041Sprite, S044Sprite, S045Sprite, S046Sprite):
         nm = c.__name__.replace('Sprite', ''); c.__name__ = nm; out[nm] = c
+    if STYLE_D:
+        for c, nm in ((S028D, 'S028'), (S029D, 'S029'), (S030D, 'S030')):
+            c.__name__ = nm; out[nm] = c
     return out
