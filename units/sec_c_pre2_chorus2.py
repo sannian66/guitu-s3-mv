@@ -812,7 +812,9 @@ class C09(Shot):
                 yb = y_end + 900 * k * k
                 fr = red_line(fr, (x - 40 * k, y_end - 140 + 900 * k * k), (x - 80 * k, yb + 120), w=1, amt=0.6 * (1 - sm(0.3, 0.9, k)))
         fr, _ = put(fr, t, 'C/slash_strings', 980, 1015, 760, rim=COLD, rim_amt=2.4, rim_dir=(-0.5, -0.9), flash=fl, expo=0.95, wind=7)
-        for tc, (a, b) in zip(cuts, (((520, 620), (1050, 260)), ((900, 280), (1500, 560)))):
+        segs = (((520, 620), (1050, 260)), ((900, 280), (1500, 560)))
+        if R6: segs = (((520, 620), (1050, 260)), ((1150, 330), (1580, 590)))   # r6（#39 段核验）：第二刀拖影从刀尖起、不再从头部起（127.0 头顶一团白像白发）
+        for tc, (a, b) in zip(cuts, segs):
             fr = blade_smear(fr, a, b, (t - tc) / 0.20, bend=0.22, width=80, seed=int(tc * 10), amt=1.2)   # 第五棒：弯月拖影替代「光剑」白棒
             fr = sparks(fr, t, int(tc * 10), b, n=50, life=0.6, speed=(200, 700), dirc=(0, 1), spread=1.4, grav=900, t0=tc, burst=True,
                         color=(1.0, 0.35, 0.2))
@@ -1163,9 +1165,12 @@ class C16(Shot):
         reveal = np.clip((grow * 520 - rr) / 60 + (self.nz - 0.5) * 2, 0, 1)
         k2 = max(0.0, t - t2)
         sig = 1.5 + 10 * eout(clamp(k2 / 0.5))
-        Gb = cv2.GaussianBlur(self.g, (0, 0), sig) * reveal * (1 - 0.45 * sm(0, 0.5, k2))
-        Gb = np.clip(Gb * (1 + 0.6 * (self.nz - 0.5)), 0, 1)[..., None]
-        fr = fr * (1 - 0.82 * Gb) + Gb * np.array([0.50, 0.02, 0.02], np.float32) * (0.7 + 0.5 * fl)
+        if R6:   # r6 #39：水中「血」去贴纸感——字形被水流扭曲（fbm 位移，越晕越大），实芯 + 晕开的血雾两层，暗红乘进水色，水面高光/雨点反光压回字上
+            fr = self._blood_r6(fr, t, k, k2, reveal, fl)
+        else:
+            Gb = cv2.GaussianBlur(self.g, (0, 0), sig) * reveal * (1 - 0.45 * sm(0, 0.5, k2))
+            Gb = np.clip(Gb * (1 + 0.6 * (self.nz - 0.5)), 0, 1)[..., None]
+            fr = fr * (1 - 0.82 * Gb) + Gb * np.array([0.50, 0.02, 0.02], np.float32) * (0.7 + 0.5 * fl)
         fr = water_ripple(fr, (960, 770), k + 0.02, flat=0.45, speed=700, amp=4 + 6 * sm(0.15, 0.4, k), y_top=560)
         fr = water_ripple(fr, (960, 770), k2 + 0.01 if t >= t2 else -1, flat=0.45, speed=760, amp=14, y_top=560)
         fr = splash(fr, t, t1, (960, 770), 161, n=60, spread=160, up=420, col=(0.55, 0.05, 0.04), amt=0.8)
@@ -1174,6 +1179,30 @@ class C16(Shot):
         fr = rain(fr, tr, 160, inten=0.9, angle=6, red=0.35 * sm(t1, t1 + 0.4, t))
         self.ca = 5 if 0 <= k2 < 0.1 else 0
         return fr
+
+
+    def _blood_r6(self, fr, t, k, k2, reveal, fl):
+        if not hasattr(self, 'wx'):
+            r = np.random.default_rng(161)
+            def nz(sc, sd):
+                a = cv2.GaussianBlur(np.random.default_rng(sd).random((H // sc + 2, W // sc + 2)).astype(np.float32), (0, 0), 1.2)
+                a = cv2.resize(a, (W, H), interpolation=cv2.INTER_CUBIC); return (a - a.mean()) / (a.std() + 1e-6)
+            self.wx = 0.25 * nz(40, 1611) + nz(9, 1612); self.wy = 0.25 * nz(40, 1613) + nz(9, 1614)
+            self.fil = np.clip(0.5 + 0.35 * nz(6, 1615), 0, 1)
+            self.gx, self.gy = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32))
+        amp = 1.5 + 2.5 * sm(0, 0.6, k) + 16.0 * eout(clamp(k2 / 0.6))          # 扭曲：落定时轻、第二滴搅散时大
+        dr = 7.0 * (t - V(134.50))                                               # 水流慢漂
+        mx = self.gx + amp * self.wx + dr * 0.6; my = self.gy + amp * 0.45 * self.wy
+        g = cv2.remap(self.g, mx, my, cv2.INTER_LINEAR, borderValue=0)
+        fade = 1 - 0.55 * sm(0, 0.55, k2)
+        core = cv2.GaussianBlur(g, (0, 0), 2.2 + 6 * eout(clamp(k2 / 0.5))) * reveal * fade
+        halo = cv2.GaussianBlur(g, (0, 0), 16 + 20 * sm(0, 0.6, k2)) * reveal * (0.55 + 0.35 * sm(0, 0.6, k2)) * (0.75 + 0.5 * self.fil)
+        core = np.clip(core * (0.82 + 0.36 * self.fil), 0, 1)[..., None]; halo = np.clip(halo, 0, 1)[..., None]
+        hi = np.clip(fr - 0.30, 0, None)                                         # 水面高光（雨痕、天光反射）
+        deep = np.array([0.16, 0.008, 0.012], np.float32); mid = np.array([0.34, 0.022, 0.022], np.float32)
+        out = fr * (1 - 0.55 * halo) + halo * 0.55 * deep * (0.9 + 0.5 * fl)
+        out = out * (1 - 0.86 * core) + core * mid * (0.85 + 0.45 * fl)
+        return out + hi * (0.35 + 0.4 * core)
 
 
 class C17(Shot):
