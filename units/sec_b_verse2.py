@@ -1632,13 +1632,21 @@ class V15(Shot):
         x_, y_ = K.grid()
         fr = fr + np.exp(-(((x_ - walk) / 380) ** 2 + ((y_ - 560) / 420) ** 2))[..., None] * np.array([0.10, 0.12, 0.16], np.float32)
         fh, fy = (770, 1085) if R5 else (880, 1100)                   # r5 #32：1:43 头顶贴黑边被裁 → 缩小下移，推镜后马尾顶仍留 ≥120px
+        if R6: fh, fy = 680, 888                                       # r6 #32：脚入画——双脚踩在积水地面（y≈900，地平 820 之下），推镜到底头顶离黑边 ≥60px
         fr, _ = put(fr, self.sp, t, fh, (walk, fy - bob),   # 第八棒：1000→880，头顶不再顶黑边
                      rim=dict(col=(0.80, 0.88, 1.0), amt=3.6 + 4 * env, dir=(0.7, -0.7)),
                     grade=dict(expo=1.18 + 0.4 * env, sat=0.55, tint=(0.92, 0.97, 1.06), lift=0.02, gamma=1.05), wind_amp=8,
                     shade=(500, 1500, 0.12, 600, 0.2))
         # 积水反光
-        ref = fr[::-1].copy(); ref = cv2.warpAffine(ref, np.float32([[1, 0, 0], [0, 1, 2 * 860 - H]]), (W, H))
-        fr = fr + ref * (self.gm * 0.25)[..., None]
+        if R6:                                                           # r6：倒影以脚底为轴（人站在水上，倒影从脚下接出），脚下一圈接触暗影 + 涟漪
+            ax_ = fy - bob
+            ref = fr[::-1].copy(); ref = cv2.warpAffine(ref, np.float32([[1, 0, 0], [0, 1, 2 * ax_ - H]]), (W, H))
+            fr = fr + ref * (self.gm * 0.25 * (y_ > ax_ - 2))[..., None]
+            cs = np.exp(-(((x_ - walk) / 120) ** 2 + ((y_ - ax_ - 4) / 14) ** 2))
+            fr = fr * (1 - 0.55 * cs[..., None])
+        else:
+            ref = fr[::-1].copy(); ref = cv2.warpAffine(ref, np.float32([[1, 0, 0], [0, 1, 2 * 860 - H]]), (W, H))
+            fr = fr + ref * (self.gm * 0.25)[..., None]
         fr = self.spl.draw(fr, t, y_far=830, y_near=1000, rate=160, amt=0.8)
         fr = self.rain.draw(fr, t, intensity=1.2, angle=14, light=(1500, 150) if env > 0.1 else None, light_r=900, cam=(80 * e, 0))
         pr = prs(24, [0, 1, 2, 3], t)
@@ -1722,7 +1730,15 @@ class V16(Shot):
             Aw = Aw2
             crack = line * Aw * math.exp(-q / 0.25)
             Fz = Fz + crack[..., None] * np.array([1.0, 0.55, 0.25], np.float32) * 1.5
+        if R6:                                                           # r6 #32：空碑金辉——碑后云眼金光漏出碑沿一圈（外晕）+ 碑首受金光、碑面自上而下一层暖金薄光
+            halo = np.clip(K.blur_ds(Aw, 36) * 1.6 - Aw, 0, 1)
+            fr = fr + halo[..., None] * GOLD * (0.55 + 0.25 * math.sin(t * 3.0))
+            top_y = rm((1080, 120))[1]
+            sheen = np.exp(-np.clip(y - top_y, 0, None) / 260.0) * np.exp(-((x - DST[0]) / 520) ** 2)
+            Fz = Fz + (Aw * sheen)[..., None] * GOLD * 0.28
         fr = fr * (1 - Aw[..., None]) + Fz
+        if R6:
+            fr = fr + K.blur_ds(Aw, 70)[..., None] * GOLD * 0.10 * (1 - Aw[..., None])
         for (fx_, fy_), tk in chips:
             fr = K.sparks(fr, t, 6110 + int(fy_), (fx_, fy_), n=70, life=0.4, speed=(200, 800), dirc=(0, -1), spread=2.0, grav=1600,
                           size=1.5, area=(40, 10), color=(1.0, 0.8, 0.5), amt=1.1, t0=tk - 0.04, burst=True)
@@ -1822,6 +1838,7 @@ class V18(Shot):
     不再用 2300px 放大 + 运动模糊糊掉；「握在自己」改马善政楷（原志莽行书「握」读成「搖」），与 V17/V19 同一句同一字体"""
     T_WO = 107.58
     FIST = (720, 500)
+    if R6: FIST = (900, 590)                                         # r6 #32：拳移到画面中部偏左、略下（原贴左上，挤出的水花顶出上黑边）
     def __init__(self):
         self.sp = spr('B_r4/fist3')
         if not getattr(self.sp, '_b11', False):                       # 第十一棒：拳上沿抠图亮边 → alpha 再收 2px + 边带压暗
@@ -1844,12 +1861,12 @@ class V18(Shot):
         hk = hitp(t, self.T_WO, 0.12)
         q = clamp01((t - self.t0) / max(th - self.t0, 0.02))
         sq = 1.0 + 0.10 * (1 - eout(q, 3)) - 0.03 * hk                    # 攥紧：入镜略大 → 一记收紧
-        fr, _ = put_at(fr, self.sp, t, (0.48, 0.36), (self.FIST[0], self.FIST[1] + 60 * (1 - eout(q, 3))), 1750 * sq,
+        fr, _ = put_at(fr, self.sp, t, (0.48, 0.36), (self.FIST[0], self.FIST[1] + 60 * (1 - eout(q, 3))), (1450 if R6 else 1750) * sq,
                        rim=dict(col=(0.75, 0.82, 1.0), amt=0.55, dir=(0.5, -1.0)),       # 第十一棒：2.0 → 0.55（critic_B_r4 拳上沿白描边）
                        grade=dict(expo=0.68, sat=0.55, tint=(0.97, 0.98, 1.03), lift=0.0, gamma=1.12),   # 压暗一档贴合场景
                        wind_amp=0, breathe=0.0, shade=(1300, 1900, 0.3, 700, 0.3))
         # 握紧挤出的水：从指缝向上、两侧迸开
-        fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - 330), n=110, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.2, grav=1500, size=1.3,
+        fr = K.sparks(fr, t, 6303, (self.FIST[0] - 20, self.FIST[1] - (270 if R6 else 330)), n=110, life=0.6, speed=(300, 1100), dirc=(0, -1), spread=2.2, grav=1500, size=1.3,
                       area=(260, 30), color=(0.8, 0.85, 0.95), amt=1.0, t0=th, burst=True)
         pr = prs(25, [4, 5, 6, 7], t)
         if R5: pr = [0.0] * 4
