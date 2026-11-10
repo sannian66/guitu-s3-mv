@@ -690,3 +690,4 @@
 ## 2026-11-10 07:18 · OpenAI 协议渠道批量生图（stele_stone.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `stele_stone_v1`（40s）→ `assets/gen/R6_A/stele_stone_v1.png`
+- 备注：A 组 r6 第三棒 #9 碑面青石材质（R6_A 本轮第 6/12 张，剩 6）

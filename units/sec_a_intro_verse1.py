@@ -1929,7 +1929,7 @@ class V15(Shot):
     # ---- r6 第三棒 #9（评审 2ce318b 打回 7 分：碑像湿布、人平移漂移 600px、右肘贴边）----
     #   碑：生图青石碑面 stele_stone_v1（真石材颗粒 + 风化斑）贴进直边碑形（左/右/顶直边，两处顶角崩口、边沿 ≤3px 风化毛口），
     #       顶面受左上冷光一条倒角亮边、右侧背光厚度面、碑后投影；碑底出画（下沿被地雾吃掉）；去掉竖向流痕。
-    #   人：刀尖仍是凿刻前沿，但改成「镜头跟刀」——碑（及字、碎屑、火星）整体在画里向左走，人锁在屏幕右侧（刀尖屏幕 x 790→900、
+    #   人：刀尖仍是凿刻前沿，但改成「镜头跟刀」——碑（及字、碎屑、火星）整体在画里向左走，人锁在屏幕右侧（刀尖屏幕 x 850→930、人缩 7%、
     #       人体右沿 ≤1800，右留白 ≥120px），每凿一字上身随刀微转（±1.4°）；刻完刀尖下沉离碑。
     def _stele7(self):
         if hasattr(self, 'st7'): return
@@ -1946,8 +1946,10 @@ class V15(Shot):
         d = np.minimum.reduce([xx - left, right - xx, yy - top])
         # 顶角崩口：左上一块斜缺、右上一个小缺口
         d = np.minimum(d, (xx - x0) + (yy - y0) - 46 + (fine - 0.5) * 6)
-        cR = np.hypot(xx - (x1 - 210), yy - y0) - 22 + (fine - 0.5) * 5
-        d = np.minimum(d, cR)
+        # 右上崩口：不规则楔形缺（宽 ≈80、深 ≈34，斜坡两侧粗糙），不是半圆
+        cx_ = x1 - 230
+        wedge = (yy - y0) - np.clip(34 - np.abs(xx - cx_ - 8 * np.sign(xx - cx_)) * 0.8, 0, 34) + (fine - 0.5) * 8
+        d = np.where(np.abs(xx - cx_) < 50, np.minimum(d, wedge), d)
         self.st7 = np.clip(d / 1.2 + 0.5, 0, 1).astype(np.float32)
         im = np.asarray(_I.open(os.path.join(R5._R6A, 'stele_stone_v1.png')).convert('RGB'), np.float32) / 255
         bw, bh = x1 - x0 + 60, H - y0 + 40
@@ -1960,7 +1962,10 @@ class V15(Shot):
         self.stone7 = (alb * lit * np.array([0.92, 0.97, 1.08], np.float32)).astype(np.float32)
         s0 = self.st7
         self.side7 = np.clip(cv2.warpAffine(s0, np.float32([[1, 0, 24], [0, 1, 5]]), (W, H)) - s0, 0, 1)
-        self.bevel7 = np.clip(s0 - cv2.warpAffine(s0, np.float32([[1, 0, 0], [0, 1, 7]]), (W, H)), 0, 1) * (0.7 + 0.6 * fine)
+        bv = np.zeros_like(s0)
+        for k_, wk in ((3, 0.45), (7, 0.30), (12, 0.18), (18, 0.07)):                         # 顶面倒角：上沿最亮、向下 18px 渐暗（不是一根细线）
+            bv += wk * np.clip(s0 - cv2.warpAffine(s0, np.float32([[1, 0, 0], [0, 1, k_]]), (W, H)), 0, 1)
+        self.bevel7 = cv2.GaussianBlur(bv, (0, 0), 1.2) * (0.6 + 0.8 * fine)
         self.lbevel7 = np.clip(s0 - cv2.warpAffine(s0, np.float32([[1, 0, 6], [0, 1, 0]]), (W, H)), 0, 1) * (0.5 + 0.5 * fine)
         self.cast7 = np.clip(cv2.GaussianBlur(cv2.warpAffine(s0, np.float32([[1, 0, 70], [0, 1, 30]]), (W, H)), (0, 0), 30) - s0 - self.side7, 0, 1)
         self.alpha7 = np.clip(s0 + self.side7, 0, 1)
@@ -1979,7 +1984,7 @@ class V15(Shot):
         wl = self.stone7.copy()
         side_c = np.array([0.040, 0.042, 0.050], np.float32) * (0.8 + 0.4 * self.stone7.mean(2, keepdims=True) / 0.12)
         wl = wl * (1 - self.side7[..., None]) + side_c * self.side7[..., None]
-        wl = wl + (self.bevel7 * 0.30)[..., None] * np.array([0.50, 0.56, 0.70], np.float32) + (self.lbevel7 * 0.12)[..., None] * np.array([0.5, 0.56, 0.7], np.float32)
+        wl = wl + (self.bevel7 * 0.22)[..., None] * np.array([0.50, 0.56, 0.70], np.float32) + (self.lbevel7 * 0.12)[..., None] * np.array([0.5, 0.56, 0.7], np.float32)
         tx, ty, cur, pr = self.tip6(t)
         wl = self.CV.draw(wl, pr, mask=self.st7)
         wl = wl * self.alpha7[..., None]
@@ -1998,7 +2003,7 @@ class V15(Shot):
             add = add + pq[..., None] * np.array([0.10, 0.10, 0.10], np.float32)
         # 镜头跟刀：屏幕刀尖 790 → 900（缓），世界层平移 sx
         txs = self._tipx_smooth(t)
-        scr = 790 + 110 * eio(u)
+        scr = 850 + 80 * eio(u)
         sx = scr - txs
         M = np.float32([[1, 0, sx], [0, 1, 0]])
         wlS = cv2.warpAffine(wl, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
@@ -2013,8 +2018,9 @@ class V15(Shot):
         hx = tx + sx
         lean = sum(-1.4 * math.sin(math.pi * p) for p in pr if 0 < p < 1)
         jit = 2.5 * math.sin(t * 47) if cur is not None else 0
-        fr, info = A.place(fr, t, self.spr, (hx + jit, ty), w=860, anc=self.anc, rim=COLD, rim_amt=2.6,
+        fr, info = A.place(fr, t, self.spr, (hx + jit, ty), w=800, anc=self.anc, rim=COLD, rim_amt=2.6,
                            rim_dir=(-0.7, -0.6), wind=8, grade=dict(expo=0.88, sat=0.55, gamma=1.08), breathe=0.0, rot=lean)
+        self._last_box = info['box']
         fr = A.glow(fr, (hx, ty), 40, 0.5 if cur is not None else 0.1, (0.9, 0.9, 1.0))
         fr = fog(fr, t, 0, 820, 1000, 0.40, (0.22, 0.25, 0.32), speed=(-50, 0))
         fr = RAIN.draw(fr, t, 0.8, angle=8, light=(200, 60), layers=(1, 2))
@@ -2538,7 +2544,7 @@ CUTS = {
     'V13': ('a_glint', 0.10, 0.14, dict(angle=32, center=(960, 600))) if (R6C_OFF('sf7') or not R5.ON['sha_fang']) else ('cont', 0, 0, {}),   # r6 第三棒 #7：殺/放一镜到底不切（'cont'：无转场无冲击、机位连续）  # 第七棒：收刀 —— 一线冷光沿 V12 斩线掠过即换（原 a_split 三条带、人物无头；不再切块）
     'V14': ('hard', 0, 0, {}),
     'V15': ('match_cut', 0.08, 0.12, dict(shape='line', center=(770, 560), angle=90, mode='cut')),   # 刀身刻字 ↔ 碑面刻字
-    'V16': ('a_glyph', 0.08, 0.34, dict(ch='主', center=(750, 650), size=230)),   # 第九棒：post 0.24→0.34          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
+    'V16': ('a_glyph', 0.08, 0.34, dict(ch='主', center=(750, 650), size=230) if (R6C_OFF('stele') or not R5.ON['carve']) else dict(ch='主', center=(598, 668), size=200)),   # r6 第三棒 #9：对准镜头跟刀后碑上「主」的屏幕位置（原 750 落在「张」上）   # 第九棒：post 0.24→0.34          # 第六棒：以「主」字墨槽为遮罩硬边扩开（原叠化两脸糊在一起）
     'V17': ('hard', 0, 0, {}),
     'V18': ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.6)),     # 第六棒：尘浪卷过（原 flash_red 把印坑「正」染成红方印）
     'V19': ('hard', 0, 0, {}),
