@@ -70,7 +70,7 @@ const SHOTS = [
   {id: 'S030', from: 60, dur: 41, cam: S030, camZ: 10, layers: [
     {f: 'S030_L1.png', z: -45, m: 1.35, dy: 2},
     {f: 'S030_L2_cut.png', z: -16, m: 1.3, dy: 0.6, vx: 0.5, amp: 0.05, freq: 3},
-    {f: 'S030_L3_cut.png', z: 0, m: 1.05, dy: 0.1},
+    {f: 'S030_L3_cut.png', z: 0, m: 0.72, dy: -0.35},
     {f: 'S030_L4_cut.png', z: 4, m: 1.35, dy: -0.9}]},
 ] as const;
 
