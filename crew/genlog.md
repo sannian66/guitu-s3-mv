@@ -633,3 +633,8 @@
 - ✔ `c28_face_pt_v2`（54s）→ `assets/gen/R5_C/c28_face_pt_v2_cut.png`
 - ✔ `c38_grip_young_v1`（59s）→ `assets/gen/R5_C/c38_grip_young_v1_cut.png`
 - ✔ `c38_grip_young_v2`（53s）→ `assets/gen/R5_C/c38_grip_young_v2_cut.png`
+
+## 2026-11-10 05:07 · OpenAI 协议渠道批量生图（jobs_F_r6_emp.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `emp_mian_b`（48s）→ `assets/gen/R6_F/emp_mian_b_cut.png`
+- ✔ `emp_mian_a`（50s，F组 r6 #21，同批前一次调用；日志因调用超时未自动写入，补记）→ `assets/gen/R6_F/emp_mian_a_cut.png`
