@@ -217,3 +217,99 @@ def ink_write(a, p, ang=35.0, seed=0, soft=0.18):
     m = np.clip((p * (1 + soft) - pr) / soft, 0, 1)
     ghost = min(1.0, p * 3.0) * 0.5
     return np.maximum(a * m, a * ghost)
+
+
+# ------------------------------------------------------------------ 9 V15 真刻字（第六轮）
+# 字形 = 生图颜体楷书「我的主张」（assets/gen/R6_A/cal_wodezhuzhang.png，白底黑墨）→ 每字 alpha；
+# 刻痕 = 药研刻 V 形槽：槽内深度 ∝ 到笔画边缘的距离，按左上光源（与碑面体积光同向）算法线明暗 —— 迎光槽壁亮、背光槽壁黑；
+# 新凿石面比风化碑面浅（新茬）；槽沿崩口（噪声侵蚀笔画边）+ 沿口碎茬浅点 + 笔画下方石粉；揭开 = 跟刀尖从左往右凿过去。
+_R6A = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'gen', 'R6_A')
+
+
+def _cal_split(name='cal_wodezhuzhang'):
+    import numpy as np
+    from PIL import Image
+    im = np.asarray(Image.open(os.path.join(_R6A, name + '.png')).convert('L'), np.float32) / 255
+    a = np.clip((0.75 - im) / 0.5, 0, 1)
+    col = (a > 0.3).sum(0)
+    segs, s = [], None
+    for x in range(len(col)):
+        if col[x] > 0 and s is None: s = x
+        if col[x] == 0 and s is not None:
+            if x - s > 40: segs.append((s, x))
+            s = None
+    if s is not None: segs.append((s, len(col)))
+    out = []
+    for (x0, x1) in segs:
+        c = a[:, x0:x1]; ys = np.nonzero(c.max(1) > 0.3)[0]
+        out.append(c[ys.min():ys.max() + 1])
+    return out
+
+
+class Carve:
+    def __init__(self, places, light=(-0.55, -0.70, 0.55), seed=9):
+        """places = [(cx, cy, 字高 px)]，与 _cal_split 的字一一对应。"""
+        import numpy as np, cv2
+        import a_kit as A
+        gl = _cal_split()
+        L = np.array(light, np.float32); L /= np.linalg.norm(L)
+        self.items = []
+        rs = np.random.RandomState(seed)
+        for i, (g, (cx, cy, hh)) in enumerate(zip(gl, places)):
+            s = hh / g.shape[0]
+            g = cv2.resize(g, (max(1, int(g.shape[1] * s)), int(hh)), interpolation=cv2.INTER_AREA)
+            pad = 24
+            g = np.pad(g, pad)
+            h_, w_ = g.shape
+            nz = cv2.resize(rs.rand(h_ // 6 + 2, w_ // 6 + 2).astype(np.float32), (w_, h_), interpolation=cv2.INTER_CUBIC)
+            nz2 = cv2.resize(rs.rand(h_ // 2 + 2, w_ // 2 + 2).astype(np.float32), (w_, h_), interpolation=cv2.INTER_LINEAR)
+            m = np.clip((g - 0.5 + (nz - 0.5) * 0.55 + (nz2 - 0.5) * 0.25) * 6 + 0.5, 0, 1)        # 崩口：笔画边被噪声侵蚀/崩出
+            m = cv2.GaussianBlur(m, (0, 0), 0.7)
+            mb = (m > 0.5).astype(np.uint8)
+            dt = cv2.distanceTransform(mb, cv2.DIST_L2, 5).astype(np.float32)
+            D = max(4.0, np.percentile(dt[mb > 0], 92))
+            depth = np.clip(dt / D, 0, 1) ** 0.85                                        # V 形槽（中脊最深）
+            hgt = -depth * D * 0.9
+            hgt = cv2.GaussianBlur(hgt, (0, 0), 1.0)
+            gx = cv2.Sobel(hgt, cv2.CV_32F, 1, 0, ksize=3) / 8; gy = cv2.Sobel(hgt, cv2.CV_32F, 0, 1, ksize=3) / 8
+            n = np.dstack([-gx, -gy, np.ones_like(gx)]); n /= np.linalg.norm(n, axis=2, keepdims=True)
+            dif = np.clip((n * L).sum(2), 0, 1)
+            # 投影：沿光线反方向偏移的槽沿挡光（迎光一侧槽壁下半段被上沿挡住）
+            sh = np.zeros_like(depth)
+            for k in range(1, 7):
+                M = np.float32([[1, 0, L[0] / abs(L[2]) * k * 1.4], [0, 1, L[1] / abs(L[2]) * k * 1.4]])
+                outside = 1 - cv2.warpAffine(m, M, (w_, h_), borderValue=0)
+                sh = np.maximum(sh, outside * np.clip(depth * D * 0.9 - k * 1.2, 0, 1))
+            tex = cv2.resize(A.tex(300 + i, 256, 30, 3), (w_, h_))
+            fresh = np.array([0.40, 0.385, 0.36], np.float32)                               # 新凿石茬（比风化碑面浅、偏暖）
+            shade = (0.06 + 1.35 * dif) * (1 - 0.65 * sh) * (1 - 0.35 * depth) * (0.85 + 0.3 * tex)
+            col = shade[..., None] * fresh
+            ring = np.clip(cv2.GaussianBlur(m, (0, 0), 3.0) * 1.6 - m * 1.6, 0, 1)        # 槽外一圈崩茬
+            chip = np.clip((nz2 - 0.62) * 5, 0, 1) * ring
+            # 石粉：笔画下沿积一层浅灰粉
+            dust = np.clip(cv2.warpAffine(cv2.GaussianBlur(m, (0, 0), 4), np.float32([[1, 0, 0], [0, 1, 7]]), (w_, h_)) - m, 0, 1) * (0.5 + 0.5 * nz)
+            x0, y0 = int(cx - w_ / 2), int(cy - h_ / 2)
+            self.items.append(dict(m=m, col=col.astype(np.float32), chip=chip, dust=dust, x0=x0, y0=y0, w=w_, h=h_,
+                                   gx0=x0 + pad, gx1=x0 + w_ - pad, gy0=y0 + pad, gy1=y0 + h_ - pad,
+                                   front=cv2.resize(rs.rand(h_ // 10 + 2, 3).astype(np.float32), (1, h_))[:, 0]))
+
+    def bounds(self, i):
+        it = self.items[i]; return it['gx0'], it['gx1'], it['gy0'], it['gy1']
+
+    def draw(self, fr, progs, mask=None):
+        """progs = 每字凿刻进度 0..1（左 → 右揭开，前沿锯齿）。mask = 碑面 alpha（字只刻在碑上）。"""
+        import numpy as np
+        for it, p in zip(self.items, progs):
+            if p <= 0: continue
+            x0, y0, w_, h_ = it['x0'], it['y0'], it['w'], it['h']
+            xx = np.arange(w_, dtype=np.float32)[None, :]
+            fx = it['gx0'] - x0 + (it['gx1'] - it['gx0'] + 30) * p + (it['front'][:, None] - 0.5) * 40
+            rv = np.clip((fx - xx) / 14.0, 0, 1) if p < 1 else np.ones((h_, w_), np.float32)
+            m = it['m'] * rv
+            if mask is not None: m = m * mask[y0:y0 + h_, x0:x0 + w_]
+            R = fr[y0:y0 + h_, x0:x0 + w_]
+            R = R * (1 - 0.35 * it['chip'][..., None] * rv[..., None]) + it['chip'][..., None] * rv[..., None] * np.array([0.10, 0.10, 0.10], np.float32)
+            R = R + (it['dust'] * rv)[..., None] * np.array([0.05, 0.05, 0.048], np.float32)
+            R = R * (1 - m[..., None]) + it['col'] * m[..., None]
+            fr[y0:y0 + h_, x0:x0 + w_] = R
+        return fr

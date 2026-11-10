@@ -37,6 +37,7 @@ R5D_TEXT_CUT = True     # #46 3:02–3:13（182–193.2s）只留「规矩」(S2
 R6D_KEEPTXT = _on('R6D_KEEPTXT')
 R6D_EMBER = _on('R6D_EMBER')   # [D组 r6 #46] S26 3:08 炸开后余烬火星
 R6D_S18 = _on('R6D_S18')    # [D组 r6 #45] S18 头顶留白加大 + 鞘尾红穗去掉（R6D_S18=0 回滚到 r5 复审版）
+R6D_B = _on('R6D_B')        # [D组 r6 第二棒] 评审返工：#45 肤色暖化/耳尖收圆/柔化，#46-f 余烬断口，184.3 碎片、186.0 地平线、192.3 光柱与构图（R6D_B=0 回滚到第一棒）
 TXTCUT = R5D_TEXT_CUT and not R6D_KEEPTXT   # 镜内横排/刻/写/印字：r6 默认保留
 VCUT = R5D_TEXT_CUT                        # 竖排宋体歌词列：继续去
 F0, F1 = 4839, 5797
@@ -1009,6 +1010,7 @@ class S18_Draw(Shot):
         if R5D_S18_NEW and R5D_S18_V2:
             self.sp = D.spr('R5_D/s18_draw_xb')     # [D r5 复审 #45] 刀鞘是素面黑漆长鞘（无缠绳），脸部在 _s18_face_fix 里去妆感
             _s18_face_fix(self.sp)
+            if R6D_B: _s18_skin_warm(self.sp)
         elif R5D_S18_NEW:
             self.sp = D.spr('R5_D/s18_draw_wa')     # [D r5 #45] 新生图：中景正面半拔刀（绿幕），与 S16/S17/S19 同一张脸、同一写实暗调
         else:
@@ -1115,6 +1117,55 @@ def _s18_face_fix(sp, RW=1672):
         sp.A = (A * (1 - tas)).astype(np.float32)
         sp.ring = cv2.GaussianBlur(np.clip(sp.A - cv2.erode(sp.A, np.ones((5, 5), np.uint8)), 0, 1), (0, 0), 1.5)
     sp.F = np.clip(F, 0, 1).astype(np.float32)
+
+
+def _s18_skin_warm(sp, RW=1672, da=12.0, db=1.0, hand_gain=1.12, hand_da=4.0, hand_ab=(22.0, 13.0)):
+    """[D组 r6 第二棒 #45] _s18_face_fix 之后：只作用于皮肤的暖化（Lab 平移 a*/b*，目标 = S22 184.3 主角脸均值），
+    手部再提亮 8% + 一点血色；右耳上缘尖角收圆（耳尖外的皮肤像素改成发色并收 alpha）；皮肤轻柔化（降 CG 微反差，靠近 S22 插画感）。"""
+    def ss(a, b, x):
+        x = np.clip((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x)
+    if getattr(sp, '_s18_warm', False):
+        return
+    sp._s18_warm = True
+    F, A = sp.F.astype(np.float32), sp.A.astype(np.float32)
+    s = sp.w / RW
+    yy, xx = np.mgrid[0:sp.h, 0:sp.w].astype(np.float32) / s
+    hsv = cv2.cvtColor(F, cv2.COLOR_RGB2HSV); Hh, S, Vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    face = np.clip(np.exp(-(((xx - 840) / 150) ** 2 + ((yy - 320) / 140) ** 4)) * 1.6, 0, 1) * (1 - ss(420, 450, yy))
+    hands = np.zeros_like(A)
+    for x0, y0, x1, y1 in ((345, 555, 495, 690), (1175, 670, 1305, 795)):
+        hands = np.maximum(hands, ss(x0 - 10, x0 + 10, xx) * ss(x1 + 10, x1 - 10, xx) * ss(y0 - 10, y0 + 10, yy) * ss(y1 + 10, y1 - 10, yy))
+    neck = np.exp(-(((xx - 835) / 55) ** 2 + ((yy - 420) / 60) ** 4)) * ss(490, 470, yy)
+    face = np.maximum(face, np.clip(neck * 1.5, 0, 1))
+    hue = np.maximum(ss(50, 35, Hh), ss(335, 350, Hh))
+    sk_face = face * hue * ss(0.03, 0.08, S) * ss(0.55, 0.42, S) * ss(0.07, 0.16, Vv)
+    sk_hand = hands * np.maximum(hue, ss(0.10, 0.04, S)) * ss(0.55, 0.42, S) * ss(0.12, 0.22, Vv)   # 右手原图近乎无彩（灰），不卡色相
+    skin = np.maximum(sk_face, sk_hand) * (A > 0.3)
+    skin = cv2.GaussianBlur(skin, (0, 0), 1.5)
+    hk = skin * hands
+    lab = cv2.cvtColor(F, cv2.COLOR_RGB2LAB)
+    lab[..., 0] = np.clip(lab[..., 0] * (1 + (hand_gain - 1) * hk), 0, 100)
+    fk = skin * (1 - hands) * ss(0.10, 0.30, Vv) * ss(0.40, 0.30, S)    # 暗部/已偏红处少加，脖子阴影不起红斑
+    lab[..., 1] += fk * da
+    lab[..., 2] += fk * db
+    # 手：a*/b* 往一个统一的血色目标收（原图左手指节偏红斑、右手近灰），再加 hand_da 一点红
+    lab[..., 1] = lab[..., 1] + (hand_ab[0] + hand_da - lab[..., 1]) * 0.65 * hk
+    lab[..., 2] = lab[..., 2] + (hand_ab[1] - lab[..., 2]) * 0.65 * hk
+    F2 = np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB), 0, 1)
+    soft = cv2.bilateralFilter(F2, 7, 0.08, 4)          # 皮肤去 CG 微反差（毛孔/硬高光），五官大形不动
+    F2 = F2 + (soft - F2) * (0.55 * skin)[..., None]
+    # 右耳上缘尖角收圆：耳廓保留到椭圆 (930,254)±(13,24)，椭圆外、耳尖三角内的皮肤像素改成发色
+    ex, ey = 930, 254
+    out_ell = ss(1.0, 1.2, np.sqrt(((xx - ex) / 13) ** 2 + ((yy - ey) / 24) ** 2))
+    tipbox = ss(918, 924, xx) * ss(956, 950, xx) * ss(208, 214, yy) * ss(240, 234, yy)
+    tip = cv2.GaussianBlur(out_ell * tipbox * ss(0.10, 0.2, F2.mean(-1)), (0, 0), 1.2)
+    hair = np.array([0.035, 0.04, 0.055], np.float32)
+    F2 = F2 * (1 - tip[..., None]) + hair * tip[..., None]
+    edge = tip * ss(934, 942, xx)                     # 贴背景的外缘：收 alpha（不留一块黑尖）
+    sp.A = (A * (1 - edge)).astype(np.float32)
+    sp.ring = cv2.GaussianBlur(np.clip(sp.A - cv2.erode(sp.A, np.ones((5, 5), np.uint8)), 0, 1), (0, 0), 1.5)
+    sp.F = np.clip(F2, 0, 1).astype(np.float32)
+    sp._skin = skin
 
 
 def stroke_head(ch, fname, x, y, s, p):

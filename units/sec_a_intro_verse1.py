@@ -1603,7 +1603,7 @@ class V15(Shot):
         self.tex = cv2.resize(A.tex(151, 512, 8, 6), (W, H)); self.tex2 = cv2.resize(A.tex(152, 512, 40, 3), (W, H))
         q = 2; edge = cv2.resize(A.tex(153, 256, 6, 4), (W // q, H // q)) * 60
         yy, xx = np.mgrid[0:H // q, 0:W // q].astype(np.float32)
-        x0, x1, y0 = 290, 1230, 140                                           # 碑：不规则粗糙边（不再是直线框）
+        x0, x1, y0 = (110, 1100, 250) if R5.ON['carve'] else (290, 1230, 140)   # 碑：不规则粗糙边（不再是直线框）；r6 #9：碑左移让人与整把刀入画
         d = np.minimum.reduce([xx * q - x0 + edge, x1 - xx * q + edge * 0.6, yy * q - y0 - 40 * np.sin(xx * q / 300) + edge * 0.8])
         self.st = cv2.resize(np.clip(d / 4, 0, 1), (W, H))
         chip = np.clip((cv2.resize(A.tex(154, 256, 20, 3), (W, H)) - 0.66) * 6, 0, 1) * np.clip(1 - np.abs(cv2.resize(d, (W, H)) - 20) / 30, 0, 1)
@@ -1611,6 +1611,10 @@ class V15(Shot):
         import a_r6
         self.spr = a_r6.hair_clean('A_r6/carve_grip', protect=(0.0, 0.53, 0.60, 0.66))          # 第六棒：双手握柄、刀身平伸向左（原 carve_mcu 托刃）
         self.anc = a_r6.anc_for(self.spr, (0.0, 0.592))
+        if R5.ON['carve']:                                                          # r6 #9：全刀入画（carve_full 生图：双手平伸、刀尖 → 原图左缘）+ 真凿刻字
+            self.spr = a_r6.clean('R5_A/carve_full_v1', lo=0.2, erode=3)
+            self.anc = a_r6.anc_for(self.spr, (0.0396, 0.430))
+            self.CV = R5.Carve([(250, 670, 190), (448, 670, 190), (636, 670, 190), (836, 670, 190)])
     def tip(self, t):
         pts = [(355, 652), (510, 652), (675, 652), (895, 652)]                   # 刀尖：每字左缘起刀，我 → 的 → 主 → 张
         ts = [CT(5, k) for (_, k, _, _, _) in self.GL]
@@ -1622,7 +1626,68 @@ class V15(Shot):
                 q = eio(clamp01((t - ts[i]) / (ts[i + 1] - ts[i])))
                 return (pts[i][0] + (pts[i + 1][0] - pts[i][0]) * q, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * q)
         return pts[-1]
+    def tip6(self, t):
+        """r6：刀尖 = 当前字的凿刻前沿（左 → 右），字间平移；刻完「张」刀尖下沉离碑。→ (x, y, 当前字 idx 或 None, 各字进度)"""
+        ts = [CT(5, k) - 0.10 for (_, k, _, _, _) in self.GL]
+        dur = 0.34
+        pr = [clamp01((t - a) / dur) for a in ts]
+        cv = self.CV
+        fx = lambda i, p: cv.bounds(i)[0] + (cv.bounds(i)[1] - cv.bounds(i)[0] + 30) * p
+        cur = None
+        for i, p in enumerate(pr):
+            if 0 < p < 1: cur = i
+        if t <= ts[0]: x = fx(0, 0) - 20 * (1 - clamp01((t - self.t0) / (ts[0] - self.t0)))
+        elif cur is not None: x = fx(cur, pr[cur])
+        else:
+            i = max(j for j in range(4) if t >= ts[j])
+            if i == 3: x = fx(3, 1)
+            else: x = fx(i, 1) + (fx(i + 1, 0) - fx(i, 1)) * eio(clamp01((t - ts[i] - dur) / (ts[i + 1] - ts[i] - dur)))
+        y = 670 + (22 * abs(math.sin(pr[cur] * math.pi * 3)) if cur is not None else 0)
+        if t > ts[3] + dur:                                                    # 刻完：刀尖下沉、离开碑面
+            q = eout(clamp01((t - ts[3] - dur) / 0.25)); x += 6 * q; y += 55 * q
+        return x, y, cur, pr
+
     def render(self, t):
+        if R5.ON['carve']: return self.render6(t)
+        return self.render5(t)
+
+    def render6(self, t):
+        u = self.u(t)
+        fr = night((0.012, 0.014, 0.024), (0.04, 0.045, 0.06))
+        fr = A.glow(fr, (200, 60), 800, 0.35, (0.55, 0.62, 0.82))
+        fr = RAIN.draw(fr, t, 0.7, angle=8, light=(200, 60), layers=(0,))
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        st = self.st[..., None]
+        lit = np.clip(1.2 - (xx - 110) / 1300 - (yy - 250) / 1600, 0.25, 1.1)
+        stone = ((0.6 + 0.45 * self.tex) * (0.85 + 0.25 * self.tex2) * lit)[..., None] * np.array([0.13, 0.135, 0.15], np.float32)
+        wet = np.clip(np.sin(xx / 23 + self.tex * 6) * 0.5 + 0.5, 0, 1) ** 8
+        stone = stone + (wet * 0.07)[..., None] * np.array([0.6, 0.7, 0.9], np.float32) - self.chip[..., None] * 0.05
+        fr = fr * (1 - st) + stone * st
+        fr = fx2.god_rays(fr, (200, 40), strength=0.35, length=1.0, color=(0.65, 0.72, 0.9), t=t, src_r=180)
+        tx, ty, cur, pr = self.tip6(t)
+        fr = self.CV.draw(fr, pr, mask=self.st)
+        # 凿刻：刀尖处碎石屑（灰、受重力下落弹开）+ 少量钢石火星 + 石粉烟
+        for i, (c, k, gx, gy, sz) in enumerate(self.GL):
+            a0 = CT(5, k) - 0.10
+            if -0.05 <= t - a0 < 0.9:
+                fr = K.sparks(fr, t, 150 + k, (self.CV.bounds(i)[0] + 60, 670), n=46, life=0.7, speed=(120, 420), dirc=(0.5, -0.6), spread=1.5, grav=1300,
+                              area=(80, 70), amt=0.55, t0=a0, burst=True, color=(0.55, 0.55, 0.58))
+        if cur is not None:
+            fr = K.sparks(fr, t, 159, (tx, ty), n=18, life=0.22, speed=(150, 480), dirc=(0.4, -0.9), spread=1.4, grav=900, area=(6, 6),
+                          amt=0.75, t0=self.t0, burst=False, color=(1.0, 0.82, 0.55))
+            pq = np.zeros((H // 4, W // 4), np.float32)
+            cv2.circle(pq, (int(tx / 4), int(ty / 4)), 9, 1.0, -1)
+            pq = cv2.resize(cv2.GaussianBlur(pq, (0, 0), 6), (W, H)) * cv2.resize(A.tex(int(t * 30) % 40 + 500, 256, 12, 3), (W, H))
+            fr = fr + pq[..., None] * np.array([0.10, 0.10, 0.10], np.float32)                       # 石粉烟
+        jit = 2.5 * math.sin(t * 47) if cur is not None else 0
+        fr, info = A.place(fr, t, self.spr, (tx + jit, ty), w=860, anc=self.anc, rim=COLD, rim_amt=2.6,
+                           rim_dir=(-0.7, -0.6), wind=8, grade=dict(expo=0.88, sat=0.55, gamma=1.08), breathe=0.0)
+        fr = A.glow(fr, (tx, ty), 40, 0.5 if cur is not None else 0.1, (0.9, 0.9, 1.0))
+        fr = fog(fr, t, 0, 820, 1000, 0.35, (0.22, 0.25, 0.32), speed=(-50, 0))
+        fr = RAIN.draw(fr, t, 0.8, angle=8, light=(200, 60), layers=(1, 2))
+        return fr, 0
+
+    def render5(self, t):
         u = self.u(t)
         fr = night((0.012, 0.014, 0.024), (0.04, 0.045, 0.06))
         fr = A.glow(fr, (200, 60), 800, 0.35, (0.55, 0.62, 0.82))

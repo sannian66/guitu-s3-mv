@@ -646,3 +646,11 @@
 ## 2026-11-10 05:21 · OpenAI 协议渠道批量生图（rise_end_a.json，1 张）
 - 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
 - ✔ `rise_end_a`（46s）→ `assets/gen/R6_A/rise_end_a_cut.png`
+
+## 2026-11-10 05:23 · OpenAI 协议渠道批量生图（rise_end_b.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `rise_end_b`（44s）→ `assets/gen/R6_A/rise_end_b_cut.png`
+
+## 2026-11-10 05:23 · OpenAI 协议渠道批量生图（rise_mid.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `rise_mid`（50s）→ `assets/gen/R6_A/rise_mid_cut.png`
