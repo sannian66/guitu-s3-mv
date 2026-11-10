@@ -2208,10 +2208,19 @@ class C37(Shot):
         P, A = put(self.Z.copy(), t, 'C5/c37_plaque', 960, 560, 560, anchor='src', src=(0.5, 0.5), rot=sw, rim=COLD, rim_amt=1.4,
                    rim_dir=(-0.5, -0.9), flash=0.5 * fl, expo=1.12 + 0.4 * fl, sat=0.9, tint=(1.0, 0.98, 0.94), wind=0, breathe=0.0)   # 第十二棒：匾面提亮一档
         # 第九棒 P2⑩：匾心先有暗刻的「判」（阴刻、暗铜色），不再是半拍空匾；电光再把它逐笔描成泥金
-        Ld = T.Layer(); T.place(Ld, '判', 960, 560, 300, (0.30, 0.21, 0.10), 'serif_black', rot=sw, texture=False)
-        Ld.A *= 0.85 * sm(self.t0, self.t0 + 0.12, t)
-        P = T.compose(P, Ld, shadow=0.7, shadow_sigma=3)
-        if t >= tp - 0.30:                      # 泥金「判」：电光逐笔描亮（自上而下）
+        pan = not R6 or os.environ.get('C_R6_KEEPPAN', '0') != '0'   # r6 #43：「判」全去（用户「判字不留了」）；C_R6_KEEPPAN=1 恢复
+        if pan:
+            Ld = T.Layer(); T.place(Ld, '判', 960, 560, 300, (0.30, 0.21, 0.10), 'serif_black', rot=sw, texture=False)
+            Ld.A *= 0.85 * sm(self.t0, self.t0 + 0.12, t)
+            P = T.compose(P, Ld, shadow=0.7, shadow_sigma=3)
+        else:   # 空匾心：闪电那拍一道冷光沿黑漆匾面自左向右扫过（只是反光，不是字），匾框金龙被照亮
+            gq = clamp((t - (tp - 0.06)) / 0.22)
+            if 0 < gq < 1:
+                yy_, xx_ = np.mgrid[0:H, 0:W].astype(np.float32)
+                bx = lerp(620, 1300, eio(gq)) + (yy_ - 560) * 0.35
+                band = np.exp(-((xx_ - bx) / 46) ** 2) * math.sin(math.pi * gq)
+                P = P + (band * A)[..., None] * np.array([0.55, 0.60, 0.68], np.float32) * 0.45
+        if t >= tp - 0.30 and pan:              # 泥金「判」：电光逐笔描亮（自上而下）
             prog = sm(tp - 0.30, tp + 0.04, t)
             L = T.Layer(); T.place(L, '判', 960, 560, 300, (1.0, 0.84, 0.46), 'serif_black', rot=sw, texture=False)
             yy = np.arange(H, dtype=np.float32)[:, None]
