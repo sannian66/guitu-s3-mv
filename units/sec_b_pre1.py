@@ -876,7 +876,12 @@ class P12(Shot):
     def __init__(self):
         # 第五轮 #18：0:56 刀尖出画被裁——重新出图（blade_face3_a：同姿势拉远，整把刀含刀尖、束发结都在画内）
         self.sp = spr('R5_B/blade_face3_a') if R5 else spr('B_r4/blade_face2_pt')
-        if R6: self.sp = spr('R6_B/blade_face4_a')    # r6 #18：腰部以上取景、宽刃大刀竖在面前遮半脸，刀首→刀尖整把在画内（生图 blade_face4_a）
+        self.kr = 1.0
+        if R6:
+            self.sp = spr('R6_B/blade_face4_a')    # r6 #18：腰部以上取景、宽刃大刀竖在面前遮半脸，刀首→刀尖整把在画内（生图 blade_face4_a）
+            hh, ww = self.sp.A.shape                # 同 #15：头部（唇/耳廓）不保红，只留暗红内领
+            yy = np.mgrid[0:hh, 0:ww][0].astype(np.float32) / hh
+            self.kr = sstep(0.40, 0.46, yy)[..., None].astype(np.float32)
         self.bg = BK.dark_bg(912, 0.015, 0.05)
         T.warm('只信这柄', 'kai', 96)
 
@@ -888,7 +893,7 @@ class P12(Shot):
         _src, _dst, _w = ((0.5, 0.5), (960, 548), 690) if R6 else ((0.5, 0.36), (960, 452) if R5 else (960, 614), 1400 if R5 else 1900)
         fr, _ = put_at(fr, self.sp, t, _src, _dst, _w,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
                        grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
-                       rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4))
+                       rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4), keep_red=self.kr)
         # 刀刃上一线寒光自上而下
         q = clamp01((t - self.t0 - 0.1) / 0.6)
         yy = (185 + 470 * eio(q)) if R5 else (120 + 600 * eio(q))
