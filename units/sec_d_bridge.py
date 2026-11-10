@@ -1574,7 +1574,152 @@ class S26_Judge(Shot):
         nn = cv2.resize(D._tile(266)[:H // 4, :W // 4], (W, H))
         self.rd = (np.sqrt((x - 960) ** 2 + ((y - 540) * 1.3) ** 2) + (nn - 0.5) * 420).astype(np.float32)
 
+    VOID = np.array([0x12, 0x04, 0x04], np.float32) / 255.0
+    HOT = np.array([0xFF, 0xB3, 0x47], np.float32) / 255.0
+    CRIM = np.array([0xC8, 0x10, 0x2E], np.float32) / 255.0
+
+    def _jag(self):
+        """断口锯齿：沿刀线方向的 1D 噪声（大锯齿 + 细碎焦痕齿），两半共用同一条断线（互补）"""
+        if getattr(self, 'jag', None) is None:
+            x, y = K.grid()
+            al = (x - self.C[0]) * self.d[0] + (y - self.C[1]) * self.d[1]
+            r = np.random.default_rng(2611)
+            j = np.zeros_like(al)
+            for f, a in ((0.011, 5.0), (0.031, 3.0), (0.083, 2.0), (0.21, 1.2)):
+                j += a * np.sin(al * f + r.uniform(0, 6.28))
+            saw = ((al / 23.0 + 0.37 * np.sin(al * 0.017)) % 1.0)          # 不规则撕口齿
+            j += 3.0 * (np.abs(saw - 0.5) - 0.25)
+            self.jag = j.astype(np.float32); self.along = al.astype(np.float32)
+            self.cn = cv2.resize(D._tile(2612)[:H // 4, :W // 4], (W, H)).astype(np.float32)
+        return self.jag
+
+    def _halfM(self, sg, s, off, t, ts):
+        """一半天平的仿射：沿法线错开 + 沿刀线滑 + 各自反向残余慢旋（±2–3°，劈开后的惯性），斩点后再缓慢漂开"""
+        rot = sg * 2.6 * eo(cl((t - ts - 0.04) / 0.85), 2)
+        drift = 55 * eo(cl((t - (ts + 0.42)) / 0.5), 2)
+        dx, dy = self.n * (off + drift) * sg + self.d * 120 * s * sg
+        P = (self.C[0] + self.n[0] * sg * 380, self.C[1] + self.n[1] * sg * 380)
+        M = cv2.getRotationMatrix2D(P, rot, 1.0).astype(np.float32)
+        M[0, 2] += dx; M[1, 2] += dy
+        return M
+
+    def _split_b(self, pap, t, s, ts):
+        """[D组 r6 第二棒 #46-f] 劈开：两半之间是近黑虚空 #120404；两条断口 3–6px 炽热锯齿边（#FFB347 芯 → #C8102E 外缘，向外 15px 内衰减）
+        + 内侧一线焦痕；返回 (无火边合成, 火边加色层, 焦痕乘子, 两半并集掩膜, 两个仿射)"""
+        jag = self._jag()
+        off = 50 * s + 150 * s * s
+        x, y = K.grid()
+        vn = self.cn
+        void = self.VOID[None, None, :] * (0.85 + 0.3 * vn)[..., None]
+        void = void + np.exp(-(np.abs(self.side) / 260) ** 2)[..., None] * np.array([0.03, 0.004, 0.004], np.float32)
+        comp = np.broadcast_to(void, pap.shape).astype(np.float32).copy()
+        E = np.zeros_like(comp); Kc = np.ones(comp.shape[:2], np.float32); U = np.zeros(comp.shape[:2], np.float32)
+        Ms = []
+        fl = 0.85 + 0.15 * math.sin(t * 37.0) * math.sin(t * 13.0 + 1.0)
+        for sg in (1, -1):
+            M = self._halfM(sg, s, off, t, getattr(self, '_ts', ts)); Ms.append(M)
+            half = cv2.warpAffine(pap, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            mk = cv2.GaussianBlur((sg * (self.side + jag) > 0).astype(np.float32), (0, 0), 0.7)
+            mkw = cv2.warpAffine(mk, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            comp = comp * (1 - mkw[..., None]) + half * mkw[..., None]
+            U = np.maximum(U, mkw)
+            b = (mkw > 0.5).astype(np.uint8)
+            din = cv2.distanceTransform(b, cv2.DIST_L2, 5)
+            dout = cv2.distanceTransform(1 - b, cv2.DIST_L2, 5)
+            nw = cv2.warpAffine(vn, M, (W, H), borderMode=cv2.BORDER_REPLICATE)
+            cw = 3.0 + 3.0 * np.clip((nw - 0.3) * 2.5, 0, 1)                 # 芯宽 3–6px，沿断口不规则
+            core = K.sstep(cw + 1.0, cw - 1.0, din) * b
+            inner = np.exp(-np.clip(din - cw, 0, None) / 4.0) * K.sstep(cw + 12, cw, din) * b * (1 - core)
+            outer = (1 - b) * np.exp(-dout / 5.0) * K.sstep(15, 0, dout)
+            mixo = np.clip(dout / 10.0, 0, 1)[..., None]
+            E += core[..., None] * self.HOT * 1.9 * fl
+            E += inner[..., None] * self.CRIM * 0.9
+            E += outer[..., None] * (self.HOT * (1 - mixo) + self.CRIM * mixo) * 1.1 * fl
+            char = K.sstep(cw, cw + 2, din) * K.sstep(cw + 16, cw + 6, din) * b * (0.6 + 0.4 * nw)   # 焦痕：芯内侧一圈烧焦
+            Kc *= (1 - 0.6 * char)
+        return comp, E, Kc, U, Ms, off
+
+    def _edge_embers(self, fr, t, Ms, off, s, t_on):
+        """断口冒火星：~300 颗（第一棒 110 的 2.7 倍），两成是 4–6px 大颗；七成从两条断口上冒，三成全画面缓升"""
+        if t < t_on: return fr
+        r = np.random.default_rng(2613)
+        N = 300
+        big = r.random(N) < 0.2
+        fromedge = r.random(N) < 0.7
+        sg = np.where(r.random(N) < 0.5, 1, -1)
+        a = r.uniform(-1150, 1150, N)
+        lf = r.uniform(0.6, 1.4, N); ph = r.random(N)
+        age = ((t - t_on) / lf + ph) % 1.0 * lf
+        born = (t - t_on) >= ph * lf * 0.6                       # 斩开后陆续出现，不是一帧全亮
+        vy = -r.uniform(60, 230, N) * np.where(big, 0.7, 1.0); vx = r.normal(0, 35, N)
+        wob = r.uniform(0, 6.28, N)
+        L = np.zeros((H // 2, W // 2), np.float32); Lh = np.zeros_like(L)
+        for i in range(N):
+            if not born[i]: continue
+            if fromedge[i]:
+                M = Ms[0] if sg[i] > 0 else Ms[1]
+                sx = self.C[0] + self.d[0] * a[i] + self.n[0] * sg[i] * 2
+                sy = self.C[1] + self.d[1] * a[i] + self.n[1] * sg[i] * 2
+                ox = M[0, 0] * sx + M[0, 1] * sy + M[0, 2]; oy = M[1, 0] * sx + M[1, 1] * sy + M[1, 2]
+            else:
+                ox = 960 + a[i] * 0.85; oy = 620 + (ph[i] - 0.5) * 700
+            px = ox + vx[i] * age[i] + 14 * math.sin(age[i] * 5 + wob[i]); py = oy + vy[i] * age[i]
+            if not (-20 < px < W + 20 and BAR - 20 < py < H - BAR + 20): continue
+            k = (1 - age[i] / lf[i]) * min(1.0, age[i] / 0.08)
+            rad = (r.uniform(2.0, 3.0) if big[i] else r.uniform(0.6, 1.1))
+            cv2.circle(L, (int(px * 4 / 2), int(py * 4 / 2)), max(1, int(rad * 4 / 2)), float(k), -1, cv2.LINE_AA, 2)
+            if age[i] < 0.35 * lf[i]: cv2.circle(Lh, (int(px * 2), int(py * 2)), max(1, int(rad * 2)), float(k), -1, cv2.LINE_AA, 2)
+        Lb = cv2.resize(cv2.GaussianBlur(L, (0, 0), 3.0) * 1.6 + L * 1.4, (W, H))
+        Lhb = cv2.resize(Lh, (W, H))
+        return fr + Lb[..., None] * np.array([1.0, 0.36, 0.09], np.float32) * 1.1 + Lhb[..., None] * self.HOT * 0.9
+
+    def render_b(self, t):
+        u = self.u(t)
+        if self.sc is None: self.sc = S06_Scale()
+        ts = V(O[46][4]); tj = V(O[46][5]); self._ts = ts
+        pap = self.sc.scene(t, sent_a=1 - cl((t - V(O[46][4])) / 0.2), ty=10, chars=not TXTCUT)
+        if not VCUT: pap = D.song(pap, [('我', 390, 440, 140, 1.0, 'k'), ('来', 390, 600, 140, cp(t, O[46][4], 0.1), 'k')])
+        s = eo(cl((t - ts - 0.04) / 0.45), 2)
+        E = None
+        if s <= 0:
+            fr = pap; pm = 1.0
+        else:
+            comp, E, Kc, U, Ms, off = self._split_b(pap, t, s, ts)
+            fr = comp * Kc[..., None] + E * min(1.0, s * 4)
+            fr = self._edge_embers(fr, t, Ms, off, s, ts + 0.08)
+            pm = max(0.0, 1 - s * 2)
+        if ts - 0.02 <= t < ts + 0.2:
+            q = (t - ts + 0.02) / 0.22
+            fr = TR._slash_streak(fr, (lerp(1080 - 900 * 0.8, 1080 + 900 * 0.8, eo(q)), lerp(420 + 900 * 0.6, 420 - 900 * 0.6, eo(q))),
+                                  self.d, q, length=2400, width=6, color=(1.0, 0.8, 0.7))
+        pj = cp(t, O[46][5], 0.1)
+        hits = [ts]
+        if pj > 0:
+            hits.append(tj)
+            burst = cl((t - tj) / 0.08) * (1 - cl((t - tj - 0.12) / 0.14))       # ≈4 帧全屏朱墨
+            R = 2400 * eo(cl((t - tj) / 0.1), 2)
+            bm = np.clip((R - self.rd) / 60, 0, 1) * burst
+            fr0 = fr
+            fr = fr * (1 - bm[..., None]) + bm[..., None] * np.array([0.72, 0.04, 0.03], np.float32)
+            if t > tj + 0.1 and E is not None:                   # 朱墨退去：两半天平成了朱红残纸，断口仍在烧，中间是黑虚空
+                ember = D.night(t, 263, top=(0.05, 0.01, 0.008), bot=(0.008, 0.0, 0.0), clouds=0.5) + \
+                    np.exp(-(self.rd / 800) ** 2)[..., None] * np.array([0.4, 0.03, 0.02], np.float32)
+                ink = 1 - np.clip(comp.mean(-1, keepdims=True) * 1.15, 0, 1)
+                paper = ember + (1 - ink) * np.array([0.30, 0.035, 0.02], np.float32) * (1 - 0.35 * cl((t - tj - 0.1) / 0.25))
+                post = paper * (1 - 0.92 * ink)
+                vd = self.VOID[None, None, :] * (0.85 + 0.3 * self.cn)[..., None]
+                post = post * U[..., None] + vd * (1 - U[..., None])
+                post = post * Kc[..., None] + E
+                post = self._edge_embers(post, t, Ms, off, s, ts + 0.08)
+                fr = fr * burst + post * (1 - burst)
+            fr = fr + impact(t, tj, 0.1) * RED * 0.3
+            pm = 0.0
+        tb = self.t1 - 0.1                                     # 3 帧黑场憋气
+        if t >= tb: fr = fr * 0.0
+        return shake_cam(fr, t, hits, 14, z=1.0 + 0.03 * u + 0.06 * impact(t, tj, 0.12)), pm
+
     def render(self, t):
+        if R6D_B and R5D_NO_PAN and R6D_EMBER: return self.render_b(t)
         u = self.u(t)
         if self.sc is None: self.sc = S06_Scale()
         ts = V(O[46][4]); tj = V(O[46][5])

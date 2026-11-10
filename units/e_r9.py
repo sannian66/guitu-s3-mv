@@ -31,6 +31,7 @@ ON = dict(wind=_on('E_R5_WIND'), text=_on('E_R5_TEXT'), mark=_on('E_R5_MARK'), e
           e23=_on('E_R5_E23'), e25=_on('E_R5_E25'), e34=_on('E_R5_E34'), beat=_on('E_R5_BEAT'), notitle=_on('E_R5_NOTITLE', '0'))
 R6FIX = _on('E_R6_FIX')       # r6 #47/#49/#50/#51 构图与卡点修正（'0' 回到 r5 画面，出对比图用）
 KEEPTXT = _on('E_R6_KEEPTXT')   # r6 #55：镜内横排/刻/写/印歌词字保留（'0' 回到 r5 #46 全去）
+R6B = R6FIX and _on('E_R6B')   # r6 第二棒（评审 REVIEW_E_r6 返工：#47 圆外残字 / #49 接地 / #50 ELS 人物可读 + LS / #51 强拍动作 / 3:40.6、3:41.3 亮斑）；'0' 回到第一棒
 M = None
 
 
@@ -290,6 +291,58 @@ class E24n(E23n):
         return M.bloom(fr, 0.8, 0.4)
 
 
+# ------------------------------------------------------------------ r6b #49 接地：接触阴影 / 脚下扬尘火星 / 朝光带轮廓光
+def _feet(A):
+    """两只脚的屏幕 x（取 alpha 最底 36 行的列投影，按中缝分左右）、底 y、站姿宽。"""
+    ys = np.nonzero(A.max(1) > 0.5)[0]; yb = int(ys.max())
+    col = A[yb - 36:yb + 1].max(0) > 0.5
+    xs = np.nonzero(col)[0]
+    mid = (xs.min() + xs.max()) / 2
+    l, r = xs[xs < mid], xs[xs >= mid]
+    return dict(l=float(l.mean()) if len(l) else float(mid - 200), r=float(r.mean()) if len(r) else float(mid + 200),
+                x0=float(xs.min()), x1=float(xs.max()), y=float(yb))
+
+
+def _contact(fr, ft, gy):
+    """脚下椭圆接触阴影：宽 ≈1.3× 站姿宽，alpha 0.5，羽化约 30px；两脚各一团更实的小影。"""
+    m = np.zeros((H // 2, W // 2), np.float32)
+    cx = (ft['x0'] + ft['x1']) / 2; hw = 0.65 * (ft['x1'] - ft['x0'])
+    cv2.ellipse(m, (int(cx / 2), int(gy / 2)), (int(hw / 2), 11), 0, 0, 360, 0.6, -1, cv2.LINE_AA)
+    for x in (ft['l'], ft['r']):
+        cv2.ellipse(m, (int(x / 2), int(gy / 2)), (36, 6), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+    m = cv2.resize(cv2.GaussianBlur(m, (0, 0), 6), (W, H))
+    return fr * (1 - 0.5 * np.clip(m, 0, 1)[..., None])
+
+
+def _band_rim(A, by):
+    """光带（y=by，全宽横在人身后）照来的轮廓光：2–3px 外缘带，朝光带的法向（上/下朝 by、左右朝外）更亮，离光带越近越亮。"""
+    Ab = cv2.GaussianBlur(A, (0, 0), 1.5)
+    gx = cv2.Sobel(Ab, cv2.CV_32F, 1, 0, ksize=3); gy = cv2.Sobel(Ab, cv2.CV_32F, 0, 1, ksize=3)
+    gn = np.sqrt(gx * gx + gy * gy) + 1e-6
+    nx, ny = -gx / gn, -gy / gn                                            # 外法向
+    yy = np.arange(H, dtype=np.float32)[:, None]
+    face = np.clip(0.55 * np.abs(nx) + np.maximum(0, ny * np.sign(by - yy)) + 0.15, 0, 1)
+    band = np.clip(A - cv2.erode(A, np.ones((5, 5), np.uint8)), 0, 1)
+    near = 0.25 + 0.75 * np.exp(-((yy - by) / 230) ** 2)
+    return cv2.GaussianBlur(band * face * near, (0, 0), 0.8)
+
+
+def _foot_dust(fr, t, ts, ft):
+    """劈开那一帧两只脚各起一团尘 + 火星，0.3s 散掉。"""
+    q = t - ts
+    if q < 0 or q > 0.6: return fr
+    dust = np.zeros((H // 4, W // 4), np.float32)
+    if q < 0.3:
+        r = 22 + 80 * eout(q / 0.3)
+        for x in (ft['l'], ft['r']):
+            cv2.ellipse(dust, (int(x / 4), int((ft['y'] - 10) / 4)), (int(r * 1.5 / 4), int(r * 0.55 / 4)), 0, 0, 360, 1.0, -1, cv2.LINE_AA)
+        dust = cv2.resize(cv2.GaussianBlur(dust, (0, 0), 4), (W, H)) * 0.55 * (1 - q / 0.3) ** 1.5
+        fr = fr * (1 - dust[..., None]) + dust[..., None] * np.array([0.72, 0.46, 0.28], np.float32)
+    for k, x in enumerate((ft['l'], ft['r'])):
+        fr = RS.fx_sparks(fr, t, ts, (x, ft['y'] - 8), 1311 + k, n=28, spd=420, dirv=(-0.5 if k == 0 else 0.5, -1), spread=1.0, grav=900, amt=0.9)
+    return fr
+
+
 # ================================================================== E25 横斩：光带只劈背景，人压在上面
 class E25n:
     GR = dict(expo=1.15, sat=0.62, tint=(1.1, 0.95, 0.86), lift=0.02, gamma=1.0)
@@ -309,6 +362,10 @@ class E25n:
         z, info = M.put(np.zeros((H, W, 3), np.float32), t, 'S130/hslash', (930, hy - 6) if R6FIX else (930, 1200), h=760 if R6FIX else 1040,   # r6：脚落地平线入画、头顶留白 rim=(1.0, 0.7, 0.4), rim_amt=3.4,
                         rim_dir=(-0.9, -0.3), wind=6, mblur=mb, grade=self.GR)
         A = np.clip(info['A'], 0, 1)
+        if R6B:                                                             # r6b #49：抠像边内缩 1px + 羽化 1.5px（去硬边贴纸感）
+            A2 = cv2.GaussianBlur(cv2.erode(A, np.ones((3, 3), np.uint8)), (0, 0), 1.5)
+            z = np.clip(z / np.maximum(A, 1e-3)[..., None], 0, 4) * A2[..., None]; A = A2
+            if not hasattr(self, 'feet'): self.feet = _feet(A)
         by = info['tip'][1] if info['tip'] else 520
         q = t - ts
         yy = np.arange(H, dtype=np.float32)[:, None, None]
@@ -321,11 +378,16 @@ class E25n:
             fr = fr * (1 - band[..., None] * 0.85) + band[..., None] * GOLDW * 1.8
             fr = fr + np.exp(-((yy - by) / (gap + 40)) ** 2) * GOLD * 0.7 * (1 + 2 * math.exp(-q / 0.12))
             if q < 0.08: fr = fr * 1.25 + np.array([0.25, 0.10, 0.03], np.float32) * (1 - q / 0.08)
+        if R6B: fr = _contact(fr, self.feet, self.feet['y'] + 6)
         fr = fr * (1 - A[..., None]) + z
         if q > 0:                                                          # 光带从人身后照来：靠近刀线的轮廓镶金
             edge = np.clip(A - cv2.erode(A, np.ones((5, 5), np.uint8)), 0, 1)
             near = np.exp(-((yy[..., 0] - by) / 200) ** 2) * (0.5 + 1.5 * math.exp(-q / 0.25))
             fr = fr + (cv2.GaussianBlur(edge, (0, 0), 1.2) * near)[..., None] * GOLDW * 1.4
+            if R6B:                                                         # r6b #49：朝光带一侧 2–3px 暖轮廓光，强度跟光带亮度走
+                bandI = eout(q / 0.25) * (0.55 + 1.2 * math.exp(-q / 0.25))
+                fr = fr + _band_rim(A, by)[..., None] * np.array([1.0, 0.80, 0.50], np.float32) * 1.25 * bandI
+                fr = _foot_dust(fr, t, ts, self.feet)
             fr = RS.fx_sparks(fr, t, ts, (300, by), 1301, n=90, spd=1400, dirv=(1, -0.1), spread=0.35, grav=300, amt=1.2)
         fr = RS.fx_embers(fr, t, 1303, amt=0.7, n=50)
         return M.bloom(fr, 0.82, 0.5)
