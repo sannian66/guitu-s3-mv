@@ -214,6 +214,7 @@ def install(G):
             band = np.exp(-((y - ey0) / (60 * s / 0.42)) ** 2) * np.exp(-((x - (ex0 + ex1) / 2) / (260 * s / 0.42)) ** 4)
             eyeL = np.exp(-(((x - ex0) / (46 * s / 0.42)) ** 2 + ((y - ey0) / (26 * s / 0.42)) ** 2))
             fr = fr * (1 - (0.55 * band * (1 - 0.85 * op * eyeL))[..., None])
+            fr = fr * (1 + (0.9 * op * eyeL)[..., None] * np.array([0.92, 0.98, 1.08], np.float32))   # 分旒处漏进一缕冷月光：这只眼读得清
             if op > 0.01:
                 fr = fr + (np.exp(-(((x - ex0 - 3) / 2.2) ** 2 + ((y - ey0 + 2) / 1.6) ** 2)) * 0.14 * op)[..., None] * np.array([0.80, 0.85, 0.90], np.float32)
             fr = self._beads(fr, t, ax, ay, s)
