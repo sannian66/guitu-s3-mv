@@ -273,7 +273,7 @@ def _sf_glyph(ch, z, p, seed):
     if p >= 0.999: return clean
     g = clean.shape[0]
     bz = int(round(z / 4) * 4)                                     # brush_prep 字号按 4 取整 → 缩回 z
-    b = T.brush_glyph(ch, SF_FONT, z, p, seed=seed, dry=0.45, wet=0.9)
+    b = T.brush_glyph(ch, SF_FONT, z, p, seed=seed, dry=0.30, wet=0.9)
     G = int(round(b.shape[0] * z / bz))
     b = cv2.resize(b, (G, G), interpolation=cv2.INTER_AREA)
     o = (G - g) // 2
