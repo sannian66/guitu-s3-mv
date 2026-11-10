@@ -896,6 +896,11 @@ class P12(Shot):
         fr, _ = put_at(fr, self.sp, t, _src, _dst, _w,   # 第八棒：拉开让头顶束发结入画（原 2350 裁掉马尾只剩两侧散发，读成披发）
                        grade=dict(expo=0.82, sat=0.6, tint=(0.92, 0.96, 1.05), lift=0.0, gamma=1.12),
                        rim=dict(col=(0.75, 0.82, 1.0), amt=2.2, dir=(-0.9, -0.4)), wind_amp=5, shade=(1100, 1900, 0.25, 760, 0.4), keep_red=self.kr)
+        if R6 and _on('B_R6_P12HAND'):                                   # r6-B3 #18：双手被轮廓光+冷调提成塑料白（亮度 ~0.85），压高光 ~40%、B 多压去蓝，与脸同档
+            hm = np.exp(-(((x - 958) / 70) ** 2 + ((y - 715) / 86) ** 2)).astype(np.float32)
+            lum = fr.mean(-1, keepdims=True)
+            hm = hm[..., None] * np.clip((lum - 0.25) / 0.4, 0, 1)
+            fr = fr * (1 - hm * np.array([0.36, 0.42, 0.48], np.float32))          # 去蓝：B 压得比 R 多 → 冷白回成冷肤色
         # 刀刃上一线寒光自上而下
         q = clamp01((t - self.t0 - 0.1) / 0.6)
         yy = (185 + 470 * eio(q)) if R5 else (120 + 600 * eio(q))
