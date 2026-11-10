@@ -8,4 +8,10 @@ for f in $(git diff --cached --name-only --diff-filter=AM); do
   [ -f "$f" ] && [ $(wc -c < "$f") -gt 50000000 ] && git reset -q -- "$f" && echo "skip big: $f"
 done
 git diff --cached --quiet && echo "nothing new" || AUTOSYNC=1 git -c user.name=sannian66 -c user.email=38859572+sannian66@users.noreply.github.com commit -q -m "自动同步 $(TZ=Asia/Shanghai date '+%m-%d %H:%M')"
-git pull --rebase --autostash -q origin main && git push -q origin main && git log --oneline -1
+# 防卡死：上次留下的 rebase 先收尾；pull 冲突则放弃 rebase、改用 merge 保住双方改动
+if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then git rebase --abort 2>/dev/null; fi
+if ! git pull --rebase --autostash -q origin main 2>/tmp/autosync_pull_err; then
+  git rebase --abort 2>/dev/null
+  git pull --no-rebase --no-edit -q -X ours origin main || { echo "!!! PULL FAILED: $(tail -2 /tmp/autosync_pull_err)"; exit 1; }
+fi
+git push -q origin main && git log --oneline -1 || echo "!!! PUSH FAILED"
