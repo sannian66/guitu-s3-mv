@@ -7,6 +7,6 @@ export const RemotionRoot: React.FC = () => (<>
   {/* S121 原镜 207.3–208.469s = 35 帧；Demo 版 90 帧便于看视差 */}
   <Composition id="S121A" component={S121Layers} durationInFrames={35} fps={30} width={1920} height={1080} defaultProps={{dir: 'layersA', hazeCol: '#efe6d6'}} />
   <Composition id="S121B" component={S121Layers} durationInFrames={35} fps={30} width={1920} height={1080} defaultProps={{dir: 'layersB', hazeCol: '#ffffff'}} />
-  <Composition id="S121A_demo" component={S121Layers} durationInFrames={90} fps={30} width={1920} height={1080} defaultProps={{dir: 'layersA', hazeCol: '#efe6d6'}} />
-  <Composition id="S121B_demo" component={S121Layers} durationInFrames={90} fps={30} width={1920} height={1080} defaultProps={{dir: 'layersB', hazeCol: '#ffffff'}} />
+  <Composition id="S121A-demo" component={S121Layers} durationInFrames={90} fps={30} width={1920} height={1080} defaultProps={{dir: 'layersA', hazeCol: '#efe6d6'}} />
+  <Composition id="S121B-demo" component={S121Layers} durationInFrames={90} fps={30} width={1920} height={1080} defaultProps={{dir: 'layersB', hazeCol: '#ffffff'}} />
 </>);

@@ -50,10 +50,10 @@ export const S121Layers: React.FC<{dir: string; hazeCol: string}> = ({dir, hazeC
     <AbsoluteFill style={{background: '#000'}}>
       {tex && <ThreeCanvas width={width} height={height} gl={{antialias: true, preserveDrawingBuffer: true}} onCreated={({gl}) => { gl.toneMapping = THREE.NoToneMapping; }}>
         <Cam u={u} t={t} shake={1} />
-        <Layer tex={tex[0]} w={70} pos={[2, 1.0, -32]} t={t} />
-        <Layer tex={tex[1]} w={30} pos={[-2.5 + t * 0.35, -3.6, -13]} t={t} amp={0.08} freq={3} haze={0.18} hazeCol={hazeCol} seg={24} />
-        <Layer tex={tex[2]} w={6.6} pos={[1.7, -1.25, 0]} t={t} />
-        <Layer tex={tex[3]} w={7.6} pos={[-0.6 + t * 0.5, -1.55, 4.2]} t={t} amp={0.12} freq={7} seg={48} />
+        <Layer tex={tex[0]} w={70} pos={[0.5, -4.5, -32]} t={t} />
+        <Layer tex={tex[1]} w={30} pos={[-2.5 + t * 0.35, -4.4, -13]} t={t} amp={0.08} freq={3} haze={0.18} hazeCol={hazeCol} seg={24} />
+        <Layer tex={tex[2]} w={5.2} pos={[1.9, -1.1, 0]} t={t} />
+        <Layer tex={tex[3]} w={6.4} pos={[-1.6 + t * 0.5, -2.05, 4.2]} t={t} amp={0.12} freq={7} seg={48} />
       </ThreeCanvas>}
       <div style={{position: 'absolute', left: 0, top: 0, width: '100%', height: 120, background: '#000'}} />
       <div style={{position: 'absolute', left: 0, bottom: 0, width: '100%', height: 120, background: '#000'}} />
