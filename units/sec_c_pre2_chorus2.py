@@ -1893,6 +1893,12 @@ class C28(Shot):
             self.ck_core = (cv2.resize(c4, (W, H)) * (0.35 + 0.65 * fall)).astype(np.float32)
             self.ck_h1 = (cv2.resize(cv2.GaussianBlur(cr, (0, 0), 3), (W, H)) * fall * 3.0).astype(np.float32)
             self.ck_h2 = (cv2.resize(cv2.GaussianBlur(cr, (0, 0), 14), (W, H)) * fall * 9.0).astype(np.float32)
+            if R6:   # r6 #42：芯收细到 ~2px（1/4 分辨率线条放大后只取脊线）；两层晕按裂纹密度软饱和——九条裂纹交汇处不再叠成一团白
+                up = cv2.resize(cr, (W, H), interpolation=cv2.INTER_CUBIC)
+                ridge = np.clip((up - 0.45) / 0.45, 0, 1) ** 1.5
+                self.ck_core = (ridge * (0.45 + 0.55 * fall)).astype(np.float32)
+                self.ck_h1 = (1 - np.exp(-self.ck_h1 / 0.55)).astype(np.float32) * 0.55
+                self.ck_h2 = (1 - np.exp(-self.ck_h2 / 0.45)).astype(np.float32) * 0.45
     def render(self, t):
         if R5: return self.render_r5(t)
         u = self.u(t)
@@ -1928,11 +1934,15 @@ class C28(Shot):
         tl = V(147.74)
         lt = sm(self.t0, tl, t) * (1 - 0.75 * sm(tl + 0.25, self.t1, t))
         fl = pulse(t, tl, 0.10)                                          # 整屏短闪白（约 3 帧）
+        if R6:   # r6 #42：严格 3 帧（1 / 0.55 / 0.25），第 4 帧起归零
+            k_ = int(math.floor((t - tl) * FPS + 1e-6))
+            fl = (1.0, 0.55, 0.25)[k_] if 0 <= k_ < 3 else 0.0
         sky = storm_sky(t, 28, 2000, flash=0.6 + 0.6 * lt, cloud=0.8)
         fr = self.wall * (1 + 1.6 * lt * np.clip(self.ck_h2, 0, 1)[..., None]) + sky * 0.10 * (0.5 + lt)
         glow = (self.ck_core * (0.8 + 2.6 * lt))[..., None] * np.array([0.92, 0.96, 1.0], np.float32) \
             + (self.ck_h1 * (0.15 + 0.55 * lt))[..., None] * np.array([1.0, 0.86, 0.6], np.float32) \
             + (self.ck_h2 * (0.04 + 0.16 * lt))[..., None] * np.array([1.0, 0.8, 0.5], np.float32)
+        if R6: glow = 1.4 * (1 - np.exp(-glow / 1.4))                 # 软饱和：芯亮、交汇处不糊成白斑
         fr = fr + glow
         # 裂纹光向镜头放射（径向拖影，光源 = 裂纹本身）
         src = np.clip(glow, 0, 2).astype(np.float32)
@@ -1940,13 +1950,16 @@ class C28(Shot):
         for i in range(n):
             z = 1 + 0.6 * lt * (i + 1) / n
             acc += cv2.warpAffine(src, np.float32([[z, 0, HX * (1 - z)], [0, z, 470 * (1 - z)]]), (W, H)) * (1 - i / n)
-        fr = fr + acc / n * 0.5 * lt
+        fr = fr + acc / n * (0.22 if R6 else 0.5) * lt
         fr = dust(fr, t, 281, n=160, amt=0.5 * lt, drift=(10, -20), region=(300, BAR, 1620, H - BAR), color=(1.0, 0.9, 0.7))
         fr, _ = put(fr, t, 'R5_C/c28_face_pt_v1', 1300 - 20 * u, 650, 900 * (1 + 0.03 * u), anchor='src', src=(0.448, 0.531),
                     rim=(1.0, 0.85, 0.6), rim_amt=1.4 + 1.6 * lt, rim_dir=(-1, -0.2), expo=0.5 + 0.45 * lt, sat=0.75,
                     tint=(1.05, 0.98, 0.9), wind=5, breathe=0.004, flash=0.6 * fl)
         fr = rain(fr, t, 280, inten=0.9, angle=6, light=(HX, 470))
-        fr = fr * (1 + 1.4 * fl) + 0.42 * fl                                # 闪白：整屏一下提亮再收回（不是一块白斑）
+        if R6:   # 整屏均匀短闪：暗部抬起来（加法为主、乘法很轻），亮处不再被乘爆成中心白团
+            fr = fr * (1 + 0.35 * fl) + 0.30 * fl * np.array([0.90, 0.94, 1.0], np.float32)
+        else:
+            fr = fr * (1 + 1.4 * fl) + 0.42 * fl                                # 闪白：整屏一下提亮再收回（不是一块白斑）
         fr = ink_vignette(fr, 0.55 * sm(tl + 0.2, self.t1, t))
         return fr
 

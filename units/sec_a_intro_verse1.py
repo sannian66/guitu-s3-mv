@@ -31,6 +31,7 @@ READY = True
 def _on(k, d='1'): return os.environ.get(k, d) != '0'
 def R6B_OFF(k): return k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'   # r6 第二棒开关（改前对比用）
 def HG_ON(): return os.environ.get('A_R6D_HANGUANG', '') == '1'   # r6 第四棒：用户 11-10 15:28 拍板 V05/V06 画内「寒光」字全去；=1 恢复（改前对比用）
+def R6E_OFF(k): return k in os.environ.get('A_R6E_OFF', '').split(',') or os.environ.get('A_R6E_OFF', '') == 'all'   # r6 第五棒开关：slash2（第二刀无字刀光）/ lycut（LY2「拦不住一道」在 V05 切点前退净）
 def R6C_OFF(k): return k in os.environ.get('A_R6C_OFF', '').split(',') or os.environ.get('A_R6C_OFF', '') == 'all'   # r6 第三棒开关（改前对比用）：sf7 / stele / …
 
 
@@ -925,6 +926,8 @@ class V06(Shot):
                 fr = R9.blade_sheen(fr, g0, g1, eio(clamp01(q)), width=26, amt=1.3 * (1 - clamp01((q - 1.0) / 0.15)), length=180)
             lit = max(lit, math.exp(-max(0.0, t - (sa + sd)) / 0.18) * (t >= sa + sd))
         if 0 <= a < 0.07: fr = fr * 1.55 + 0.06 * COLDV          # 第三棒：冲击改冷色曝光脉冲（不再白闪）
+        if R5.ON['slash_keys'] and not HG_ON() and not R6E_OFF('slash2'):
+            fr = self.slash2(fr, t, ts2)
         # 「寒光」斩开：字在屏幕下方，被同一刀切开两半错位
         p = cprog(1, [9], t, 0.25)[0]
         if not HG_ON():                                                  # r6 第四棒：寒光字层、逐字点亮、刀光扫字、斩字火星全部不出；刀身扫光/斩击/裂线保留
@@ -983,6 +986,37 @@ class V06(Shot):
             m = m + cv2.GaussianBlur(m, (0, 0), 6) * 0.35 * (cv2.GaussianBlur(LA, (0, 0), 6) > 0.02)
             fr = fr + m[..., None] * 0.85 * np.array([0.70, 0.85, 1.0], np.float32)
         return fr
+
+    @staticmethod
+    def slash2(fr, t, ts2):
+        """r6 第五棒（总导演：去「寒光」后第二刀偏弱）：第二刀 21.86 补一条不带字的横向刀光。
+        命中帧 b 一帧内由护手后扫到右出画（贴鼓点），沿送出姿态刀尖高度（K3 刀尖 ≈(1286,371)）、随刀身 -2° 微斜；
+        细冷白芯 2px + 两层冷晕（σ6 / σ24），两端收尖；b+1 起整段同时淡出，b+5 退净（共 5 帧）；命中帧附带轻冷色脉冲（×1.30，弱于第一刀 ×1.55）。
+        叠加后在刀光范围内软压到 ≤0.95（≈242/255），不发白一片。"""
+        F = int(round(t * 30)); b = int(round(ts2 * 30)); k = F - b
+        if not (0 <= k <= 4): return fr
+        hd = 0.62 if k == 0 else 1.0                                              # 命中帧刀光头已过刀尖、扫到 62%；下一帧满长
+        f = (1.0, 0.82, 0.55, 0.30, 0.12)[k]
+        if k == 0: fr = fr * 1.30 + 0.04 * COLDV
+        y0, ang, x0, x1 = 371.0, -2.0, 640.0, W + 80.0
+        th = math.radians(ang); Y = lambda x: y0 + (x - 1286.0) * math.tan(th)
+        xe = x0 + (x1 - x0) * hd
+        Ls = np.zeros((H // 2, W // 2), np.float32); n = 40
+        for i in range(n):
+            xa = x0 + (xe - x0) * i / n; xb = x0 + (xe - x0) * (i + 1) / n; s_ = (i + 0.5) / n
+            wv = min(1.0, s_ / 0.25) ** 1.2 * (min(1.0, (1 - s_) / 0.12) if hd >= 1 else 1.0)   # 尾端（护手侧）长收尖；出画端满长时也收
+            cv2.line(Ls, (int(xa / 2), int(Y(xa) / 2)), (int(xb / 2), int(Y(xb) / 2)), float(wv), 1, cv2.LINE_AA)
+        Ls = cv2.resize(Ls, (W, H))
+        core = Ls * 1.25
+        h1 = cv2.GaussianBlur(Ls, (0, 0), 6) * 1.6
+        h2 = cv2.GaussianBlur(Ls, (0, 0), 24) * 1.1
+        add = (core[..., None] * np.array([0.95, 0.98, 1.0], np.float32) + h1[..., None] * np.array([0.62, 0.78, 1.0], np.float32)
+               + h2[..., None] * np.array([0.35, 0.50, 0.85], np.float32)) * f
+        out = fr + add
+        m = np.clip(h2 * 8, 0, 1)[..., None]                                      # 只在刀光范围内软压高光
+        cap = 0.95
+        soft = np.where(out > 0.8, 0.8 + (cap - 0.8) * np.tanh((out - 0.8) / (cap - 0.8)), out)
+        return out * (1 - m) + soft * m
 
     @staticmethod
     def cutline(fr, c, ang, x0, x1, a2):
@@ -2690,12 +2724,14 @@ def lyrics(fr, t):
         if li == 6 and chars[0][0] == 3: t_on = max(t_on, V(38.30))
         if li == 1 and chars[0][0] == 4: t_on = max(t_on, V(19.37))          # 第十一棒：等 V03「五百重甲」退净再起「拦」（原 19.23 起笔与「甲」右上并存）          # 第六棒：「由权势执掌」等 V16「若正义」切走后再落
         if not (t_on <= t < t_out + 0.4): continue
+        if li == 1 and chars[0][0] == 4 and not R6E_OFF('lycut') and t >= V05.t0: continue   # r6 第五棒：20.9 V05 右上暗红「住一道」残影 = 本句淡出拖进 V05 手部特写 → 随 V04→V05 硬切一起退净
         out = clamp01((t - t_out) / (0.15 if li in (0, 7) else 0.25))
         adv = [s * 1.04 for (_, s, _) in chars]
         x = cx - sum(adv) / 2
         L = T.Layer(); pmax = 0.0; big = max(s for (_, s, _) in chars)
         for (k, s, c), a in zip(chars, adv):
             p = clamp01((t - max(CT(li, k) - 0.16, t_on)) / 0.26)
+            if li == 1 and k in (7, 8) and not R6E_OFF('lycut'): p = clamp01((t - max(CT(li, k) - 0.16, t_on)) / 0.17)   # r6 第五棒：「一道」写快一点，V05 切点前写完整
             if li == 7 and s >= 150: p = clamp01((t - max(CT(li, k) - 0.10, t_on)) / 0.15)   # 第七棒：「乱世」等大字快写，残笔不超过 4 帧（41.31 红色半字）
             pmax = max(pmax, p)
             if p > 0:
