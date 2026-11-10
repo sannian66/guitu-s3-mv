@@ -1,0 +1,68 @@
+{
+ "S028_L1": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no characters, no objects. A huge blood-red ink bloom spreading across white paper, wet ink edges, screentone gradient dots at the rims, black ink splatter flecks. Leave the center calm.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S028_L2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Extreme close-up of a long straight Chinese sword blade lying diagonally across the frame, polished steel drawn in sharp black pen lines and white highlights, a single drop of blood just splashing on the blade surface in a crown splash. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S029_L2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Medium close-up of Gui Tu (keep exactly the face, hair and costume of the reference model sheet)'s right hand tightening around the black sword hilt, knuckles straining in silhouette, black leather bracer, red sash edge visible. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg"
+  ]
+ },
+ "S029_L1": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no characters. Deep black night with a large blood-red graphic block at right, screentone gradient, speed lines radiating from center.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S028_L3": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Foreground element only: a few large blood-red droplets and fine black ink spatter flying toward the camera, motion blurred. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S029_L3": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Foreground element only: a stream of tiny white-hot and blood-red sparks streaking diagonally. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S030_L1": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no characters. Night sky, a gigantic blood-red full moon in upper center, white sky around it with screentone dots, distant black mountain silhouettes at the bottom.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S030_L2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Element only: a long horizontal band of drifting manga-style clouds in black ink and white with screentone shading. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "S030_L3": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Full-body long shot of Gui Tu (keep exactly the face, hair and costume of the reference model sheet) standing, raising his long straight sword high with one arm, sword tip pointing at the sky, ponytail and red sash flowing, seen from a slightly low angle. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg"
+  ]
+ },
+ "S030_L4": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Foreground element only: black jagged rocks and wild grass silhouettes along the bottom edge, drawn in bold black ink. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ }
+}
