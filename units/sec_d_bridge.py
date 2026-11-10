@@ -1349,6 +1349,7 @@ class S22_Chuang(Shot):
         x_, y_ = K.grid()
         red = (1.0, 0.26, 0.14)
         bounce = np.exp(-(((x_ - 1530) / 520) ** 2 + ((y_ - 640) / 420) ** 2)) * (0.35 + 0.65 * min(1.0, pin * 2))
+        if not TXTCUT and t > th: bounce = bounce * (0.45 + 0.55 * math.exp(-(t - th) / 0.12))   # [D组 r6] 「闯」撞碎后红反光随碎片散去，不再整身染红
         if TXTCUT: bounce = bounce * 0.45                       # [D r5 #46] 没有朱红「闯」了：红反光减半（留木牌暖红光源）
         fr = fr + (Aw * bounce * 0.22)[..., None] * np.array(red, np.float32)
         if R5D_TEXT_CUT:                                         # [D r5 复审 #46-2] 去掉一侧红描边 / 一侧白描边（只留很淡的冷边）
