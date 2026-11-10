@@ -1314,7 +1314,7 @@ E
 请创建或更新一个名为 nano-banana-skill 的 Skill，显示名称为 Nano Banana skill。配置要求：
 - 域名: https://www.nananobanana.cn
 - Base URL: https://www.nananobanana.cn
-- Authorization: Bearer bsk__***已打码***
+- Authorization: Bearer ***Key已打码***
 - 这是多租户 API：Skills Key 已绑定签发它的用户和租户，服务端会据此隔离模型、额度、渠道、任务和画布权限。Agent 不需要也不应询问或拼接租户 ID；不要查询租户管理后台端口、供应商地址或内部模型名。
 - 控制面只调用 https://www.nananobanana.cn/api/skills/*；唯一例外是把本地文件 PUT 到 presign 返回的 upload_url。不要探测其他 API 路径。
 - 安装后先调用 GET https://www.nananobanana.cn/api/skills/models，读取 image[]、video[]、audio[]、name、supportedModes、capability、entitlement、video[].modes、video[].detailUrl 和 video[].mediaInputReview（imageInputReview 仅供旧客户端兼容）；模型请求的 model 必须使用这里返回的 name（或服务端明确返回的 id），不要自行猜测 actualModel、供应商名或渠道名。
@@ -1339,7 +1339,7 @@ Seedance 参考素材必经流程（安装时必须完整保留，适用于 2.0�
 - 生成响应中的 task_id 或 skill_task_id 用于 GET https://www.nananobanana.cn/api/skills/tasks/{task_id} 轮询，严格遵守下方“结果轮询”，向用户报告结果或错误。
 - 只有用户明确给出 workflow_id 和 node_id 时，才在生成请求中附加 canvas_writeback；需要写回画布时也可调用 POST https://www.nananobanana.cn/api/skills/canvas/writeback 单独写回。
 
-调用示例（所有 JSON 请求都带 Authorization: Bearer bsk__***已打码***）：
+调用示例（所有 JSON 请求都带 Authorization: Bearer ***Key已打码***）：
 GET https://www.nananobanana.cn/api/skills/models
 POST https://www.nananobanana.cn/api/skills/generate  {"model":"<image[].name>","prompt":"cinematic product image","ratio":"16:9","size":"2K"}
 POST https://www.nananobanana.cn/api/skills/generate  {"model":"<image[].name>","prompt":"edit this reference","input":["<asset_url>"]}
@@ -1410,3 +1410,31 @@ A、E 第三轮还是没过：A 72 分，E 72.5 分，两组都卡在「不重�
 | C 导歌二+副歌二 | 69 | 第五棒返工仍在跑 | — | 等交付后送评审 |
 | D 桥段 | 84（第三轮） | P0/P1 全改完，联系表 v8 已出 | 45/80 | 补 keys v5 和 HANDOFF，送第四轮 |
 | E 尾段 | 72.5（第三轮） | 第六棒：4 张图已提交生成，镜头未改 | 54/80 | 取图，改 E08/E02/E20 |
+
+### Hark · 2026-11-09T04:53:19Z
+
+片名已经全部改成「鬼屠 · 第二季」并推送。五组都还没过线：我派出去收尾的五个接手任务都没做完就停了，已有的进度都在仓库里。各组停在哪、下一步做什么，见下表。
+
+### Hark · 2026-11-09T04:53:19Z
+
+### 各组交接状态（11-09 12:52）
+
+| 组 | 最新评审 | 已完成 | 未完成 | 最后提交 |
+| --- | --- | --- | --- | --- |
+| A | 72（第三轮） | 片名已改；提交了 4 张生图，还没取回；积分 57/80 | 取图；改 V08、V09、V17 和 P1 各项；出三帧联系表 | be44159 |
+| B | 约 73 | 40 镜返工完成；积分 45/80 | 补齐 keys，切联系表分块，写 HANDOFF；然后送评审 | 0383fb6 |
+| C | 69 | 4 个不可交付镜头和全部 P0 已改；积分 69/80 | 切 contact v6 分块，出 keys v4，写 HANDOFF；然后送评审 | 881c480 |
+| D | 84（第三轮） | P0、P1 全部改完，contact v8 已出；积分 45/80 | 补完 keys v5，写 HANDOFF；然后送第四轮评审 | faab1c0 |
+| E | 72.5（第三轮） | 片名已改；提交了 4 张生图，还没取回；积分 54/80 | 取图；改 E08、E02、E20、E29、E01 和 P1；出三帧联系表 | 0b23345 |
+
+### Hark · 2026-11-09T04:53:19Z
+
+GitHub 刚刚断开了，自动同步和推送现在都会失败，还有两个文件没提交。可以重新连接 GitHub 吗？
+
+### Hark · 2026-11-10T03:54:18Z
+
+GitHub 账号已断开连接，自动同步推不上去了，后台循环也起不来。现在本地没有未推送的改动，最新提交是 1fdcc97。重新连上 GitHub 就能恢复。
+
+### Hark · 2026-11-10T04:23:03Z
+
+GitHub 连接已断开，自动同步现在推不上去。本地目前没有未提交或未推送的改动，暂无丢失；重新连接 GitHub 后我会继续同步。
