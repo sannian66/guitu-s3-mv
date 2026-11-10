@@ -2189,6 +2189,8 @@ def gold_tip(A, B, p, tip=(960, 345), seed=0):
     out = out + (ring * 0.8 * (1 - p * 0.6) + core * 0.55 * math.sin(math.pi * p))[..., None] * GOLD
     out = out + D.rays(tip, p, seed=7, n=40)[..., None] * GOLD * 0.35 * math.sin(math.pi * p)
     a = math.sin(math.pi * cl((p - 0.15) / 0.7))
+    if a > 0.02 and not TXTCUT and R6D_C and R6D_B:                       # [D组 r6 第三棒] 转场里的「答」与 S30 同位同款
+        return _da_c(out, a * 0.5, 1.2 - 0.2 * p)
     if a > 0.02 and not TXTCUT:
         ay, asz = (DA_Y, DA_S * 1.06) if R6D_B else (470, 680)
         L = D.text_layer([('答', 960, ay, asz, a * 0.45, 1.25 - 0.25 * p, 0.0, GOLD)], fname='serif_black')
@@ -2203,6 +2205,7 @@ class S30_Da(Shot):
         self.sp = D.spr('thrust_sky_back')
 
     def render(self, t):
+        if R6D_C and R6D_B: return self.render_c(t)
         u = self.u(t)
         td = V(O[47][5])
         op = eo(cl((t - self.t0) / 1.4), 2)
@@ -2242,6 +2245,91 @@ class S30_Da(Shot):
         z = 1.0 + 0.04 * u + 0.1 * impact(t, td, 0.15)
         return shake_cam(fr, t, [td], 10, z=z, oy=(-25 if R6D_B else -60) * eo(u, 2)), 0.0
 
+    def render_c(self, t):
+        """[D组 r6 第三棒 192.3] 光柱改成有中轴热芯的体积光：中轴 ±60px 暖白 225–235，S 曲线衰减到柱边琥珀 ~120；
+        柱边 40–80px 云纹侵蚀羽化（不再是直边）；柱内 3 道向下缓移的体积光束（α 0.15–0.25）；整帧峰值 ≤240。
+        「答」金白字芯 + 3px 深棕描边 + 下移 6px 投影（α0.4）+ 背后一圈暗晕，字与周边背景亮度差 ≥40；
+        人物身高 ≥200px（脚在下黑边内），刀尖与「答」字脚 ≥30px。"""
+        u = self.u(t)
+        td = V(O[47][5])
+        op = eo(cl((t - self.t0) / 1.4), 2)
+        fr = D.storm(t, 301, c=(960, 300), spin=0.05, base=(0.035, 0.03, 0.03), lit=(0.4, 0.36, 0.3), eye=200 + 300 * op)
+        x, y = K.grid()
+        n = cv2.resize(D._tile(303)[:H // 4, :W // 4], (W, H))
+        n2 = cv2.resize(D._tile(307)[:H // 8, :W // 8], (W, H), interpolation=cv2.INTER_CUBIC)       # 低频云纹
+        n3 = cv2.resize(D._tile(309)[:H // 2, :W // 2], (W, H))                                       # 高频云絮
+        en = (n2 - 0.5) * 1.6 + (n3 - 0.5) * 0.7
+        cx = 960 + (n2[:, 960:961] - 0.5) * 50                                                         # 柱轴随高度轻微摆动
+        dx = np.abs(x - cx)
+        gap = 20 + 470 * op                                                                            # 柱半宽
+        ed = gap - dx + en * 75 + (n - 0.5) * 60                                                                        # 云纹侵蚀后的柱边距离
+        vfade = 1 - K.sstep(720, 1010, y)
+        open_ = K.sstep(-30, 30, ed) * vfade                                                           # 60px 羽化带
+        s_ = K.sstep(60, max(61.0, gap), dx)                                                           # 热芯 ±60 平台 → S 曲线到边
+        core = np.array([0.97, 0.91, 0.80], np.float32) * 0.985                                       # 暖白（灰度 ≈ 0.90 → 230）
+        amb = np.array([0.74, 0.46, 0.17], np.float32)                                                # 琥珀（灰度 ≈ 0.47 → 120）
+        sky = core * (1 - s_[..., None]) + amb * s_[..., None]
+        tex = 1 + (0.03 + 0.07 * s_) * ((n3 - 0.5) * 2)                                               # 云纹在柱边更明显，热芯干净
+        sky = sky * (tex * (0.96 + 0.06 * (1 - y / H)))[..., None]
+        fr = fr * (1 - open_[..., None]) + sky * open_[..., None]
+        rim = np.exp(-((ed + 10) / 28) ** 2) * vfade * (0.35 + 0.65 * n3)                              # 云缘被照亮的一圈暖边（碎、不连续）
+        fr = fr + rim[..., None] * np.array([0.55, 0.36, 0.14], np.float32) * 0.45
+        # 柱内 3 道向下的体积光束：自上沿发散、沿光束方向的噪声向下缓移
+        beams = np.zeros((H, W), np.float32)
+        for k, (bx, ang, wd, a) in enumerate(((960 - 0.38 * gap, -5.0, 30, 0.25), (960 + 0.10 * gap, 2.5, 40, 0.18), (960 + 0.46 * gap, 7.0, 26, 0.22))):
+            th = math.radians(ang)
+            along = (y - BAR) * math.cos(th) + (x - bx) * math.sin(th)
+            across = (x - bx) * math.cos(th) - (y - BAR) * math.sin(th)
+            tile = D._tile(331 + k)
+            mv = int(140 * (t - self.t0)) % 512
+            stream = cv2.resize(tile[:, (k * 97) % 400:(k * 97) % 400 + 1], (1, 512))[:, 0]
+            sv = np.interp(np.mod(along * 0.35 - mv, 512), np.arange(512), stream)
+            beams += a * np.exp(-(across / wd) ** 2) * (0.4 + 1.2 * sv) * K.sstep(-40, 160, along) * vfade
+        fr = fr + (beams * open_)[..., None] * np.array([1.0, 0.88, 0.62], np.float32)
+        feet, fh = (960, 905 - 8 * eo(u, 2)), 380                                                      # 人身（头顶→脚）≈ 220px，脚在下黑边内
+        sc = D.fit_scale(self.sp, fh)
+        fr, _ = D.real_figure(fr, self.sp, t, D.feet(self.sp), feet, sc, expo=0.5, sat=0.5,
+                              tint=(1.05, 0.95, 0.85), rim=GOLDR, rim_amt=4.0, rim_dir=(0.0, -1.0), wind=12, look='sil')
+        fr = _blade_sil(fr, self.sp, feet, sc)
+        p = cp(t, O[47][5], 0.1)
+        if p > 0:
+            if not TXTCUT:
+                fr = _da_c(fr, min(1, p * 2), (1 + 0.18 * (1 - eo(p)) + 0.03 * u))
+            fr = K.sparks(fr, t, 3001, (960, DA2_Y), n=200, life=1.0, speed=(500, 1500), dirc=(0, -1), spread=3.1, grav=150, burst=True,
+                          t0=td, color=tuple(GOLD), amt=1.2)
+        fr = fr + impact(t, td, 0.12) * GOLD * 0.5
+        wo = ei(cl((t - (self.t1 - 0.5)) / 0.5), 2)                                                     # 白金出画（接 E 组 flash_white）
+        fr = fr * (1 + 0.6 * wo) + wo * np.array([1.0, 0.92, 0.75], np.float32) * 0.35
+        top = 0.94 + 0.06 * ei(cl((t - (self.t1 - 0.17)) / 0.17), 2)                                  # 峰值 ≤240，最后 5 帧才放到白
+        fr = _knee(fr, 0.88, top)
+        z = 1.0 + 0.04 * u + 0.1 * impact(t, td, 0.15)
+        return shake_cam(fr, t, [td], 10, z=z, oy=-15 * eo(u, 2)), 0.0
+
+
+DA2_Y, DA2_S = 300, 350    # [D组 r6 第三棒] S30 金「答」：字号 400 → 350，上移（人放大后刀尖抬高）
+S30_TIP = (960, 545)       # 人放大后的刀尖位置（gold_tip 转场圆心）
+
+
+def _da_c(fr, a, scl, s=None):
+    """[D组 r6 第三棒] 金「答」：背后暗晕（压周边背景）→ 下移 6px 投影 α0.4 → 3px 深棕描边 → 金白字芯 + 细金辉。"""
+    L = D.text_layer([('答', 960, DA2_Y, s or DA2_S, a, scl, 0.0, np.array([1.0, 0.90, 0.64], np.float32))], fname='serif_black')
+    bx = L.box(140)
+    if bx is None: return fr
+    x0, y0, x1, y1 = bx
+    out = fr.copy(); F = out[y0:y1, x0:x1]
+    A = L.A[y0:y1, x0:x1]; C = L.C[y0:y1, x0:x1]
+    halo = np.clip(cv2.GaussianBlur(A, (0, 0), 34) * 2.2, 0, 1)
+    F *= (1 - 0.42 * halo)[..., None]
+    F += (halo * 0.42)[..., None] * np.array([0.10, 0.05, 0.015], np.float32)
+    shd = np.roll(cv2.GaussianBlur(A, (0, 0), 3), 6, axis=0)
+    F[:] = F * (1 - 0.4 * shd[..., None]) + 0.4 * shd[..., None] * np.array([0.12, 0.06, 0.02], np.float32)
+    ol = cv2.GaussianBlur(cv2.dilate(A, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))), (0, 0), 0.7)
+    F[:] = F * (1 - ol[..., None]) + ol[..., None] * np.array([0.24, 0.11, 0.035], np.float32)
+    F[:] = F * (1 - A[..., None]) + C * A[..., None]
+    g = cv2.GaussianBlur(A, (0, 0), 10)
+    F += (np.clip(g - A, 0, 1) * 0.18)[..., None] * np.array([1.0, 0.7, 0.3], np.float32)
+    return out
+
 
 SHOTS = [S01_Drop, S02_Steles, S03_TypeSlam, S04_Snow, S05_Ren, S06_Scale, S07_Heap, S08_Seals, S09_Brush, S10_Giant,
          S11_Answer, S12_Pierce, S13_PaperCut, S14_Burn, S15_Hole, S16_Closed, S17_Eye, S18_Draw, S19_Forge, S20_Wall,
@@ -2278,6 +2366,7 @@ CUTS = {
     'S29_Thrust': ('gold_beam', 0.08, 0.14, dict(x0=960)),
     'S30_Da': ('gold_tip', 0.1, 0.14, dict(tip=(960, 345))),
 }
+if R6D_C and R6D_B: CUTS['S30_Da'] = ('gold_tip', 0.1, 0.14, dict(tip=S30_TIP))   # [D组 r6 第三棒] 人放大后刀尖下移
 if R5D_TEXT_CUT:   # [D r5 复审 #46-4] 189.71 S27→S28 的故障撕裂（7 帧，像坏帧）改成 2 帧冷白闪硬切
     CUTS['S28_Spin'] = ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.47 if R6D_B else 0.55))   # [D组 r6 第二棒] 闪白收 15%（评审 #46-d：f5693 进 S28 后亮度掉得陡）
 

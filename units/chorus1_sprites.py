@@ -243,13 +243,18 @@ def install(G):
         #     上下两半沿法线错开 12px 后不合拢，切口红热 0.8s 冷却成暗红；火星不进字的包围盒
         T_APEX = 69.865
         T_STRK = 69.955         # 命中前一帧（69.967）先见俯冲斜劈姿势
-        T_LAND = 70.30
+        T_LAND = 70.10          # r6 第三棒：俯冲压到 4 帧（69.967–70.067），每帧位移 ≈47px，不再冻帧
         GY = 900                # 脚底线
+        # r6 第三棒（评审 #23-1 起跳缩小）：四张生图的人物比例尺不同（头宽实测：蓄力 230px / 腾空 290 / 斩 230 / 落地 180 源像素），
+        # 屏幕缩放统一按「人物比例尺」= CS / REL，各姿势头宽一致（±3%），高度变化只靠位置
+        CS = 0.45
+        REL = {'crouch': 1.0, 'apex': 1.26, 'strike': 1.0, 'land': 0.78}
         POSES = {'crouch': ('R5_F/js1_crouch_b', 600), 'apex': ('R5_F/js3_apex_b', 560),
                  'strike': ('R5_F/js4_strike_a', 600), 'land': ('R5_F/js5_land_a', 600)}
         TXT, TX, TY, TS = '那就劈开它', 470.0, 252.0, 88      # 刻字：整句中心、字号
         C0, C1 = (150.0, 226.0), (790.0, 282.0)                # 字上的切线（≈5°，穿过五字中腰），刀弧由此弯向右下
         GAP = 12.0                                             # 劈开后上下两半沿法线错开
+        FLASH_C, FLASH_R, FLASH_A = (760.0, 300.0), 330.0, 0.42      # 命中暖白闪：中心（刀弧交字处偏右下）、σ、峰值
         def __init__(self):
             super().__init__()
             self.P = {k: L(p) for k, (p, h) in self.POSES.items()}
@@ -292,23 +297,22 @@ def install(G):
                 return 'crouch', (620 + 70 * k, self.GY), 0.0, (6 * k, 0), None
             if t < self.T_STRK:                                            # 腾空：抛物线顶点附近，清晰，几乎不糊
                 i = int(round((t - self.T_APEX) / fps))                    # 0,1,2
-                fx = (845, 885, 915)[min(i, 2)]; fy = (738, 718, 712)[min(i, 2)]
+                fx = (845, 885, 915)[min(i, 2)]; fy = (800, 788, 782)[min(i, 2)]
                 g = ('crouch', (690, self.GY), 0.22) if i == 0 else None
                 return 'apex', (fx, fy), (-2.0, -1.0, 0.0)[min(i, 2)], ((4, -3), (2, -1), (0, 0))[min(i, 2)], g
             if t < self.T_LAND:                                            # 俯冲斜劈：沿抛物线右下斜落
                 k = clamp01((t - self.T_STRK) / (self.T_LAND - self.T_STRK))
-                kk = eout(k, 2)
-                fx = 990 + 170 * kk; fy = 752 + 140 * k ** 1.4
-                g = ('apex', (915, 712), 0.22 * (1 - clamp01((t - self.T_STRK) / 0.07)))
-                return 'strike', (fx, fy), 0.0, (8 * (1 - kk), 8 * (1 - kk)), g
+                fx = 990 + 170 * k; fy = 790 + 110 * k                     # 匀速斜落：每帧 ≈47px
+                g = ('apex', (915, 782), 0.22 * (1 - clamp01((t - self.T_STRK) / 0.07)))
+                return 'strike', (fx, fy), 0.0, (8, 6), g
             a = t - self.T_LAND                                            # 落地收刀：沉身
             k = eout(clamp01(a / 0.2), 2)
-            g = ('strike', (1160, 892), 0.12 * (1 - clamp01(a / 0.05)))
+            g = ('strike', (1160, 890), 0.12 * (1 - clamp01(a / 0.05)))
             return 'land', (1250 + 40 * clamp01(a / 0.65), self.GY + 14 * (1 - k) - 14), 0.0, (6 * (1 - k), 6 * (1 - k)), g
         def _put(self, fr, t, name, foot, rot=0.0, mblur=(0, 0), alpha=1.0, rim=None, gr=None):
-            sp = self.P[name]; th = self.POSES[name][1]
+            sp = self.P[name]
             x0, y0, x1, y1 = sp.bbox
-            s = th / ((y1 - y0) * sp.h)
+            s = self.CS / self.REL[name] * 2048 / max(sp.w, sp.h)       # 人物比例尺统一（源图长边 2048 归一）
             return sp.draw(fr, t, ((x0 + x1) / 2, y1), foot, s, rot=rot, mblur=mblur, rim=rim, grade=gr,
                            shade=None, wind_amp=6.5, alpha=alpha, wrap=0.4)[0]
         def _carve(self, fr, t, shift):
@@ -411,15 +415,22 @@ def install(G):
                 a = t - self.T_HIT
                 r = np.random.default_rng(3530)
                 Lb = np.zeros((H // 2, W // 2), np.float32)
+                # r6 第三棒（评审 #23-2 落地后浮着的方形暗斑）：碎砖重力 500→2600、不再随时间放大，沿速度方向拉运动模糊，
+                # 0.25–0.38s 内淡出 / 落出画（70.4 以后墙面上没有任何碎块）
+                fade = 1 - sstep(0.25, 0.38, a)
                 for i in range(22):
                     ox, oy = r.uniform(1100, 1500), r.uniform(380, 720)
                     vx, vy = r.normal(250, 500), r.normal(-250, 300)
-                    s = (r.uniform(18, 60)) * (1 + 2 * a)
-                    px, py = ox + vx * a - camx * 0.6, oy + vy * a + 500 * a * a
-                    if py > 860: continue                                   # 碎砖不落进底部字幕区
-                    box = cv2.boxPoints(((px / 2, py / 2), (s / 2, s * 0.45 / 2), r.uniform(0, 180) + 300 * a))
-                    cv2.fillConvexPoly(Lb, box.astype(np.int32), 1.0, cv2.LINE_AA)
-                fr = over(fr, cv2.resize(cv2.GaussianBlur(Lb, (0, 0), 2), (W, H)), (0.03, 0.03, 0.035))
+                    s = r.uniform(18, 50); rot0 = r.uniform(0, 180)
+                    if fade <= 0.01: continue
+                    for k in range(4):                                       # 4 次采样 = 运动模糊
+                        aa = max(0.0, a - k * 0.008)
+                        px, py = ox + vx * aa - camx * 0.6, oy + vy * aa + 2600 * aa * aa
+                        if py > 940: continue
+                        box = cv2.boxPoints(((px / 2, py / 2), (s / 2, s * 0.45 / 2), rot0 + 300 * aa))
+                        cv2.fillConvexPoly(Lb, box.astype(np.int32), 0.3 * fade, cv2.LINE_AA)
+                Lb = np.clip(Lb, 0, 1)
+                fr = over(fr, cv2.resize(cv2.GaussianBlur(Lb, (0, 0), 1.5), (W, H)), (0.03, 0.03, 0.035))
                 base = fr
                 fr = K.sparks(fr, t, 3540, (1250, 600), n=70, life=0.5, speed=(400, 1200), dirc=(0.5, -0.5), spread=0.9,
                               grav=900, burst=True, t0=self.T_HIT, area=(150, 200))
@@ -427,10 +438,14 @@ def install(G):
             if self.T_LAND <= t < self.T_LAND + 0.5:                       # 落地扬尘
                 fr = K.sparks(fr, t, 3550, (1250 - camx, self.GY - 8), n=40, life=0.5, speed=(150, 450), dirc=(1, -0.2), spread=1.4,
                               grav=300, burst=True, t0=self.T_LAND, area=(260, 10), color=(0.6, 0.58, 0.55), amt=0.5)
-            fl = white(t, self.T_HIT, 0.035)
+            # r6 第三棒（评审 #23-4 命中帧发灰）：整帧抬灰 → 只在命中帧（1 帧）加一团暖白加色闪，中心在刀弧交字处，四角几乎不动，黑位不抬
             sk = pulse(t, self.T_HIT, 0.12) * (t >= self.T_HIT)
+            if abs(t - self.T_HIT) < 0.5 / 30:
+                fx_, fy_ = self.FLASH_C
+                fl = np.exp(-((x - fx_) ** 2 + (y - fy_) ** 2) / (2 * self.FLASH_R ** 2)).astype(np.float32)
+                fr = fr + (fl * self.FLASH_A)[..., None] * np.array([1.0, 0.9, 0.74], np.float32)
             dx, dy, dr = shake(t, 12 * sk, 16, 35)
-            fr = cam(fr * (1 - 0.2 * fl) + fl * 0.32, 1.02 + 0.025 * sk, dx, dy, dr)
+            fr = cam(fr, 1.02 + 0.025 * sk, dx, dy, dr)
             return fr, 0
 
     # ---------------------------------------------------------------- S037 ELS 背影站在金缝前（小人，金 rim）

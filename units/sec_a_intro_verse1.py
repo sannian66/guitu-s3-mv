@@ -867,7 +867,8 @@ class V05(Shot):
         fr = RAIN.draw(fr, t, 0.5, angle=10, layers=(2,))
         p = cprog(1, [9], t, 0.16)[0]                                   # 第五棒：「寒」20.82 随刃口寒光落下（与 V06 同位，跨切点连续）
         if p > 0:
-            L = T.Layer(); L.paste(BG('寒', 'kai', 230, p, seed=1), 800, 760, (0.94, 0.92, 0.88))
+            _hx, _hy = (800, 760) if R6B_OFF('hanguang') else V06.HG[0]                 # r6 第二棒：跟 V06「寒光」新位置（人物右侧）同位
+            L = T.Layer(); L.paste(BG('寒', 'kai', 230, p, seed=1), _hx, _hy, (0.94, 0.92, 0.88))
             fr = T.compose(fr, L, shadow=0.8, shadow_sigma=16, glow=0.2)
         return fr, (3 if g > 0.5 else 0)
 
