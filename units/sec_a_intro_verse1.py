@@ -1526,7 +1526,7 @@ class V12(Shot):
     def render(self, t):
         if R5.ON['sha_fang'] and not R6C_OFF('sf7'):                               # r6 第三棒 #7：殺/放 一镜到底（见 _sf_sha_world / V13.r6c）
             fr = _sf_sha_world(t)
-            return _sf_word(fr, t), (5 if 0 <= t - CT(4, 1) < 0.1 else 0)
+            return _sf_word(fr, t), ((5 if R6F_OFF('sf7b') else 3) if 0 <= t - CT(4, 1) < 0.1 else 0)   # r6 第六棒：斩杀帧色差 5→3
         u = self.u(t); ts = CT(4, 1)
         fr = night((0.04, 0.008, 0.008), (0.12, 0.02, 0.02))
         fr = A.glow(fr, (1400, 420), 500, 0.35, (0.9, 0.2, 0.12))
@@ -1558,6 +1558,8 @@ SF_AT, SF_RED, SF_COLD = (330, 400), (0.88, 0.10, 0.07), (0.72, 0.80, 0.94)
 #   · 脚点 990→900（有效区下沿 960 之内）；恶徒断口羽化 + 血雾，下半身随后屈膝沉入地雾，不留硬边黑块。
 SF_FEET = 900                                     # 两个世界共用脚点（屏幕 y）
 SF_HERO_X, SF_OPP_X = 720, 1330
+SF_TIP, SF_HILT = (294.0, 741.0), (630.0, 534.0)       # 殺世界 slash_diag 刀尖 / 护手屏幕位置（h=640、脚点 (720,900)，30.0 实测）
+SF_FANG_DX = 110                                  # r6 第六棒：sheath_same 头中心 740 / 胯 737，slash_diag 头 849 / 胯 803（同 h=640、同脚点）→ 放世界整体右移 110px
 def _sf_k():
     tm = CT(4, 6); return tm, tm - 0.40                                     # 「放」字拍、变换起点（31.03）
 def _sf_edge(t):
@@ -1595,8 +1597,13 @@ def _sf_sha_world(t):
     fr = _sf_ground(fr, (0.30, 0.05, 0.04))
     fr = _villain_spr6(fr, t, a, (SF_OPP_X, SF_FEET + 10), 640)
     fr = _sf_contact(fr, SF_HERO_X + 10, SF_FEET)
+    if a >= 0 and not R6F_OFF('sf7b'):                                          # r6 第六棒 #7：斩杀刀光 = 从恶徒断口穿回鬼屠刀尖的一道细刀弧（画在人物后，被人物遮挡），不再是独立白柱
+        q = clamp01(a / 0.09); fd = math.exp(-max(0.0, a - 0.09) / 0.16)
+        if fd > 0.03:
+            P0 = (1560.0, 702.0); P1 = SF_TIP; Pe = (P0[0] + (P1[0] - P0[0]) * eout(q), P0[1] + (P1[1] - P0[1]) * eout(q))
+            fr = R5.blade_arc(fr, SF_HILT, P0, Pe, depth=0.03, width=0.05, amt=1.2 * fd, col=(1.0, 0.86, 0.80))
     fr, info = A.place(fr, t, S('S014/slash_diag'), (SF_HERO_X, SF_FEET), h=640, rim=REDR, rim_amt=3.0, wind=10, grade=dict(expo=0.85, sat=0.6))
-    if a >= 0:
+    if a >= 0 and R6F_OFF('sf7b'):
         fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
         fr = K.sparks(fr, t, 31, (1200, 620), n=60, life=0.6, speed=(200, 800), dirc=(1, -0.4), spread=1.0, grav=1200, area=(60, 60), amt=0.8, t0=ts, burst=True)
     return fr
@@ -1610,13 +1617,14 @@ def _sf_fang_world(t):
     fr = fog(fr, t, 0, 200, 900, 0.35, (0.18, 0.21, 0.28), speed=(-30, 0), light=(1400, 420))
     fr = RAIN.draw(fr, t, 0.9, angle=4, light=(1400, 420), layers=(0, 1))
     fr = _sf_ground(fr, (0.20, 0.23, 0.30))
-    fr = _sf_contact(fr, SF_HERO_X + 10, SF_FEET)
-    fr, _ = A.place(fr, t, os.path.join(R5._R5A, 'sheath_same_v1_cut.png'), (SF_HERO_X, SF_FEET), h=640, rim=COLD, rim_amt=3.0, wind=7,
+    dx = 0 if R6F_OFF('sf7b') else SF_FANG_DX                                   # r6 第六棒 #7：放世界鬼屠与殺世界同位（头/上身中心对齐），擦换时不出双头
+    fr = _sf_contact(fr, SF_HERO_X + 10 + dx, SF_FEET)
+    fr, _ = A.place(fr, t, os.path.join(R5._R5A, 'sheath_same_v1_cut.png'), (SF_HERO_X + dx, SF_FEET), h=640, rim=COLD, rim_amt=3.0, wind=7,
                     grade=dict(expo=0.85, sat=0.55))
     bow = 1.0 + 6.0 * eio(u) + 1.6 * math.sin(t * 6.0)
     trem = 2.5 * math.sin(t * 41) + 1.5 * math.sin(t * 67)
-    fr = _sf_contact(fr, SF_OPP_X + 10, SF_FEET + 4, rx=230)
-    fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (SF_OPP_X + 10 + trem, SF_FEET + 4), h=500, anc=(0.5, 1.0), rim=COLD, rim_amt=2.4,
+    fr = _sf_contact(fr, SF_OPP_X + 10 + dx, SF_FEET + 4, rx=230)
+    fr, _ = A.place(fr, t, A.bg_matte('A/kneel_beg'), (SF_OPP_X + 10 + dx + trem, SF_FEET + 4), h=500, anc=(0.5, 1.0), rim=COLD, rim_amt=2.4,
                     rim_dir=(-0.7, -0.6), grade=dict(expo=0.62, sat=0.3, gamma=1.2), wind=3, rot=-bow)
     return fr
 
@@ -1637,6 +1645,31 @@ def _sf_contact(fr, x, y, rx=200):
     return fr * (1 - 0.8 * cv2.resize(sh, (W, H))[..., None])
 
 
+def _villain_relight(col, Al, at):
+    """r6 第六棒 #7（评审：恶徒灰白发边、去色冷灰像贴上去的照片）：
+    ① 去边色 decontaminate：alpha<0.97 的边带颜色用内部（alpha≥0.97）颜色向外扩散替换，抠图带进来的浅底色不再成环；
+    ② 受同一盏红光：按亮度重新着色成鬼屠同色温的暗红（亮部偏朱、暗部压深），不再是冷灰照片；
+    ③ 逆光侧（朝画面右上红光 1400,420）补一道 3–6px 暗红轮廓光。"""
+    inner = (Al >= 0.97).astype(np.float32)
+    num = cv2.GaussianBlur(col * inner[..., None], (0, 0), 5); den = cv2.GaussianBlur(inner, (0, 0), 5)[..., None]
+    fill = num / np.maximum(den, 1e-4)
+    band = np.clip((0.97 - Al) / 0.5, 0, 1)[..., None] * (den > 1e-3)
+    col = col * (1 - band) + fill * band
+    lum = col @ np.array([0.30, 0.55, 0.15], np.float32)
+    lum = lum / (1 + lum * 0.4)
+    red = np.stack([lum * 1.05, lum * 0.42, lum * 0.36], -1)
+    col = col * 0.30 + red * 0.70 + np.array([0.035, 0.006, 0.005], np.float32)
+    Ab = (Al > 0.5).astype(np.float32)
+    rimw = np.clip(Ab - cv2.erode(Ab, np.ones((9, 9), np.uint8)), 0, 1)
+    rimw = cv2.GaussianBlur(rimw, (0, 0), 1.5)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    gx = cv2.Sobel(cv2.GaussianBlur(Ab, (0, 0), 6), cv2.CV_32F, 1, 0); gy = cv2.Sobel(cv2.GaussianBlur(Ab, (0, 0), 6), cv2.CV_32F, 0, 1)
+    nrm = np.sqrt(gx * gx + gy * gy) + 1e-6
+    lx, ly = 0.75, -0.66                                                                              # 光从右上来
+    facing = np.clip(-(gx * lx + gy * ly) / nrm, 0, 1)
+    return col + (rimw * facing)[..., None] * np.array([0.55, 0.07, 0.04], np.float32)
+
+
 def _villain_spr6(fr, t, a, at, h, deg=32):
     """r6 第三棒：恶徒两断改版 —— 断口 3px 羽化 + 朱红血雾（不再是直红线 + 硬边黑块）；剪影带红色环境光（不读成纯黑块）；
     上半沿斩线滑开后受重力坠落，下半身 0.2s 后屈膝后仰下沉，两片都沉进脚下地雾（无原地半透明淡出、无残影）。"""
@@ -1645,10 +1678,17 @@ def _villain_spr6(fr, t, a, at, h, deg=32):
     P, info = A.place(z, t, A.bg_matte('A/villain_fall'), (at[0] + back, at[1]), h=h, anc=(0.5, 1.0), rim=REDR, rim_amt=2.6,
                       rim_dir=(0.8, -0.5), grade=dict(expo=0.80, sat=0.12, tint=(1.08, 0.94, 0.90)), wind=8, rot=-6 * eout(max(0, a) / 0.5))
     Al = info['A'][..., None]
-    col = P / np.maximum(Al, 1e-3); Al2 = np.clip((Al - 0.30) / 0.70, 0, 1)
-    Al2 = cv2.erode(Al2[..., 0], np.ones((3, 3), np.uint8))                                          # 收 matte 灰边（发外灰晕）
-    Al2 = cv2.GaussianBlur(Al2, (0, 0), 0.8)[..., None]                                               # 再 1px 羽化
-    col = col + np.array([0.09, 0.014, 0.011], np.float32)                                            # 红色环境光托起暗部
+    col = P / np.maximum(Al, 1e-3)
+    if R6F_OFF('sf7b'):
+        Al2 = np.clip((Al - 0.30) / 0.70, 0, 1)
+        Al2 = cv2.erode(Al2[..., 0], np.ones((3, 3), np.uint8))                                      # 收 matte 灰边（发外灰晕）
+        Al2 = cv2.GaussianBlur(Al2, (0, 0), 0.8)[..., None]                                           # 再 1px 羽化
+        col = col + np.array([0.09, 0.014, 0.011], np.float32)                                        # 红色环境光托起暗部
+    else:
+        col = _villain_relight(col, Al[..., 0], at)
+        Al2 = np.clip((Al - 0.45) / 0.55, 0, 1)
+        Al2 = cv2.erode(Al2[..., 0], np.ones((5, 5), np.uint8))                                      # r6 第六棒：alpha 内收 ≈2.5px（发梢灰白残边整圈吃掉）
+        Al2 = cv2.GaussianBlur(Al2, (0, 0), 0.9)[..., None]
     P = col * Al2; Al = Al2
     if a > 0:
         th = math.radians(deg); cy = at[1] - 0.55 * h
