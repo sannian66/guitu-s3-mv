@@ -1824,9 +1824,17 @@ class C27(Shot):
         u = self.u(t)
         tt = V(147.28)
         fl = 0.6 + 1.0 * bolt_env(t, tt) + 0.4 * pulse(t, V(146.5), 0.1)
-        fr = storm(t, 27, horizon=900, flash=fl, fc=(960, 400), refl=0.9)
-        fr = fr + sm(tt - 0.05, tt + 0.1, t) * 0.18 * (1 - sm(tt + 0.3, tt + 0.8, t))
-        fr = K.vol_light(fr, (960, 500), 380, (0.85, 0.9, 1.0), 0.35 * fl)
+        if R6:   # r6 #42：缺口里不再是一整块过曝纯白——压低天光，露出被电光照亮的云层 + 一道真闪电，亮度靠云的层次给
+            fs = 0.10 + 0.50 * bolt_env(t, tt) + 0.25 * pulse(t, V(146.5), 0.1)
+            fr = storm(t, 27, horizon=900, flash=fs, fc=(960, 330), refl=0.9)
+            fr = bolt(fr, t, V(146.5), 271, (1010, BAR + 10), (930, 640), inten=0.8)
+            fr = bolt(fr, t, tt, 272, (900, BAR + 10), (990, 700), inten=1.0)
+            fr = fr + sm(tt - 0.05, tt + 0.1, t) * 0.08 * (1 - sm(tt + 0.3, tt + 0.8, t))
+            fr = K.vol_light(fr, (960, 520), 360, (0.85, 0.9, 1.0), 0.16 * fl)
+        else:
+            fr = storm(t, 27, horizon=900, flash=fl, fc=(960, 400), refl=0.9)
+            fr = fr + sm(tt - 0.05, tt + 0.1, t) * 0.18 * (1 - sm(tt + 0.3, tt + 0.8, t))
+            fr = K.vol_light(fr, (960, 500), 380, (0.85, 0.9, 1.0), 0.35 * fl)
         r = np.random.default_rng(27)
         ys = np.linspace(BAR - 20, 910, 30)
         lx = 820 + np.cumsum(r.normal(0, 14, 30)) - 40 * u; rx = 1100 + np.cumsum(r.normal(0, 14, 30)) + 40 * u

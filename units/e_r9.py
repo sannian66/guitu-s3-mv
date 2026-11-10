@@ -32,6 +32,7 @@ ON = dict(wind=_on('E_R5_WIND'), text=_on('E_R5_TEXT'), mark=_on('E_R5_MARK'), e
 R6FIX = _on('E_R6_FIX')       # r6 #47/#49/#50/#51 构图与卡点修正（'0' 回到 r5 画面，出对比图用）
 KEEPTXT = _on('E_R6_KEEPTXT')   # r6 #55：镜内横排/刻/写/印歌词字保留（'0' 回到 r5 #46 全去）
 R6B = R6FIX and _on('E_R6B')   # r6 第二棒（评审 REVIEW_E_r6 返工：#47 圆外残字 / #49 接地 / #50 ELS 人物可读 + LS / #51 强拍动作 / 3:40.6、3:41.3 亮斑）；'0' 回到第一棒
+R6E = _on('E_R6E')   # r6 第五棒（REVIEW_DE_r6c #50 小修）：E_R6E_SUN 日面按成片数值重做、E_R6E_DUST 扬尘不对称；'0' 回到第四棒
 R6C = R6B and _on('E_R6C')   # r6 第四棒（评审 a200f95 返工：#50/#51 日面+大气透视山脊+扬尘团、E26 恢复暖色日出——压过曝面积、不压整体亮度）；'0' 回到第二棒
 M = None
 
@@ -761,6 +762,9 @@ def sun_atmo(fr, c, r, amt=1.0, core=(1.0, 0.95, 0.84), limb=0.18, inner=40, out
 
 
 SUNC = (1.0, 0.93, 0.76)   # 日面核心：暖白（不是纯白）
+SUN6E_FC = 232.0                                                                     # 第五棒：成片日心亮度（强拍 +3，≤238）
+SUN6E_GLOW = dict(disc=False, inner=60, outer=200, a_in=0.18, a_out=0.16)            # 第五棒 ELS 盘外辉光
+SUN6E_GLOW_L = dict(disc=False, inner=70, outer=230, a_in=0.18, a_out=0.16)          # 第五棒 LS
 
 
 def _ridge_line(seed, base, amp, bumps=()):
@@ -853,14 +857,22 @@ def _els_r6c(self, t):
     fr = self.sky6.copy()
     sun = (640, 700 - 30 * u)                                                              # 日心离头 ≈550px
     kw = beat_pulse(t, HITS34W) + beat_pulse(t, [(x, 1.0) for x in STRONG34])
-    src = sun_atmo(fr, sun, 92, amt=0.92 + 0.08 * kw, disc=False)
-    fr = sun_atmo(fr, sun, 92, amt=0.92 + 0.08 * kw, core=SUNC)
+    if R6E_SUN:                                                                           # 第五棒：这里只画辉光，日盘最后按成片数值画
+        src = fr = sun_atmo(fr, sun, 92, amt=1.0, **SUN6E_GLOW)
+    else:
+        src = sun_atmo(fr, sun, 92, amt=0.92 + 0.08 * kw, disc=False)
+        fr = sun_atmo(fr, sun, 92, amt=0.92 + 0.08 * kw, core=SUNC)
     fr = fx2.god_rays(fr, sun, strength=0.30 + 0.35 * kw, length=1.1, t=t)
     fr = self.rg6.paint(fr, src)
     bob = 3 * abs(math.sin(t * 5.5))
     fx, fy = 1200 - 24 * u, 872
     fr = _shadow(fr, fx, fy, L=90, lean=0.9, wmax=26)
-    fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985, keep=(sun[0], sun[1], 92))
+    if R6E_SUN:
+        fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985)
+        if not hasattr(self, 'cov6'): self.cov6 = _ridge_cov(self.rg6)
+        fr = sun_final(fr, sun, 92, self.cov6, Fc=SUN6E_FC + 3 * kw)
+    else:
+        fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985, keep=(sun[0], sun[1], 92))
     fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 340, sun, rim_w=1.2, rim_amt=0.85)
     fr = dust_kick(fr, t, STRONG34[:1], [(fx - 30, fy - 4, 0.8), (fx + 40, fy - 2, 0.7), (fx - 260, fy - 10, 0.9), (fx + 300, fy - 8, 0.8),
                                          (fx - 620, fy - 22, 0.7), (fx + 560, fy - 14, 0.6)], 7340, r0=85, rise=60, amt=1.2, n_spark=30, spark_v=(140, 380))
@@ -876,20 +888,92 @@ def _ls_r6c(self, t):
     fr = self.sky.copy()
     sun = (600, 700 - 20 * u)
     kw = beat_pulse(t, [(x, 1.0) for x in STRONG34[1:]])
-    src = sun_atmo(fr, sun, 110, amt=0.92 + 0.08 * kw, inner=46, outer=230, disc=False)
-    fr = sun_atmo(fr, sun, 110, amt=0.92 + 0.08 * kw, inner=46, outer=230, core=SUNC)
+    if R6E_SUN:
+        src = fr = sun_atmo(fr, sun, 110, amt=1.0, **SUN6E_GLOW_L)
+    else:
+        src = sun_atmo(fr, sun, 110, amt=0.92 + 0.08 * kw, inner=46, outer=230, disc=False)
+        fr = sun_atmo(fr, sun, 110, amt=0.92 + 0.08 * kw, inner=46, outer=230, core=SUNC)
     fr = fx2.god_rays(fr, sun, strength=0.28 + 0.35 * kw, length=1.0, t=t)
     fr = self.rg6.paint(fr, src)
     bob = 4 * abs(math.sin(t * 5.5))
     fx, fy = 1250 - 30 * u, 936
     fr = _shadow(fr, fx, fy, L=60, lean=0.9, wmax=40, amt=0.6)
-    fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985, keep=(sun[0], sun[1], 110))
+    if R6E_SUN:
+        fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985)
+        if not hasattr(self, 'cov6'): self.cov6 = _ridge_cov(self.rg6)
+        fr = sun_final(fr, sun, 110, self.cov6, Fc=SUN6E_FC + 3 * kw)
+    else:
+        fr = _tone_cap(M.bloom(fr, 0.90, 0.25), 0.86, 0.985, keep=(sun[0], sun[1], 110))
     fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 600, sun, rim_w=1.6, rim_amt=0.9)
     fr = dust_kick(fr, t, STRONG34[1:], [(fx - 50, fy - 6, 1.3), (fx + 60, fy - 4, 1.2), (fx - 380, fy - 18, 1.1), (fx + 420, fy - 14, 1.0),
                                          (fx - 800, fy - 30, 0.9)], 7350, r0=110, rise=80, amt=1.2, n_spark=36, spark_v=(160, 460))
     fr = E.dust_motes(fr, t, 1394, n=50, amt=0.26, drift=(-22, -12))
     z = step_zoom(t, [(7072 / 30, 0.03)]) * (1 + 0.006 * u)
     return K.cam(fr, z, center=(fx, 600))
+
+
+# ================================================================== r6 第五棒（E_R6E）：#50 日面按「成片」数值重做 + 扬尘不对称
+# 根因（REVIEW_DE_r6c）：①_tone_cap(keep=日面) 让盘内不压、盘外压 → 盘边自己切出一道 30–40 级的硬台阶；
+# ② 盘面 >1.0 进 finish 高光柔肩（0.85 起压）后全被压平成 246–249，临边变暗看不见。
+# 做法：天空/辉光/山整帧照常软压（不再 keep），最后单独画日盘——目标值直接定在「成片」亮度上，
+# 用 finish 的同一套调色+辉光+柔肩在日面附近的小块上迭代反解盘面输入值，所以压缩之后临边变暗仍成立。
+R6E_SUN = R6C and R6E and _on('E_R6E_SUN')
+R6E_DUST = R6C and R6E and _on('E_R6E_DUST')
+_SUNC_N = np.asarray(SUNC, np.float32) / (0.299 * SUNC[0] + 0.587 * SUNC[1] + 0.114 * SUNC[2])
+
+
+def _fin_lite(cr):
+    """K.finish（bloom 0.25、red_keep=1）去掉颗粒/暗角/色差的同款：调色 → 辉光 → 高光柔肩。只用于日面附近小块反解。"""
+    fr = np.clip(cr, 0, 4)
+    r, g, b = fr[..., 0], fr[..., 1], fr[..., 2]
+    lum = 0.3 * r + 0.59 * g + 0.11 * b
+    sat = np.clip((np.maximum(r, np.maximum(g, b)) - np.minimum(r, np.minimum(g, b))) * 3.0, 0, 1)
+    ratio = (r - np.maximum(g, b)) / (r + 1e-3)
+    sat = np.maximum(sat, np.clip((ratio - 0.38) / 0.24, 0, 1) * np.clip((r - 0.03) / 0.06, 0, 1))
+    fr = np.stack([lum * 0.96, lum * 0.99, lum * 1.05], -1) * (1 - sat[..., None]) + fr * sat[..., None]
+    fr = K.bloom(fr, 0.72, 0.25, 26)
+    fr = np.where(fr > 0.85, 0.85 + (1 - np.exp(-(fr - 0.85) * 4)) * 0.15, fr)
+    return np.clip(fr, 0, 1)
+
+
+def _luma8(a): return (0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]) * 255
+
+
+def _sinv(y8):
+    """高光柔肩的反函数（成片 0–255 → 柔肩前的值）。"""
+    y = np.clip(y8 / 255.0, 0, 0.995)
+    return np.where(y <= 0.85, y, 0.85 - np.log(np.clip(1 - (y - 0.85) / 0.15, 1e-3, 1)) / 4)
+
+
+def sun_final(fr, c, r, cov=None, Fc=233.0, k85=0.85, feather=20.0, iters=3, margin=170):
+    """在成片亮度上定日盘：中心 Fc（≤238），ρ=0.85 处 = Fc·k85（暗 12–18%），盘内抛物面往边缘继续缓降；
+    外缘 feather px smoothstep 化进盘外辉光（10–90% ≈ 0.6·feather ≈ 12px）。cov = 山脊遮挡（1=山），山前不画。"""
+    x0, x1 = int(max(0, c[0] - r - margin)), int(min(W, c[0] + r + margin))
+    y0, y1 = int(max(0, c[1] - r - margin)), int(min(H, c[1] + r + margin))
+    cr = fr[y0:y1, x0:x1].astype(np.float32).copy()
+    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    d = np.hypot(xx - c[0], yy - c[1]); rho = d / r
+    G = _luma8(_fin_lite(cr))                                           # 盘外：天 + 辉光在成片里的亮度
+    Td = Fc * (1 - (1 - k85) * (rho / 0.85) ** 2)
+    s = np.clip((d - (r - feather / 2)) / feather, 0, 1); s = s * s * (3 - 2 * s)
+    sky = 1.0 if cov is None else (1 - cov[y0:y1, x0:x1])
+    w = ((1 - s) * sky).astype(np.float32)
+    T = Td * (1 - s) + G * s
+    q = _sinv(T).astype(np.float32)
+    base = cr.copy()
+    for _ in range(iters):
+        cr = base * (1 - w[..., None]) + (q[..., None] * _SUNC_N) * w[..., None]
+        L = _luma8(_fin_lite(cr))
+        q = np.clip(q + (_sinv(T) - _sinv(L)) / np.maximum(w, 0.25), 0, 2.0).astype(np.float32)
+    cr = base * (1 - w[..., None]) + (q[..., None] * _SUNC_N) * w[..., None]
+    out = fr.copy(); out[y0:y1, x0:x1] = cr
+    return out
+
+
+def _ridge_cov(rg):
+    cov = np.zeros((H, W), np.float32)
+    for m, k, ref, f in rg.L: cov = 1 - (1 - cov) * (1 - m)
+    return cov
 
 
 def _e26_render_c(self, t):

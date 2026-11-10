@@ -998,23 +998,23 @@ class V06(Shot):
         hd = 0.62 if k == 0 else 1.0                                              # 命中帧刀光头已过刀尖、扫到 62%；下一帧满长
         f = (1.0, 0.82, 0.55, 0.30, 0.12)[k]
         if k == 0: fr = fr * 1.30 + 0.04 * COLDV
-        y0, ang, x0, x1 = 371.0, -2.0, 640.0, W + 80.0
+        y0, ang, x0, x1 = 371.0, -2.0, 900.0, W + 80.0           # 起点在护手外（x≈900），不压脸、颈
         th = math.radians(ang); Y = lambda x: y0 + (x - 1286.0) * math.tan(th)
         xe = x0 + (x1 - x0) * hd
         Ls = np.zeros((H // 2, W // 2), np.float32); n = 40
         for i in range(n):
             xa = x0 + (xe - x0) * i / n; xb = x0 + (xe - x0) * (i + 1) / n; s_ = (i + 0.5) / n
             wv = min(1.0, s_ / 0.25) ** 1.2 * (min(1.0, (1 - s_) / 0.12) if hd >= 1 else 1.0)   # 尾端（护手侧）长收尖；出画端满长时也收
-            cv2.line(Ls, (int(xa / 2), int(Y(xa) / 2)), (int(xb / 2), int(Y(xb) / 2)), float(wv), 1, cv2.LINE_AA)
+            cv2.line(Ls, (int(xa / 2), int(Y(xa) / 2)), (int(xb / 2), int(Y(xb) / 2)), float(wv), 2, cv2.LINE_AA)
         Ls = cv2.resize(Ls, (W, H))
-        core = Ls * 1.25
-        h1 = cv2.GaussianBlur(Ls, (0, 0), 6) * 1.6
-        h2 = cv2.GaussianBlur(Ls, (0, 0), 24) * 1.1
+        core = Ls * 1.3
+        h1 = cv2.GaussianBlur(Ls, (0, 0), 8) * 3.2
+        h2 = cv2.GaussianBlur(Ls, (0, 0), 32) * 2.6
         add = (core[..., None] * np.array([0.95, 0.98, 1.0], np.float32) + h1[..., None] * np.array([0.62, 0.78, 1.0], np.float32)
                + h2[..., None] * np.array([0.35, 0.50, 0.85], np.float32)) * f
         out = fr + add
         m = np.clip(h2 * 8, 0, 1)[..., None]                                      # 只在刀光范围内软压高光
-        cap = 0.95
+        cap = 0.88
         soft = np.where(out > 0.8, 0.8 + (cap - 0.8) * np.tanh((out - 0.8) / (cap - 0.8)), out)
         return out * (1 - m) + soft * m
 
