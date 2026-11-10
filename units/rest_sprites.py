@@ -73,7 +73,7 @@ def _prep(key):
         a = a[max(0, ys.min() - my):ys.max() + my, max(0, xs.min() - mx):xs.max() + mx]
     im = Image.fromarray(a, 'RGBA')
     if 'flip' in mods: im = ImageOps.mirror(im)
-    im.save(out)
+    tmp = out + '.%d.tmp.png' % os.getpid(); im.save(tmp); os.replace(tmp, out)  # 原子写，防 timeout 留半截缓存
     return out
 
 
