@@ -154,39 +154,42 @@ def install(G):
             if t < self.T_CLOSE: return 1.0
             return 1 - eio((t - self.T_CLOSE) / 0.07)
         def _beads(self, fr, t, ax, ay, s):
-            """12 串玉珠（屏幕空间画）：珠径 ≈5px，冷银逆光勾边，月光下闪 1–2 点"""
+            """12 串玉珠（屏幕空间画）：小珠密串；逆光下是暗剪影，背后越亮（月面）勾边越亮；月光下闪 1–2 点"""
             S2 = lambda px, py: (ax + (px - self.ANC[0] * self.SW) * s, ay + (py - self.ANC[1] * self.SH_) * s)
             op = self._open(t)
             Lb = np.zeros((H, W), np.float32); Lr = np.zeros((H, W), np.float32); Lg = np.zeros((H, W), np.float32)
-            rr = max(2.0, 11.5 * s)
-            nb = 13; step = 44.0
+            rr = max(2.0, 10.5 * s)
+            nb = 16; step = 35.0
             glint = []
             for i, x0 in enumerate(self.sx):
-                sway = 7.0 * math.sin(t * 2.3 + i * 0.9) + 4.0 * math.sin(t * 3.7 + i * 1.7)
+                sway = 6.0 * math.sin(t * 2.3 + i * 0.9) + 3.0 * math.sin(t * 3.7 + i * 1.7)
                 part = 0.0
-                if i == self.kL: part = -62.0 * op
-                elif i == self.kL + 1: part = 30.0 * op
-                elif i == self.kL - 1: part = -18.0 * op
-                pts = []
-                for j in range(nb):
-                    yy = self.BOARD_Y + 26 + j * step
-                    f = (yy - self.BOARD_Y) / (nb * step)
-                    pts.append(S2(x0 + (sway + part) * f ** 0.9, yy))
-                P = np.array(pts)
+                if i == self.kL: part = -64.0 * op
+                elif i == self.kL + 1: part = 34.0 * op
+                elif i == self.kL - 1: part = -20.0 * op
                 top = S2(x0, self.BOARD_Y)
-                cv2.line(Lb, (int(top[0] * 4), int(top[1] * 4)), (int(P[-1][0] * 4), int(P[-1][1] * 4)), 0.8, 1, cv2.LINE_AA, 2)
-                for j, (px, py) in enumerate(P):
-                    cv2.circle(Lb, (int(px * 4), int(py * 4)), int(rr * 4), 1.0, -1, cv2.LINE_AA, 2)
-                    cv2.ellipse(Lr, (int(px * 4), int((py - rr * 0.35) * 4)), (int(rr * 4), int(rr * 0.75 * 4)), 0, 200, 340, 1.0, 3, cv2.LINE_AA, 2)
-                    ph = math.sin(t * 9.0 + i * 2.1 + j * 1.3)
-                    if ph > 0.985: glint.append((px - rr * 0.3, py - rr * 0.4, (ph - 0.985) / 0.015))
+                prev = top
+                for j in range(nb):
+                    yy = self.BOARD_Y + 22 + j * step
+                    f = (yy - self.BOARD_Y) / (nb * step)
+                    px, py = S2(x0 + (sway + part) * f ** 0.9, yy)
+                    cv2.line(Lb, (int(prev[0] * 4), int(prev[1] * 4)), (int(px * 4), int(py * 4)), 0.7, 1, cv2.LINE_AA, 2)
+                    r_ = rr * (0.85 + 0.3 * ((i * 7 + j * 3) % 5) / 4)
+                    cv2.circle(Lb, (int(px * 4), int(py * 4)), int(r_ * 4), 1.0, -1, cv2.LINE_AA, 2)
+                    cv2.circle(Lr, (int(px * 4), int(py * 4)), int(r_ * 4), 1.0, 2, cv2.LINE_AA, 2)
+                    prev = (px, py)
+                    ph = math.sin(t * 7.0 + i * 2.1 + j * 1.3)
+                    if ph > 0.992 and j < 5 and abs(i - self.kL - 1.5) > 3: glint.append((px - r_ * 0.35, py - r_ * 0.4, (ph - 0.992) / 0.008))
+            glint.sort(key=lambda g: -g[2])
             for gx, gy, g in glint[:2]:                                    # 月光点：同屏最多 2 粒
                 cv2.circle(Lg, (int(gx), int(gy)), 1, float(g), -1, cv2.LINE_AA)
-            Lb = cv2.GaussianBlur(Lb, (0, 0), 0.6)
-            fr = fr * (1 - 0.92 * Lb[..., None]) + Lb[..., None] * np.array([0.020, 0.032, 0.028], np.float32)
-            fr = fr + cv2.GaussianBlur(Lr, (0, 0), 0.7)[..., None] * np.array([0.55, 0.62, 0.72], np.float32) * 0.55
+            back = cv2.GaussianBlur(fr.mean(-1), (0, 0), 6)                # 珠子背后的亮度：月面前 = 剪影 + 亮勾边
+            Lb = cv2.GaussianBlur(Lb, (0, 0), 0.5)
+            fr = fr * (1 - 0.9 * Lb[..., None]) + Lb[..., None] * np.array([0.018, 0.026, 0.024], np.float32)
+            rim = cv2.GaussianBlur(Lr, (0, 0), 0.6) * np.clip(Lb * 1.2, 0, 1) * np.clip(back * 1.6, 0.06, 1)
+            fr = fr + rim[..., None] * np.array([0.62, 0.68, 0.78], np.float32) * 0.7
             if glint:
-                fr = fr + (cv2.GaussianBlur(Lg, (0, 0), 1.0) * 6 + cv2.GaussianBlur(Lg, (0, 0), 5) * 10)[..., None] * np.array([0.85, 0.92, 1.0], np.float32)
+                fr = fr + (cv2.GaussianBlur(Lg, (0, 0), 0.9) * 5 + cv2.GaussianBlur(Lg, (0, 0), 4) * 8)[..., None] * np.array([0.85, 0.92, 1.0], np.float32)
             return fr
         def render(self, t):
             u = self.u(t)
@@ -195,7 +198,7 @@ def install(G):
             s = 0.42 * (1 + 0.02 * u)
             ax, ay = 960, 448 + cr
             S2 = lambda px, py: (ax + (px - self.ANC[0] * self.SW) * s, ay + (py - self.ANC[1] * self.SH_) * s)
-            mx, my = S2(1034, 300)
+            mx, my = S2(1034, 430)
             fr = K.paste_sprite(fr, *self.moon, mx, my, scale=0.74)     # 满月压在头后：逆光光源，冕板剪影横过月面
             x, y = K.grid()
             halo = np.exp(-((x - mx) ** 2 + (y - my) ** 2) / (2 * 380.0 ** 2)).astype(np.float32)
@@ -203,7 +206,7 @@ def install(G):
             fade = np.clip(1.0 - (y - (ay + 420)) / 360, 0.2, 1.0).astype(np.float32)   # 胸以下渐隐入云
             fr, _ = self.sp.draw(fr, t * 0.6, self.ANC, (ax, ay), s, wind_amp=3.0, breathe=0.0,
                                  grade=dict(expo=0.40, sat=0.62, tint=(0.88, 0.93, 1.07), lift=0.0, gamma=1.3),
-                                 rim=dict(col=(0.88, 0.92, 1.0), amt=3.6, dir=(0, -1)), wrap=0.9,
+                                 rim=dict(col=(0.88, 0.92, 1.0), amt=2.8, dir=(0, -1)), wrap=0.9,
                                  shade=None, alpha=0.97, extra_A=fade)
             # 冕板在眼部的投影（旒后双眼沉在暗里）；分旒那一刻左眼局部移开阴影 + 一点冷灰眼神光（不发光）
             op = self._open(t)
@@ -212,7 +215,7 @@ def install(G):
             eyeL = np.exp(-(((x - ex0) / (46 * s / 0.42)) ** 2 + ((y - ey0) / (26 * s / 0.42)) ** 2))
             fr = fr * (1 - (0.55 * band * (1 - 0.85 * op * eyeL))[..., None])
             if op > 0.01:
-                fr = fr + (np.exp(-(((x - ex0 - 3) / 2.2) ** 2 + ((y - ey0 + 2) / 1.6) ** 2)) * 0.35 * op)[..., None] * np.array([0.80, 0.85, 0.90], np.float32)
+                fr = fr + (np.exp(-(((x - ex0 - 3) / 2.2) ** 2 + ((y - ey0 + 2) / 1.6) ** 2)) * 0.14 * op)[..., None] * np.array([0.80, 0.85, 0.90], np.float32)
             fr = self._beads(fr, t, ax, ay, s)
             # 云层只在胸口以下流过（天幕感），不遮脸
             cl = cv2.resize(K.tile_crop(self.cloud, t * 40, 0, H // 4, W // 4), (W, H))
