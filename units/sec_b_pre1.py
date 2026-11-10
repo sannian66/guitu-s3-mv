@@ -178,7 +178,8 @@ class P01(Shot):
 class P02(Shot):
     T_DROP = V(45.38)
     def __init__(self):
-        self.bg = ledger(202, cols=6, size=110, x0=40, x1=1880, y0=130, y1=980)
+        # r6-B3：P02 微距纸面人名也改乱码（与 P01 同一套 GBK 误解码字，NotoSerifSC 全覆盖、无缺字方块）；B_R6_P02MOJI=0 回滚
+        self.bg = ledger(202, cols=6, size=110, x0=40, x1=1880, y0=130, y1=980, chars=_moji() if (R6 and _on('B_R6_P02MOJI')) else None)
         T.warm('写生死簿', 'serif_black', 130)
         self.P = [dict(ch=c, x=1010, y=250 + i * 170, size=130, rot=0, font='serif_black', idx=i, emph=c in '生死')
                   for i, c in enumerate('写生死簿')]
