@@ -148,7 +148,7 @@ def install(G):
         # r6 第四棒（评审 #21=6：代码冕旒被否）：冕旒 = 生图玉珠（emp_liu_a 生图前旒），F_r6d_prep_liu.py 把左眼两侧两串、右眼一串
         # 抠成图层按「冕板前沿为支点的摆」挪位，出 c0 合旒（双眼沉在旒后）→ c1/c2 风起 → c3 分旒（露画面左眼）四档精灵
         T_OPEN, T_HOLD = 63.20, 63.30                     # 63.233 / 63.267 过渡两帧，63.30 起分旒到镜尾（≥8 帧）
-        EYE_GAIN, EYE_ADD = 0.45, 0.0                     # 只一缕冷月光提眼窝，不加色、不发光
+        EYE_GAIN, EYE_ADD = 0.30, 0.0                     # 只一缕冷月光提眼窝，不加色、不发光
         def __init__(self):
             super().__init__()
             self.sps = [L(f'R6_F/emp_liu_c{k}') for k in range(4)]
