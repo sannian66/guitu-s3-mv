@@ -228,6 +228,7 @@ class V01(Shot):
     BELL = (1300, 560)
     HIT_X = 80 if R5 else 60          # 第五轮 #29：撞木头（底板 x≈951）真的顶到钟沿（x≈1030）——原 60 差 ~20px 撞空
     TIP = (951.0, 658.0)              # 撞木头在底板（/1.14）中的位置（实测）
+    if R6: HIT_X = 96                 # r6 #29：实测钟沿逆光亮边在底板 x≈1164（/1.14≈1021），钟体暗部从 ≈1200 起——撞木头要压过亮边贴进暗部，才读成「顶上了」
     def __init__(self):
         self.P = _plate('v01_bell', 1.14)
         h, w = self.P.shape[:2]
@@ -361,7 +362,7 @@ class V01(Shot):
             for k in range(3):
                 rr = 90 + 1500 * (ring_t - 0.10 * k) ** 0.8 if ring_t > 0.10 * k else -1
                 if rr > 0:
-                    fr, edge = ring_warp(fr, hit if k == 0 else bell, rr, 30 + 10 * k, 30 * hk, sy=0.85)
+                    fr, edge = ring_warp(fr, hit if k == 0 else bell, rr, 30 + 10 * k, (11 if R6 else 30) * hk, sy=0.85)   # r6：声波折射减弱，梁上吊绳不再被扭成钩
                     fr = fr + edge[..., None] * np.array([0.80, 0.82, 0.86], np.float32) * 0.16 * hk
             # 撞点：冷白冲击核 + 放射铜屑（2–3 帧）
             d = np.sqrt((x - hit[0]) ** 2 + ((y - hit[1]) * 1.3) ** 2)
