@@ -432,6 +432,7 @@ class E34n:   # ELS：日在左、人在右 1/3，头不压日面；写实背影
         self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]
 
     def render(self, t):
+        if R6B: return _els_r6b(self, t)
         u = self.u(t)
         fr = self.sky.copy()
         sun = (820, 690 - 40 * u)
@@ -446,6 +447,129 @@ class E34n:   # ELS：日在左、人在右 1/3，头不压日面；写实背影
         fr, info = M.put(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), h=330 - 24 * u, rim=GOLDW, rim_amt=4.0, rim_dir=(-0.9, -0.35),
                          grade=G_BACK, wind=6)
         return fr * (1 + 0.07 * beat_pulse(t, HITS34)) if R6FIX else fr
+
+    def credits(self, fr, t):                                                  # r6b：后面接 LS（同一署名延续），ELS 末尾不淡出
+        if not R6B: return M.Credits.credits(self, fr, t)
+        t1 = self.t1; self.t1 = 1e9
+        try: return M.Credits.credits(self, fr, t)
+        finally: self.t1 = t1
+
+
+# ---- r6b #50/#51：ELS 人物在辉光之后合成 + 自带轮廓光；强拍 = 阶梯推镜 / 地平线逆光扬尘火星 / 7061 硬切 LS
+HITS34W = [(7047 / 30, 0.6), (7054 / 30, 0.6)]                                # 弱拍：只作用于日面与光柱
+STRONG34 = [7040 / 30, 7061 / 30, 7072 / 30]
+
+
+def step_zoom(t, steps, z0=1.0, tau=0.06):
+    """阶梯推镜：每个强拍一帧内进一级（只进不退），其余时间几乎静止。"""
+    z = z0
+    for th, dz in steps:
+        if t >= th - 1 / 30: z += dz * (1 - math.exp(-(t - th + 1 / 30) / tau))
+    return z
+
+
+def horizon_burst(fr, t, hits, y, seed, n=150, amt=1.0, x0=0, x1=W):
+    """地平线随强拍扬起一排逆光尘 + 火星（0.5s 散掉）。"""
+    L = np.zeros((H // 2, W // 2), np.float32); haze = 0.0
+    for k, th in enumerate(hits):
+        q = t - th + 1 / 30
+        if q < 0 or q > 0.6: continue
+        r = np.random.default_rng(seed + k)
+        xs = r.uniform(x0, x1, n); vy = r.uniform(120, 420, n); vx = r.uniform(-60, 60, n) + 30; sz = r.uniform(0.6, 1.8, n); y0 = y + r.normal(0, 10, n)
+        life = r.uniform(0.25, 0.6, n); dl = r.uniform(0.0, 0.08, n)                     # 起跳错开 0–2 帧，不排成一条线
+        for i in range(n):
+            qi = q - dl[i]
+            if qi < 0 or qi > life[i]: continue
+            a = (1 - qi / life[i]) ** 1.5 * min(1.0, qi / 0.03 + 0.3)
+            px = xs[i] + vx[i] * qi; py = y0[i] - vy[i] * qi + 300 * qi * qi
+            p2 = (px - vx[i] * 0.035, py + (vy[i] - 600 * qi) * 0.035)                    # 短拖尾 = 被踢起的火星
+            cv2.line(L, (int(px / 2), int(py / 2)), (int(p2[0] / 2), int(p2[1] / 2)), float(a), max(1, int(sz[i])), cv2.LINE_AA)
+        haze = max(haze, math.exp(-q / 0.18))
+    if haze <= 0: return fr
+    L = cv2.resize(cv2.GaussianBlur(L, (0, 0), 0.8), (W, H))
+    yy = np.arange(H, dtype=np.float32)[:, None]
+    band = np.exp(-((yy - y + 10) / 26) ** 2) * haze                                       # 扬起的一层尘雾（逆光被照亮）
+    return fr + (L * 1.3 + cv2.GaussianBlur(L, (0, 0), 4) * 0.8)[..., None] * np.array([1.0, 0.72, 0.38], np.float32) * amt \
+              + band[..., None] * np.array([0.30, 0.20, 0.10], np.float32) * amt
+
+
+def _person_lit(fr, t, key, at, h, sun, seed_dir=(-0.9, -0.35), rim_w=1.5, rim_amt=0.9, wind=6, grade=None):
+    """人物在辉光之后合成（贴在黑底上取出，不吃背景光包裹），再给头肩上沿 1–2px 暖白轮廓光（朝日一侧更亮）。返回 (fr, A, info)。"""
+    z, info = M.put(np.zeros((H, W, 3), np.float32), t, key, at, h=h, rim=GOLDW, rim_amt=2.0, rim_dir=seed_dir, grade=grade or G_BACK, wind=wind)
+    A = np.clip(info['A'], 0, 1)
+    fr = fr * (1 - A[..., None]) + z
+    Ab = cv2.GaussianBlur(A, (0, 0), 1.0)
+    gx = cv2.Sobel(Ab, cv2.CV_32F, 1, 0, ksize=3); gy = cv2.Sobel(Ab, cv2.CV_32F, 0, 1, ksize=3)
+    gn = np.sqrt(gx * gx + gy * gy) + 1e-6
+    yy, xx = E.grid()
+    lx, ly = sun[0] - xx, sun[1] - yy - 250                                                # 低日在左后方，光略自上
+    ln = np.sqrt(lx * lx + ly * ly) + 1e-6
+    face = np.clip((-gx * lx - gy * ly) / (gn * ln), 0, 1) ** 0.8
+    top = np.clip(-gy / gn, 0, 1)                                                           # 头顶 / 肩上沿
+    k = max(1, int(round(rim_w * 2)) | 1)
+    band = np.clip(A - cv2.erode(A, np.ones((k, k), np.uint8)), 0, 1)
+    rim = cv2.GaussianBlur(band * np.clip(0.75 * face + 0.55 * top, 0, 1), (0, 0), 0.6)
+    fr = fr + rim[..., None] * np.array([1.0, 0.90, 0.72], np.float32) * rim_amt
+    return fr, A, info
+
+
+def _tone_cap(fr, knee=0.80, top=1.0, keep=None):
+    """亮部软压：最大通道超过 knee 的部分压缩到 top 以下（控制过曝面积）。keep=(cx,cy,r)：日面本身不压，只压日晕/天空。"""
+    m = fr.max(-1, keepdims=True)
+    over = np.clip(m - knee, 0, None)
+    nm = knee + (top - knee) * (1 - np.exp(-over / (top - knee)))
+    out = fr * np.where(m > knee, nm / np.maximum(m, 1e-6), 1.0)
+    if keep is None: return out
+    yy, xx = E.grid()
+    k = np.clip((keep[2] - np.hypot(xx - keep[0], yy - keep[1])) / 4 + 0.5, 0, 1)[..., None]
+    return out * (1 - k) + fr * k
+
+
+def _els_r6b(self, t):
+    if not hasattr(self, 'sky6'):
+        self.sky6 = E.dawn_sky(1380, horizon=0.68, top=(0.20, 0.15, 0.10), mid=(0.58, 0.42, 0.25), hor=(0.95, 0.74, 0.48), cloud=0.7, sun=(640, 660))
+    u = self.u(t)
+    fr = self.sky6.copy()
+    sun = (640, 700 - 30 * u)                                                              # 日心离头 ≈550px
+    kw = beat_pulse(t, HITS34W) + beat_pulse(t, [(x, 1.0) for x in STRONG34])
+    fr = E.sun_disc(fr, sun, 92, amt=0.80 + 0.16 * kw, halo=0.6)
+    fr = fx2.god_rays(fr, sun, strength=0.42 + 0.40 * kw, length=1.1, t=t)
+    fr = E.place_layer(fr, self.rd, self.ra, z=1.0)
+    fr = horizon_burst(fr, t, STRONG34[:1], 712, 7340, n=170)
+    bob = 3 * abs(math.sin(t * 5.5))
+    fx, fy = 1200 - 24 * u, 872
+    fr = _shadow(fr, fx, fy, L=90, lean=0.9, wmax=26)
+    fr = _tone_cap(M.bloom(fr, 0.85, 0.35), 0.82, 1.04, keep=(sun[0], sun[1], 92))
+    fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 340, sun, rim_w=1.2, rim_amt=0.85)
+    fr = E.dust_motes(fr, t, 1381, n=40, amt=0.25, drift=(-18, -10))
+    z = step_zoom(t, [(7040 / 30, 0.025)]) * (1 + 0.004 * u)
+    return K.cam(fr, z, center=(fx, 640))
+
+
+class E34L:   # r6b：7061 强拍硬切 LS（人高 ≈600px），头肩轮廓、马尾在中间调的天前清楚；7072 再进一级 + 地平线扬尘
+    def __init__(self):
+        self.sky = cv2.GaussianBlur(E.dawn_sky(1392, horizon=0.70, top=(0.24, 0.17, 0.11), mid=(0.62, 0.45, 0.27), hor=(0.95, 0.72, 0.46), cloud=0.7, sun=(600, 690)), (0, 0), 3)
+        self.rd, self.ra = E.ridges(n=3, base=0.70, step=0.06, seed=1393, amp=0.04, far=0.5, near=0.03)
+        self.rd = cv2.GaussianBlur(self.rd, (0, 0), 2.5); self.ra = cv2.GaussianBlur(self.ra, (0, 0), 2.5)   # 浅景深：远山略虚
+        self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]                       # 署名④ 延续（p=1，不重新出场）
+
+    def render(self, t):
+        u = self.u(t)
+        fr = self.sky.copy()
+        sun = (600, 700 - 20 * u)
+        kw = beat_pulse(t, [(x, 1.0) for x in STRONG34[1:]])
+        fr = E.sun_disc(fr, sun, 110, amt=0.78 + 0.16 * kw, halo=0.6)
+        fr = fx2.god_rays(fr, sun, strength=0.40 + 0.40 * kw, length=1.0, t=t)
+        fr = E.place_layer(fr, self.rd, self.ra, z=1.0)
+        fr = horizon_burst(fr, t, STRONG34[1:], 760, 7350, n=200, amt=1.1)
+        bob = 4 * abs(math.sin(t * 5.5))
+        fx, fy = 1250 - 30 * u, 936
+        fr = _shadow(fr, fx, fy, L=60, lean=0.9, wmax=40, amt=0.6)
+        fr = _tone_cap(M.bloom(fr, 0.85, 0.35), 0.82, 1.04, keep=(sun[0], sun[1], 110))
+        fr, A, info = _person_lit(fr, t, 'R5_E/back_rim_a', (fx, fy - bob), 600, sun, rim_w=1.6, rim_amt=0.9)
+        fr = E.dust_motes(fr, t, 1394, n=50, amt=0.3, drift=(-22, -12))
+        z = step_zoom(t, [(7072 / 30, 0.03)]) * (1 + 0.006 * u)
+        return K.cam(fr, z, center=(fx, 600))
 
 
 class E34b:   # MS 背影上半身：日在头侧（不在头后），金边发丝在风里
@@ -642,6 +766,11 @@ def apply(mod):
     if ON['beat']:
         e34 = rep.get('E34', M.E34)
         tail = [(e34, 7037, 'S136', 'ELS')]
+        if ON['e34'] and R6B:
+            tail += [(_cls('E34L', E34L, M.Credits), 7061, 'S136L', 'LS')]
+            M.CUTS['E34L'] = ('cut', 0, 0, {})                                    # 纯硬切（不加 hard 的 +15% 冲白帧，免得切点那帧过曝 10%）；重音靠抖 + 扬尘
+            M.MOVE['E34'] = ('sine', 1.0, 1.0, 0, 0, 0, 0, 0, 0)                 # 推镜改在镜内做阶梯推（强拍才进）；保留条目让抖动生效
+            M.MOVE['E34L'] = ('sine', 1.0, 1.0, 0, 0, 0, 0, 0, 0)
         if ON['e34']:
             tail += [(_cls('E34b', E34b, M.Credits), 7088, 'S136b', 'MS'), (_cls('E34c', E34c, M.Credits), 7105, 'S136c', 'ECU'),
                      (_cls('E34d', E34d, M.Credits), 7115, 'S136d', 'CU')]
@@ -651,6 +780,7 @@ def apply(mod):
             M.MOVE['E34d'] = ('expo_out', 1.06, 1.0, 0, 0, 0, 0, 0, 0)
             M.SHAKE['E34b'] = [(7098 / 30, 3)]
             if R6FIX: M.SHAKE['E34'] = [(7040 / 30, 2), (7061 / 30, 2), (7072 / 30, 2)]          # r6 #51
+            if R6B: M.SHAKE['E34'] = [(7040 / 30, 3)]; M.SHAKE['E34L'] = [(7061 / 30, 3), (7072 / 30, 3)]
         e35 = _cls('E35', E35n, M.Shot)
         tail += [(e35, 7126, 'S137', 'ECU')]
         M.SHAKE['E35'] = [(7133 / 30, 3), (7143 / 30, 3), (7153 / 30, 7), (7160 / 30, 4), (7167 / 30, 3)]

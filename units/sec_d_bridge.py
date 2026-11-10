@@ -1434,7 +1434,7 @@ class S22_Chuang(Shot):
 
 def _shatter_layer_avoid(L, p, impact=None, n=90, seed=0, power=1.0, gravity=600.0, spin=360.0, avoid=None):
     """T.shatter_layer 同一套碎片与随机序列（seed 一致 → 其余碎片轨迹不变），只多一条：
-    直线 + 重力轨迹会穿过 avoid 矩形（脸）的碎片，把飞散方向在 ±8°…±64° 内找最近的一个绕开角度。"""
+    直线 + 重力轨迹会穿过 avoid 矩形（脸）的碎片，把飞散方向在 ±8°…±120° 内找最近的一个绕开角度（仍绕不开的由 _shatter_vol 的脸区 30% 兜底）。"""
     bx = L.box(2)
     out = T.Layer()
     if bx is None: return out
@@ -1455,19 +1455,31 @@ def _shatter_layer_avoid(L, p, impact=None, n=90, seed=0, power=1.0, gravity=600
         sp = (300 + r.uniform(0, 900)) * power * (1.2 - min(1, dist / 900) * 0.6)
         v = v + r.normal(0, 0.35, 2)
         dz = r.uniform(-0.4, 0.8)
+        au = r.uniform(-1, 1); shade = r.uniform(0.7, 1.35)          # 与 T.shatter_layer 同序取数，只是提前
         if avoid is not None:
-            rad = float(np.linalg.norm(tri - cen, axis=1).max()) * 1.4 + 10
-            ax0, ay0, ax1, ay1 = avoid[0] - rad, avoid[1] - rad, avoid[2] + rad, avoid[3] + rad
+            qx0, qy0 = np.floor(tri.min(0)).astype(int); qx1, qy1 = np.ceil(tri.max(0)).astype(int) + 1
+            qx0, qy0 = max(0, qx0), max(0, qy0); qx1, qy1 = min(W, qx1), min(H, qy1)
+            mq = np.zeros((max(1, qy1 - qy0), max(1, qx1 - qx0)), np.float32)
+            cv2.fillConvexPoly(mq, np.round((tri - [qx0, qy0]) * 4).astype(np.int32), 1.0, cv2.LINE_AA, shift=2)
+            yq, xq = np.nonzero(L.A[qy0:qy1, qx0:qx1] * mq > 0.1)       # 只按碎片上真有笔画的像素判断（不按三角形外接圆）
+            if xq.size > 160:
+                sel = np.random.default_rng(k).choice(xq.size, 160, replace=False); xq, yq = xq[sel], yq[sel]
+            ox_ = (xq + qx0 - cen[0]).astype(np.float32)[:, None]; oy_ = (yq + qy0 - cen[1]).astype(np.float32)[:, None]
+            ax0, ay0, ax1, ay1 = avoid
+            th_ = np.radians(-au * spin * es)[None, :]                       # cv2 正角 = 逆时针（y 向下）
+            sc_ = (1 + dz * es)[None, :]
+            rx_ = (ox_ * np.cos(th_) - oy_ * np.sin(th_)) * sc_; ry_ = (ox_ * np.sin(th_) + oy_ * np.cos(th_)) * sc_
             def hits(vv):
-                px = cen[0] + vv[0] * sp * es; py = cen[1] + vv[1] * sp * es + gravity * ps * ps
+                if not xq.size: return False
+                px = cen[0] + vv[0] * sp * es[None, :] + rx_
+                py = cen[1] + vv[1] * sp * es[None, :] + gravity * (ps * ps)[None, :] + ry_
                 return bool(np.any((px > ax0) & (px < ax1) & (py > ay0) & (py < ay1)))
             if hits(v):
-                for dg in (8, -8, 16, -16, 24, -24, 32, -32, 44, -44, 64, -64):
+                for dg in (8, -8, 16, -16, 24, -24, 32, -32, 44, -44, 64, -64, 90, -90, 120, -120):
                     a_ = math.radians(dg); vv = np.array([v[0] * math.cos(a_) - v[1] * math.sin(a_), v[0] * math.sin(a_) + v[1] * math.cos(a_)], np.float32)
                     if not hits(vv): v = vv; break
         tx = v[0] * sp * e; ty = v[1] * sp * e + gravity * p * p
-        ang = r.uniform(-1, 1) * spin * e; sc = 1 + dz * e
-        shade = r.uniform(0.7, 1.35)
+        ang = au * spin * e; sc = 1 + dz * e
         bx0, by0 = np.floor(tri.min(0)).astype(int); bx1, by1 = np.ceil(tri.max(0)).astype(int) + 1
         bx0, by0 = max(0, bx0), max(0, by0); bx1, by1 = min(W, bx1), min(H, by1)
         if bx1 <= bx0 or by1 <= by0: continue
