@@ -31,7 +31,7 @@ READY = True
 def _on(k, d='1'): return os.environ.get(k, d) != '0'
 def R6B_OFF(k): return k in os.environ.get('A_R6B_OFF', '').split(',') or os.environ.get('A_R6B_OFF', '') == 'all'   # r6 第二棒开关（改前对比用）
 def HG_ON(): return os.environ.get('A_R6D_HANGUANG', '') == '1'   # r6 第四棒：用户 11-10 15:28 拍板 V05/V06 画内「寒光」字全去；=1 恢复（改前对比用）
-def R6F_OFF(k): return k in os.environ.get('A_R6F_OFF', '').split(',') or os.environ.get('A_R6F_OFF', '') == 'all'   # r6 第六棒开关：slash2b（第二刀刀光压曝光）/ sf7b（#7 双头+恶徒）
+def R6F_OFF(k): return k in os.environ.get('A_R6F_OFF', '').split(',') or os.environ.get('A_R6F_OFF', '') == 'all'   # r6 第六棒开关：slash2b（第二刀刀光压曝光）/ sf7b（#7 双头+恶徒）；POLISH1：sf7c（#7 斩杀刀光起点/命中闪）/ slash2c（653/654f 星芒软肩）
 def R6E_OFF(k): return k in os.environ.get('A_R6E_OFF', '').split(',') or os.environ.get('A_R6E_OFF', '') == 'all'   # r6 第五棒开关：slash2（第二刀无字刀光）/ lycut（LY2「拦不住一道」在 V05 切点前退净）
 def R6C_OFF(k): return k in os.environ.get('A_R6C_OFF', '').split(',') or os.environ.get('A_R6C_OFF', '') == 'all'   # r6 第三棒开关（改前对比用）：sf7 / stele / …
 
@@ -1597,15 +1597,53 @@ def _sf_sha_world(t):
     fr = _sf_ground(fr, (0.30, 0.05, 0.04))
     fr = _villain_spr6(fr, t, a, (SF_OPP_X, SF_FEET + 10), 640)
     fr = _sf_contact(fr, SF_HERO_X + 10, SF_FEET)
-    if a >= 0 and not R6F_OFF('sf7b'):                                          # r6 第六棒 #7：斩杀刀光 = 从恶徒断口穿回鬼屠刀尖的一道细刀弧（画在人物后，被人物遮挡），不再是独立白柱
+    sf7c = a >= 0 and not R6F_OFF('sf7b') and not R6F_OFF('sf7c')
+    if a >= 0 and not R6F_OFF('sf7b') and R6F_OFF('sf7c'):                      # r6 第六棒 #7：斩杀刀光 = 从恶徒断口穿回鬼屠刀尖的一道细刀弧（画在人物后，被人物遮挡），不再是独立白柱
         q = clamp01(a / 0.09); fd = math.exp(-max(0.0, a - 0.09) / 0.16)
         if fd > 0.03:
             P0 = (1560.0, 702.0); P1 = SF_TIP; Pe = (P0[0] + (P1[0] - P0[0]) * eout(q), P0[1] + (P1[1] - P0[1]) * eout(q))
             fr = R5.blade_arc(fr, SF_HILT, P0, Pe, depth=0.03, width=0.07, amt=1.7 * fd, col=(1.0, 0.86, 0.80))
     fr, info = A.place(fr, t, S('S014/slash_diag'), (SF_HERO_X, SF_FEET), h=640, rim=REDR, rim_amt=3.0, wind=10, grade=dict(expo=0.85, sat=0.6))
+    if sf7c: fr = _sf_strike7c(fr, a)
     if a >= 0 and R6F_OFF('sf7b'):
         fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
         fr = K.sparks(fr, t, 31, (1200, 620), n=60, life=0.6, speed=(200, 800), dirc=(1, -0.4), spread=1.0, grav=1200, area=(60, 60), amt=0.8, t0=ts, burst=True)
+    return fr
+
+
+SF_HIT = (1215.0, 575.0)                          # r6 POLISH1：命中点 = 刀弧尾端落在恶徒断口（腰）处的屏幕位置
+SF_FLASH_CAP = 0.74
+SF_GRIP = (600.0, 553.0)                          # 鬼屠右手握刀处偏刀身一点（护手 SF_HILT 沿刀身 9%）
+def _sf_strike7c(fr, a):
+    """r6 POLISH1（REVIEW_A_r6e #7-③ 建议）：斩杀刀光起点从袍摆下沿挪到鬼屠右手/刀身。
+    · 刀弧画在人物前：刀尖轨迹从恶徒断口（尾，淡）沿一条微微上拱的弧回到鬼屠右手握刀处（前缘，最亮）= 「这一刀是他挥出来的」；
+    · 刀身同帧一线冷白刃光（护手→刀尖），把刀弧前缘接到刀上；
+    · 命中点 902/903f 两帧冷白闪（峰值软限到成片 ≤235），之后 τ0.12s 衰减。开关 A_R6F_OFF=sf7c 回第六棒。"""
+    fd = 1.0 if a < 0.05 else math.exp(-(a - 0.05) / 0.12)
+    if fd < 0.03: return fr
+    fr = R5.blade_arc(fr, (900.0, 330.0), SF_HIT, SF_GRIP, depth=-0.10, width=0.09, amt=1.25 * fd, col=(0.86, 0.92, 1.0))
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    # 刀身刃光：护手 → 刀尖细线（σ1.2 芯 + σ7 晕），尖端收细
+    hx, hy = SF_HILT; tx, ty = SF_TIP; vx, vy = tx - hx, ty - hy; Lb = math.hypot(vx, vy)
+    s_ = np.clip(((xx - hx) * vx + (yy - hy) * vy) / (Lb * Lb), 0, 1)
+    d = np.hypot(xx - (hx + s_ * vx), yy - (hy + s_ * vy))
+    tp = np.clip(s_ / 0.08, 0, 1) * (1 - 0.5 * s_)
+    edge = (np.exp(-(d / 1.2) ** 2) * 0.55 + np.exp(-(d / 7) ** 2) * 0.12) * tp
+    fr = fr + edge[..., None] * np.array([0.85, 0.92, 1.0], np.float32) * fd
+    # 命中冷白闪：只 2 帧（a<0.05 → 902/903f），中心 = 刀弧尾端落在恶徒断口处；沿刀弧方向拉长的冷白芯 + 宽冷晕
+    if a < 0.05:
+        k = 1.0 if a < 0.02 else 0.55
+        dx_, dy_ = xx - SF_HIT[0], yy - SF_HIT[1]
+        th = math.atan2(SF_HIT[1] - SF_GRIP[1], SF_HIT[0] - SF_GRIP[0]); c_, s2 = math.cos(th), math.sin(th)
+        u_, v_ = dx_ * c_ + dy_ * s2, -dx_ * s2 + dy_ * c_
+        g = (np.exp(-(u_ / 70.0) ** 2 - (v_ / 9.0) ** 2) * 0.50 + np.exp(-(dx_ ** 2 + dy_ ** 2) / (2 * 90.0 ** 2)) * 0.16
+             + np.exp(-(dx_ ** 2 + dy_ ** 2) / (2 * 300.0 ** 2)) * 0.07) * k
+        add = g[..., None] * np.array([0.88, 0.94, 1.0], np.float32)
+        out = fr + add
+        cap = SF_FLASH_CAP                                            # 软限：闪光区不顶到高光肩（成片 ≤235）
+        m = np.clip(g / 0.04, 0, 1)[..., None]
+        lim = np.where(out > cap, cap + (1 - np.exp(-(out - cap) / 0.06)) * 0.06, out)
+        fr = out * (1 - m) + lim * m
     return fr
 
 
