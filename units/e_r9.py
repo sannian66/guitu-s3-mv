@@ -29,6 +29,7 @@ def _on(k, d='1'): return os.environ.get(k, d) != '0'
 
 ON = dict(wind=_on('E_R5_WIND'), text=_on('E_R5_TEXT'), mark=_on('E_R5_MARK'), e19=_on('E_R5_E19'), e22=_on('E_R5_E22'),
           e23=_on('E_R5_E23'), e25=_on('E_R5_E25'), e34=_on('E_R5_E34'), beat=_on('E_R5_BEAT'), notitle=_on('E_R5_NOTITLE', '0'))
+KEEPTXT = _on('E_R6_KEEPTXT')   # r6 #55：镜内横排/刻/写/印歌词字保留（'0' 回到 r5 #46 全去）
 M = None
 
 
@@ -484,7 +485,20 @@ def apply(mod):
     if ON['wind']: _clamp_wind()
     if ON['mark']: _install_glyph()
 
-    if ON['text']:
+    if ON['text'] and KEEPTXT:
+        # r6 #55（2026-11-10 13:01 用户：「镜里那些横排或刻、写、印出来的歌词字，保留」）——晚于 #46，覆盖其「其余到结束文字全去」：
+        # 横排大字 / 刀上刻字 / 朱印 / 血书 全部恢复；只去竖排（E06 若规则是、E08 伪装竖叠、E11 定/规 竖叠）与「判」（E21）。
+        for nm in ('E06', 'E08', 'E11'):
+            getattr(M, nm).text = _nil_text
+        t21 = M.E21.text
+
+        def text21(self, fr, t):                                            # 「判」照 D 段后令继续去，只留「我」
+            r0 = R3.rub_text
+            R3.rub_text = lambda fr_, items, *a, **k: r0(fr_, [it for it in items if it[0] != '判'], *a, **k)
+            try: return t21(self, fr, t)
+            finally: R3.rub_text = r0
+        M.E21.text = text21
+    elif ON['text']:
         for nm in ('E01', 'E02', 'E03', 'E04', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14T', 'E19', 'E20', 'E21', 'E22', 'E23', 'E24', 'E25', 'E26'):
             getattr(M, nm).text = _nil_text
         _wrap_init(M.E01, lambda s: setattr(s.B, 'engrave', lambda col, *a, **k: col))
