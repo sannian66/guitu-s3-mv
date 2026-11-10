@@ -40,3 +40,4 @@
 - 疑似游离进度：分支 `feat/quality-pass`（11-10 07:07）有 10 个提交不在 main（冻版母版、#23 跳斩新精灵、#27 剑光、副歌一旧字幕层叠字根因、19 张绿幕重抠精灵、字幕去底色、寒光巨字去掉、铜牌去框、黑白红试色）。要逐条核对 main 是否已等效修过，没有的要移植（不整支合并）。`compare/main-baseline` 只有一份对比版简报，无代码。
 - 同步保底：post-commit 推送（core.hooksPath=tools/hooks）✅；3 分钟 autosync 循环 ✅ 15:08；30 分钟定时任务（5415161d）保留 ✅；Wentoken 生图 Key 已由代理注入（api.wentoken.si /v1/models 200）。
 - 沙箱依赖重装中（numpy/cv2 丢失）。
+- 15:12 依赖重装完成（rf_sb.sh 出帧 OK）。派出：r6-A3（#7 #9 #10 #12 + 复核 #3/片名层）、r6-F4（#21 生图冕旒、#22、#28、横排句、复核 #23）、r6-DE4（D #45/192.3 复核，E #50 #51 E26，229.0 定种子）、audit-qp（feat/quality-pass 10 个游离提交逐条审计 → AUDIT_quality_pass.md）。B（8 条已提交待交付/评审，#32 105.9 断碑硬边）与 C（#41 #42 C39 左半幅）等渲染空位。
