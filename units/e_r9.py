@@ -692,6 +692,47 @@ def _guard_frames():
     M._Sec.frame_f = frame_f
 
 
+# ------------------------------------------------------------------ r6b：3:40.6 E26 地平线白带 / 3:41.3 E27a 眼间光晕
+def _e26_render(self, t):
+    """评审 REVIEW_E_r6 其他瑕疵 1：日出核心 ≤240、白带厚度减半（地平线细线 σ2→σ1.5、光带 σ24→σ12，日面/光柱减弱，亮部软压）。"""
+    u = self.u(t)
+    hy = 600
+    if not hasattr(self, 'sky6'):
+        yv = np.arange(H, dtype=np.float32)[:, None, None]
+        att = 1 - 0.30 * np.exp(-((yv - hy) / 70) ** 2)                      # 天光在地平线附近那条最亮的带压暗三成 → 白带变薄
+        self.sky6 = self.sky * att
+    fr = self.sky6.copy()
+    sun = (960, hy + 90 - 170 * eout(u, 2))
+    fr = E.sun_disc(fr, sun, 110, amt=0.85)
+    fr = fx2.god_rays(fr, sun, strength=0.5, length=1.0, t=t)
+    fr, z = self.g.render(fr, hy, f=900, camh=1.0, dz=-6 * u, line=1.0, fog=(1.0, 0.8, 0.5))
+    yy = np.arange(H, dtype=np.float32)[:, None, None]
+    fr = fr + np.exp(-((yy - hy) / 1.5) ** 2) * GOLDW * 0.9 + np.exp(-((yy - hy) / 12) ** 2) * GOLD * 0.35
+    fr = RS.fx_embers(fr, t, 1312, amt=0.6, n=40)
+    fr = M.bloom(fr, 0.85, 0.35)
+    return _tone_cap(fr, 0.78, 0.94)
+
+
+def _e26_text_init(s):
+    """「正道沧桑」整组下移 60px（y 250→310），推镜起幅 1.25 时字顶离上黑边 ≥40px。"""
+    s.l = LyrO(M.row('正道沧桑', [M.CT(55, 7), M.CT(55, 8), M.CT(55, 9), M.CT(55, 10)], 960, 310, size=170, gold='正道沧桑', track=0.22, font='serif_black'),
+               None, seed=210, glow=0.3, outline=7, shadow=0.95, plate_amt=0.45)
+
+
+def _e27a_render(self, t):
+    """评审 其他瑕疵/待问 4：眼部 ECU 的横向光晕不再横穿两眼连线——移到鼻梁下方一侧（y 560→700，只扫到画面中线左侧为止），核心 ≤235。"""
+    u = self.u(t)
+    fr = np.zeros((H, W, 3), np.float32) + np.array([0.03, 0.01, 0.01], np.float32)
+    fr, info = M.put(fr, t, 'S125/stare|crop=0.30,0.31,0.70,0.51', (960, 540), w=2500 * (1 + 0.12 * eout(u)), anc=(0.5, 0.5),
+                     rim=(1.0, 0.35, 0.2), rim_amt=2.5, rim_dir=(1.0, 0.0), wind=4,
+                     grade=dict(expo=0.85, sat=0.55, tint=(1.12, 0.92, 0.86), lift=0.0, gamma=1.15))
+    yy, xx = E.grid()
+    fr = fr * (0.35 + 0.8 * np.exp(-((yy - 560) / 260) ** 2))[..., None]
+    sx = 260 + 520 * eio(min(1.0, u * 1.4))
+    fr = E.flare_streak(fr, (sx, 700), amt=0.32, angle=0, length=0.7, col=(1.0, 0.5, 0.3))
+    return _tone_cap(M.bloom(fr, 0.8, 0.3), 0.80, 0.92)
+
+
 # ================================================================== 挂载
 def _cls(name, body, base):
     c = type(name, (base,), {k: v for k, v in body.__dict__.items() if not k.startswith('__') or k == '__init__'})
@@ -786,7 +827,10 @@ def apply(mod):
         M.SHAKE['E35'] = [(7133 / 30, 3), (7143 / 30, 3), (7153 / 30, 7), (7160 / 30, 4), (7167 / 30, 3)]
         rep['E35'] = e35
         shots = [s for s in shots if s[1] < 7037] + tail + [s for s in shots if s[1] >= 7174]
-    if R6B: _guard_frames()
+    if R6B:
+        _guard_frames()
+        M.E26.render = _e26_render; M.E27a.render = _e27a_render
+        if KEEPTXT or not ON['text']: _wrap_init(M.E26, _e26_text_init)
     for k, c in rep.items(): setattr(M, k, c)                               # E18/E36 按全局名取 E16/E17/E35
     M.SHOTS[:] = shots
     M.IDS[:] = [s[0].__name__ for s in shots]
