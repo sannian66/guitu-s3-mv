@@ -627,9 +627,9 @@ def fx_drip(g, ch, x, y, z, col, tau, kw, S, ko):
     if kw.get('melt') and q < 1.2:                                   # 熔化：字下半段微微下坠变形
         import cv2 as _c
         Gs = g.shape[0]; yy = np.arange(Gs, dtype=np.float32)
-        sag = 3.0 * _eo(q / 0.8) * np.clip((yy - Gs * 0.45) / (Gs * 0.55), 0, 1)
+        sag = 3.0 * float(_eo(q / 0.8)) * np.clip((yy - Gs * 0.45) / (Gs * 0.55), 0, 1)
         mx = np.tile(np.arange(Gs, dtype=np.float32)[None, :], (Gs, 1)); my = np.tile((yy - sag)[:, None], (1, Gs))
-        g = _c.remap(g, mx, my, _c.INTER_LINEAR)
+        g = _c.remap(g, mx.astype(np.float32), my.astype(np.float32), _c.INTER_LINEAR)
         col = tuple(np.array(col) * (1 - 0.6 * _eo(q / 0.5)) + np.array(cc) * 0.6 * _eo(q / 0.5))
     return g, col
 
