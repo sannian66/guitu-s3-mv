@@ -23,7 +23,17 @@ def _key():
     return k
 
 
-def api(method, path, body=None, timeout=30):
+def api(method, path, body=None, timeout=30, tries=6):
+    """5xx / 非 JSON 网关页自动重试（nananobanana 偶发 502）"""
+    for i in range(tries):
+        st, raw = _api1(method, path, body, timeout)
+        if st < 500 and raw[:1] in '{[': return st, raw
+        if method == 'POST' and path.endswith('/generate') and st < 500: return st, raw
+        time.sleep(3 + 3 * i)
+    return st, raw
+
+
+def _api1(method, path, body=None, timeout=30):
     assert path.startswith('/api/skills/'), '只允许 /api/skills/*'
     h = {'Content-Type': 'application/json'}
     k = _key()
