@@ -47,6 +47,34 @@ def install(G):
 
     def white(t, t_hit, d=0.05): return pulse(t, t_hit, d) * (t >= t_hit)
 
+    def red_moon(r, gain=0.8):
+        """r6 第二棒（评审 #27 月色连续性 / #26 暗环）：沿用 S042 #26 猩红之月配色，月海纹理保留（×0.85–1.0），亮度 ×gain。
+        返回 (rgb, A_盘, 晕)：盘按 alpha 贴，血晕另行加色（不再用暗红盖一圈 → 无贴纸暗环）"""
+        rgb, A = K.moon_sprite(r)
+        lum = rgb.mean(-1, keepdims=True)
+        s_ = A.shape[0]; yy_, xx_ = np.mgrid[0:s_, 0:s_].astype(np.float32) - s_ / 2
+        dd_ = np.sqrt(xx_ ** 2 + yy_ ** 2)
+        disc = np.clip((r - dd_) / 2 + 0.5, 0, 1)
+        limb0 = np.clip(1 - (dd_ / r) ** 4 * 0.25, 0.05, 1)[..., None]
+        moon_r = np.clip((lum / limb0 - 0.76) / 0.19, 0, 1)                   # 去掉白月自带的边缘压暗，只留月海/环形山
+        det = lum - cv2.GaussianBlur(lum, (0, 0), r * 0.04)[..., None]
+        limb_r = np.clip(1 - 0.22 * (dd_ / r) ** 4, 0, 1)[..., None]
+        rgb_r = limb_r * (1 + 3.0 * det) * (np.array([0.80, 0.045, 0.17], np.float32) * (0.45 + 0.55 * moon_r) ** 1.6
+                          + np.array([0.14, 0.03, 0.04], np.float32) * moon_r ** 3) * gain
+        halo = (1 / (1 + (np.maximum(dd_ - r, 0) / (r * 0.55)) ** 2) * (1 - disc) * np.clip((s_ / 2 - dd_) / (r * 1.2), 0, 1) ** 2)
+        return rgb_r.astype(np.float32), disc.astype(np.float32), halo.astype(np.float32)
+
+    def paste_red_moon(fr, r, c, gain=0.8, glow=0.30):
+        rgb, Ad, halo = red_moon(r, gain)
+        fr = K.paste_sprite(fr, rgb, Ad, *c)
+        z = np.zeros_like(rgb)
+        return K.paste_sprite(fr, z + np.array([0.75, 0.04, 0.12], np.float32) * glow * gain, halo, *c, add=True)
+
+    def sky_redden(sky, c, rad=600, amt=0.07):
+        x, y = K.grid(); d = np.sqrt((x - c[0]) ** 2 + (y - c[1]) ** 2)
+        tint = (np.exp(-(d / rad) ** 2) * amt)[..., None] * np.array([1.0, 0.05, 0.15], np.float32)
+        return sky * np.array([1.04, 0.88, 0.88], np.float32) + tint
+
     # ---------------------------------------------------------------- S029 MCU 握刀手收紧（脸 + 拳）
     class S029Sprite(S029):
         def __init__(self):
@@ -445,8 +473,15 @@ def install(G):
         """r5 #27：去掉转一圈旋斩 + 圆环 → 蓄势（刀尖星芒）→ 一道横贯全画面的剑光 + 闪白 → 收刀定格（生图 s45_follow_a）"""
         T_GO = V(84.40)                                  # 光头起划（命中前 2 帧）
         P0, P1, BUL = (1880.0, 670.0), (40.0, 390.0), 50.0    # 剑光：右下 → 左上，略上拱，末端贴着收刀的刀身
+        MOON = (1500, 372)                               # r6 第二棒：月心下移 72px → 月顶 ≥ y200，不被 2.39 上黑边切平
         def __init__(self):
             super().__init__(); self.w1, self.w3 = L('S045/windup'), L('R5_F/s45_follow_a')
+            # r6 第二棒（评审 #27）：沿用 #26 的猩红之月（亮度 ×0.8，人物剪影仍有对比），叙事不再从红月跳回白月
+            sk = K.sky(seed=45, cloud=0.55, horizon=0.72, top=(0.03, 0.035, 0.05), bot=(0.16, 0.17, 0.2)).copy()
+            sk = sky_redden(sk, self.MOON)
+            sk = paste_red_moon(sk, 170, self.MOON)
+            far = K.mountains(W, H, 760, 120, 451, 4)
+            self.bg = over(sk, far * 0.6, (0.07, 0.075, 0.09))
             x, y = K.grid(); (x0, y0), (x1, y1) = self.P0, self.P1
             d = np.array([x1 - x0, y1 - y0]); d /= np.linalg.norm(d); self.dirv = d
             self.dist = ((x - x0) * d[1] - (y - y0) * d[0]).astype(np.float32)     # 到剑光线的有符号距离
@@ -480,7 +515,7 @@ def install(G):
         FY = 868
         WFOOT = (0.50, 1393 / 1440); FFOOT = (0.57, 1948 / 2048)          # 两张精灵的双脚中点（归一化）
         WTIP = (2410 / 2560, 579 / 1440)                                  # windup 刀尖
-        HW, HF = 557, 640                                                  # 包围盒高：两张头同大
+        HW, HF = 557, 590                                                  # 包围盒高：r6 第二棒 follow 0.92 倍（640→590），切换不再往前跳一步
         def render(self, t):
             fr = self.bg * (1 - self.gm[..., None] * 0.75)
             rim = dict(col=(0.75, 0.84, 1.0), amt=1.8, dir=(0.5, -0.8))
@@ -520,7 +555,8 @@ def install(G):
             wv = (0.45, 0.15)[nf] if 0 <= nf < 2 else 0.0
             fr = fr * (1 - wv) + wv * 1.1
             band = 1 - np.exp(-(self.dist / 20) ** 2) * (t >= self.T_HIT)                  # 雨丝沿剑光被斩开
-            fr = K.rain(fr, t, 451, n=320, amt=0.4, speed=2000 if t > 84.36 else 600, angle=6, region=band)
+            fr = K.rain(fr, t, 451, n=320, amt=0.4, speed=2000 if t > 84.36 else 600, angle=6, region=band, near=0.0)
+            fr = K.rain(fr, t, 457, n=36, amt=0.22, speed=2600 if t > 84.36 else 800, angle=6, region=band, near=0.0, length=(90, 160))   # 近层：细（≤5px）、半透
             if t >= self.T_HIT:
                 for i, s_ in enumerate((0.3, 0.55, 0.8)):
                     fr = K.sparks(fr, t, 4520 + i, self._pt(s_), n=22, life=0.45, speed=(300, 800), dirc=tuple(self.dirv), spread=1.0,
@@ -534,6 +570,8 @@ def install(G):
         BLADE = (0.312, 0.458)                            # 刀身左右缘（归一化 x），护手在 0.81
         def __init__(self):
             super().__init__(); self.sp = L('R5_F/bladeface_a')
+            bg = sky_redden(K.sky(seed=46, cloud=0.5).copy(), (1500, 330))                       # r6 第二棒：月色沿用猩红之月
+            self.bg = cv2.GaussianBlur(paste_red_moon(bg, 140, (1500, 330)), (0, 0), 10)
             x, y = K.grid(); self.x, self.y = x, y
             self.inkm = sstep(660, 580, x).astype(np.float32)        # r6：墨爆收在刀身左侧更远处，不再有墨滴溅上刀身（读作血点）
         def render(self, t):
