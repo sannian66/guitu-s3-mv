@@ -949,14 +949,14 @@ class V07(Shot):
     @staticmethod
     def carve_quan(sp0):
         """r6 #30：「权」刻在杖身上（拳头上方那段杖杆）——先把雕花磨出一块素面乌木开光（圆角竖框），再阴刻宋体「权」+ 槽里嵌暗金；
-        刻在精灵贴图里，随手/杖一起抖、一起转。屏幕位置 ≈ (738, 300)、字高 ≈ 185px（推镜后仍在安全区内）。"""
+        刻在精灵贴图里，随手/杖一起抖、一起转。屏幕位置 ≈ (735, 330)、字高 ≈ 158px（推镜后仍在安全区内）。"""
         import copy
         sp = copy.copy(sp0); F = sp0.F.copy(); A = sp0.A
         h, w = A.shape
         sc = w / 2808.0                                              # 屏幕像素 → 贴图像素（put_at 宽 2700×1.04）
         def s2t(X, Y): return (0.24 * w + (X - 820) * sc, 0.30 * h + (Y - 560) * sc)
-        cx, cy = s2t(738, 300)
-        pw, ph = 120 * sc, 150 * sc
+        cx, cy = s2t(735, 330)
+        pw, ph = 105 * sc, 125 * sc
         pm = np.zeros((h, w), np.float32)
         cv2.rectangle(pm, (int(cx - pw), int(cy - ph)), (int(cx + pw), int(cy + ph)), 1.0, -1)
         pm = cv2.GaussianBlur(pm, (0, 0), 6 * sc) * (A > 0.5)
@@ -966,8 +966,8 @@ class V07(Shot):
         F = F * (1 - pm[..., None]) + lac * pm[..., None]
         edge = np.clip(pm - cv2.erode(pm, np.ones((5, 5), np.uint8)), 0, 1)
         F = F + cv2.GaussianBlur(edge, (0, 0), 1.5)[..., None] * np.array([0.30, 0.22, 0.10], np.float32)   # 开光一圈金线
-        L = T.Layer(); T.place(L, '权', cx, cy, 185 * sc, color='white', fname='serif_black', alpha=1.0, rot=-3, texture=False)
-        Am = np.clip(L.A, 0, 1).astype(np.float32)[:h, :w]
+        L = T.Layer(); T.place(L, '权', W / 2, H / 2, 158 * sc, color='white', fname='serif_black', alpha=1.0, rot=-3, texture=False)
+        Am = cv2.warpAffine(np.clip(L.A, 0, 1).astype(np.float32), np.float32([[1, 0, cx - W / 2], [0, 1, cy - H / 2]]), (w, h))
         F = BV.engrave(F, Am, light=(0.9, -0.4), depth=4 * sc, groove=0.7, fill=(0.62, 0.44, 0.16), fill_k=0.7,
                        hl_col=(1.0, 0.85, 0.55), hl=0.6, surface=pm, glow=0.0)
         sp.F = np.clip(F, 0, None).astype(np.float32)
