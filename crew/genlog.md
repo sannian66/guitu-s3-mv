@@ -698,3 +698,19 @@
 
 ## 2026-11-10 15:27 · C 组 r6 第二棒（jobs_C_r6_b.json，1 张）
 - ✔ `c23_tools_intaglio_v2`（62s）→ `assets/gen/R6_C/c23_tools_intaglio_v2.png`（C23 三块铜牌阴刻圆规/曲尺/天平，黑底，替代 v1 绿幕溢色变紫那版）
+
+## 2026-11-10 19:56 · OpenAI 协议渠道批量生图（r7_master.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S043_master`（49s）→ `out/round7/test/S043_master.png`
+
+## 2026-11-10 19:56 · OpenAI 协议渠道批量生图（r7_S121_r7.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S121_r7`（39s）→ `out/round7/test/S121_r7.png`
+
+## 2026-11-10 19:56 · OpenAI 协议渠道批量生图（r7_S015_r7.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S015_r7`（45s）→ `out/round7/test/S015_r7.png`
+
+## 2026-11-10 19:56 · OpenAI 协议渠道批量生图（r7_S096_r7.json，1 张）
+- 渠道 `https://api.wentoken.si/v1`，模型 `gpt-image-2`（多参考图走 `/images/edits`）
+- ✔ `S096_r7`（48s）→ `out/round7/test/S096_r7.png`
