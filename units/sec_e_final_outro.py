@@ -1952,13 +1952,6 @@ if E_R5:
     e_r9.apply(sys.modules[__name__])
 
 
-if __name__ == '__main__':
-    import time
-    from PIL import Image
-    f = int(sys.argv[1]); out = sys.argv[2] if len(sys.argv) > 2 else '/tmp/e.png'
-    a = time.time(); im = frame(f, {}); print('%.2fs' % (time.time() - a))
-    Image.fromarray(im).save(out)
-
 # 第六轮 #53（2026-11-10 用户：「竖排歌词要全部去掉，因为我们改成横排了」）：R5_NOVLYR=1（默认）时本段屏幕层竖排歌词一律不画——
 # E06「若规则是」（row vertical=True）、E11「定 / 规」竖叠。默认 E_R5_TEXT=1 已把 3:13 起屏幕字全去，所以默认画面不变；
 # 这里保证单独回滚 E_R5_TEXT=0 时竖排也不回来。R5_NOVLYR=0 回滚。
@@ -1972,3 +1965,11 @@ if NOVLYR:
     def _nil_vlyr(self, fr, t): return fr
     for _nm in ('E06', 'E11'):
         globals()[_nm].text = _nil_vlyr
+
+
+if __name__ == '__main__':
+    import time
+    from PIL import Image
+    f = int(sys.argv[1]); out = sys.argv[2] if len(sys.argv) > 2 else '/tmp/e.png'
+    a = time.time(); im = frame(f, {}); print('%.2fs' % (time.time() - a))
+    Image.fromarray(im).save(out)
