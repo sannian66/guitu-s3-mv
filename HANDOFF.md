@@ -440,3 +440,6 @@ intro → army(五百重甲,寒光刀光) → pscales0(纸上天平滴血) → d
 - **第五轮评审未派**（本棒无 run_subagent）：简报 `crew/round4/B_review_brief_r5.md`，核对对象 critic_B_r4，底线 83，回退点 39af4ab。READY 仍 False。
 - 生图：tools/nb.py 仍 401（invalid_skill_key）；本棒改用 Hark generate_image（参考图需 <5MB，先缩成 jpg）。
 - 仍弱 / 未做：V02 生图底板 1408 宽，推近到 1.24 后中景略软；V17 摊掌是右手、V18 拳朝向不完全一致；P2：V20/V21 城墙、P08「天」裂缝未动。部分步骤被 autosync 循环先行提交（16:56/16:59/17:02/17:04 自动同步里含 B 组文件）。
+
+## 第八轮（11-11，当前进行）
+风格 D 定稿，路线 1（现管线 + STYLE_D=1，只换素材与调色）。S028–S030 试做已通过（f1838a1）。全部方案、提示词、素材清单与铺开步骤见 **crew/round8/PLAN_r8.md**（以它为准）。
