@@ -246,6 +246,16 @@ python3 tools/gcut_batch.py …
 4. **worktree**：当前目录 `.git` 是个文本文件，真 git 目录在 `鬼屠OP_new/.git`，`du -sh .git` 会骗人。
 5. **git**：`assets/gen` 已入库 525 张；`out/gcut/`、`out/round5/<组>/`、`out/devsnap*/` 都是中间产物，已进 `.gitignore`，别提交。
 6. **提交**：用户要求 `Co-Authored-By` 之类的署名按项目规则处理；不要 `--no-verify`。
+7. **大推送**：仓库已有 ~6GB，一次性 `git push` 传 1.8GB 会挂在
+   `RPC failed; curl 16 Error in the HTTP2 framing layer`。已设 `http.version=HTTP/1.1`、`http.postBuffer=500m`。
+   稳的做法：先推到临时分支再更新 main——
+   ```bash
+   git push origin <前一段提交>:refs/heads/tmp-hub    # 分几段推，每段小一点，失败可续
+   git push origin HEAD:refs/heads/tmp-hub
+   git push origin main                               # 对象已在服务端，这一步只是挪指针
+   git push origin --delete tmp-hub
+   ```
+   第一段推成功后对象就留在服务端了，重试不会重传。
 
 ---
 
