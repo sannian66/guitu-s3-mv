@@ -1,3 +1,5 @@
+> **11-10 22:52 CST 成片已出**：out/render_r6/guitu_s3_mv_r6.mp4 校验全过（见 crew/round6/RENDER_r6.md 末尾）。剩下只有「待你拍板」事项。
+
 > **11-10 21:30 CST**：13:02 UTC 沙箱又重启一次，libEGL 丢失 → skia 静默回退 cv2，b25–b33 作废重渲（b00–b24 是 skia 正常渲的）。tools/r6_drive.sh 已加守卫：skia 不可用先自动 apt 装，装不上拒绝开渲。
 
 > **11-10 20:04 CST 接手核对（第十二任总导演）**：新沙箱里 out/render_r6/ 不存在（.gitignore 不入库），交接书写的「底层 31/34」实际全部丢失；.pydeps 也不在。已重装依赖（arm64、2 核），底层 34 块从 0 重渲，W=2，约 2s/帧/进程，预计 2 小时。hooks、3 分钟循环、30 分钟兜底已恢复。
