@@ -2238,7 +2238,7 @@ CUTS = {
     'S30_Da': ('gold_tip', 0.1, 0.14, dict(tip=(960, 345))),
 }
 if R5D_TEXT_CUT:   # [D r5 复审 #46-4] 189.71 S27→S28 的故障撕裂（7 帧，像坏帧）改成 2 帧冷白闪硬切
-    CUTS['S28_Spin'] = ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.55))
+    CUTS['S28_Spin'] = ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.47 if R6D_B else 0.55))   # [D组 r6 第二棒] 闪白收 15%（评审 #46-d：f5693 进 S28 后亮度掉得陡）
 
 
 def seal_iris(A, B, p, center=(760, 400), ch='理', rot=-7.0):
