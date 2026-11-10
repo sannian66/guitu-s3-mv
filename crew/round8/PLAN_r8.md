@@ -81,3 +81,9 @@ Reminder — art style: high-contrast Japanese manga ink illustration; color sch
 1. 用户确认走路线 1 → 生成第五节列出的 D 风格精灵与背景 → `STYLE_D=1` 改造 S028–S030 → 渲 1779–1868 → 与现版同段对比交付。
 2. 试做通过再按段（副歌一 S027–S048 → 全片 138 镜）铺开，提示词按本文件模板逐镜写进 `jobs/r8_D_<段>.json`。
 3. 第六轮遗留 10 项待用户拍板（见项目技能）。
+
+## 路线 1 试做（11-11 05:01，已交）
+- 开关 `STYLE_D=1`（配合 SPRITE_MODE=1）：`units/chorus1_sprites.py` 新增 S028D/S029D/S030D，只换素材（assets/gen/R8_D/route1/）与调色；`chorus1.py` EXPO_ALL→1.0、S028/S029 前景余烬改灰烬；`c1kit.finish` 去冷蓝 mono 偏色。
+- S028 去掉巨字「血」，血滴改墨线描边；火星改白 + 血红。
+- 渲染：`python3 tools/r8_route1.py 1779 1869 out.mp4`（单帧 `still <f> out.png`），90 帧约 2 分钟。
+- 成果：crew/round8/S028-030_风格D_现管线.mp4、..._对比.mp4。
