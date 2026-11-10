@@ -624,8 +624,12 @@ class A08(Shot):
         dcol = (plank * (0.5 + 0.5 * self.tex))[..., None] * np.array([0.05, 0.035, 0.025], np.float32) * (1 + 2 * env)
         dcol = dcol + studs[..., None] * np.array([0.10, 0.09, 0.08], np.float32) * (1 + 3 * env)
         fr = fr * (1 - door[..., None]) + dcol * door[..., None]
-        seamL = np.exp(-((xx - (gx0 + wL)) / 4) ** 2); seamR = np.exp(-((xx - (gx1 - wL)) / 4) ** 2)
-        fr = fr + ((seamL + seamR) * (yy > 200) * (yy < TH))[..., None] * np.array([0.6, 0.7, 1.0], np.float32) * (0.8 + 3 * env)
+        if R6B_OFF('doorline'):
+            seamL = np.exp(-((xx - (gx0 + wL)) / 4) ** 2); seamR = np.exp(-((xx - (gx1 - wL)) / 4) ** 2); _sk = 1.0
+        else:                                                              # r6 第二棒 #2：门板内沿不再是贯通的亮白硬线 → 羽化 3px + 降亮 35%，上下两端渐隐（与拱券漫射统一）
+            seamL = np.exp(-((xx - (gx0 + wL)) / 7) ** 2); seamR = np.exp(-((xx - (gx1 - wL)) / 7) ** 2)
+            _sk = 0.65 * np.clip((yy - 200) / 220, 0, 1) * (0.55 + 0.45 * np.clip((TH - yy) / 120, 0, 1)) * (0.8 + 0.4 * self.tex2)
+        fr = fr + ((seamL + seamR) * _sk * (yy > 200) * (yy < TH))[..., None] * np.array([0.6, 0.7, 1.0], np.float32) * (0.8 + 3 * env)
         # 城墙 + 拱门
         wall = np.ones((H, W), np.float32)
         hole = ((((xx - 960) / 440) ** 2 + ((yy - 470) / 300) ** 2 < 1) & (yy < 470)) | ((xx > gx0) & (xx < gx1) & (yy >= 470)) | (yy >= TH)
