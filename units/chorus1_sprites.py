@@ -693,9 +693,10 @@ def install(G):
             if tr >= self.T_ANS + 1 / 30:
                 pb = 0.17 * eout((tr - self.T_ANS) / 0.2, 2)
                 m = K.ink_blot(pb, seed=46, center=(150, 950)) * self.inkm     # 墨点不溅上脸（只在刀身左侧）
+                # r6 F组第二棒（评审 #28 可选）：颗粒/飞白版试过像毛毡（见 F_r6.md 第二棒），回退形状，只把平涂橙压成朱砂墨色
                 edge = np.clip(K.blur_ds(m, 6) - m * 0.85, 0, 1)
-                fr = over(fr, m, RED * 0.22 + 0.015)
-                fr += edge[..., None] * GOLD * 1.2 * (1 - 0.5 * pb)
+                fr = over(fr, m, np.array([0.30, 0.040, 0.030], np.float32))
+                fr += edge[..., None] * np.array([0.55, 0.16, 0.06], np.float32) * (1 - 0.5 * pb)
             return fr, (3 if k > 0.5 else 0)
 
     out = {}
