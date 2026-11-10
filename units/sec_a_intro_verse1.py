@@ -1601,7 +1601,7 @@ def _sf_sha_world(t):
         q = clamp01(a / 0.09); fd = math.exp(-max(0.0, a - 0.09) / 0.16)
         if fd > 0.03:
             P0 = (1560.0, 702.0); P1 = SF_TIP; Pe = (P0[0] + (P1[0] - P0[0]) * eout(q), P0[1] + (P1[1] - P0[1]) * eout(q))
-            fr = R5.blade_arc(fr, SF_HILT, P0, Pe, depth=0.03, width=0.05, amt=1.2 * fd, col=(1.0, 0.86, 0.80))
+            fr = R5.blade_arc(fr, SF_HILT, P0, Pe, depth=0.03, width=0.07, amt=1.7 * fd, col=(1.0, 0.86, 0.80))
     fr, info = A.place(fr, t, S('S014/slash_diag'), (SF_HERO_X, SF_FEET), h=640, rim=REDR, rim_amt=3.0, wind=10, grade=dict(expo=0.85, sat=0.6))
     if a >= 0 and R6F_OFF('sf7b'):
         fr = streak(fr, 480, 1700, 300, a / 0.09, w=6, amt=1.5, ang=32, col=(1.0, 0.85, 0.8))
@@ -1645,6 +1645,23 @@ def _sf_contact(fr, x, y, rx=200):
     return fr * (1 - 0.8 * cv2.resize(sh, (W, H))[..., None])
 
 
+def _villain_clean_path():
+    """r6 第六棒：villain_fall 的 bg_matte 在头发外围留了一团不透明的浅灰原底（≈0.43 灰、低饱和、低纹理）——评审说的「灰白发边」。
+    按「浅灰 + 低饱和 + 低纹理」或「半透明 + 浅灰」把这团原底从 alpha 里抠掉，缓存成新 PNG。"""
+    out = A.CACHE + '/vf_clean_r6f.png'
+    if os.path.exists(out): return out
+    im = cv2.imread(A.bg_matte('A/villain_fall'), cv2.IMREAD_UNCHANGED).astype(np.float32) / 255
+    rgb, a = im[..., :3], im[..., 3]
+    lum = rgb.mean(-1); sat = rgb.max(-1) - rgb.min(-1)
+    m1 = cv2.GaussianBlur(lum, (0, 0), 3); sd = np.sqrt(np.clip(cv2.GaussianBlur(lum * lum, (0, 0), 3) - m1 * m1, 0, None))
+    g = np.clip((lum - 0.26) / 0.08, 0, 1) * np.clip((0.075 - sat) / 0.035, 0, 1) * np.clip((0.075 - sd) / 0.03, 0, 1)
+    g = np.maximum(g, np.clip((0.97 - a) / 0.15, 0, 1) * np.clip((lum - 0.24) / 0.08, 0, 1) * np.clip((0.09 - sat) / 0.04, 0, 1))
+    g = cv2.GaussianBlur(cv2.morphologyEx(g, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)), (0, 0), 2)
+    im[..., 3] = a * (1 - g)
+    cv2.imwrite(out, (np.clip(im, 0, 1) * 255 + 0.5).astype(np.uint8))
+    return out
+
+
 def _villain_relight(col, Al, at):
     """r6 第六棒 #7（评审：恶徒灰白发边、去色冷灰像贴上去的照片）：
     ① 去边色 decontaminate：alpha<0.97 的边带颜色用内部（alpha≥0.97）颜色向外扩散替换，抠图带进来的浅底色不再成环；
@@ -1675,7 +1692,7 @@ def _villain_spr6(fr, t, a, at, h, deg=32):
     上半沿斩线滑开后受重力坠落，下半身 0.2s 后屈膝后仰下沉，两片都沉进脚下地雾（无原地半透明淡出、无残影）。"""
     z = np.zeros((H, W, 3), np.float32)
     back = 0.0 if a < 0 else 40 * eout(a / 0.4)
-    P, info = A.place(z, t, A.bg_matte('A/villain_fall'), (at[0] + back, at[1]), h=h, anc=(0.5, 1.0), rim=REDR, rim_amt=2.6,
+    P, info = A.place(z, t, A.bg_matte('A/villain_fall') if R6F_OFF('sf7b') else _villain_clean_path(), (at[0] + back, at[1]), h=h, anc=(0.5, 1.0), rim=REDR, rim_amt=2.6,
                       rim_dir=(0.8, -0.5), grade=dict(expo=0.80, sat=0.12, tint=(1.08, 0.94, 0.90)), wind=8, rot=-6 * eout(max(0, a) / 0.5))
     Al = info['A'][..., None]
     col = P / np.maximum(Al, 1e-3)
