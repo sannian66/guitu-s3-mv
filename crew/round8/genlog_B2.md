@@ -1,7 +1,7 @@
 # 第八轮风格 D · B2 主歌二 生图记录（nananobanana RH_image2，提示词 jobs/r8_D_B2.json）
 
-合计 44 张 × 3 = **132 积分**（预算上限 170）。提交失败 0 次；弃用 4 张（见状态列）。候选原图在仓库外 `~/Downloads/gen_cands/R8_D/B2/`。
-太上皇按 SPREAD §4 不加定妆照，描述写在提示词里（jobs/r8_D_B2.json 的 EMP 段）；鬼屠定妆照同 SPREAD_r8 §4。
+合计 48 张 × 3 = **144 积分**（预算上限 170）。提交失败 0 次；弃用 4 张（见状态列）。候选原图在仓库外 `~/Downloads/gen_cands/R8_D/B2/`。
+太上皇按 SPREAD §9 带太上皇定妆照（taishanghuang_sheet，input 见 jobs/r8_D_B2.json）；鬼屠定妆照同 SPREAD_r8 §4。
 
 | 时间 | 组/名 | 模型 | 规格 | 积分 | task_id | 状态 | 文件 | 备注 |
 |---|---|---|---|---|---|---|---|---|
@@ -10,7 +10,7 @@
 | 11-11 12:24 | R8_D/B2/V07_wall | RH_image2 | 2K 16:9 | 3 | 7b0b77cf-c747-44e0-916c-044f066593c3 | ✔ 采用 | assets/gen/R8_D/B2/V07_wall.png | 纯文生图 try1 |
 | 11-11 12:25 | R8_D/B2/V20_plate | RH_image2 | 2K 16:9 | 3 | 3cefbd31-e138-4a4b-b000-18034440755b | ✘ 弃用 | （候选原图在仓库外） | 一张图里倒影中的「白」是正写；现版设计是水中倒置的「白」、V21 转 180° 后正读 → 改分层 V20_bg2 + 两面幡（「白」幡由代码倒置入水） |
 | 11-11 12:25 | R8_D/B2/V09_bg | RH_image2 | 2K 16:9 | 3 | d1dbea66-f3db-4210-b8c4-5d3d48a351ae | ✔ 采用 | assets/gen/R8_D/B2/V09_bg.png | 纯文生图 try1 |
-| 11-11 12:25 | R8_D/B2/V07_grip | RH_image2 | 2K 16:9 | 3 | 6c376be5-301a-4c87-baa3-fbd4fcc6f593 | ✔ 采用 | assets/gen/R8_D/B2/V07_grip_cut.png | 纯文生图 try1 |
+| 11-11 12:25 | R8_D/B2/V07_grip | RH_image2 | 2K 16:9 | 3 | 6c376be5-301a-4c87-baa3-fbd4fcc6f593 | ✘ 弃用 | （候选原图在仓库外） | 太上皇未带定妆照（白须 / 冠 / 龙袍，与官方设定不符）→ 太上皇定妆照返工 |
 | 11-11 12:26 | R8_D/B2/V16_sky | RH_image2 | 2K 16:9 | 3 | 055268e3-dd51-4e88-9041-c3e78f9e866c | ✔ 采用 | assets/gen/R8_D/B2/V16_sky.png | 纯文生图 try1 |
 | 11-11 12:26 | R8_D/B2/V20_stand | RH_image2 | 2K 16:9 | 3 | 7c819ca3-a536-4a56-bce5-f458981a25c6 | ✔ 采用 | assets/gen/R8_D/B2/V20_stand_cut.png | 定妆照参考 try1 |
 | 11-11 12:26 | R8_D/B2/V13_bg | RH_image2 | 2K 16:9 | 3 | 2f7c2c7d-ff49-4055-8258-537bde4233d9 | ✔ 采用 | assets/gen/R8_D/B2/V13_bg.png | 纯文生图 try1 |
@@ -31,9 +31,9 @@
 | 11-11 12:32 | R8_D/B2/V12_effigy | RH_image2 | 2K 16:9 | 3 | 227f0dec-8ddb-4f36-b3bc-682433b1b211 | ✔ 采用 | assets/gen/R8_D/B2/V12_effigy_cut.png | 纯文生图 try1 |
 | 11-11 12:32 | R8_D/B2/V18_fist | RH_image2 | 2K 16:9 | 3 | b284d65e-64ee-4476-9b06-61823477aa0a | ✔ 采用 | assets/gen/R8_D/B2/V18_fist_cut.png | 纯文生图 try1 |
 | 11-11 12:32 | R8_D/B2/V08_floor | RH_image2 | 2K 16:9 | 3 | c658a0db-a744-4325-b645-55a34852dc4e | ✔ 采用 | assets/gen/R8_D/B2/V08_floor.png | 纯文生图 try1 |
-| 11-11 12:32 | R8_D/B2/V06_face | RH_image2 | 2K 16:9 | 3 | af5535a1-a401-4042-ab87-0f1438ae4dd0 | ✔ 采用 | assets/gen/R8_D/B2/V06_face_cut.png | 纯文生图 try1 |
+| 11-11 12:32 | R8_D/B2/V06_face | RH_image2 | 2K 16:9 | 3 | af5535a1-a401-4042-ab87-0f1438ae4dd0 | ✘ 弃用 | （候选原图在仓库外） | 太上皇未带定妆照（白须 / 冠 / 龙袍，与官方设定不符）→ 太上皇定妆照返工 |
 | 11-11 12:33 | R8_D/B2/V08_staff | RH_image2 | 2K 16:9 | 3 | 1ddd69e3-d9e1-4719-940c-2d4ba16d6910 | ✔ 采用 | assets/gen/R8_D/B2/V08_staff_cut.png | 纯文生图 try1 |
-| 11-11 12:33 | R8_D/B2/V05_shadow | RH_image2 | 2K 16:9 | 3 | 3375c214-6130-4cd8-8960-eae9ca52f172 | ✔ 采用 | assets/gen/R8_D/B2/V05_shadow_cut.png | 纯文生图 try1 |
+| 11-11 12:33 | R8_D/B2/V05_shadow | RH_image2 | 2K 16:9 | 3 | 3375c214-6130-4cd8-8960-eae9ca52f172 | ✘ 弃用 | （候选原图在仓库外） | 太上皇未带定妆照（白须 / 冠 / 龙袍，与官方设定不符）→ 太上皇定妆照返工 |
 | 11-11 12:34 | R8_D/B2/V05_screen | RH_image2 | 2K 16:9 | 3 | b5aae20f-8977-4bc4-b371-05cce342e524 | ✔ 采用 | assets/gen/R8_D/B2/V05_screen.png | 纯文生图 try1 |
 | 11-11 12:34 | R8_D/B2/V04_hu | RH_image2 | 2K 16:9 | 3 | b0ba7305-913a-44a7-835e-6884c8602547 | ✔ 采用 | assets/gen/R8_D/B2/V04_hu_cut.png | 纯文生图 try1 |
 | 11-11 12:34 | R8_D/B2/V03_figs | RH_image2 | 2K 16:9 | 3 | ceef68f7-f933-493a-b782-bd47b08348ae | ✔ 采用 | assets/gen/R8_D/B2/V03_figs_cut.png | 纯文生图 try1 |
@@ -43,9 +43,13 @@
 | 11-11 12:36 | R8_D/B2/V01_ram | RH_image2 | 2K 16:9 | 3 | a1a60a2d-9d9e-4a79-bbdf-cec4afa60c00 | ✔ 采用 | assets/gen/R8_D/B2/V01_ram_cut.png | 纯文生图 try1 |
 | 11-11 12:36 | R8_D/B2/V01_bg | RH_image2 | 2K 16:9 | 3 | 1b984d7b-f4cd-45c6-8d84-b6dd436119f5 | ✔ 采用 | assets/gen/R8_D/B2/V01_bg.png | 纯文生图 try1 |
 | 11-11 12:38 | R8_D/B2/V01_bell | RH_image2 | 2K 16:9 | 3 | 81e196ae-1709-4c6d-88d8-30196ef0a922 | ✔ 采用 | assets/gen/R8_D/B2/V01_bell_cut.png | 纯文生图 try1 |
-| 11-11 13:01 | R8_D/B2/V05_shadow | RH_image2 | 2K 16:9 | 3 | 976f49be-e725-4936-b18d-4303959467e7 | ✘ 弃用 | （候选原图在仓库外） | 误用了一个来源不明的「太上皇参考图」地址重抽（SPREAD §4：太上皇不加定妆照）→ 作废，回用 try1 |
-| 11-11 13:01 | R8_D/B2/V06_face | RH_image2 | 2K 16:9 | 3 | 87185ea9-08bf-4b29-a7dd-e4fef9184147 | ✘ 弃用 | （候选原图在仓库外） | 误用了一个来源不明的「太上皇参考图」地址重抽（SPREAD §4：太上皇不加定妆照）→ 作废，回用 try1 |
-| 11-11 13:01 | R8_D/B2/V07_grip | RH_image2 | 2K 16:9 | 3 | 9b5542a2-f954-406a-9910-84f59d766f64 | ✘ 弃用 | （候选原图在仓库外） | 误用了一个来源不明的「太上皇参考图」地址重抽（SPREAD §4：太上皇不加定妆照）→ 作废，回用 try1 |
+| 11-11 13:01 | R8_D/B2/V05_shadow | RH_image2 | 2K 16:9 | 3 | 976f49be-e725-4936-b18d-4303959467e7 | ✔ 采用 | assets/gen/R8_D/B2/V05_shadow_cut.png | 定妆照参考 try2（太上皇定妆照返工） |
+| 11-11 13:01 | R8_D/B2/V06_face | RH_image2 | 2K 16:9 | 3 | 87185ea9-08bf-4b29-a7dd-e4fef9184147 | ✔ 采用 | assets/gen/R8_D/B2/V06_face_cut.png | 定妆照参考 try2（太上皇定妆照返工） |
+| 11-11 13:01 | R8_D/B2/V07_grip | RH_image2 | 2K 16:9 | 3 | 9b5542a2-f954-406a-9910-84f59d766f64 | ✔ 采用 | assets/gen/R8_D/B2/V07_grip_cut.png | 定妆照参考 try2（太上皇定妆照返工） |
 | 11-11 13:18 | R8_D/B2/V20_banner_bai | RH_image2 | 2K 16:9 | 3 | a46a5f7a-d2d6-41ea-84f4-25261fe952f8 | ✔ 采用 | assets/gen/R8_D/B2/V20_banner_bai_cut.png | 纯文生图 try1 |
 | 11-11 13:18 | R8_D/B2/V20_bg2 | RH_image2 | 2K 16:9 | 3 | d892febe-95bc-40fd-9600-ac3fe53fb452 | ✔ 采用 | assets/gen/R8_D/B2/V20_bg2.png | 纯文生图 try1 |
 | 11-11 13:18 | R8_D/B2/V20_banner_hei | RH_image2 | 2K 16:9 | 3 | 231775eb-f48d-4ab0-ae92-e84800585c28 | ✔ 采用 | assets/gen/R8_D/B2/V20_banner_hei_cut.png | 纯文生图 try1 |
+| 11-11 15:16 | R8_D/B2/V17_bg | RH_image2 | 2K 16:9 | 3 | ecd389f8-cd17-4498-887e-3954571f9fbd | ✔ 采用 | assets/gen/R8_D/B2/V17_bg.png | 纯文生图 try1 |
+| 11-11 15:17 | R8_D/B2/V19_bg | RH_image2 | 2K 16:9 | 3 | 9b70451c-70db-44f4-94d4-2dc823155a97 | ✔ 采用 | assets/gen/R8_D/B2/V19_bg.png | 纯文生图 try1 |
+| 11-11 15:17 | R8_D/B2/V22_bg | RH_image2 | 2K 16:9 | 3 | b1feb158-0db5-47be-a7d3-5519768c0df9 | ✔ 采用 | assets/gen/R8_D/B2/V22_bg.png | 纯文生图 try1 |
+| 11-11 15:19 | R8_D/B2/V15_bg | RH_image2 | 2K 16:9 | 3 | 467cb9cc-1445-47ac-afdf-35d469419ac2 | ✔ 采用 | assets/gen/R8_D/B2/V15_bg.png | 纯文生图 try1 |
