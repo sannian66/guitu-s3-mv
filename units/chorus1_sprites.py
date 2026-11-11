@@ -1062,4 +1062,7 @@ def install(G):
     if STYLE_D:
         for c, nm in ((S028D, 'S028'), (S029D, 'S029'), (S030D, 'S030'), (S035D, 'S035')):
             c.__name__ = nm; out[nm] = c
+        if os.environ.get('C1D', '1') != '0':                       # 第八轮 C1 铺开：其余 18 镜风格 D（units/chorus1_d.py）；C1D=0 回到样镜状态
+            import chorus1_d
+            out.update(chorus1_d.install(dict(G, S035Sprite=S035Sprite)))
     return out
