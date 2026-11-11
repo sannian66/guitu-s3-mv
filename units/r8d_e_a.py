@@ -138,6 +138,16 @@ def sub_layer(sp, mask):
     return m
 
 
+def flipped(sp):
+    """水平翻转副本（§P1-7 血红日去重）：F / A 同时镜像，缓存 uid 另起，不污染原精灵。"""
+    m = sub_layer(sp, 1.0)
+    m.F = np.ascontiguousarray(m.F[:, ::-1]); m.A = np.ascontiguousarray(m.A[:, ::-1])
+    m.wind_w = np.ascontiguousarray(m.wind_w[:, ::-1]); m.ring = np.ascontiguousarray(m.ring[:, ::-1])
+    m.bbox = (1.0 - sp.bbox[2], sp.bbox[1], 1.0 - sp.bbox[0], sp.bbox[3])
+    m._box = {}; m._supp = None; m._supp_for = None
+    return m
+
+
 def _wind(w):
     """SPREAD §12.3：置换只做弱的——幅度压到原来的 45%、上限 4.5px（精灵 wind_w 只在发梢 / 衣带边缘非零，脸和身体不动）。"""
     return min(4.5, 0.45 * w)
@@ -522,14 +532,14 @@ class E01(Shot):
     「血」字头起一道血珠沿刃口缓缓下淌（墨线描边）；刀尖白星芒；前景白尘。分层：天 0.25 / 日 0.5 / 刀（锁定）/ 前景尘。"""
     def __init__(self):
         self.sky = plate('EA_sky')
-        self.sun = spr('EA_sun'); self.blade = spr('EA_blade')
+        self.sun = flipped(spr('EA_sun')); self.blade = spr('EA_blade')
         self.tb = CT(48, 0)
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
         fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.12, 960 + 60 * pv * 0.25, 600 - 20 * pv * 0.25)
         fr = rays(fr, (420, 900), t, strength=0.35, length=0.8, src_r=300)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (420 + 50 * pv * 0.5, 900), 980 / 1096, wind=0, breathe=0, rot=-24, flip=True)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (420 + 50 * pv * 0.5, 900), 980 / 1096, wind=0, breathe=0, rot=-24)
         BH = 1050; foot = (1150, 1200)
         ang = -6.0 + 1.5 * u
         a, s = self.blade.fit(BH)
@@ -1429,13 +1439,13 @@ class E21(Shot):
     """白纸晨空 + 左上血红日（他仰望的方向）+ 白光柱斜下 + 仰望侧脸（生图，朝左上、白色轮廓光，马尾与发丝风吹）+ 白尘。"""
     def __init__(self):
         self.sky = plate('EA_sky', blur=4)
-        self.sun = spr('EA_sun'); self.sp = spr('EA_E21')
+        self.sun = flipped(spr('EA_sun')); self.sp = spr('EA_E21')
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
         fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.6, 1400 + 40 * pv * 0.2, 330)
         fr = rays(fr, (330, 280), t, strength=0.4, length=1.0, src_r=260)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (330 - 40 * pv * 0.4, 280), 640 / 1096, wind=0, breathe=0, rot=-61, flip=True)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (330 - 40 * pv * 0.4, 280), 640 / 1096, wind=0, breathe=0, rot=-61)
         fr, _ = put(fr, self.sp, t, 1000, (1180 + 40 * u, 1095), wind=10.0, breathe=0.006)
         fr = dust(fr, t, 1271, n=70, amt=0.4, drift=(-20, -30))
         return bloom(fr, 0.86, 0.3)
@@ -1556,10 +1566,10 @@ class E25(Shot):
             wb = 1 - sstep(780, 900, yy); bot = bot * wb + bg * (1 - wb)
             fr = np.where(yy < by, top, bot)
             # P1-5：光剑式发光管 → 一道硬边白芯（细、干笔断口）+ 极窄血红边，辉光压到最低
-            core = np.exp(-((yy[..., 0] - by) / 2.6) ** 2)
-            brk = 0.55 + 0.45 * np.clip(cv2.GaussianBlur(K.fbm(2, W // 8, 1308, base=6, octaves=3).astype(np.float32), (0, 0), 1)[0], 0, 1)
-            core = core * brk[None, :] * (1 - sstep(0.9, 1.0, np.abs(xx - 960) / 960) * 0.5)
-            edge = np.exp(-((yy[..., 0] - by) / max(5.0, gap * 0.20)) ** 2) - core
+            core = np.exp(-((yy[..., 0] - by) / 2.6) ** 2)[..., 0]          # (H,1) → (H,)
+            brk = 0.55 + 0.45 * np.clip(cv2.resize(cv2.GaussianBlur(K.fbm(2, W // 8, 1308, base=6, octaves=3).astype(np.float32), (0, 0), 1)[0], (W,), interpolation=cv2.INTER_CUBIC), 0, 1)
+            core = core[:, None] * brk[None, :] * (1 - sstep(0.90, 1.0, np.abs(np.arange(W, dtype=np.float32) - 960) / 960) * 0.5)
+            edge = (np.exp(-((yy[..., 0] - by) / max(5.0, gap * 0.20)) ** 2) - core[..., None])[..., 0]
             fr = fr * (1 - 0.55 * edge[..., None]) + np.clip(edge, 0, 1)[..., None] * RED * 0.55
             fr = fr * (1 - core[..., None] * 0.95) + core[..., None] * 1.30
             fr = speed_h(fr, 0.6 * math.exp(-q / 0.5), t, seed=1305, y0=by - 260, y1=by + 260)
@@ -1581,14 +1591,14 @@ class E26(Shot):
 
     def __init__(self):
         self.sky = plate('EA_sky')
-        self.sun = spr('EA_sun'); self.gr = spr('EA_line')
+        self.sun = flipped(spr('EA_sun')); self.gr = spr('EA_line')
 
     def render(self, t):
         u = self.u(t)
         fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.2, 1500, 650)
         sy = self.HY + 70 - 150 * eout(u, 2)
         fr = rays(fr, (960, sy), t, strength=0.5, length=1.0, src_r=150)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (960, sy), 300 / 1096, wind=0, breathe=0, rot=-112, flip=True)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (960, sy), 300 / 1096, wind=0, breathe=0, rot=-112)
         s = W / 2048 * 1.02
         fr, Ag = put_at(fr, self.gr, t, (0.5, 0.573), (960, self.HY), s * 1.04, wind=0, breathe=0)
         yy, xx = grid()
