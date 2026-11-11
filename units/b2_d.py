@@ -49,10 +49,22 @@ def view(P, cx, cy, z=1.0, rot=0.0, ox=0.0, oy=0.0):
 _SPR = {}
 
 
+def _edge_fade(A, seed=0, band=70):
+    """贴图画布边一圈不规则羽化（用户硬规则：任何图层不许露出裁切直边）：离画布边 band px 内按噪声形状渐隐"""
+    h, w = A.shape
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    d = np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy))
+    nz = cv2.resize(K.fbm(max(8, h // 32), max(8, w // 32), 9100 + seed, 3, 4), (w, h)).astype(np.float32)
+    return np.clip((d - 4) / (band * (0.5 + nz)), 0, 1) ** 1.2
+
+
 def spr(name, work_w=2048, flip=False):
     k = (name, work_w, flip)
     if k not in _SPR:
-        sp = SP.SpriteLayer(G + name + '_cut.png', work_w=work_w)
+        sp = copy.copy(SP.SpriteLayer(G + name + '_cut.png', work_w=work_w))
+        fe = _edge_fade(sp.A, len(name))
+        sp.A = (sp.A * fe).astype(np.float32); sp.ring = (sp.ring * fe).astype(np.float32); sp.wind_w = (sp.wind_w * fe).astype(np.float32)
+        SP._UID[0] += 1; sp._uid = SP._UID[0]; sp._supp = None; sp._supp_for = None; sp._box = {}
         if flip:
             sp = copy.copy(sp)
             sp.F = np.ascontiguousarray(sp.F[:, ::-1]); sp.A = np.ascontiguousarray(sp.A[:, ::-1])
@@ -121,6 +133,7 @@ class InkRain:
         self.k = r.uniform(0.45, 1.0, n)
 
     def draw(self, fr, t, amt=1.0, cam=(0.0, 0.0), avoid=None, frac=1.0, near=None):
+        """cam：相机位移（雨丝屏幕位移 = -cam × 视差）；主体屏幕位移为 s 时传 cam=(-s, …)，雨与主体同向"""
         n = int(len(self.x) * frac)
         ux, uy = np.sin(self.a[:n]), np.cos(self.a[:n])
         x = (self.x[:n] + self.v[:n] * t * ux - cam[0] * self.p[:n]) % (W * 1.3) - W * 0.15
@@ -332,7 +345,7 @@ class V02D(Shot):
         fr = self.rain.draw(fr, t, 1.0, cam=(0, -120 * e))
         # 前景檐角：视差最快、虚焦、滴水（中点为零）
         ox = 300 * (e - 0.5)
-        fr, Ae = put_at(fr, self.fg, t, (0.0, 0.0), (-220 + ox, -40), 1300, wind_amp=0, breathe=0, defocus=4.0)
+        fr, Ae = put_at(fr, self.fg, t, (0.0, 0.0), (-220 + ox, -40), 1300, wind_amp=0, breathe=0)
         dbuf = np.zeros((H, W), np.float32)
         for (a, b_, s_) in self.drip:
             x0 = -220 + ox + 120 + a * 760; y0 = 260 + a * 260
@@ -383,7 +396,7 @@ class V03D(Shot):
         self.P = plate('V03_bg', 1.12)
         r = np.random.default_rng(4903)
         self.rows = []
-        for row, (n, fy, hh, bl, mist) in enumerate(((9, 690, 200, 2.2, 0.55), (7, 800, 320, 1.0, 0.28), (5, 1010, 520, 0.0, 0.0))):
+        for row, (n, fy, hh, bl, mist) in enumerate(((9, 690, 200, 0.0, 0.55), (7, 800, 320, 0.0, 0.28), (5, 1010, 520, 0.0, 0.0))):   # 远排不虚化，只网点淡出
             for i in range(n):
                 if r.uniform() < 0.12: continue
                 x_ = -120 + (2200 / n) * (i + 0.5) + r.uniform(-0.35, 0.35) * (2200 / n) + (row % 2) * 60
@@ -406,7 +419,7 @@ class V03D(Shot):
             k = int(min(4, math.floor(bk * 4.999)))              # 姿势表：0 直立 … 4 深躬（关键姿势逐级切换）
             fr = draw_fig(fr, k, (x_ + pan * par[row], fy), hh * (1 - 0.04 * k), rot=tj + 0.8 * math.sin(t * 2 + x_),
                           blur=bl, tone=((0.82, 0.82, 0.82), mist) if mist else None)
-        fr = self.rain.draw(fr, t, 1.0, cam=(pan, 0))
+        fr = self.rain.draw(fr, t, 1.0, cam=(-pan, 0))
         return cam(fr, 1.02 + 0.02 * e, 0, 0, 0.6 * e), 0
 
 
@@ -417,7 +430,7 @@ class V04D(Shot):
 
     def __init__(self):
         self.sp = spr('V04_hu')
-        self.bg = plate('V03_bg', 1.0, 0.55, blur=8)
+        self.bg = view(plate('V03_bg', 1.4, 0.95), 1344, 520)          # 同场景换机位：取宫门一角放大，不虚化
         self.rain = InkRain(4913, n=500, angle=6)
         x, y = K.grid(); self.x, self.y = x, y
         self.cx = [960 + (c / 2048 - 0.5) * self.WPX for c in self.TAB]
@@ -460,24 +473,24 @@ class V05D(Shot):
         for i in (0, 2, 4, 1, 3):
             xx = 80 + i * 440 + (i % 2) * 40
             fr = draw_fig(fr, (i % 2), (xx, 1080 + 340 + sink + 40 * (i % 3)), 1050 + 60 * (i % 2), rot=2 * math.sin(t * 1.5 + i),
-                          flip=(i % 2 == 0), blur=6, tone=((0.01, 0.01, 0.01), 0.92))
+                          flip=(i % 2 == 0), blur=0.0, tone=((0.01, 0.01, 0.01), 0.92))
         return cam(fr, 1.0 + 0.07 * e, 0, -30 * e), 0
 
 
 class V06D(Shot):
     """V06 屏风后真相：太上皇半张脸被烛光从下照亮（影 → 脸匹配剪辑），冷笑时下巴微抬、慢推"""
-    FACE = (1001 / 2048, 463 / 1152)
+    FACE = (1396 / 2048, 520 / 1152)      # 太上皇定妆照版（V06_face：脸在源图右侧，手搭在左侧）
 
     def __init__(self):
         self.sp = spr('V06_face')
-        self.bg = plate('V05_screen', 1.0, 0.30, blur=10)
+        self.bg = view(plate('V05_screen', 1.6, 0.45), 1100, 560)        # 同一扇屏风的近景（不虚化，压暗）
         x, y = K.grid(); self.x, self.y = x, y
 
     def render(self, t):
         u = self.u(t); e = eio(u); x, y = self.x, self.y
         fl = 0.88 + 0.12 * math.sin(t * 19) * math.sin(t * 6.1)
         fr = self.bg + np.exp(-(((x - 960) / 600) ** 2 + ((y - 1150) / 380) ** 2))[..., None] * RED * 0.35 * fl
-        fr, _ = put_at(fr, self.sp, t, self.FACE, (930 - 36 * e, 400 - 22 * e), 2050 * (1 + 0.03 * e), rot=-2.2 * e, wind_amp=2, breathe=0.004)
+        fr, _ = put_at(fr, self.sp, t, self.FACE, (1180 - 36 * e, 430 - 22 * e), 2000 * (1 + 0.03 * e), rot=-2.2 * e, wind_amp=3, breathe=0.004)
         sway = 90 * math.sin(t * 7.3) + 40 * math.sin(t * 13.1)
         fr = fr * (0.62 + 0.45 * sstep(120, 760, y))[..., None]
         fr = fr * (1 + 0.18 * np.exp(-(((x - 930 - sway) / 380) ** 2 + ((y - 760) / 260) ** 2)))[..., None]
@@ -506,7 +519,7 @@ class V07D(Shot):
         fr = K.dust(fr, t, 5203, n=70, amt=0.45 * pq, size=(1, 3), drift=(20, -14), color=(0.95, 0.95, 0.95))
         k = eout(clamp01((t - self.t0) / 0.25), 3)
         tr = 1.6 * math.sin(t * 41) * k
-        fr, _ = put_at(fr, self.sp, t, (1058 / 2048, 0.55), (430 + tr, 600 + 0.6 * tr), 1640 * (1.0 + 0.04 * k), rot=2.5 * k, wind_amp=0, breathe=0)
+        fr, _ = put_at(fr, self.sp, t, (1057 / 2048, 502 / 1152), (470 + tr, 560 + 0.6 * tr), 1700 * (1.0 + 0.04 * k), rot=2.5 * k, wind_amp=3, breathe=0)
         fr = fr * (0.55 + 0.45 * pq)
         hk = pulse(t, V(self.T_QUAN), 0.1) * (t >= V(self.T_QUAN))
         dx, dy, dr = shake(t, 2 + 8 * hk, 11, 52)
@@ -581,6 +594,7 @@ class Abacus:
     GAP_LO = 1112 + 6           # 梁下空档起（拨上去后珠顶贴到这里）
     GAP_UP = 761                # 梁上空档止（上珠拨下来后珠底贴到这里）
     HB = 104                    # 每档珠子半宽
+    SMASH = ((5, V(98.373)), (6, V(98.373)))   # V10 重拍：「算」「够」两档上珠砸下（同一刚体，V11/V12 里保持砸下状态）
     _inst = None
 
     @classmethod
@@ -607,6 +621,7 @@ class Abacus:
             hole = np.maximum(hole, reg)
         self.hidden = self._fill(hole)
         self.cols = [self._rod(k) for k in range(9)]
+        self.beam_mask = np.zeros(A.shape, np.float32); self.beam_mask[y0:y1] = 1.0
 
     def _fill(self, hole):
         """藏字：梁面是黑漆 + 横向白丝纹，逐行用同一行无字处的像素补（每字一个取样起点），保持横纹连贯"""
@@ -689,8 +704,9 @@ class Abacus:
             # 拨珠：字头前 2 帧起 3 帧内拨上去，略过头再回弹
             q = clamp01((t - (tk - 0.067)) / 0.10)
             if q > 0:
-                self.set_beads(rgb, A, k, eout(q, 2), 0.0)
-        for k, tu in upk:                                                     # 重拍：上珠整串砸下
+                rb = 0.14 * math.sin(clamp01((t - tk - 0.033) / 0.16) * math.pi) * (t > tk + 0.033)   # 撞上梁后回弹一下再落定
+                self.set_beads(rgb, A, k, eout(q, 2) - rb, 0.0)
+        for k, tu in tuple(upk) + self.SMASH:                                 # 重拍：上珠整串砸下（V10 98.373 那一记，之后各镜保持）
             q = clamp01((t - (tu - 0.05)) / 0.06)
             if q > 0: self.set_beads(rgb, A, k, 1.0 if t >= self.tk(k) - 0.067 else 0.0, eout(q, 2))
         return rgb, A, hot
@@ -729,7 +745,7 @@ class _AbacusShot(Shot):
     def compose(self, t, drop=0.0):
         c, s, yaw, pan = self.camera(t)
         ab = self.ab
-        fr = view(self.bg, self.bg.shape[1] / 2, self.bg.shape[0] / 2, 1.0, 0, -0.3 * pan, 0)
+        fr = view(self.bg, self.bg.shape[1] / 2, self.bg.shape[0] / 2, 1.0, 0, 0.3 * pan, 0)    # 背景与主体同向、视差 0.3
         rgb, A, hot = ab.state(t, self.UPK)
         M = ab.homog(c, s, yaw, dst=(960.0, 540.0 + drop))
         Wf = cv2.warpPerspective(rgb, M, (W, H), flags=cv2.INTER_LINEAR)
@@ -739,8 +755,7 @@ class _AbacusShot(Shot):
         fr = fr * (1 - 0.35 * sh[..., None])
         fr = fr * (1 - Af) + Wf * Af
         # 出字：字周围压暗 + 白热辉光 + 血光（只在字上）
-        beam = cv2.warpPerspective(np.pad(np.ones((ab.BEAM[1] - ab.BEAM[0], ab.sw), np.float32),
-                                          ((ab.BEAM[0], ab.sh - ab.BEAM[1]), (0, 0))), M, (W, H))
+        beam = cv2.warpPerspective(ab.beam_mask, M, (W, H))
         for k in range(9):
             tk = ab.tk(k); kk = pulse(t, tk, 0.25) * (t >= tk - 0.034)
             if kk > 0.02:
@@ -750,7 +765,7 @@ class _AbacusShot(Shot):
             fr = fr + (K.blur_ds(Hf, 10) * 0.8 + Hf * 0.5)[..., None] * WHITE
             fr = fr + K.blur_ds(Hf, 40)[..., None] * RED * 0.7
         avoid = cv2.dilate(beam, np.ones((25, 25), np.uint8))
-        fr = self.rain.draw(fr, t, 1.0, cam=(pan, 0), avoid=avoid)
+        fr = self.rain.draw(fr, t, 1.0, cam=(-pan, 0), avoid=avoid)
         for k in self.KS:
             tk = ab.tk(k)
             if tk - 0.034 <= t < tk + 0.6:
@@ -767,8 +782,8 @@ class V09D(_AbacusShot):
 
     def camera(self, t):
         e = eio(self.u(t))
-        cx = 900 + 1000 * e
-        return (cx, 940.0), 0.50 + 0.04 * e, 9.0 - 3.0 * e, -500 * (e - 0.5)
+        cx = 800 + 760 * e                                                   # 跟字：牺 → 少（第五轮 #31 断句：牺牲多少 / 才算 / 够分量）
+        return (cx, 940.0), 0.50 + 0.04 * e, 9.0 - 3.0 * e, -(cx - 1180) * (0.50 + 0.04 * e)
 
     def render(self, t):
         fr, _ = self.compose(t)
@@ -780,17 +795,13 @@ class V09D(_AbacusShot):
 class V10D(_AbacusShot):
     """V10 97.50–98.43：贴近梁的中段——算、够刻出；98.373 重拍「算」「够」两档上珠一记砸下，画面震、雨珠炸开"""
     T_HIT = 98.373
-    KS = (5, 6)
+    KS = (4, 5, 6)
     SEED = 5501
-
-    def __init__(self):
-        super().__init__()
-        self.UPK = ((5, V(self.T_HIT)), (6, V(self.T_HIT)))
 
     def camera(self, t):
         e = eio(self.u(t))
-        cx = 2280 + 330 * e
-        return (cx, 900.0), 0.78 + 0.04 * e, -6.0 + 2.0 * e, -260 * (e - 0.5)
+        cx = 1950 + 300 * e                                                   # 「才算」居中
+        return (cx, 900.0), 0.78 + 0.04 * e, -6.0 + 2.0 * e, -(cx - 2100) * (0.78 + 0.04 * e)
 
     def render(self, t):
         fr, M = self.compose(t)
@@ -816,10 +827,10 @@ class V11D(_AbacusShot):
         th = V(self.T_LIANG)
         e = eio(clamp01((t - self.t0) / (th - self.t0)))
         q = eout(clamp01((t - th - 0.05) / 0.32), 3)
-        cx = 2900 + 300 * e
+        cx = 2850 + 250 * e                                                   # 「够分量」居中 → 99.0 落定后拉开见整句
         cx = cx + (1920 - cx) * q
         s = (0.72 + 0.03 * e) * (1 - q) + 0.44 * q
-        return (cx, 940.0), s, -8.0 * (1 - q) + 4.0 * q, -300 * (e - 0.5)
+        return (cx, 940.0), s, -8.0 * (1 - q) + 4.0 * q, -250 * (e - 0.5) * 0.72 * (1 - q)
 
     def render(self, t):
         th = V(self.T_LIANG)
@@ -839,7 +850,7 @@ class V11D(_AbacusShot):
 class V12D(Shot):
     def __init__(self):
         self.ab = Abacus.get()
-        self.bg = plate('V09_bg', 1.15, blur=2.0)
+        self.bg = plate('V09_bg', 1.15)
         self.F, self.A = rgba('V12_effigy')
         self.Fs, self.As = cv2.resize(self.F, (512, 288)), cv2.resize(self.A, (512, 288))
         self.rain = InkRain(5703, n=420, angle=4)
@@ -847,17 +858,17 @@ class V12D(Shot):
 
     def render(self, t):
         u = self.u(t); e = eio(u)
-        fr = view(self.bg, self.bg.shape[1] / 2, self.bg.shape[0] / 2, 1.0, 0, 0, 120 * (e - 0.5))
+        fr = view(self.bg, self.bg.shape[1] / 2, self.bg.shape[0] / 2, 1.0, 0, 0, -120 * (e - 0.5))      # 下摇：背景与算盘同向上移（视差 0.3）
         # 上方：算盘底框（虚焦）随下摇离开画面
         rgb, A, _ = self.ab.state(t)
         M = self.ab.homog((1920, 1980), 0.55, 0, dst=(960, 60 - 420 * e))
-        Wf = cv2.GaussianBlur(cv2.warpPerspective(rgb, M, (W, H)), (0, 0), 7); Af = cv2.GaussianBlur(cv2.warpPerspective(A, M, (W, H)), (0, 0), 7)
-        fr = fr * (1 - Af[..., None]) + Wf * Af[..., None]
+        Wf = cv2.warpPerspective(rgb, M, (W, H)); Af = cv2.warpPerspective(A, M, (W, H))
+        fr = fr * (1 - Af[..., None]) + (Wf * 0.55 + 0.4) * Af[..., None]           # 远处的算盘底框：网点淡出（不做景深虚化）
         for i in range(7):                                                 # 远处更多纸人在坠（灰、小、虚）
             qq = (u * 0.8 + (i * 0.37) % 1.0) % 1.0
             fx = 160 + i * 250 + 40 * math.sin(t * 2 + i)
             Mi = M_foot(512, 288, (256, 144), (fx, -100 + 1300 * qq), (150 + 30 * (i % 3)) / 288, 70 * math.sin(i * 1.7 + t * 1.5) + 150)
-            fr = paste_affine(fr, self.Fs, self.As, Mi, 0.7, 3 + 2 * (i % 3), ((0.75, 0.75, 0.75), 0.6))[0]
+            fr = paste_affine(fr, self.Fs, self.As, Mi, 0.7, 0.0, ((0.75, 0.75, 0.75), 0.6))[0]
         T_REN = V(CT(23, 4))
         for k, dt in enumerate((0.09, 0.05, 0.0)):                         # 主纸人 + 两帧残影（翻滚、越来越近）
             tt = t - dt; q = clamp01((tt - self.t0) / (T_REN - self.t0))
@@ -911,7 +922,6 @@ class V14D(Shot):
         self.sp = spr('V14_defy')
         r = np.random.default_rng(5903)
         self.back = [(r.uniform(-50, 1970), r.uniform(770, 800), r.uniform(150, 200)) for _ in range(12)]
-        self.front = [(80, 1180, 760, True), (1900, 1180, 760, False)]
         self.rain = InkRain(5905, n=560, angle=8)
         self.spl = fx2.Splashes(5906)
 
@@ -922,8 +932,8 @@ class V14D(Shot):
         push = eout(clamp01((t - tf) / 0.5), 2)
         for (bx, fy, hh) in self.back:
             away = 1 if bx > self.FOOT[0] else -1
-            fr = draw_fig(fr, 4 if push < 0.3 else 2, (bx, fy), hh, rot=14 * push * away, flip=bx < self.FOOT[0], blur=2.0,
-                          tone=((0.80, 0.80, 0.80), 0.45))
+            fr = draw_fig(fr, 4 if push < 0.3 else 2, (bx, fy), hh, rot=14 * push * away, flip=bx < self.FOOT[0], blur=0.0,
+                          tone=((0.80, 0.80, 0.80), 0.30))
         rise = eout(clamp01((t - self.t0) / 0.30), 3)
         fr, _ = put(fr, self.sp, t, 880 * (0.96 + 0.04 * rise), (self.FOOT[0], self.FOOT[1] + 170 * (1 - rise)), wind_amp=12, mblur=(0, 30 * (1 - rise)))
         if t >= tf:
@@ -934,9 +944,6 @@ class V14D(Shot):
             fr = fr * (1 - 0.6 * ring[..., None])
             fr = splash(fr, t, 5907, (self.FOOT[0], self.FOOT[1] - 10), tf, n=160, area=(260, 10), speed=(300, 1100), spread=2.6, red=0.12, life=0.6)
             fr = ink_debris(fr, t, 5908, (self.FOOT[0], self.FOOT[1] - 10), tf, n=90, area=(240, 10), speed=(300, 1000), spread=2.4, life=0.6, size=3)
-        for (fx_, fy, hh, fl) in self.front:
-            fr = draw_fig(fr, 4, (fx_ + (-40 if fl else 40) * push, fy), hh, rot=-10 * push * (-1 if fl else 1), flip=fl, blur=9,
-                          tone=((0.01, 0.01, 0.01), 0.85))
         fr = self.spl.draw(fr, t, y_far=780, y_near=1000, rate=140, amt=0.7, color=WHITE)
         fr = self.rain.draw(fr, t, 1.0)
         hk = max(pulse(t, tf, 0.12) * (t >= tf), pulse(t, tk2, 0.12) * (t >= tk2))
@@ -949,7 +956,7 @@ class V15D(Shot):
     T_BOLT = 103.987
 
     def __init__(self):
-        self.P = plate('V13_bg', 1.20)
+        self.P = plate('V15_bg', 1.15)
         self.a = spr('V15_walk'); self.b = spr('V15_look')
         self.bolt = fx2.Lightning(6003, p0=(1500, 130), p1=(1700, 700), branches=6)
         self.rain = InkRain(6004, n=620, angle=14)
@@ -959,7 +966,7 @@ class V15D(Shot):
         u = self.u(t); e = eio(u)
         tl = V(self.T_BOLT)
         env = 0.0 if t < tl - 0.02 else math.exp(-max(0, t - tl) / 0.3)
-        fr = view(self.P, self.P.shape[1] * 0.62, self.P.shape[0] * 0.48, 1.0, 0, -40 * (e - 0.5), 0)
+        fr = view(self.P, self.P.shape[1] * 0.5, self.P.shape[0] * 0.5, 1.0, 0, -40 * (e - 0.5), 0)
         fr = fr * (1 - 0.25 * env) + 0.25 * env
         if t >= tl - 0.06: fr = self.bolt.draw(fr, t, tl, intensity=1.0, color=(0.98, 0.98, 0.98))
         walk = 1120 - 90 * e; bob = 6 * abs(math.sin(t * 6.5))
@@ -969,7 +976,7 @@ class V15D(Shot):
         else:
             fr, _ = put(fr, self.b, t, 690, (walk, fy), wind_amp=11)
         fr = self.spl.draw(fr, t, y_far=830, y_near=1000, rate=160, amt=0.8, color=WHITE)
-        fr = self.rain.draw(fr, t, 1.1, cam=(80 * e, 0))
+        fr = self.rain.draw(fr, t, 1.1, cam=(40 * (e - 0.5), 0))
         if 0 <= t - tl < 1 / 30 + 1e-3:                                    # 闪电那一帧：漫画式反白
             lum = fr.mean(-1, keepdims=True)
             fr = np.clip(1.05 - lum, 0, 1) * np.ones(3, np.float32)
@@ -1027,11 +1034,13 @@ class V17D(Shot):
     PC = (965, 600)
 
     def __init__(self):
-        self.bg = plate('V13_bg', 1.0, 1.0, blur=14)
+        self.bg = plate('V17_bg', 1.0)
         self.sp = spr('V17_palm')
         F, A = rgba('V17_palm')
         l = F.mean(-1)
-        cr = np.clip((cv2.GaussianBlur(l, (0, 0), 5) - l - 0.03) * 12, 0, 1) * (A > 0.9)
+        yy, xx = np.mgrid[0:A.shape[0], 0:A.shape[1]].astype(np.float32)
+        palm = np.exp(-(((xx - 1048) / 230) ** 2 + ((yy - 568) / 170) ** 2))            # 只在掌心一块
+        cr = np.clip((cv2.GaussianBlur(l, (0, 0), 5) - l - 0.03) * 12, 0, 1) * (A > 0.9) * palm
         self.cr = cv2.GaussianBlur(cr.astype(np.float32), (0, 0), 1.2)
         self.rain = InkRain(6202, n=380, angle=6)
 
@@ -1058,7 +1067,7 @@ class V18D(Shot):
     FIST = (900, 590)
 
     def __init__(self):
-        self.bg = plate('V13_bg', 1.0, 1.0, blur=14)
+        self.bg = plate('V17_bg', 1.0)
         self.palm = spr('V17_palm'); self.fist = spr('V18_fist')
         self.rain = InkRain(6302, n=380, angle=8)
 
@@ -1087,18 +1096,18 @@ class V18D(Shot):
 class V19D(Shot):
     """V19 握刀转身：甩镜入（0.4s 落定 + 运动模糊），马尾甩出雨珠，红带飘"""
     def __init__(self):
-        self.P = plate('V13_bg', 1.25, blur=3)
+        self.P = plate('V19_bg', 1.25)
         self.sp = spr('V19_grab')
         self.rain = InkRain(6402, n=560, angle=10)
 
     def render(self, t):
         u = self.u(t)
         e = eout(clamp01(u * 3.0), 3); whip = 1 - e
-        fr = view(self.P, self.P.shape[1] * 0.35, self.P.shape[0] * 0.40, 1.0, 0, 300 * whip, 0)
+        fr = view(self.P, self.P.shape[1] * 0.5 + 150, self.P.shape[0] * 0.5, 1.0, 0, 300 * whip - 150, 0)
         if whip > 0.05: fr = K.motion_blur(fr, int(60 * whip), 0)
         fr, _ = put_at(fr, self.sp, t, (0.42, 0.85), (980 - 260 * whip, 1005), 1720, wind_amp=14, mblur=(-55 * whip, 0))
         fr = splash(fr, t, 6404, (640, 300), self.t0 + 0.05, n=40, area=(220, 160), speed=(300, 900), dirc=(-1, -0.2), spread=1.1, grav=900, red=0.0, life=0.45, size=1.0)
-        fr = self.rain.draw(fr, t, 1.0, cam=(-300 * whip, 0))
+        fr = self.rain.draw(fr, t, 1.0, cam=(-300 * whip + 150, 0))
         return cam(fr, 1.02, 0, 0, -2 * whip), 0
 
 
@@ -1110,10 +1119,11 @@ class V20D(Shot):
     PLATE_WL = 668                        # 背景板水线（源图行，2048 宽）
 
     def __init__(self):
-        P = plate('V20_bg2', 1.0)
-        s = W / 2048
-        sh = int(round(self.WL - self.PLATE_WL * s))
-        self.P = cv2.warpAffine(P, np.float32([[1, 0, 0], [0, 1, sh]]), (W, H), borderMode=cv2.BORDER_REFLECT)
+        SC = 1.25                                                     # 放大到水线上下都 ≥540px（平移后不露画布边）
+        P = plate('V20_bg2', SC)
+        s = SC * W / 2048
+        sx = -(P.shape[1] - W) / 2; sy = self.WL - self.PLATE_WL * s
+        self.P = cv2.warpAffine(P, np.float32([[1, 0, sx], [0, 1, sy]]), (W, H), borderMode=cv2.BORDER_REFLECT)
         self.st = spr('V20_stand')
         sp = copy.copy(self.st)                                    # 去掉生图自带的水洼，倒影由代码按水线镜像
         yy = np.arange(sp.h, dtype=np.float32)[:, None]
@@ -1124,10 +1134,33 @@ class V20D(Shot):
         SP._UID[0] += 1; sp._uid = SP._UID[0]; sp._supp = None; sp._box = {}
         ys, xs = np.nonzero(sp.A > 0.5); sp.bbox = (xs.min() / sp.w, ys.min() / sp.h, xs.max() / sp.w, ys.max() / sp.h)
         self.st = sp
-        self.hei = spr('V20_banner_hei'); self.bai = spr('V20_banner_bai')
+        self.hei = spr('V20_banner_hei'); self.bai = self._mirror_glyph(spr('V20_banner_bai'))
         self.rain = InkRain(6504, n=420, angle=2)
         self.r = np.random.default_rng(6505).uniform(0, 1, (34, 3))
         self.wn = K.tile(256, 6506, 6, 3)
+
+    @staticmethod
+    def _mirror_glyph(sp0):
+        """用户 11-11（V21 1:51）：「白」字要水平翻转——幡、杆不动，只把幡面上的字左右镜像（水中倒置 + 转 180° 后正读）。
+        做法：字形遮罩（幡面上的白笔画）→ 幡布按周围黑布补平 → 镜像后的字形取镜像后的原像素贴回同一位置。"""
+        sp = copy.copy(sp0)
+        F = sp.F.copy(); A = sp.A
+        h, w = A.shape
+        x0, x1, y0, y1 = 860, 1250, 180, 760                              # 字所在的幡面区域（源图 2048 宽）
+        L = F.mean(-1)
+        g = ((L > 0.6) & (A > 0.5)).astype(np.uint8); g[:, :x0] = 0; g[:, x1:] = 0; g[:y0] = 0; g[y1:] = 0
+        n, lab, st, _ = cv2.connectedComponentsWithStats(g)
+        keep = np.zeros(n, np.uint8); keep[1:] = st[1:, 4] > 400; g = keep[lab]
+        ys, xs = np.nonzero(g); cx = int(round((xs.min() + xs.max()) / 2))
+        gd = cv2.dilate(g, np.ones((9, 9), np.uint8))
+        cloth = cv2.inpaint((np.clip(F, 0, 1) * 255).astype(np.uint8), gd, 9, cv2.INPAINT_TELEA).astype(np.float32) / 255
+        M = np.float32([[-1, 0, 2 * cx], [0, 1, 0]])
+        gm = cv2.warpAffine(cv2.GaussianBlur(gd.astype(np.float32), (0, 0), 1.2), M, (w, h)) * (A > 0.5)
+        Fm = cv2.warpAffine(F, M, (w, h))
+        F2 = F * (1 - gd[..., None]) + cloth * gd[..., None]
+        sp.F = (F2 * (1 - gm[..., None]) + Fm * gm[..., None]).astype(np.float32)
+        SP._UID[0] += 1; sp._uid = SP._UID[0]; sp._supp = None; sp._box = {}
+        return sp
 
     def scene(self, t):
         x, y = K.grid()
@@ -1180,7 +1213,7 @@ class V22D(Shot):
     T_CUT = 113.34
 
     def __init__(self):
-        self.P = plate('V13_bg', 1.15)
+        self.P = plate('V22_bg', 1.10)
         self.a = spr('V22_wind'); self.b = spr('V22_slash')
         self.rain = InkRain(6603, n=560, angle=10)
 
@@ -1196,7 +1229,8 @@ class V22D(Shot):
             Fz, am = put(z, self.b, t, 820, (960 + 30 * (1 - k), 1000), wind_amp=12, mblur=(60 * (1 - k), 0))
         line_y = 470 + 0.06 * (x - 960)
         m = np.ones((H, W), np.float32) if t < tc else sstep(-6, 6, y - line_y)
-        fr = fr * (1 - m[..., None]) + _bv2().neg_grade(fr) * m[..., None]       # 颠倒的是世界：人不反相
+        ng = _bv2().neg_grade(fr) * 0.75 + 0.18                                  # 负片世界（压一档灰，不整屏死黑）
+        fr = fr * (1 - m[..., None]) + ng * m[..., None]                          # 颠倒的是世界：人不反相
         fr = fr * (1 - am[..., None]) + Fz
         fr = self.rain.draw(fr, t, 1.0)
         if t >= tc - 0.05:
@@ -1230,13 +1264,13 @@ class V23D(Shot):
             ws.append(26 * (1 - 0.5 * i / 40)); heat.append(max(0.0, 1 - i / 6))
         fr = drybrush_trail(fr, pts, ws, seed=6704, heat=heat)
         bob = 5 * abs(math.sin(t * 6.0))
-        fr, _ = put_at(fr, self.sp, t, self.TIP, (tipx, gy - bob * 0.2), 2048, wind_amp=10, rot=0.6 * math.sin(t * 3.0))
+        fr, _ = put_at(fr, self.sp, t, self.TIP, (tipx, gy - bob * 0.2), 1350, wind_amp=10, rot=0.6 * math.sin(t * 3.0))
         fr = K.sparks(fr, t, 6705, (tipx, gy - 5), n=90, life=0.5, speed=(300, 1000), dirc=(-0.6, -1), spread=0.8, grav=1300, size=1.2,
                       area=(20, 10), amt=1.0, color=(0.95, 0.95, 0.95))
         fr = K.sparks(fr, t, 6706, (tipx, gy - 5), n=40, life=0.5, speed=(300, 900), dirc=(-0.6, -1), spread=0.9, grav=1300, size=1.6,
                       area=(20, 10), amt=1.0, color=REDC)
         fr = self.fog.draw(fr, t, density=0.30, y0=620, y1=960, color=(0.92, 0.92, 0.92), speed=(60, -40))
-        fr = self.rain.draw(fr, t, 0.9, cam=(pan, 0))
+        fr = self.rain.draw(fr, t, 0.9, cam=(-pan, 0))
         hk = pulse(t, V(113.64), 0.12) * (t >= V(113.64))
         dx, dy, dr = shake(t, 4 + 12 * hk, 10, 67)
         return cam(fr, 1.04, dx, dy, dr), (3 if hk > 0.5 else 0)
@@ -1247,7 +1281,7 @@ class V24D(Shot):
     S = 1.0
 
     def __init__(self):
-        self.P = plate('V24_wide', 1.0)
+        self.P = plate('V24_wide', 1.0, 1.15)
         self.sp = spr('V25_back')
         self.fog = fx2.Fog(6804)
         self.rain = InkRain(6805, n=480, angle=10)
@@ -1266,7 +1300,7 @@ class V24D(Shot):
             pts.append((961 + 14 * (1 - f) + 6 * math.sin(yy * 0.03), yy)); ws.append(2 + 34 * f ** 1.6)
             heat.append(max(0.0, 1 - (n - i) / 5))
         fr = drybrush_trail(fr, pts, ws, seed=6806, heat=heat)
-        fr = self.fog.draw(fr, t, density=0.45, y0=60, y1=360, color=(0.92, 0.92, 0.92), speed=(30, 0))
+        fr = self.fog.draw(fr, t, density=0.55, y0=60, y1=520, color=(0.92, 0.92, 0.92), speed=(30, 0))
         fr, _ = put(fr, self.sp, t, 300, (880, 1010), wind_amp=8)
         fr = self.rain.draw(fr, t, 1.0)
         return cam(fr, 1.10 - 0.10 * e, 0, 60 - 60 * e), 0
@@ -1277,11 +1311,11 @@ class V25D(Shot):
     T_XIANG = 116.46
 
     def __init__(self):
-        self.P = plate('V25_plate', 1.10)
+        self.P = plate('V25_plate', 1.20)
         self.sp = spr('V25_back')
         self.fog = fx2.Fog(6904)
         self.rain = InkRain(6905, n=480, angle=8)
-        s = 1.10 * W / 2048
+        s = 1.20 * W / 2048
         ox = -(self.P.shape[1] - W) / 2 - 180; oy = -(self.P.shape[0] - H) / 2
         pts = [(1375, 1100), (1258, 1000), (1139, 900), (1143, 800), (1194, 700), (1194, 660)]
         self.furrow = [(px * s + ox, py * s + oy) for px, py in pts]
@@ -1307,7 +1341,7 @@ class V25D(Shot):
         fr = self.fog.draw(fr, t, density=0.40, y0=430, y1=760, color=(0.92, 0.92, 0.92))
         fr, Am = put(fr, self.sp, t, 600, (640, 960), wind_amp=10)
         fr = self.rain.draw(fr, t, 1.0)
-        end = clamp01((t - 117.33) / 0.45)
+        end = clamp01((t - 117.60) / 0.18)                                  # 段尾压暗只在最后 6 帧（接 C 段硬切）
         fr = fr * (1 - 0.7 * eio(end))
         hk = pulse(t, tx, 0.12) * (t >= tx)
         dx, dy, dr = shake(t, 10 * hk, 12, 69)

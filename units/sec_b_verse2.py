@@ -2411,13 +2411,13 @@ CUTS = {
 FG = {'V03': ('rain', 0.3), 'V07': ('ember', 0.3), 'V08': ('rain', 0.3), 'V09': ('rain', 0.3), 'V13': ('rain', 0.35),
       'V14': ('ember', 0.5), 'V15': ('rain', 0.45)}
 EXPO = {}
-if STYLE_D:                                   # 风格 D：转场去金边 / 去暖光（只剩黑白血红）；前景粒子换中性（ember → ash 白灰）；段落不再整体提亮
+if STYLE_D:                                   # 风格 D：转场去金边 / 去暖光（只剩黑白血红）；段落级前景粒子关掉；段落不再整体提亮
     _WHT = np.full(3, 0.85, np.float32)
-    CUTS['V06'] = ('match_cut', 0.0, 0.12, dict(shape='circle', center=(930, 400), radius=220, glow=np.zeros(3, np.float32)))
+    CUTS['V06'] = ('match_cut', 0.0, 0.12, dict(shape='circle', center=(1170, 440), radius=220, glow=np.zeros(3, np.float32)))   # 影 → 脸：圆心对准 D 版太上皇的脸
     CUTS['V09'] = ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 520), radius=160, glow=_WHT))
     for _k, (_n, _a, _b, _kw) in list(CUTS.items()):
         if _n == 'slash_wipe': CUTS[_k] = (_n, _a, _b, dict(_kw, gap_glow=False))      # 斩线缝光是橙色 → 关掉（斩痕由镜内干笔斩痕承担）
-    FG = {k: (('ash' if v[0] == 'ember' else v[0]), v[1]) for k, v in FG.items()}
+    FG = {}                                    # D 版每镜自带细墨雨 / 浮尘；段落级冷色前景雨 / 余烬全部关掉（避免双层雨和冷蓝偏色）
 
 
 def _bind():
