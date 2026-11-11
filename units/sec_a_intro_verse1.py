@@ -3159,6 +3159,18 @@ def frame(f, cache):
     return cache['sec'].frame(int(f))
 
 
+# 第八轮 STYLE_D：风格 D 改版钩子（r8d_a1 / r8d_a2 两个并行单元各替换自己的镜头）；STYLE_D=0 时不加载
+if os.environ.get('STYLE_D') == '1':
+    import importlib
+    for _m in ('r8d_a1', 'r8d_a2'):
+        try:
+            _mod = importlib.import_module(_m)
+        except ModuleNotFoundError as _e:
+            if _e.name != _m: raise
+            continue
+        _mod.apply(sys.modules[__name__])
+
+
 if __name__ == '__main__':
     # 自测：python3 units/sec_a_intro_verse1.py <秒> [...] → /tmp/a_<秒>.png
     from PIL import Image
