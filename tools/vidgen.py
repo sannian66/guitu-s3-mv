@@ -3,7 +3,7 @@
 用法：
   # 报价（不扣积分）
   python3 tools/vidgen.py quote <首帧.png|jpg> "<提示词>" [时长秒=4]
-  # 生成 + 后处理（12 积分/4 秒），输出可直接用
+  # 生成 + 后处理（12 积分/4 秒），输出可直接用（2560x1440 / 24fps / 2.39 黑边各 184px）
   python3 tools/vidgen.py gen <首帧> "<提示词>" <输出.mp4> [时长秒=4]
   # 只做后处理（已有原始 mp4）
   python3 tools/vidgen.py post <原始mp4> <输出.mp4>
@@ -11,7 +11,7 @@
 要点：
 - 模型 minimax-h3-metaso，模式 image2video_first（整张画面交给模型，人物和背景一起动）；2K / 16:9；
 - 该模型的参考图审核要求是 never，直接提交生成（审核接口当前 401，别走 /videos/review）；
-- 生成结果 2560x1440、24fps；本脚本统一转 1920x1080、30fps、上下各 120px 黑边，并过一遍 units/style_d.palette 色板兜底；
+- 生成结果 2560x1440、24fps，与实际成片规格一致：本脚本只补上下黑边（各 184px，2.39 画幅）、过一遍 units/style_d.palette 色板兜底，不动分辨率与帧率；
 - 每张（含失败）记 crew/genlog.md；Key 从 .env.local 读，绝不提交。
 """
 import json, os, subprocess, sys, tempfile
@@ -22,7 +22,9 @@ sys.path.insert(0, os.path.join(ROOT, 'units'))
 import nb  # noqa: E402
 
 MODEL = 'minimax-h3-metaso'
-W, H, BAR, FPS = 1920, 1080, 120, 30
+# 成片规格（用户 11-11 20:2x 定）：2K 2560x1440、24fps；2.39 画幅的上下黑边各 184px（1440 - 2560/2.39 = 368）
+W, H, FPS = 2560, 1440, 24
+BAR = int(round((H - W / 2.39) / 2))      # = 184
 SRC_FPS = 24
 
 
@@ -81,12 +83,12 @@ def post(src, out):
         if not ok: break
         frames.append(cv2.resize(f, (W, H), interpolation=cv2.INTER_AREA))
     if not frames: raise RuntimeError('no frames: %s' % src)
-    n_out = int(round(len(frames) / SRC_FPS * FPS))
+    n_out = len(frames)      # 24fps 原样保留，不重排
     p = subprocess.Popen(['ffmpeg', '-y', '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '%dx%d' % (W, H),
                           '-r', str(FPS), '-i', '-', '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', out],
                          stdin=subprocess.PIPE)
     for i in range(n_out):
-        f = cv2.cvtColor(frames[min(len(frames) - 1, int(round(i / FPS * SRC_FPS)))], cv2.COLOR_BGR2RGB)
+        f = cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB)
         f = style_d.palette(f.astype(np.float32) / 255)
         f[:BAR] = 0; f[H - BAR:] = 0
         p.stdin.write((np.clip(f, 0, 1) * 255 + 0.5).astype(np.uint8).tobytes())
