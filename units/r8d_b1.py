@@ -61,7 +61,7 @@ def edge_mask(A, seed=0, width=0.05):
     r = np.random.default_rng(seed)
     for side in ('top', 'bot', 'left', 'right'):
         e = {'top': A[0], 'bot': A[-1], 'left': A[:, 0], 'right': A[:, -1]}[side]
-        if (e > 0.05).sum() < 0.015 * len(e): continue                          # 刀尖等窄接触不算裁切边（羽化会把刀尖吃掉）
+        if (e > 0.05).sum() < 0.004 * len(e): continue                          # 刀尖等窄接触不算裁切边（羽化会把刀尖吃掉）
         n = len(e)
         wav = cv2.resize(r.random((1, 12)).astype(np.float32), (n, 1), interpolation=cv2.INTER_CUBIC)[0]
         wav = wav * 0.7 + cv2.resize(r.random((1, 48)).astype(np.float32), (n, 1), interpolation=cv2.INTER_CUBIC)[0] * 0.3
@@ -959,7 +959,7 @@ def blade_heat_d(fr, Aw, g, tip, half_w, heat, front=1.0, t=0.0, seed=0, edge_si
     if k not in _P:
         _P[k] = cv2.resize(K.fbm(H // 8, W // 8, seed, base=10, octaves=4), (W, H))
     nz = _P[k]
-    depth = 1.55 * clamp01(heat)                                                 # 烧进的深度：刃口 → 刀背（刀背留一线钢色）
+    depth = 2.05 * clamp01(heat)                                                 # 烧进的深度：刃口 → 刀背（刃口一侧大半烧红，刀背留一线钢色）
     hot = ((side + (nz - 0.5) * 0.5) > (1.0 - depth)).astype(np.float32)
     hot = cv2.GaussianBlur(hot, (0, 0), 0.8) * band * reach
     kc = ('crk', seed)
@@ -1009,7 +1009,7 @@ class P14D(Shot):
 # MS 侧身平端横刀（刀尖指画左）：刃口余烬红，缓推 + 火星沿刃剥落；59.10 鼓停：一线寒光由刀镡扫向刀尖，压暗憋住 → 副歌一 S028 横刀
 class P15D(Shot):
     T_HOLD = V(59.13)
-    SRC, DST, WPX = (0.55, 0.43), (1000.0, 560.0), 2000.0
+    SRC, DST, WPX = (0.55, 0.47), (1010.0, 600.0), 1660.0
     def __init__(self):
         self.sp = lay('B1_guard2_cut')
         self.tex = K.tile(512, 915, 6, 4)
@@ -1050,8 +1050,8 @@ class P15D(Shot):
 
 
 # =================================================================================== 装配
-LIFT = {'P05': (0.06, 0.78), 'P06': (0.10, 0.72), 'P07': (0.06, 0.80), 'P08': (0.04, 0.85), 'P09': (0.04, 0.85),
-        'P12': (0.10, 0.72), 'P13': (0.06, 0.80), 'P14': (0.10, 0.75), 'P15': (0.06, 0.78)}   # 返工 #4：(抬黑位, gamma)
+LIFT = {'P05': (0.10, 0.70), 'P06': (0.12, 0.68), 'P07': (0.06, 0.80), 'P08': (0.12, 0.66), 'P09': (0.04, 0.85),
+        'P12': (0.12, 0.70), 'P13': (0.08, 0.78), 'P14': (0.10, 0.75), 'P15': (0.06, 0.78)}   # 返工 #4：(抬黑位, gamma)
 
 
 D_SHOTS = {'P01': P01D, 'P02': P02D, 'P03': P03D, 'P04': P04D, 'P05': P05D, 'P06': P06D, 'P07': P07D, 'P08': P08D,
