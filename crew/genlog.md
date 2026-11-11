@@ -859,3 +859,4 @@
 | 11-11 05:41 | R8_D/V09/V09_abacus | RH_image2 | 2K 16:9 | 3 | 6f2aa63b-4d5d-4c1c-9eac-ac7a9cbe1e60 | ✔ 采用 | assets/gen/R8_D/B/V09_abacus.png（cut：V09_abacus_cut.png） | 纯文生图 try1；梁上 9 字「牺牲多少才算够分量」逐字核对全对 |
 | 11-11 05:41 | R8_D/V09/V09_bg | RH_image2 | 2K 16:9 | 3 | da7e7021-f95a-4859-8b30-2946817b1369 | ✔ 采用 | assets/gen/R8_D/B/V09_bg.png | 纯文生图 try1；背景板 |
 | 11-11 05:41 | R8_D/V09/V09_fg | RH_image2 | 2K 16:9 | 3 | b5b1c45d-f49e-42da-b9b6-15a8d9c2127c | ✔ 采用 | assets/gen/R8_D/B/V09_fg.png（cut：V09_fg_cut.png） | 纯文生图 try1；前景雨丝 + 血珠 |
+| 11-11 12:52 | R8_D/sheet/taishanghuang_sheet | RH_image2 | 2K 16:9 | 3 | b36f3ed3-2ede-40d5-95dd-68b5aa85c65b | ✔ 采用 | assets/gen/R8_D/taishanghuang_sheet.png | 太上皇风格 D 定妆照，参考官方设定图 最终boss_太上皇.webp；CDN 68023565-40d4-4a36-acc1-7a6404184505.jpg |

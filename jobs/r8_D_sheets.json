@@ -1,0 +1,11 @@
+{
+ "taishanghuang_sheet": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Character model sheet of the Retired Emperor (Tai Shang Huang), the final villain. Keep exactly the face, hair and costume of the reference image: a tall, gaunt, emaciated old man with a long narrow face, hollow cheeks, deep wrinkles, heavy dark eye bags, cold half-lidded eyes and a thin downturned mouth, clean-shaven with NO beard and NO moustache; very long straight black hair streaked with silver-white strands, the top gathered into a small topknot pierced by a thin black hairpin, the rest falling loose past the waist with pale strands framing the face; NO crown; wearing loose layered translucent black gauze robes with very wide sleeves trailing to the floor and a dark blood-red sash knotted at the waist with long hanging ends; long bony pale hands. Layout: at right a large close-up of his face; at left three full-body views of the same man standing still: front, side, back. Plain white background.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/08/b3bbfc3d-1ee1-43e7-a143-b8b6a451bd7d.webp"
+  ]
+ }
+}

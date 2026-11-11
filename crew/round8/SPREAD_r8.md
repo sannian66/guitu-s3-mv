@@ -60,3 +60,13 @@
 
 ## 8. 独立评审
 做完后由协调者派**全新上下文**的评审员，只看 `<单元>_对比.mp4`、contact/keys、USER_NOTES、PLAN_r8 第一节和标杆，按 7 项逐项 0–10 打分（风格 D、用户要求落实、文字规则、分层动效、卡点、精致度、相对现版）。**任一项 <8 打回**，返工意见会发回给你，最多两轮。
+
+## 9. 角色定妆照（11-11 12:55 补，用户：「太上皇的形象不太对啊，没有做定妆照然后参考图去制作吗？」）
+**所有有名有姓的角色都必须带定妆照参考出图**，不准纯文字描述。官方设定图见 `assets/characters/`（`asset_urls.json` 是 CDN 地址），五官、发型严格一致。
+| 角色 | 风格 D 定妆照（优先用） | input 地址 | Scene 里的写法 |
+|---|---|---|---|
+| 鬼屠 | `assets/gen/R8_D/guitu_sheet.png` | `https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg` | `Gui Tu (keep exactly the face, hair and costume of the reference model sheet)` |
+| 太上皇 | `assets/gen/R8_D/taishanghuang_sheet.png` | `https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/68023565-40d4-4a36-acc1-7a6404184505.jpg` | `the Retired Emperor (keep exactly the face, hair and costume of the reference model sheet)` |
+
+太上皇的设定（与旧提示词常见的错误相反）：**没有胡子、没有皇冠**；瘦高枯槁、长窄脸、深皱纹、浓重眼袋、半垂冷眼、薄唇下撇；黑发夹银白长发，头顶小髻插一根黑簪，其余披散过腰；黑色半透明纱质宽袖长袍拖地，暗血红腰带垂长穗；手指枯瘦苍白。**不是白发白须老皇帝，不是龙袍。**
+其他角色（周齐世、柳传智、殷若、影子、谢玄洲、丁昭、杨不丢）如果出镜：先找协调者出风格 D 定妆照；来不及就直接用 `asset_urls.json` 里的官方设定图做 input。群演、无名角色（群臣、士兵、跪者）不需要定妆照。
