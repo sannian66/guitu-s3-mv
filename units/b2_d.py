@@ -376,13 +376,19 @@ def figs():
             Fc = F[ya:yb, xa:xb].copy(); Ac = (A * mk)[ya:yb, xa:xb].copy()
             bot = np.nonzero(Ac[-8:].max(0) > 0.5)[0]
             fx = float(bot.mean()) if len(bot) else Ac.shape[1] / 2
-            _FIGS.append((Fc, Ac, (fx, float(Ac.shape[0]))))
+            # 用户硬规则：不许露出裁切直边 —— 先垫透明边，再按形状羽化（帧里看不到直线切边）
+            pd = max(20, int(0.10 * min(Ac.shape[:2])))
+            Fc = cv2.copyMakeBorder(Fc, pd, pd, pd, pd, cv2.BORDER_CONSTANT, value=0)
+            Ac = cv2.copyMakeBorder(Ac, pd, pd, pd, pd, cv2.BORDER_CONSTANT, value=0)
+            band = max(18.0, min(Ac.shape[:2]) * 0.09)
+            Ac = (Ac * _edge_fade(Ac, 3100 + i, band).astype(np.float32)).astype(np.float32)
+            _FIGS.append((Fc, Ac, (fx + pd, float(yb - ya + pd)), 2 * pd))
     return _FIGS
 
 
 def draw_fig(fr, k, foot, h_px, rot=0.0, flip=False, blur=0.0, tone=None, alpha=1.0):
-    Fc, Ac, fs = figs()[k]
-    s = h_px / Ac.shape[0]
+    Fc, Ac, fs, pad = figs()[k]
+    s = h_px / (Ac.shape[0] - pad)
     M = M_foot(Ac.shape[1], Ac.shape[0], fs, foot, s, rot, False)
     if flip:
         Fc = Fc[:, ::-1]; Ac = Ac[:, ::-1]
