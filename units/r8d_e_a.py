@@ -82,7 +82,7 @@ def scroll_text(img):
     for qi, q in enumerate(SCROLL_QUADS):
         q = np.float32(q)
         wq = float(np.linalg.norm(q[1] - q[0])); hq = float(np.linalg.norm(q[3] - q[0]))
-        ncol = max(2, int(round(wq / 22)))                               # 每列约 22px 宽（屏幕），竖排、从右往左
+        ncol = max(2, int(round(wq / 27)))                               # 每列约 27px 宽（屏幕，§12.6：1080p 下单字可辨），竖排、从右往左
         cw = 80; ch = 74
         nrow = max(6, int(round(hq / wq * ncol * cw / ch)))
         Wc, Hc = ncol * cw + 40, nrow * ch + 60
@@ -99,7 +99,7 @@ def scroll_text(img):
         aw = cv2.warpPerspective(a, Mq, (W, H), flags=cv2.INTER_AREA)
         inside = cv2.warpPerspective(np.ones_like(a), Mq, (W, H)) > 0.5
         paper = np.clip((lum - 0.25) / 0.25, 0, 1) * inside                 # 只写在纸面（亮处），挡在前面的轴 / 木杆不写
-        ink = np.clip(aw * 1.3, 0, 1) * paper * 0.72
+        ink = np.clip(aw * 1.4, 0, 1) * paper * 0.85
         img = img * (1 - ink[..., None]) + ink[..., None] * 0.05
     return img
 
@@ -138,15 +138,20 @@ def sub_layer(sp, mask):
     return m
 
 
+def _wind(w):
+    """SPREAD §12.3：置换只做弱的——幅度压到原来的 45%、上限 4.5px（精灵 wind_w 只在发梢 / 衣带边缘非零，脸和身体不动）。"""
+    return min(4.5, 0.45 * w)
+
+
 def put(fr, sp, t, h, foot, wind=6.0, breathe=0.004, **kw):
     """按包围盒高度落脚（脚底中点 → foot）。grade / rim / wrap / shade 一律中性（风格 D 不调色）。"""
     a, s = sp.fit(h)
-    return sp.draw(fr, t, a, foot, s, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=wind, breathe=breathe, **kw)
+    return sp.draw(fr, t, a, foot, s, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=_wind(wind), breathe=breathe, **kw)
 
 
 def put_at(fr, sp, t, src, dst, scale, wind=6.0, breathe=0.004, **kw):
     """源归一化点 src → 屏幕 dst，scale = 精灵工作宽（2048）→ 屏幕像素倍率。"""
-    return sp.draw(fr, t, src, dst, scale, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=wind, breathe=breathe, **kw)
+    return sp.draw(fr, t, src, dst, scale, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=_wind(wind), breathe=breathe, **kw)
 
 
 def scr_of(sp, h, foot, p):
@@ -178,6 +183,120 @@ def comp_pick(sp, x0, y0, x1, y1):
         cx, cy = cen[i][0] / w, cen[i][1] / h
         if x0 <= cx <= x1 and y0 <= cy <= y1: keep[i] = 1
     return sub_layer(sp, keep[lab])
+
+
+_FLOW = {}
+def _noise2(seed, gh=H // 24, gw=W // 24):
+    r = np.random.default_rng(seed)
+    out = []
+    for _ in range(4):                                                     # 两对低频噪声（x / y 各一对，做时间上的旋转插值）
+        n = cv2.GaussianBlur(r.standard_normal((gh, gw)).astype(np.float32), (0, 0), 2.2)
+        out.append(n / (n.std() + 1e-6))
+    return out
+
+
+def _flow_maps(t, seed, drift, amp, w=None, omega=0.55):
+    """低频噪声流场：整体漂移 drift（px/s）+ 随时间缓慢转动的噪声扰动 amp（px）；w 为逐像素权重（0 处不动）。"""
+    key = ('n', seed)
+    if key not in _FLOW: _FLOW[key] = _noise2(seed)
+    ax, bx, ay, by = _FLOW[key]
+    c, s = math.cos(omega * t), math.sin(omega * t)
+    nx = cv2.resize(ax * c + bx * s, (W, H), interpolation=cv2.INTER_CUBIC)
+    ny = cv2.resize(ay * c + by * s, (W, H), interpolation=cv2.INTER_CUBIC)
+    dx = drift[0] * t + amp * nx; dy = drift[1] * t + amp * 0.45 * ny
+    if w is not None: dx = dx * w; dy = dy * w
+    yy, xx = grid()
+    return (xx - dx).astype(np.float32), (yy - dy).astype(np.float32)
+
+
+def flow_plate(img, t, seed=1, drift_far=(-7.0, 0.0), drift_near=(-22.0, 1.0), amp_far=3.0, amp_near=6.0):
+    """SPREAD §12.2：天 / 云不是「一张图平移旋转」——拆两层各走各的流场。
+    远层 = 底板把深色云块补底去掉后的白纸 + 浅灰云（慢漂 + 小扰动）；近层 = 深墨云 / 血红云带（快漂 + 大扰动），
+    两层速度、扰动相位都不同，云在流、云和天之间有相对运动。底板是生图像素，没有新增 AI 像素。"""
+    key = ('p', id(img))
+    if key not in _FLOW:
+        lum = img.mean(-1)
+        red = np.clip((img[..., 0] - img[..., 1]) * 2 - 0.4, 0, 1)
+        near = np.clip((0.42 - lum) / 0.12, 0, 1)
+        near = np.maximum(near, red * np.clip((0.75 - lum) / 0.2, 0, 1))
+        near = cv2.morphologyEx(near.astype(np.float32), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))   # 整团云（含云内亮边）一起走，不撕成碎块
+        near = cv2.GaussianBlur(near, (0, 0), 3.0)
+        clean = inpaint_mask(img, (near > 0.2).astype(np.float32), rad=11)
+        _FLOW[key] = (np.ascontiguousarray(clean, np.float32), np.ascontiguousarray(near, np.float32))
+        if len(_FLOW) > 24: [_FLOW.pop(k) for k in [k for k in _FLOW if k[0] == 'p'][:6]]
+    clean, near = _FLOW[key]
+    mx, my = _flow_maps(t, seed, drift_far, amp_far)
+    out = cv2.remap(clean, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    mx, my = _flow_maps(t + 3.7, seed + 50, drift_near, amp_near, omega=0.8)
+    ink = cv2.remap(img, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    a = cv2.remap(near, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)[..., None]
+    return out * (1 - a) + ink * a
+
+
+def flow_region(img, t, mask_key, mask, seed=3, amp=10.0, drift=(-6.0, 0.0)):
+    """只在 mask 区内做噪声流动（如 E03 的血红天），权重在边界平滑归零，碑 / 地面等硬物不被拖拽。"""
+    key = ('m', mask_key)
+    if key not in _FLOW:
+        _FLOW[key] = cv2.GaussianBlur(cv2.erode(mask.astype(np.float32), np.ones((15, 15), np.uint8)), (0, 0), 9)
+    w = _FLOW[key]
+    mx, my = _flow_maps(t, seed, drift, amp, w=w)
+    return cv2.remap(img, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+
+def _flow_smoke(sm, t, seed, drift, amp):
+    """低频烟层：时间上缓慢转动的噪声位移（§12.3：低振幅、低频、只在烟层内部），避免「整张烟平移」。"""
+    key = ('s', seed)
+    if key not in _FLOW:
+        n = _noise2(seed, gh=sm.shape[0], gw=sm.shape[1])
+        _FLOW[key] = [cv2.resize(a, (sm.shape[1], sm.shape[0]), interpolation=cv2.INTER_CUBIC) for a in n]
+    ax, bx, ay, by = _FLOW[key]
+    c, s_ = math.cos(0.5 * t), math.sin(0.5 * t)
+    h, w = sm.shape
+    gh, gw = np.mgrid[0:h, 0:w].astype(np.float32)
+    mx = gw - (drift[0] * t + amp * (ax * c + bx * s_)) * (w / W)
+    my = gh - (drift[1] * t + amp * 0.4 * (ay * c + by * s_)) * (h / H)
+    return cv2.remap(sm, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+
+_CH18 = None
+def lava_crack_local(fr, x, t, seed=18, width=34, top=120, bot=960):
+    """与 R6.lava_crack 同一条裂缝，但喷出的不是灰色平涂多边形：改成墨线勾边的纸片（白 / 网点灰）与墨块，无投影。"""
+    global _CH18
+    if _CH18 is None:
+        _CH18 = (Chips(1817, n=26, size=(10, 30), spread=(210, 430), zr=(0.9, 2.4), tones=(0.95, 0.62, 0.05)),
+                 Chips(1818, n=10, size=(8, 20), spread=(160, 380), zr=(0.6, 1.4), tones=(0.88, 0.1)))
+    yy = np.arange(H, dtype=np.float32)
+    r = np.random.default_rng(seed)
+    path = np.zeros(H, np.float32)
+    for k in range(5):
+        f = r.uniform(0.006, 0.05); path += r.uniform(3, 9) * np.sin(yy * f + r.uniform(0, 6))
+    cx = x + path
+    xx = np.arange(W, dtype=np.float32)[None, :]
+    d = np.abs(xx - cx[:, None])
+    wv = width * (0.7 + 0.5 * np.sin(yy * 0.05 + t * 9)[:, None] * 0.3 + 0.3 * np.sin(yy * 0.013)[:, None])
+    core = np.exp(-(d / (wv * 0.28)) ** 2)
+    hot = np.exp(-(d / (wv * 0.7)) ** 2)
+    char = np.clip(1 - d / (wv * 1.6), 0, 1)
+    vis = ((yy >= top) & (yy <= bot)).astype(np.float32)[:, None]
+    fr = fr * (1 - 0.85 * char * vis)[..., None]
+    fr = fr + (hot * vis)[..., None] * np.array([0.9, 0.18, 0.04], np.float32) * 1.25 + (core * vis)[..., None] * np.array([1.0, 0.86, 0.62], np.float32) * 1.4
+    gl = cv2.GaussianBlur((hot * vis).astype(np.float32), (0, 0), 30)
+    fr = fr + gl[..., None] * np.array([1.0, 0.35, 0.08], np.float32) * 0.55
+    q = t - M.CT(53, 7)
+    if q > 0:                                                              # 碎屑从缝里往外走（两簇，左右各一层景深）
+        for c in _CH18: fr = c.draw(fr, min(q * 0.9, 1.0), c=(960, 560), to_cam=0.35, zf=1.4)
+    return fr
+
+
+def contact(fr, foot, wid, amt=0.55, dirx=-1.0, length=0.0, sq=6.0):
+    """SPREAD §12.5 接地：脚下一块压扁的接触暗影 + 可选沿光向的短投影（光从日的方向来，影子拖向反方向），人和地面同一光源。"""
+    yy, xx = grid()
+    d = ((xx - foot[0]) / wid) ** 2 + ((yy - foot[1]) * sq / wid) ** 2
+    m = np.exp(-d * 2.2)
+    if length > 0:
+        sx = xx - foot[0]; along = np.clip(sx * dirx / length, 0, 1)
+        m = np.maximum(m, np.exp(-((yy - foot[1] - 0.04 * sx * dirx) * sq / wid) ** 2 * 2.2) * (1 - along) * (sx * dirx > 0) * (along < 1) * 0.8)
+    return fr * (1 - amt * np.clip(m, 0, 1))[..., None]
 
 
 def warp_plate(img, s, cx, cy, rot=0.0):
@@ -339,21 +458,22 @@ def rays(fr, src, t, strength=0.6, length=1.0, occ=None, src_r=160):
     return M.fx2.god_rays(fr, src, strength=strength, length=length, t=t, src_r=src_r, color=np.array([1.0, 1.0, 1.0], np.float32), occluder=occ)
 
 
-def flare(fr, p, amt, angle=0.0, length=1.0):
-    """SPREAD §11②：不用写实镜头光斑 / 鬼影 —— 硬边白色十字星芒（细线，长短两组）+ 小白点，外圈一圈墨线短芒。"""
+def flare(fr, p, amt, angle=0.0, length=1.0, scale=1.0, rays=1.0):
+    """SPREAD §11②：不用写实镜头光斑 / 鬼影 —— 硬边白色十字星芒（细线，长短两组）+ 小白点，外圈一圈墨线短芒。
+    scale 缩星芒尺寸；rays 缩外圈墨线短芒（P1-6：日面上的星芒不能像准星贯穿日轮）。"""
     if amt <= 0.01: return fr
     L = np.zeros((H // 2, W // 2), np.float32); Kk = np.zeros_like(L)
     cx, cy = p[0] / 2, p[1] / 2
-    for k, (ln, w) in enumerate(((520, 2), (520, 2), (150, 1), (150, 1))):
+    for k, (ln, w) in enumerate(((520 * scale, 2), (520 * scale, 2), (150 * scale, 1), (150 * scale, 1))):
         a = math.radians(angle + 90 * k) if k < 2 else math.radians(angle + 45 + 90 * (k - 2))
         for sgn in (1, -1):
             e = (cx + sgn * math.cos(a) * ln * length / 2, cy + sgn * math.sin(a) * ln * length / 2)
             cv2.line(L, (int(cx * 8), int(cy * 8)), (int(e[0] * 8), int(e[1] * 8)), 1.0, w, cv2.LINE_AA, 3)
-    cv2.circle(L, (int(cx * 8), int(cy * 8)), 7 * 8, 1.0, -1, cv2.LINE_AA, 3)
+    cv2.circle(L, (int(cx * 8), int(cy * 8)), int(7 * 8 * scale), 1.0, -1, cv2.LINE_AA, 3)
     for k in range(8):
         a = math.radians(angle + 22.5 + 45 * k)
-        cv2.line(Kk, (int((cx + math.cos(a) * 14) * 8), int((cy + math.sin(a) * 14) * 8)),
-                 (int((cx + math.cos(a) * 26) * 8), int((cy + math.sin(a) * 26) * 8)), 1.0, 1, cv2.LINE_AA, 3)
+        cv2.line(Kk, (int((cx + math.cos(a) * 14 * rays) * 8), int((cy + math.sin(a) * 14 * rays) * 8)),
+                 (int((cx + math.cos(a) * 26 * rays) * 8), int((cy + math.sin(a) * 26 * rays) * 8)), 1.0, 1, cv2.LINE_AA, 3)
     L = cv2.resize(L, (W, H)) * min(1.0, amt); Kk = cv2.resize(Kk, (W, H)) * min(1.0, amt)
     fr = fr * (1 - np.clip(Kk * 0.8, 0, 1))[..., None]
     return fr * (1 - np.clip(L, 0, 1))[..., None] + np.clip(L, 0, 1)[..., None] * 1.05
@@ -407,9 +527,9 @@ class E01(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.12, 960 + 60 * pv * 0.25, 600 - 20 * pv * 0.25)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.12, 960 + 60 * pv * 0.25, 600 - 20 * pv * 0.25)
         fr = rays(fr, (420, 900), t, strength=0.35, length=0.8, src_r=300)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (420 + 50 * pv * 0.5, 900), 980 / 1096, wind=0, breathe=0)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (420 + 50 * pv * 0.5, 900), 980 / 1096, wind=0, breathe=0, rot=-24, flip=True)
         BH = 1050; foot = (1150, 1200)
         ang = -6.0 + 1.5 * u
         a, s = self.blade.fit(BH)
@@ -465,9 +585,9 @@ class E02(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.5, 700 - 40 * pv * 0.2, 330 + 60 * pv * 0.2)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.5, 700 - 40 * pv * 0.2, 330 + 60 * pv * 0.2)
         fr = rays(fr, (1560, 330), t, strength=0.45, length=0.9, src_r=200)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (1560 - 30 * pv * 0.45, 330 + 40 * pv * 0.45), 560 / 1096, wind=0, breathe=0)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (1560 - 30 * pv * 0.45, 330 + 40 * pv * 0.45), 560 / 1096, wind=0, breathe=0, rot=58)
         S2 = 1.06; c2 = (980, 520)                                          # 精灵画布宽 2048×1.06 > 画幅，四边都在画外（不露裁切边）
         fr, A = put_at(fr, self.sp, t, (0.5, 0.5), c2, S2, wind=7.0)
         p0 = scr_at(self.sp, (0.5, 0.5), c2, S2, self.BLADE[0]); p1 = scr_at(self.sp, (0.5, 0.5), c2, S2, self.BLADE[1])
@@ -492,11 +612,16 @@ class E03(Shot):
 
     def __init__(self):
         self.img = plate('EA_E03')
+        im = self.img
+        sky = ((im[..., 0] - im[..., 1] > 0.35) | (im.mean(-1) < 0.30)) & (im.mean(-1) < 0.55)    # 血红天 + 天里的墨云；碑身 / 地面（灰白）不动
+        yy = grid()[0]
+        self.skym = (sky & (yy < 560)).astype(np.float32)
 
     def render(self, t):
         u = self.u(t)
         e = eio(u)
-        fr = dolly(self.img, self.VP, 1.0 + 0.10 * e, 0.38 * e)
+        img = flow_region(self.img, t - self.t0, 'E03sky', self.skym, seed=31, amp=5.0, drift=(0.0, 4.0))   # §12.2：天上的云往门洞方向流
+        fr = dolly(img, self.VP, 1.0 + 0.10 * e, 0.38 * e)
         fr = rays(fr, (self.VP[0], self.VP[1] - 10), t, strength=0.5, length=1.0, src_r=90)
         fr = fog(fr, t, 1131, amt=0.32, speed=(26, 0), y0=0.62, y1=1.0)
         fr = fog(fr, t + 3.1, 1132, amt=0.22, speed=(-34, 0), y0=0.5, y1=0.9)
@@ -772,7 +897,18 @@ class E09(Shot):
 
     def __init__(self):
         self.bg = plate('EA_E06', blur=1.5, gain=1.05)
-        self.sp = spr('EA_E09')
+        sp = spr('EA_E09')
+        # P1-9：生图自带的血红刀弧不是「刀光」，是一块死像素——先从精灵里抹掉（换成同亮度的中性灰，接缝由干笔飞白盖住），
+        # 刀光改由代码画：斩后沿同一道弧线刷出干笔白芯 + 血红外沿。
+        F = sp.F
+        red = (F[..., 0] - np.maximum(F[..., 1], F[..., 2]) > 0.18) & (F[..., 0] > 0.2)
+        red = cv2.dilate(red.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(np.float32)
+        red = cv2.GaussianBlur(red, (0, 0), 2.0)[..., None]
+        lum = F.mean(-1, keepdims=True)
+        grey = np.clip(lum * 1.02, 0, 1) * np.ones(3, np.float32)
+        self.sp = sub_layer(sp, 1.0)
+        self.sp.F = np.ascontiguousarray(F * (1 - red) + grey * red, np.float32)
+        self.arcmask = np.ascontiguousarray(np.clip(red[..., 0] * 1.6, 0, 1), np.float32)   # 原刀弧所在的像素（屏幕空间里再按变换取）
         self.ts = CT(51, 2)
 
     def render(self, t):
@@ -794,6 +930,21 @@ class E09(Shot):
             fr, A = put(fr, self.sp, t, 860, foot, wind=8.0)
         if -0.04 <= q < 0.4:
             fr = ink_slash(fr, self.P0, self.P1, eout((q + 0.04) / 0.08), 1 - c01((q - 0.12) / 0.28), width=60, seed=91)
+        # 刀光（代码画）：斩后 0.1s 起沿一道下压的弧抡出，0.5s 内渐隐；干笔白芯 + 血红外沿，压在精灵之上
+        if 0.02 <= q < 0.62:
+            e = eout(c01((q - 0.02) / 0.10)); fade = 1 - c01((q - 0.18) / 0.44)
+            f = K.blur_ds(np.zeros((H // 2, W // 2), np.float32), 1)
+            pts = [(300 + 1330 * (k / 22), 520 + 300 * math.sin(math.pi * (k / 22)) - 90 * (k / 22)) for k in range(23)]
+            n = int(e * 22)
+            for k in range(max(0, n - 1)):
+                q0, q1 = pts[k], pts[k + 1]
+                for j, (off, wd, gain) in enumerate(((-9, 2, 0.55), (-4, 3, 1.0), (3, 2, 0.75), (9, 1, 0.35))):
+                    aa = (q0[0], q0[1] + off); bb = (q1[0], q1[1] + off * 1.2)
+                    cv2.line(f, (int(aa[0] / 2), int(aa[1] / 2)), (int(bb[0] / 2), int(bb[1] / 2)), gain, wd, cv2.LINE_AA)
+            Lw = cv2.resize(cv2.GaussianBlur(f, (0, 0), 0.8), (W, H)) * fade
+            Lr = cv2.resize(cv2.GaussianBlur(cv2.dilate(f, np.ones((5, 5), np.uint8)), (0, 0), 2.6), (W, H)) * fade
+            fr = fr * (1 - np.clip(Lr * 0.8, 0, 1))[..., None] + np.clip(Lr, 0, 1)[..., None] * RED * 1.15
+            fr = fr + np.clip(Lw, 0, 1)[..., None] * 1.25
         if q >= 0:
             fr = sparks2(fr, t, 1181, (960, 560), t0=self.ts, n=60, dirc=(0.4, -1), spread=1.4)
         nf = int(round(q * FPS))
@@ -875,10 +1026,10 @@ class E11(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5; q = t - self.t0
-        fr = warp_plate(self.sky, 1.35, 1300 + 40 * pv * 0.25, 450)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.35, 1300 + 40 * pv * 0.25, 450)
         fr, _ = put_at(fr, self.ridge, t, (0.5, 0.75), (960 + 40 * pv * 0.6, 790), W * 1.1 / 2048, wind=0, breathe=0)
         foot = (1000, 1000)
-        fr = fr * (1 - 0.55 * np.clip(K.blur_ds(np.exp(-(((grid()[1] - foot[0]) / 260) ** 2 + ((grid()[0] - foot[1]) / 40) ** 2)), 6), 0, 1))[..., None]
+        fr = contact(fr, foot, 300, amt=0.6, dirx=-1.0, length=520)                  # 日在右上：影子拖向左
         fr, A = put(fr, self.sp, t, 820, foot, wind=7.0)
         for i, cr in enumerate(self.cr):
             m = K.draw_crack((H, W), cr, 3, branches=4, seed=70 + i, prog=eout(q / 0.35))
@@ -929,7 +1080,7 @@ class E12(Shot):
             if q < 0: fr = fr * (1 - 0.35 * K.blur_ds(Asl, 20)[..., None] * (1 - e))
         foot = (1420, 790)
         a, s = self.man.fit(430)
-        _, Am = self.man.draw(np.zeros((H, W, 3), np.float32), t, a, foot, s, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=6.0, breathe=0)
+        _, Am = self.man.draw(np.zeros((H, W, 3), np.float32), t, a, foot, s, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=_wind(6.0), breathe=0)
         Sh = np.zeros_like(Am)
         for k in range(1, 10):
             Mt = np.float32([[1, 0, -30 * k], [0, 1, 22 * k]]); Sh = np.maximum(Sh, cv2.warpAffine(Am, Mt, (W, H)) * (1 - 0.07 * k))
@@ -952,9 +1103,9 @@ class E13(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.7, 520 - 40 * pv * 0.2, 360)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.7, 520 - 40 * pv * 0.2, 360)
         fr = rays(fr, (1250, 430), t, strength=0.25, length=0.7, src_r=380)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (1250 + 60 * pv * 0.4, 430), 900 / 1096, wind=0, breathe=0)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (1250 + 60 * pv * 0.4, 430), 900 / 1096, wind=0, breathe=0, rot=131)
         fr, _ = put(fr, self.sp, t, 1300, (900 + 30 * u, 1240), wind=12.0, breathe=0.006)      # 画布左缘（发丝）与上下缘都在画外
         fr = embers(fr, t, 1213, n=50, amt=0.7)
         return bloom(fr, 0.86, 0.3)
@@ -972,12 +1123,13 @@ class E14T(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.25, 1200 + 50 * pv * 0.2, 600, rot=-2)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.25, 1200 + 50 * pv * 0.2, 600, rot=-2)
         fr, _ = put_at(fr, self.ridge, t, (0.5, 0.75), (960 + 50 * pv * 0.5, 740), W * 1.12 / 2048, wind=0, breathe=0)
         fr, _ = put(fr, self.tab, t, 420, (560 + 50 * pv * 0.7, 870), wind=0, breathe=0)
         fr = ink_ring(fr, (560 + 50 * pv * 0.7, 868), 46, 0.8, squash=4.0, seed=1225)      # 桩脚土
         fr = fog(fr, t, 1224, amt=0.2, speed=(-40, 0), y0=0.62, y1=0.95, col=(0.85, 0.85, 0.85))
         bob = 6 * abs(math.sin(t * 5.5))
+        fr = contact(fr, (1120, 1075 + 30 * u), 260, amt=0.5 * (1 - 0.4 * bob / 6))   # 抬步时影子变淡
         fr, _ = put(fr, self.sp, t, 960 * (1 + 0.06 * u), (1120, 1075 - bob + 30 * u), wind=9.0, breathe=0)   # 画布上沿（马尾顶）在上黑边里
         fr, _ = put_at(fr, self.fg, t, (0.8, 0.7), (1700 + 160 * u, 900), 1.2, wind=0, breathe=0, alpha=0.9)
         fr = embers(fr, t, 1223, n=60, amt=0.7)
@@ -1015,7 +1167,8 @@ class E15(Shot):
         fr = fr + (line * cool * 1.4)[..., None] + (line * 1.2)[..., None] * RED + glow[..., None] * RED * 0.9
         q = t - self.tcut
         tf = np.zeros((H, W, 3), np.float32)
-        tf, At = put(tf, self.tab, t, 520, (1180, 720), wind=0, breathe=0)
+        wob = 0.0 if q >= 0 else 0.9 * math.sin(t * 7.3) * c01((q + 0.55) / 0.55) ** 2   # P1-9：被斩前 0.5s 木牌轻微晃动（刀风先到）
+        tf, At = put(tf, self.tab, t, 520, (1180 + 3.5 * wob, 720), wind=0, breathe=0, rot=wob)
         C = tf / np.maximum(At, 1e-3)[..., None]
         if q >= 0:
             p0 = (900.0, 640.0); p1 = (1460.0, 672.0)                       # 斩在牌身与木桩交界：「天理」整块翻落，字不被切
@@ -1072,23 +1225,37 @@ class SymbolShot(Shot):
         self.full = img
         self.blank = inpaint_mask(img, keep)
         self.strokes = strokes
-        self.par = [stroke_param(self.sym_m, pts) for pts, _, _ in strokes]
-        if len(strokes) > 1:                                                  # 两笔：像素归属离哪条笔顺线更近
-            yy, xx = grid()
-            ds = []
-            for pts, _, _ in strokes:
-                P = np.array(pts, np.float32); a, b = P[0], P[-1]; d = (b - a) / np.linalg.norm(b - a)
-                ds.append(np.abs((xx - a[0]) * d[1] - (yy - a[1]) * d[0]))
-            self.own = [(ds[0] <= ds[1]).astype(np.float32), (ds[1] < ds[0]).astype(np.float32)]
-        else:
-            self.own = [np.ones((H, W), np.float32)]
+        # 揭开用「距落笔点的半径」（圆形前缘）而不是沿笔道的弧长参数：
+        # 弧长参数在折线转弯处是距离场的等值线，等值线会在两笔交叠区拐成楔形/领结缺口，截出一段直线边。
+        # 半径前缘在任何笔画形状上都是圆/滚动的弧，两笔取 max 自然融合，没有硬边界。
+        yy, xx = grid()
+        self.rp, self.rmax = [], []
+        for pts, _, _ in strokes:
+            P = np.array(pts, np.float32)
+            d = np.full((H, W), 1e9, np.float32)
+            for i in range(len(P) - 1):
+                a, b = P[i], P[i + 1]; v = b - a; L = np.linalg.norm(v) + 1e-6; dv = v / L
+                u = np.clip((xx - a[0]) * dv[0] + (yy - a[1]) * dv[1], 0, L)
+                d = np.minimum(d, np.hypot(xx - (a[0] + dv[0] * u), yy - (a[1] + dv[1] * u)))
+            self.rp.append(d)
+            hits = d[self.sym_m > 0.5]
+            self.rmax.append(float(hits.max() if hits.size else d.max()) + 40.0)
+        self.ws = [np.ones((H, W), np.float32)] * len(strokes)
+        # 前缘干笔：沿笔顺方向的丝状噪声，让揭开边是飞白断口而不是一条干净弧线
+        self.noise = []
+        for i, (pts, _, _) in enumerate(strokes):
+            n = np.random.default_rng(1700 + i).random((H // 4, W // 4)).astype(np.float32)
+            n = cv2.filter2D(n, -1, np.eye(9, dtype=np.float32) / 9)
+            n = (n - n.mean()) / (n.std() + 1e-6)
+            self.noise.append(cv2.resize(n, (W, H), interpolation=cv2.INTER_LINEAR))
 
     def symbol(self, t):
         rev = np.zeros((H, W), np.float32); fl = 0.0
-        for par, own, (pts, t0, dur) in zip(self.par, self.own, self.strokes):
+        for rp, rmx, nz, (pts, t0, dur) in zip(self.rp, self.rmax, self.noise, self.strokes):
             k = c01((t - t0) / dur)
             if k <= 0: continue
-            rev = np.maximum(rev, np.clip((k * 1.04 - par) / 0.04, 0, 1) * own)
+            front = np.clip((k * 1.08 * rmx - rp + 26 * nz) / 90.0, 0, 1)      # 半径前缘：宽过渡 + 干笔丝状噪声
+            rev = np.maximum(rev, front)
             fl = max(fl, pulse(t, t0 + dur, 0.1))
         m = self.sym_m * rev
         return self.blank * (1 - m[..., None]) + self.full * m[..., None], m, fl
@@ -1189,7 +1356,7 @@ class E18(E17):
         fr = E17.render(self, t)
         o = int(16 + 30 * eout(u))
         fr = np.concatenate([np.roll(fr, -o, 1)[:, :960], np.roll(fr, o, 1)[:, 960:]], 1)
-        fr, _ = R6.lava_crack(fr, 960, t, seed=18, width=40 + 34 * eout(u))
+        fr = lava_crack_local(fr, 960, t, seed=18, width=40 + 34 * eout(u))   # 本单元版本：碎屑改墨线纸片 / 墨块（P1-4）
         return fr
 
 
@@ -1199,21 +1366,30 @@ class E19(Shot):
     直视镜头的特写（生图：半脸沉在实黑里、发丝风吹 + 呼吸）。推近 expo_in（MOVE）。"""
     def __init__(self):
         bg = plate('EA_cross', blur=14)
-        self.bg = np.ascontiguousarray(np.roll(bg, -700, 1) * 0.3, np.float32)
+        # P1-8：平涂暗灰 → 网点灰（画面区 ~0.65）。底 = 提亮的朱红板（压成中灰）+ 网点；人物半脸的实黑不动
+        base = np.roll(bg, -700, 1)
+        base = base.mean(-1, keepdims=True) * np.array([1.0, 0.985, 0.97], np.float32)
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        dots = (np.sin(xx * 1.55) * np.sin(yy * 1.55) > 0.62).astype(np.float32)
+        dots = cv2.GaussianBlur(dots, (0, 0), 0.6)
+        self.bg = np.ascontiguousarray(np.clip((0.66 - 0.11 * dots) + 0.13 * (base - base.mean()), 0, 1) * np.ones(3, np.float32), np.float32)
         self.sp = spr('EA_E19')
         self.chips = Chips(125, n=26, size=(14, 40), spread=(1100, 500), zr=(1.2, 2.8), tones=(0.92, 0.5, 0.05))
         self.chips_f = Chips(126, n=10, size=(20, 50), spread=(1100, 520), zr=(0.45, 0.8), tones=(0.9, 0.08))
         self.smoke = K.fbm(H // 4, W // 4, 1255, base=5, octaves=5).astype(np.float32)
+        self.smoke2 = K.fbm(H // 4, W // 4, 1257, base=4, octaves=4).astype(np.float32)
 
     def render(self, t):
-        u = self.u(t)
+        u = self.u(t); q = t - self.t0
         fr = self.bg.copy()
-        Mt = np.float32([[1, 0, 0], [0, 1, -30 * (t - self.t0)]])
-        sm = cv2.resize(cv2.warpAffine(self.smoke, Mt, (W // 4, H // 4), borderMode=cv2.BORDER_REFLECT), (W, H))
-        xx = grid()[1]
-        side = np.clip((np.abs(xx - 960) - 380) / 300, 0, 1)
-        fr = fr * (1 - np.clip((sm - 0.4) * 2, 0, 1) * side * 0.6)[..., None] + (np.clip((sm - 0.55) * 2, 0, 1) * side * 0.12)[..., None]
-        fr = self.chips.draw(fr, (t - self.t0) * 0.5 + 0.2, to_cam=0.3, zf=1.6)
+        yy, xx = grid()
+        # 墨烟：两层各走各的（§12.2）——慢层向上，快层斜向上，再叠低频噪声扰动
+        for sm0, spd, amp, sxx in ((self.smoke, -18, 0.10, 1255), (self.smoke2, -46, 0.16, 1257)):
+            sm = _flow_smoke(sm0, q, sxx, (spd * 0.5, spd), amp)
+            sm = cv2.resize(sm, (W, H))
+            side = np.clip((np.abs(xx - 960) - 380) / 300, 0, 1)
+            fr = fr * (1 - np.clip((sm - 0.42) * 2, 0, 1) * side * 0.35)[..., None] + (np.clip((sm - 0.58) * 2, 0, 1) * side * 0.10)[..., None]
+        fr = self.chips.draw(fr, q * 0.5 + 0.2, to_cam=0.3, zf=1.6)
         fr, _ = put_at(fr, self.sp, t, (0.5, 0.5), (960, 560), 1.0, wind=6.0, breathe=0.006)
         fr = self.chips_f.draw(fr, (t - self.t0) * 0.5 + 0.2, to_cam=0.15, zf=1.6)
         return bloom(fr, 0.88, 0.25)
@@ -1230,18 +1406,20 @@ class E20(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.3, 900 + 30 * pv * 0.15, 520)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.3, 900 + 30 * pv * 0.15, 520)
         hit = pulse(t, self.tt, 0.18)
         cy = 920 - 200 * eio(u); cx = 1290 + 30 * pv * 0.3
         fr = rays(fr, (cx, cy), t, strength=0.35 + 0.35 * hit, length=1.1, src_r=380)
-        fr, As = put_at(fr, self.sun, t, (0.5, 0.49), (cx, cy), 820 / 1096 * (1 + 0.03 * hit), wind=0, breathe=0)
+        fr, As = put_at(fr, self.sun, t, (0.5, 0.49), (cx, cy), 820 / 1096 * (1 + 0.03 * hit), wind=0, breathe=0, rot=96)
         fr = fr + K.blur_ds(As, 30)[..., None] * RED * 0.5 * hit
         fr, Ar = put_at(fr, self.ridge, t, (0.5, 0.75), (960 + 30 * pv * 0.6, 800), W * 1.1 / 2048, wind=0, breathe=0)
         rx = 640 + 30 * pv * 0.6
         col = Ar[:, int(rx)]; ys = np.nonzero(col > 0.5)[0]
         gy = float(ys[0]) + 6 if len(ys) else 800.0
+        fr = contact(fr, (rx, gy), 40, amt=0.7, dirx=-1.0, length=170, sq=5.0)      # 日在右后：长影拖向左
         fr, _ = put(fr, self.man, t, 150, (rx, gy), wind=3.0, breathe=0, look='sil')
-        fr = flare(fr, (cx, cy - 300), 0.9 * hit, angle=0, length=1.4)
+        sr = 820 / 1096 * 0.5 * 1152 * 0.5                                    # 日轮半径（屏幕 px，按当前摆放倍率）
+        fr = flare(fr, (cx + 0.42 * sr, cy - 0.88 * sr), 0.75 * hit, angle=14, length=0.55, scale=0.34, rays=0.55)
         fr = dust(fr, t, 1264, n=50, amt=0.3)
         return bloom(fr, 0.86, 0.35)
 
@@ -1255,9 +1433,9 @@ class E21(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.6, 1400 + 40 * pv * 0.2, 330)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.6, 1400 + 40 * pv * 0.2, 330)
         fr = rays(fr, (330, 280), t, strength=0.4, length=1.0, src_r=260)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (330 - 40 * pv * 0.4, 280), 640 / 1096, wind=0, breathe=0)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (330 - 40 * pv * 0.4, 280), 640 / 1096, wind=0, breathe=0, rot=-61, flip=True)
         fr, _ = put(fr, self.sp, t, 1000, (1180 + 40 * u, 1095), wind=10.0, breathe=0.006)
         fr = dust(fr, t, 1271, n=70, amt=0.4, drift=(-20, -30))
         return bloom(fr, 0.86, 0.3)
@@ -1267,7 +1445,7 @@ class E21(Shot):
 class E22(Shot):
     """白纸晨空 + 刀身正中背后一轮血红日（支点）+ 焦土山脊 + 横刀于胸、两端吊秤盘（生图）。
     秤盘从精灵里拆成两层，各绕刀端吊点摆：「来」左盘一沉、「量」右盘一沉（阻尼摆）+ 刀身白光自左扫到右。"""
-    PIV = ((0.075, 0.43), (0.925, 0.43))
+    PIV = ((0.075, 0.44), (0.925, 0.44))
     H_, FOOT = 960, (960, 1080)
 
     def __init__(self):
@@ -1284,14 +1462,14 @@ class E22(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5
-        fr = warp_plate(self.sky, 1.4, 620, 600 - 20 * pv * 0.2)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.4, 620, 600 - 20 * pv * 0.2)
         a, s = self.sp.fit(self.H_)
         foot = (self.FOOT[0], self.FOOT[1] - 15 * u)
         by = scr_of(self.sp, self.H_, foot, (0.5, 0.43))[1]
         fr = rays(fr, (960, by - 30), t, strength=0.45, length=1.0, src_r=280)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (960, by - 30), 600 / 1096, wind=0, breathe=0)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (960, by - 30), 600 / 1096, wind=0, breathe=0, rot=147)
         fr, _ = put_at(fr, self.ridge, t, (0.5, 0.75), (960 + 30 * pv * 0.6, 830), W * 1.1 / 2048, wind=0, breathe=0)
-        z, A = self.sp.draw(np.zeros((H, W, 3), np.float32), t, a, foot, s, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=6.0, breathe=0)
+        z, A = self.sp.draw(np.zeros((H, W, 3), np.float32), t, a, foot, s, grade=NEU, rim=NORIM, wrap=0, shade=None, wind_amp=_wind(6.0), breathe=0)
         yy, xx = grid()
         mx = xx.copy(); my = yy.copy()                                     # 秤盘绕刀端吊点摆：连续形变场（权重在盘外平滑归零，没有图层接缝）
         for piv, th, sg in ((self.PIV[0], self.tl, 1), (self.PIV[1], self.tr, -1)):
@@ -1322,7 +1500,7 @@ class E23(Shot):
 
     def render(self, t):
         u = self.u(t)
-        fr = speed_radial(self.bg.copy(), (900, 560), 0.25 + 0.6 * ein(u, 2), t, seed=129, inner=0.34)
+        fr = speed_radial(flow_plate(self.bg, t - self.t0, seed=5), (900, 560), 0.25 + 0.6 * ein(u, 2), t, seed=129, inner=0.34)
         fr, _ = put_at(fr, self.sp, t, (0.5, 0.5), (960, 545), 1.06, wind=11.0, breathe=0)      # 画布四边都在画外
         return bloom(fr, 0.88, 0.25)
 
@@ -1330,7 +1508,7 @@ class E23(Shot):
 # ==================================================================== E24 S129b ECU 刃身满屏寒光（218.27–218.97）
 class E24(Shot):
     """E23 同一张生图推到刃身大特写（刀身横贯画面），白光自柄扫到刀尖 + 刃口一线白光；横向速度线。"""
-    BL = ((0.71, 0.44), (0.0, 0.485))
+    BL = ((0.73, 0.335), (0.0, 0.305))                                  # 新刀（直刃 + 中式方镡）：刀根护手 → 刀尖，沿刀身中线
 
     def __init__(self):
         self.bg = np.clip(plate('EA_sky', blur=12) * 0.6 + 0.42, 0, 1)
@@ -1339,8 +1517,8 @@ class E24(Shot):
     def render(self, t):
         u = self.u(t); e = eio(u)
         sc = 1.9 + 0.1 * e
-        src = (0.50 - 0.18 * e, 0.462)
-        fr = speed_h(self.bg.copy(), 0.5, t, seed=1291, dirx=-1)
+        src = (0.50 - 0.18 * e, 0.322)
+        fr = speed_h(flow_plate(self.bg, t - self.t0, seed=6, drift_far=(-20.0, 0.0), drift_near=(-60.0, 0.0)), 0.5, t, seed=1291, dirx=-1)
         fr, A = put_at(fr, self.sp, t, src, (960, 560), sc, wind=4.0, breathe=0, rot=-2)
         k = eio(c01(u * 1.15))
         bx = self.BL[0][0] + (self.BL[1][0] - self.BL[0][0]) * k; byy = self.BL[0][1] + (self.BL[1][1] - self.BL[0][1]) * k
@@ -1365,7 +1543,7 @@ class E25(Shot):
 
     def render(self, t):
         u = self.u(t); pv = u - 0.5; q = t - self.ts
-        bg = warp_plate(self.sky, 1.15, 420 + 30 * pv * 0.2, 500, rot=1.5)
+        bg = warp_plate(flow_plate(self.sky, t - self.t0), 1.15, 420 + 30 * pv * 0.2, 500, rot=1.5)
         bg, _ = put_at(bg, self.ridge, t, (0.5, 0.75), (960 + 30 * pv * 0.5, 830), W * 1.1 / 2048, wind=0, breathe=0)
         h, foot = 740, (930, 935)
         by = scr_of(self.sp, h, foot, (0.7, 0.28))[1]
@@ -1377,9 +1555,13 @@ class E25(Shot):
             top = K.cam(bg, 1.0, oy=gap / 2); bot = K.cam(bg, 1.0, oy=-gap / 2)
             wb = 1 - sstep(780, 900, yy); bot = bot * wb + bg * (1 - wb)
             fr = np.where(yy < by, top, bot)
-            band = np.exp(-((yy[..., 0] - by) / max(2, gap * 0.45)) ** 2)
-            fr = fr * (1 - band[..., None] * 0.9) + band[..., None] * 1.6
-            fr = fr + np.exp(-((yy - by) / (gap + 40)) ** 2) * RED * 0.8 * (1 + 2 * math.exp(-q / 0.12))
+            # P1-5：光剑式发光管 → 一道硬边白芯（细、干笔断口）+ 极窄血红边，辉光压到最低
+            core = np.exp(-((yy[..., 0] - by) / 2.6) ** 2)
+            brk = 0.55 + 0.45 * np.clip(cv2.GaussianBlur(K.fbm(2, W // 8, 1308, base=6, octaves=3).astype(np.float32), (0, 0), 1)[0], 0, 1)
+            core = core * brk[None, :] * (1 - sstep(0.9, 1.0, np.abs(xx - 960) / 960) * 0.5)
+            edge = np.exp(-((yy[..., 0] - by) / max(5.0, gap * 0.20)) ** 2) - core
+            fr = fr * (1 - 0.55 * edge[..., None]) + np.clip(edge, 0, 1)[..., None] * RED * 0.55
+            fr = fr * (1 - core[..., None] * 0.95) + core[..., None] * 1.30
             fr = speed_h(fr, 0.6 * math.exp(-q / 0.5), t, seed=1305, y0=by - 260, y1=by + 260)
             if q < 0.08: fr = fr * 1.2 + 0.15 * (1 - q / 0.08)
         fr, A = put(fr, self.sp, t, h, foot, wind=6.0, mblur=(80, 0) if 0 <= q < 0.03 else (0, 0))
@@ -1403,10 +1585,10 @@ class E26(Shot):
 
     def render(self, t):
         u = self.u(t)
-        fr = warp_plate(self.sky, 1.2, 1500, 650)
+        fr = warp_plate(flow_plate(self.sky, t - self.t0), 1.2, 1500, 650)
         sy = self.HY + 70 - 150 * eout(u, 2)
         fr = rays(fr, (960, sy), t, strength=0.5, length=1.0, src_r=150)
-        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (960, sy), 300 / 1096, wind=0, breathe=0)
+        fr, _ = put_at(fr, self.sun, t, (0.5, 0.49), (960, sy), 300 / 1096, wind=0, breathe=0, rot=-112, flip=True)
         s = W / 2048 * 1.02
         fr, Ag = put_at(fr, self.gr, t, (0.5, 0.573), (960, self.HY), s * 1.04, wind=0, breathe=0)
         yy, xx = grid()
@@ -1449,3 +1631,33 @@ def apply(mod):
     mod.CUTS['E05'] = ('impact', 0, 0, dict(col=(1.0, 1.0, 1.0), amp=10))
     mod.CUTS['E23'] = ('impact', 0, 0, dict(col=(1.0, 1.0, 1.0), amp=10, soft=True))
     mod.CUTS['E25'] = ('impact', 0, 0, dict(col=(1.0, 1.0, 1.0), amp=8, soft=True))
+    cover_moves(mod)
+
+
+def cover_moves(mod):
+    """运镜平移 / 滚转 / 震屏会让 K.cam 在画幅边露出镜像填充（BORDER_REFLECT：左缘一排对称「人字纹」）。
+    逐镜按最坏时刻算出外露像素，把该镜整段 zoom 乘一个刚好盖住的系数（2.39 黑边内的上下外露不算）。"""
+    LB = (H - W / 2.39) / 2                                              # 上下黑边高度（约 138px）
+    for i, (c, f, _, _) in enumerate(mod.SHOTS):
+        if f >= mod.CHORUS_END: break
+        sid = mod.IDS[i]; mv = mod.MOVE.get(sid)
+        if not mv: continue
+        t0, t1 = mod.BOUNDS[i] / FPS, mod.BOUNDS[i + 1] / FPS
+        need = 1.0
+        for k in range(61):
+            u = k / 60; t = t0 + (t1 - t0) * u
+            e = mod.ease(mv[0], u)
+            z = mv[1] + (mv[2] - mv[1]) * e; x = mv[3] + (mv[4] - mv[3]) * e; y = mv[5] + (mv[6] - mv[5]) * e; r = mv[7] + (mv[8] - mv[7]) * e
+            for (ts, amp) in mod.SHAKE.get(sid, []):
+                q = t - ts
+                if 0 <= q < 0.5:
+                    a = amp * math.exp(-q / 0.12); x += a * math.sin(q * 90); y += a * math.cos(q * 73)
+            cr, sr = math.cos(math.radians(r)), math.sin(math.radians(r))
+            for px, py in ((0, LB), (W, LB), (0, H - LB), (W, H - LB)):
+                for g in (1.0, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12):           # 找刚好盖住的最小倍率
+                    dx, dy = (px - W / 2) / (z * g), (py - H / 2) / (z * g)
+                    qx = cr * dx - sr * dy + W / 2 + x; qy = sr * dx + cr * dy + H / 2 + y
+                    if -1 <= qx <= W + 1 and -1 <= qy <= H + 1: break
+                need = max(need, g)
+        if need > 1.0:
+            mod.MOVE[sid] = (mv[0], mv[1] * need, mv[2] * need) + tuple(mv[3:])
