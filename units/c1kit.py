@@ -500,8 +500,12 @@ def finish(fr, t, ca=0, grain=0.04, vig=0.5, bloom_amt=0.35, grade=True, red_kee
             ratio = (r - np.maximum(g, b)) / (r + 1e-3)
             rk = np.clip((ratio - 0.38) / 0.24, 0, 1) * np.clip((r - 0.03) / 0.06, 0, 1)
             sat = np.maximum(sat, rk * red_keep)
-        mono = np.stack([lum, lum, lum], -1) if os.environ.get('STYLE_D') == '1' else np.stack([lum * 0.96, lum * 0.99, lum * 1.05], -1)
-        fr = mono * (1 - sat[..., None]) + fr * sat[..., None]
+        if os.environ.get('STYLE_D') == '1':   # 第八轮风格 D：只保血红，金/暖/冷一律中性去色
+            import style_d
+            fr = style_d.palette(fr)
+        else:
+            mono = np.stack([lum * 0.96, lum * 0.99, lum * 1.05], -1)
+            fr = mono * (1 - sat[..., None]) + fr * sat[..., None]
     if bloom_amt > 0: fr = bloom(fr, 0.72, bloom_amt, 26)
     if ca:
         ca = int(round(ca))

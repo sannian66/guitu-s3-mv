@@ -2831,6 +2831,20 @@ def frame(f, cache):
     return to8(_SEC[0].frame(int(f)))
 
 
+
+# 第八轮 STYLE_D：风格 D 改版钩子。本段分两个并行单元改，各自一个模块（r8d_c_a / r8d_c_b），
+# 模块里 apply(本模块) 替换 SHOTS 里自己负责的镜头类 / 表项；STYLE_D=0 时完全不加载，现版不变。
+if os.environ.get('STYLE_D') == '1':
+    import importlib
+    for _m in ('r8d_c_a', 'r8d_c_b'):
+        try:
+            _mod = importlib.import_module(_m)
+        except ModuleNotFoundError as _e:
+            if _e.name != _m: raise
+            continue
+        _mod.apply(sys.modules[__name__])
+
+
 if __name__ == '__main__':
     from PIL import Image
     ts = [float(x) for x in sys.argv[2:]]

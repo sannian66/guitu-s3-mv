@@ -60,7 +60,11 @@ def chorus1():
 
 def frame(f, cache):
     import subtitle as SUB                      # 第五轮 #52：全片统一底部居中歌词字幕
-    return SUB.apply(_frame(f, cache), f / FPS)
+    im = _frame(f, cache)
+    if os.environ.get('STYLE_D') == '1':        # 第八轮：全片色板兜底（黑白灰 + 血红），字幕之前
+        import style_d
+        im = style_d.palette8(im)
+    return SUB.apply(im, f / FPS)
 
 
 def _frame(f, cache):
