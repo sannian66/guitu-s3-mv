@@ -1566,12 +1566,15 @@ class E25(Shot):
             wb = 1 - sstep(780, 900, yy); bot = bot * wb + bg * (1 - wb)
             fr = np.where(yy < by, top, bot)
             # P1-5：光剑式发光管 → 一道硬边白芯（细、干笔断口）+ 极窄血红边，辉光压到最低
-            core = np.exp(-((yy[..., 0] - by) / 2.6) ** 2)[..., 0]          # (H,1) → (H,)
-            brk = 0.55 + 0.45 * np.clip(cv2.resize(cv2.GaussianBlur(K.fbm(2, W // 8, 1308, base=6, octaves=3).astype(np.float32), (0, 0), 1)[0], (W,), interpolation=cv2.INTER_CUBIC), 0, 1)
-            core = core[:, None] * brk[None, :] * (1 - sstep(0.90, 1.0, np.abs(np.arange(W, dtype=np.float32) - 960) / 960) * 0.5)
-            edge = (np.exp(-((yy[..., 0] - by) / max(5.0, gap * 0.20)) ** 2) - core[..., None])[..., 0]
-            fr = fr * (1 - 0.55 * edge[..., None]) + np.clip(edge, 0, 1)[..., None] * RED * 0.55
-            fr = fr * (1 - core[..., None] * 0.95) + core[..., None] * 1.30
+            yv = np.arange(H, dtype=np.float32)[:, None]                     # (H,1)
+            bx_ = np.arange(W, dtype=np.float32)[None, :]                    # (1,W)
+            core = np.exp(-((yv - by) / 1.5) ** 2) ** 2              # 硬边细芯（~1px 高斯平方）
+            brk = 0.25 + 0.75 * np.clip(cv2.resize(cv2.GaussianBlur(K.fbm(2, W // 8, 1308, base=6, octaves=3).astype(np.float32), (0, 0), 1)[0], (W, 1), interpolation=cv2.INTER_CUBIC), 0, 1)
+            dry = np.clip((brk - 0.30) / 0.25, 0, 1) * 0.85 + 0.15               # 干笔：飞白断续，但不是整段断开
+            core = core * dry * (1 - sstep(0.90, 1.0, np.abs(bx_ - 960) / 960) * 0.5)
+            edge = np.clip(np.exp(-((yv - by) / max(3.5, gap * 0.10)) ** 2) - core, 0, 1)
+            fr = fr * (1 - 0.45 * edge[..., None]) + edge[..., None] * RED * 0.45
+            fr = fr * (1 - core[..., None] * 0.92) + core[..., None] * 1.06
             fr = speed_h(fr, 0.6 * math.exp(-q / 0.5), t, seed=1305, y0=by - 260, y1=by + 260)
             if q < 0.08: fr = fr * 1.2 + 0.15 * (1 - q / 0.08)
         fr, A = put(fr, self.sp, t, h, foot, wind=6.0, mblur=(80, 0) if 0 <= q < 0.03 else (0, 0))
