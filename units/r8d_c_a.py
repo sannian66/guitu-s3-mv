@@ -906,7 +906,8 @@ class C13(Shot):
     雨线沿螺旋吸进眼里；131.61 / 131.96 / 132.07 鼓点上云层里电光一闪。"""
     def __init__(self):
         self.bg = plate('C13_vortex', 1.0, size=(2400, 1350))
-        lum = self.bg.mean(-1)
+        self.bgN = plate('C13_vortex', 1.0, size=(2400, 1350), flip=True)   # 近层改用镜像板：云块形状不再与原板重复
+        lum = self.bgN.mean(-1)
         self.nearA = np.clip((lum - 0.55) / 0.3, 0, 1).astype(np.float32)
         h4, w4 = H // 2, W // 2
         yy, xx = np.mgrid[0:h4, 0:w4].astype(np.float32) * 2
@@ -939,7 +940,7 @@ class C13(Shot):
         fl = sum(0.6 * pulse(t, h, 0.07) * (t >= h) for h in hits) + 0.2 * ein(u, 2)
         z = 1.0 + 0.35 * ein(u, 2)
         far = self._swirl(self.bg, t, u, z * 1.12)
-        near = self._swirl(self.bg, t * 1.6, u, z * 1.12 * 1.30)          # 近层：同一组云但转得快、放得大
+        near = self._swirl(self.bgN, t * 1.6, u, z * 1.12 * 1.30)          # 近层：镜像板，转得快、放得大
         na = self._swirl(self.nearA[..., None].repeat(3, -1), t * 1.6, u, z * 1.12 * 1.30)[..., 0] * 0.55
         fr = far * (1 - na[..., None]) + near * na[..., None]
         fr = lit(fr, fl * 0.6)
