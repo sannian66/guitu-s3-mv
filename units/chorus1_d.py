@@ -285,10 +285,12 @@ def install(G):
             cm = np.clip((cl.mean(-1) - 0.55) * 3.0, 0, 1) * sstep(560, 760, Y)
             fr = fr * (1 - cm[..., None]) + cl * 1.06 * cm[..., None]
             # 眼底两点寒光（63.25 底鼓 + 军鼓）：墨线十字星芒，强度提高
-            g = pulse(t, V(63.25), 0.18) * (t >= V(63.25))
+            g = pulse(t, V(63.25), 0.22) * (t >= V(63.25))
             for ex in (0.462, 0.536):
-                p = src2scr(self.emp, anc, dst, s, (ex, 0.150))
-                fr = star(fr, p, g * 0.9, 60, 16)
+                p = src2scr(self.emp, anc, dst, s, (ex, 0.163))
+                d2 = (X - p[0]) ** 2 + (Y - p[1]) ** 2
+                fr = fr + (np.exp(-d2 / 18.0 ** 2) * 0.85 + np.exp(-d2 / 5.0 ** 2) * 1.8)[..., None] * WHITE3 * g   # 小屏也读得到的眼底亮点
+                fr = star(fr, p, g * 1.25, 46, 15)
             # 中景远山：代码山脊（顶点高低随机、上缘墨线、下沿随视差滑动，不是背景板切出来的横条）
             mtn = K.mountains(W, H, 835, 64, 3141, 5)                      # 缓存的山形（标量基线），按视差上下平移
             mtn = cv2.warpAffine(mtn, np.float32([[1, 0, dx * 0.7], [0, 1, cr * 0.7]]), (W, H), borderMode=cv2.BORDER_REPLICATE)
@@ -614,7 +616,8 @@ def install(G):
         """S035 劈缝的特写：白石墙沿同一方向（右上 → 左下）被劈开，缝里血红速度线 + 白热缝心，体积光向镜头散；沿缝推进"""
         def __init__(self):
             w = plate(C1 + 'C1_wall.png', (3456, 1944))
-            self.wall = np.ascontiguousarray(w[300:300 + 1300, 400:400 + 2400] * 0.56).astype(np.float32)
+            # 与 S035 同墙但换区域 + 水平镜像 + 更低机的暗部：避免两镜读成同一张板
+            self.wall = np.ascontiguousarray(w[180:180 + 1300, 300:300 + 2400][:, ::-1] * 0.52).astype(np.float32)
             self.gapp = plate(R1 + 'D035_gap.png', (2400, 1350))[:1300]
             self.d = np.array([-0.80, 0.60])
             self.fogt = K.tile(512, 363, 5, 5)
@@ -725,9 +728,15 @@ def install(G):
             off = 320 * u
             fr = self.bg[100:100 + H, int(60 + off * 0.5):int(60 + off * 0.5) + W].copy()
             ph = (t - self.t0) / 0.36                                    # 一步 0.36s：两步态交替
-            sp = self.wa if int(ph) % 2 == 0 else self.wb
+            n_ph = int(ph); frac = ph - n_ph
+            sp = self.wa if n_ph % 2 == 0 else self.wb
             bob = 8 * abs(math.sin(math.pi * ph))
-            fr, _ = put_foot(sp, fr, t, 790, (780 + 60 * u, 1000 - bob), wind_amp=-10, rot=0.8 * math.sin(math.pi * ph))
+            foot = (780 + 60 * u, 1000 - bob)
+            if frac < 0.12:                                             # 换步的 1–2 帧：上一姿势淡出 + 横向残影，软化硬切
+                prev = self.wb if n_ph % 2 == 0 else self.wa
+                put_foot(prev, fr, t, 790, (foot[0] + 5, foot[1]), wind_amp=-10,
+                         rot=0.8 * math.sin(math.pi * ph), alpha=0.38 * (1 - frac / 0.12), mblur=(12, 0))
+            fr, _ = put_foot(sp, fr, t, 790, foot, wind_amp=-10, rot=0.8 * math.sin(math.pi * ph))
             fr = ink_rain(fr, t, 394, n=200, amt=0.55 * clamp01((t - self.t0) / 0.6 + 0.3), speed=1500, angle=10, near=0.2)
             dx, dy, dr = shake(t, 6, 1.4, 39)
             return cam(fr, 1.04, dx, dy, dr), 0
@@ -791,9 +800,12 @@ def install(G):
                     fr = fr * (1 - m[..., None] * 0.04)
                 sp, anc, s0 = self.sps[i]
                 a, b, c, d = self.P[i]
-                dst = ((a + c) / 2 + (18 if i % 2 else -18) * eio(u), b + (d - b) * self.EY[i])
+                dst = ((a + c) / 2 + (18 if i % 2 else -18) * eio(u), b + (d - b) * self.EY[i] + 2.5 * math.sin(2 * math.pi * (t - T0) / 0.9))
                 lay, A = draw(sp, np.zeros_like(fr), t, anc, dst, s0 * (1.15 - 0.15 * k) * (1 + 0.02 * u), wind_amp=8, extra_A=m)
                 fr = fr * (1 - A[..., None]) + lay
+                gl = pulse(t, T0 + 0.03, 0.16) * (t >= T0 + 0.03)
+                if gl > 0.01:                                          # 入格后眼部寒光一闪：格内也有表演，不只是一张静图
+                    fr = star(fr, dst, gl * 0.65, 44, 13)
                 if int(round((t - T0) * 30)) == 0:                     # 砸入帧：格内反相
                     l = fr.mean(-1, keepdims=True)
                     fr = fr * (1 - m[..., None]) + np.clip(1 - l, 0, 1) * m[..., None]
