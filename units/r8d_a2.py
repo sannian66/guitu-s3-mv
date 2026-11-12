@@ -44,6 +44,51 @@ def bgview(name, scale=1.1, dx=0.0, dy=0.0, z=1.0, rot=0.0, pivot=(0.5, 0.5), at
     return cv2.GaussianBlur(out, (0, 0), blur) if blur > 0.3 else out
 
 
+_FL = {}
+def flowdisp(t, amp, spd, seed, swell=0.0):
+    """§12-2/3：低频、低振幅、随时间缓慢变化的噪声位移场（1/8 分辨率求解后放大）。
+    swell>0 时叠一个同相位的大尺度膨胀，让云团自身在「鼓」，不只是平移。"""
+    if seed not in _FL:
+        r = np.random.default_rng(seed)
+        gh, gw = H // 8, W // 8
+        yy, xx = np.mgrid[0:gh, 0:gw].astype(np.float32) / 8.0
+        wv = [(r.uniform(0, 6.28), r.uniform(0.5, 1.2), r.uniform(0.0035, 0.010), r.uniform(0.004, 0.012), r.uniform(0.5, 1.0)) for _ in range(3)]
+        _FL[seed] = (xx, yy, wv, np.hypot(xx - W / 2, yy - H / 2) / (H / 8.0))
+    xx, yy, wv, rr = _FL[seed]
+    dx = np.zeros_like(xx); dy = np.zeros_like(xx)
+    for ph, om, kx, ky, w in wv:
+        a = kx * xx + ky * yy + ph + om * spd * t
+        dx += np.sin(a) * w
+        dy += np.cos(a * 1.37 + 0.7) * w * 0.85
+    if swell:
+        dx += np.sin(swell * t * 0.31 + rr * 0.9) * 0.55 * swell / max(swell, 1e-3)
+        dy += np.cos(swell * t * 0.27 + rr * 0.7) * 0.4
+    return cv2.resize(dx * amp, (W, H), interpolation=cv2.INTER_CUBIC), cv2.resize(dy * amp, (W, H), interpolation=cv2.INTER_CUBIC)
+
+
+def flowwrap(im, t, amp=10.0, spd=0.35, seed=0, swell=0.0, mask=None):
+    """把已经合成好的整幅画面按流场重采样（云 / 烟 / 天空「在流」，不是整体旋转缩放）。"""
+    if amp <= 0.3: return im
+    dx, dy = flowdisp(t, amp, spd, seed, swell)
+    if mask is not None: dx *= mask; dy *= mask
+    xx, yy = K.grid()
+    out = cv2.remap(np.ascontiguousarray(im, np.float32), xx + dx, yy + dy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    return out
+
+
+_VG = []
+def vortex_swirl(im, t, c, gain=46.0, r0=900.0, rate=0.11, cy=1.25):
+    """§12-2：绕 c 的切向剪切位移场——越靠涡心转得越快，外圈几乎不动；画面整体不旋转。"""
+    if not _VG:
+        x, y = K.grid(); _VG.extend([x, y, np.hypot(x - c[0], (y - c[1]) * cy) / r0])
+    x, y, rr = _VG
+    sw = np.clip(1.25 - rr, 0, 1.25) ** 1.6 * gain                       # 位移量（px）
+    an = np.arctan2(y - c[1], x - c[0]) + np.clip(1.25 - rr, 0, 1.25) ** 1.6 * rate * t
+    r2 = np.hypot(x - c[0], (y - c[1]) * cy)
+    return cv2.remap(np.ascontiguousarray(im, np.float32), c[0] + np.cos(an) * r2, c[1] + np.sin(an) * r2 / cy,
+                     cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+
 def brighten(fr, k):
     """背景板提亮：暗部抬起（白纸感），亮部不爆；k 0..1"""
     return 1 - (1 - np.clip(fr, 0, 1)) ** (1 + 1.4 * k) if k > 0 else fr
@@ -288,7 +333,7 @@ class V08D(DShot):
 
     def side(self, t, th):
         u = self.u(t); e = eio(u); a = t - th
-        fr = bgview('A2_v08_bg', 1.12, dx=-50 * (e - 0.5))
+        fr = flowwrap(bgview('A2_v08_bg', 1.12, dx=-50 * (e - 0.5)), t, 5, 0.25, 8)
         yy = np.arange(H, dtype=np.float32)[:, None, None]
         band = np.clip((yy - 868) / 4, 0, 1)
         pap = np.zeros_like(fr); pap[870:980] = self.pap[:110]
@@ -356,7 +401,7 @@ class V09D(DShot):
     def render(self, t):
         u = self.u(t); e = eio(u)
         par = e - 0.5
-        fr = brighten(bgview('A2_v09_bg', 1.14, dx=-70 * par), 0.55)
+        fr = flowwrap(brighten(bgview('A2_v09_bg', 1.14, dx=-70 * par), 0.55), t, 6, 0.3, 9)
         a_, s_ = lay('A2_v09_scale').fit(self.HGT)
         fx, fy = self.FOOT
         dst = (fx + 18 * par, fy)
@@ -518,7 +563,7 @@ VGR = dict(NEU, expo=0.85)                       # 恶徒：斩前斩后同一�
 def sha_world(t):
     ts = CT(4, 1); a = t - ts
     u = _sf_u(t)
-    fr = brighten(bgview('A2_v12_bg', 1.10, dx=-40 * (u - 0.5)), 0.35)
+    fr = flowwrap(brighten(bgview('A2_v12_bg', 1.10, dx=-40 * (u - 0.5)), 0.35), t, 9, 0.4, 12, swell=0.6)
     fr = RAIN.draw(fr, t, 0.8, angle=4, color=(0.10, 0.02, 0.02), layers=(0, 1))
     fr = _contact(fr, HERO_FOOT[0] + 10, HERO_FOOT[1])
     # 恶徒
@@ -567,7 +612,7 @@ def sha_world(t):
 
 def fang_world(t):
     u = _sf_u(t)
-    fr = bgview('A2_v13_bg', 1.10, dx=-40 * (u - 0.5))
+    fr = flowwrap(bgview('A2_v13_bg', 1.10, dx=-40 * (u - 0.5)), t, 9, 0.4, 13, swell=0.6)
     fr = RAIN.draw(fr, t, 0.9, angle=4, color=(0.25, 0.25, 0.25), layers=(0, 1))
     fr = _contact(fr, HERO_FOOT[0] + 10 + FANG_DX, HERO_FOOT[1])
     fr, Ah = sfit(fr, t, 'A2_v13_hero', 660, (HERO_FOOT[0] + FANG_DX, HERO_FOOT[1]), wind_amp=5.0)
@@ -615,10 +660,10 @@ class V13D(DShot):
 #   层：夜空背景板 A2_v14_bg（视差 0.5）/ 主体三姿势（按脸中心与脸宽对齐，发丝衣带风动；直刀 + 中式护手 + 素黑柄 + 环首红穗）/ 刀光 / 火星 / 前景灰烬
 class V14D(DShot):
     HEAD = (880.0, 400.0)                                  # 脸中心落点（三姿势按脸对齐）
-    S = (1.05, 0.90, 1.0)                                 # 按脸宽对齐（p1 0.090 / p2 0.105 / p3 0.095）
+    S = (1.05, 1.05, 1.05)                                 # 图生图衍生：三张同底同构图，缩放一致
     POSE = ('A2_v14_p1', 'A2_v14_p2', 'A2_v14_p3')
-    FACE = ((0.525, 0.27), (0.49, 0.30), (0.455, 0.29))     # 各姿势脸中心（源图归一化）
-    GUARD = ((0.485, 0.735), (0.345, 0.585), (0.295, 0.42))  # 各姿势护手（源图归一化）
+    FACE = ((0.525, 0.27), (0.50, 0.25), (0.505, 0.25))     # 各姿势脸中心（源图归一化）
+    GUARD = ((0.485, 0.735), (0.365, 0.555), (0.40, 0.465))  # 各姿势护手（源图归一化）
     # 画布：上缘 y<120（藏在黑边里）；p3 红带出左画布边 → 画布左缘 x≈-37
 
     def pose(self, t):
@@ -627,7 +672,7 @@ class V14D(DShot):
 
     def render(self, t):
         u = self.u(t); e = eio(u); par = e - 0.5
-        fr = bgview('A2_v14_bg', 1.12, dx=-50 * par, rot=-1.5 * par)
+        fr = flowwrap(bgview('A2_v14_bg', 1.12, dx=-50 * par, rot=-1.5 * par), t, 10, 0.45, 14, swell=0.7)
         fr = RAIN.draw(fr, t, 0.5, angle=-10, color=(0.7, 0.7, 0.7), layers=(0, 1))
         i, tb, td = self.pose(t)
         name = self.POSE[i]
@@ -650,7 +695,7 @@ class V14D(DShot):
             b = t - td
             mb = (60 * max(0.0, 1 - b / 0.07), 0)
             dst = (self.HEAD[0] - 8 * eout(b / 0.25), self.HEAD[1])
-        fr, Am = sput(fr, t, name, a_src, dst, s, wind_amp=5.0 if i < 2 else 9.0, mblur=mb)
+        fr, Am = sput(fr, t, name, a_src, dst, s, wind_amp=4.0 if i < 2 else 5.5, mblur=mb)
         G = spt(name, a_src, dst, s, self.GUARD[i])
         if i == 0:
             for k in range(3):
@@ -662,7 +707,7 @@ class V14D(DShot):
         elif i == 1:
             b = t - tb
             # 出鞘白光沿刃滑过（护手 → 鞘口方向）
-            T_ = spt(name, a_src, dst, s, (0.655, 0.765))
+            T_ = spt(name, a_src, dst, s, (0.62, 0.86))
             q = clamp01(b / 0.22)
             P = (G[0] + (T_[0] - G[0]) * q, G[1] + (T_[1] - G[1]) * q)
             fr = star(fr, P, 1.0 - 0.5 * q, 1.0, rot=31)
@@ -670,11 +715,11 @@ class V14D(DShot):
             fr = speed_lines(fr, t, 1410, 28, 0.5 * max(0.0, 1 - b / 0.15))
         else:
             b = t - td
-            tip = spt(name, a_src, dst, s, (0.985, 0.41))
+            tip = spt(name, a_src, dst, s, (0.868, 0.365))
             pts = bez((G[0] + 120, G[1] + 260), (G[0] + 600, G[1] + 40), (tip[0] + 60, tip[1] - 10), 60)
             fade = 1.0 if b < 0.10 else math.exp(-(b - 0.10) / 0.22)
             fr = brush(fr, pts, 80, clamp01(b / 0.07), fade, 1411)
-            mouth = spt(name, a_src, dst, s, (0.765, 0.775))
+            mouth = spt(name, a_src, dst, s, (0.62, 0.86))
             fr = K.sparks(fr, t, 1412, mouth, n=50, life=0.5, speed=(300, 900), dirc=(1, -0.6), spread=0.9, grav=700,
                           area=(10, 10), amt=1.0, t0=td, burst=True, color=(1.0, 1.0, 1.0))
             fr = K.sparks(fr, t, 1413, mouth, n=30, life=0.45, speed=(250, 800), dirc=(1, -0.4), spread=1.0, grav=700,
@@ -698,6 +743,7 @@ class V15D(DShot):
         u = self.u(t); e = eio(u); par = e - 0.5
         T1, T2 = CT(5, 9), CT(5, 10)
         fr = brighten(bgview('A2_plaza', 1.15, dx=-40 * par, dy=-60 + 30 * par), 0.45)
+        fr = flowwrap(fr, t, 12, 0.5, 15, swell=0.8, mask=np.clip((760 - np.arange(H, dtype=np.float32)) / 200, 0, 1)[:, None])
         fr = RAIN.draw(fr, t, 0.75, angle=-6, color=(0.80, 0.80, 0.80), layers=(0, 1))
         a1 = t - T1
         if a1 < -1 / 30 + 1e-4:
@@ -713,10 +759,10 @@ class V15D(DShot):
             return fr, 0
         if a1 < 0:                                                       # 反白冲击帧（命中前一帧）
             fr = _contact(fr, self.FOOT[0], self.FOOT[1], rx=210)
-            fr, Am = sfit(fr, t, 'A2_v15_raise', self.HGT, (self.FOOT[0], self.FOOT[1] - 30), wind_amp=8.0)
+            fr, Am = sfit(fr, t, 'A2_v15_raise', self.HGT, (self.FOOT[0], self.FOOT[1] - 30), wind_amp=6.0)
             return invert_frame(fr, Am), 4
         sp = lay('A2_v15_plant'); a_, s_ = sp.fit(self.HGT)
-        tipn = lowest('A2_v15_plant')
+        tipn = (0.502, 0.982)                                  # 刀尖（lowest() 会取到鞋底）
         tip = spt('A2_v15_plant', a_, self.FOOT, s_, tipn)
         a2 = t - T2
         prog = 0.55 * eout(a1 / 0.10) + (0.45 * eout(a2 / 0.12) if a2 >= 0 else 0)
@@ -734,7 +780,7 @@ class V15D(DShot):
         fr = over(fr, np.clip(ring * 0.9, 0, 1).astype(np.float32), INKC)
         fr = _contact(fr, self.FOOT[0], self.FOOT[1], rx=220)
         kick = 6 * math.exp(-a1 / 0.06)
-        fr, Am = sfit(fr, t, 'A2_v15_plant', self.HGT, (self.FOOT[0], self.FOOT[1] + kick), wind_amp=7.0 + 6 * math.exp(-a1 / 0.3))
+        fr, Am = sfit(fr, t, 'A2_v15_plant', self.HGT, (self.FOOT[0], self.FOOT[1] + kick), wind_amp=5.0 + 3.5 * math.exp(-a1 / 0.3))
         fr = K.sparks(fr, t, 1501, tip, n=80, life=0.55, speed=(300, 1100), dirc=(0, -1), spread=1.3, grav=1300,
                       area=(20, 6), amt=1.0, t0=T1, burst=True, color=(1.0, 1.0, 1.0))
         fr = K.sparks(fr, t, 1502, tip, n=40, life=0.5, speed=(250, 900), dirc=(0, -1), spread=1.2, grav=1300,
@@ -767,6 +813,8 @@ class V16D(DShot):
     def render(self, t):
         u = self.u(t); e = eio(u)
         fr = bgview('A2_vortex', 1.30, pivot=(0.53, 0.32), at=self.EYE, rot=-14 * e)
+        fr = flowwrap(fr, t, 26, 0.55, 16, swell=1.2)                     # 云团鼓动 + 低频扰动
+        fr = vortex_swirl(fr, t, self.EYE)                                # 切向剪切：各半径转速不同，墨云在自己转
         hits = [K.pulse(t, x, 0.12) * (t >= x) for x in (V(37.129), CT(6, 1), CT(6, 2))]
         hk = max(hits)
         k = eio(clamp01((t - V(36.9)) / 1.0))
@@ -776,7 +824,7 @@ class V16D(DShot):
             c = (self.EYE[0] - 20, self.EYE[1] + 40 + 110 * k)
             fr, As = sput(fr, t, 'A2_seal', (0.5, 0.55), c, s, alpha=min(1.0, 1.4 * k),
                           grade=dict(NEU, expo=0.55 + 0.45 * k + 0.4 * hk))
-        fr, Ae = sfit(fr, t, 'A2_v16_emperor', 900, (640, 1010), wind_amp=9.0)
+        fr, Ae = sfit(fr, t, 'A2_v16_emperor', 900, (640, 1010), wind_amp=6.0)
         fr = ASH.draw(fr, t, 0.35, wind=(-120, -40))
         return flash(fr, 0.25 * hk), (2 if hk > 0.7 else 0)
 
@@ -796,7 +844,7 @@ class V17D(DShot):
 
     def side(self, t, th, land=False):
         q = 1.0 if land else clamp01((t - self.t0) / (th - self.t0))
-        fr = bgview('A2_v17_sky', 1.10, dy=30 * q)                                 # 独立板：仰角天幕，涡心留白给坠印
+        fr = flowwrap(bgview('A2_v17_sky', 1.10, dy=30 * q), t, 13, 0.55, 17)         # 独立板：仰角天幕，云在流
         fr = RAIN.draw(fr, t, 0.8, angle=-6, color=(0.8, 0.8, 0.8), layers=(0, 1))
         by = 330 + 560 * ein(q, 1.8)
         sp = lay('A2_seal')
@@ -844,7 +892,7 @@ class V17D(DShot):
 class V18D(DShot):
     def render(self, t):
         u = self.u(t); e = eio(u)
-        fr = bgview('A2_v18_plate', 1.12, rot=-2.5 * (e - 0.5), z=1.0 + 0.03 * (1 - e))
+        fr = flowwrap(bgview('A2_v18_plate', 1.12, rot=-2.5 * (e - 0.5), z=1.0 + 0.03 * (1 - e)), t, 7, 0.3, 18)
         rm = SD.red_mask(fr)
         k = t - V(39.903)
         if k >= 0: fr = fr + K.blur_ds(rm, 10)[..., None] * BLOOD * 0.6 * math.exp(-k / 0.15)
@@ -865,7 +913,7 @@ class V19D(DShot):
 
     def render(self, t):
         u = self.u(t); e = eio(u)
-        fr = paper_bg(1901, red=(1480, 330, 360))
+        fr = flowwrap(paper_bg(1901, red=(1480, 330, 360)), t, 5, 0.2, 19, swell=0.5)
         fr = focus_lines(fr, (1480, 300), 0.75, 1902, r0=300, n=90)
         s = W / lay('A2_v19_mcu').w * 1.25
         fr, Am = sput(fr, t, 'A2_v19_mcu', self.FACE, (self.AT[0], self.AT[1] - 10 * (e - 0.5)), s, wind_amp=6.0, breathe=0.004)
@@ -892,22 +940,23 @@ class V20D(DShot):
         rm = SD.red_mask(fr) * (np.arange(H, dtype=np.float32)[:, None] < 800)
         rm = cv2.GaussianBlur(rm.astype(np.float32), (0, 0), 1.2)[..., None]
         fr = fr * (1 - rm) + sky * rm
+        fr = flowwrap(fr, t, 8, 0.35, 20, swell=0.6)
         fr = RAIN.draw(fr, t, 0.6, angle=-6, color=(0.8, 0.8, 0.8), layers=(0, 1))
         fr = _contact(fr, self.FOOT[0], self.FOOT[1], rx=200 if a < 0 else 240)
         sx, sy = R8.shake(t, ts, amp=14, tau=0.10, seed=3)
         if a < 0:
             dy = 8 * eio(clamp01((t - self.t0) / max(1e-3, ts - self.t0)))
-            fr, Am = sfit(fr, t, 'A2_v20_coil', 560, (self.FOOT[0], self.FOOT[1] + dy), wind_amp=8.0)
+            fr, Am = sfit(fr, t, 'A2_v20_coil', 560, (self.FOOT[0], self.FOOT[1] + dy), wind_amp=5.5)
             return fr, 0
         if a < 1 / 30 - 1e-4:
             foot = (self.FOOT[0] + sx, self.FOOT[1] + 30 + sy)
-            fr, Am = sfit(fr, t, 'A2_v20_rise', 820, foot, wind_amp=10.0, mblur=(36, -30))
+            fr, Am = sfit(fr, t, 'A2_v20_rise', 820, foot, wind_amp=6.0, mblur=(36, -30))
         else:
             dy = -10 * eout(clamp01(a / 0.4))
             foot = (self.FOOT[0] + sx, self.FOOT[1] + dy + sy)
-            fr, Am = sfit(fr, t, 'A2_v20_rise', 820, foot, wind_amp=10.0, mblur=(0, 18 * max(0.0, 1 - a / 0.12)))
+            fr, Am = sfit(fr, t, 'A2_v20_rise', 820, foot, wind_amp=6.0, mblur=(0, 18 * max(0.0, 1 - a / 0.12)))
         sp = lay('A2_v20_rise'); a_, s_ = sp.fit(820)
-        tip = spt('A2_v20_rise', a_, foot, s_, sp.top)
+        tip = spt('A2_v20_rise', a_, foot, s_, (0.93, 0.045))       # 刀刃画内端点（新图为右上斜刺）
         pts = bez((430, 860), (1250, 700), (tip[0] + 30, tip[1] - 20), 60)
         fade = 1.0 if a < 0.10 else math.exp(-(a - 0.10) / 0.25)
         fr = brush(fr, pts, 90, clamp01(a / 0.07), fade, 2001)
@@ -938,7 +987,7 @@ class V21D(DShot):
 
     def scene(self, t):
         tf, tm = CT(7, 8), CT(7, 9)
-        fr = paper_bg(2100, red=(1500, 760, 520))
+        fr = flowwrap(paper_bg(2100, red=(1500, 760, 520)), t, 6, 0.22, 21, swell=0.5)
         fr = focus_lines(fr, self.C, 0.55, 2103, r0=520, n=80)
         sp = lay('A2_v21_edge')
         s = 1.30
