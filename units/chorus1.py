@@ -1564,6 +1564,7 @@ if os.environ.get('STYLE_D') == '1':
     if os.environ.get('C1D', '1') != '0' and SPRITE_MODE:   # 第八轮 C1 铺开（units/chorus1_d.py，只在它实际装载时）：前景余烬 / 金尘 → 灰烬；S033/S036 代码碎砖遮挡（暖色 rim）→ 镜内生图碎块落石
         FG.update({k: ('ash', a) for k, (kd, a) in FG.items() if kd in ('ember', 'gold') and k not in ('S028', 'S029', 'S030')})
         for _k in ('S033', 'S036'): OCC.pop(_k, None)
+        CUTS['S032'] = ('slash_wipe', 0.06, 0.16, dict(angle=78, soft_edges=True))   # 评审：入格两半画布边羽化，不露直线 / 矩形边
 # 曝光（v1 整体偏暗）：全局 1.2，个别镜头再补
 EXPO_ALL = 1.0 if os.environ.get('STYLE_D') == '1' else 1.2
 EXPO = {'S031': 1.15, 'S039': 1.1, 'S043': 1.25, 'S044': 1.3, 'S047': 1.15, 'S048': 1.3, 'S041': 1.1, 'S042': 1.15}

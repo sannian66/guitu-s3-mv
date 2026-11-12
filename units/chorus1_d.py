@@ -45,6 +45,16 @@ def install(G):
         sp.wind_w = np.maximum(sp.wind_w, cv2.GaussianBlur(red, (0, 0), 8) * k).astype(np.float32)
         return sp
 
+    def shaped_bottom(sp, y0=0.80, amp=0.09, feather=0.05, seed=0):
+        """下沿按云形 / 撕口形状淡出（不是水平直切）：y0 以上不透明，y0 附近随低频噪声起伏，往下渐隐"""
+        h, w = sp.A.shape
+        n = cv2.resize(K.tile_crop(K.tile(256, seed + 771, 3, 3), 0, 0, 8, max(4, w // 16)), (w, 8), interpolation=cv2.INTER_CUBIC)
+        prof = (n.mean(0) - 0.5) * 2.0
+        cut = (y0 + amp * prof) * h
+        a = np.clip((cut[None, :] - np.arange(h, dtype=np.float32)[:, None]) / (feather * h), 0, 1).astype(np.float32)
+        sp.A = (sp.A * a).astype(np.float32)
+        return sp
+
     def draw(sp, fr, t, anchor, dst, scale, **kw):
         kw.setdefault('wind_amp', 6.0); kw.setdefault('breathe', 0.003)
         return sp.draw(fr, t, anchor, dst, scale, grade=NEU, rim=NORIM, wrap=0, shade=None, **kw)
@@ -256,35 +266,33 @@ def install(G):
     class S031D(S031):
         def __init__(self):
             self.sky = plate(C1 + 'C1_sky.png', (2112, 1188))
-            self.emp = flut('C1_emp', 0.6)
+            self.emp = shaped_bottom(flut('C1_emp_full', 0.6), 0.86, 0.08, 0.12, 31)   # 半身到膝的巨像；下摆烟化 + 云形不规则淡出
             self.sw = rig.Swordsman(310, view='back')
             self.ridge = K.ridge_line(W, 905, 40, 312, 2)
-            fg = self.sky[int(1188 * 0.80):, :, :]
-            self.fgm = np.clip((0.35 - fg.mean(-1)) * 6, 0, 1)        # 远山黑剪影（同一张背景板的下沿，单独作前景层做视差）
             n_ = cv2.resize(K.tile_crop(K.tile(512, 3131, 4, 4), 0, 0, H // 8, W // 8), (W, H))
             self.fn = ((n_ - 0.5) * 160 + 40 * np.sin(X / 140.0)).astype(np.float32)
         def render(self, t):
             u = self.u(t)
             cr = 60 * (1 - eio(u))
             dx = -30 + 60 * eio(u)                                  # 远景视差：天 0.3 / 巨像 0.6 / 山 1.0
-            fr = self.sky[int(54 - cr * 0.3):int(54 - cr * 0.3) + H, int(96 + dx * 0.3):int(96 + dx * 0.3) + W].copy()
+            fr = self.sky[int(54 - cr * 0.3):int(54 - cr * 0.3) + H, int(96 + dx * 0.3):int(96 + dx * 0.3) + W].copy() * 1.06
             mc = (1040 / 2048 * 2112 - 96 - dx * 0.3, 279 / 1152 * 1188 - 54 + cr * 0.3)       # 背景板白月心
-            fade = np.clip(1.0 - (Y - (mc[1] + 330 + self.fn)) / 170, 0, 1).astype(np.float32)   # 胸以下淡入云海（云形不规则边，不成直线）
-            s = 0.62 * (1 + 0.02 * u)
-            fr, A = draw(self.emp, fr, t * 0.6, (0.5, 0.06), (mc[0] + dx * 0.3, mc[1] - 60 + cr * 0.6), s, wind_amp=5,
-                         alpha=0.94, extra_A=fade)
-            # 眼底两点寒光（63.25 底鼓 + 军鼓）
+            s = 0.86 * (1 + 0.02 * u)
+            anc, dst = (0.5, 0.09), (mc[0] + dx * 0.3, mc[1] - 150 + cr * 0.6)     # 发髻顶在白月里（月作光环），身体立在云海上
+            fr, A = draw(self.emp, fr, t * 0.6, anc, dst, s, wind_amp=6, alpha=0.95)
+            # 云海从下方漫过下摆（同一张背景板的云层，按亮度做遮罩 → 巨像立在云里，不是飘着）
+            cl = self.sky[int(54 - cr * 0.3):int(54 - cr * 0.3) + H, int(96 + dx * 0.55):int(96 + dx * 0.55) + W]
+            cm = np.clip((cl.mean(-1) - 0.55) * 3.0, 0, 1) * sstep(560, 760, Y)
+            fr = fr * (1 - cm[..., None]) + cl * 1.06 * cm[..., None]
+            # 眼底两点寒光（63.25 底鼓 + 军鼓）：墨线十字星芒，强度提高
             g = pulse(t, V(63.25), 0.18) * (t >= V(63.25))
-            for ex in (0.455, 0.545):
-                p = src2scr(self.emp, (0.5, 0.06), (mc[0] + dx * 0.3, mc[1] - 60 + cr * 0.6), s, (ex, 0.405))
-                fr = star(fr, p, g * 0.5, 50, 14)
-            # 前景远山（同一背景板下沿，单独一层：视差 1.0）
-            yb = int(1188 * 0.80) - int(54 - cr * 0.3) + int(cr * 0.7)
-            fm = self.fgm[:, int(96 + dx):int(96 + dx) + W]
-            hh = min(fm.shape[0], H - yb)
-            if hh > 0:
-                m = np.zeros((H, W), np.float32); m[yb:yb + hh] = fm[:hh]
-                fr = over(fr, m, (0.02, 0.02, 0.02))
+            for ex in (0.462, 0.536):
+                p = src2scr(self.emp, anc, dst, s, (ex, 0.150))
+                fr = star(fr, p, g * 0.9, 60, 16)
+            # 中景远山：代码山脊（顶点高低随机、上缘墨线、下沿随视差滑动，不是背景板切出来的横条）
+            mtn = K.mountains(W, H, 835, 64, 3141, 5)                      # 缓存的山形（标量基线），按视差上下平移
+            mtn = cv2.warpAffine(mtn, np.float32([[1, 0, dx * 0.7], [0, 1, cr * 0.7]]), (W, H), borderMode=cv2.BORDER_REPLICATE)
+            fr = over(fr, mtn * 0.55, (0.10, 0.10, 0.11))
             rg = self.ridge + cr
             rm = K.ridge_mask(H, W, rg)
             fr = over(fr, rm, (0.015, 0.015, 0.015))
@@ -309,7 +317,8 @@ def install(G):
             self.P0 = np.array([np.polyval(c, 0.0), 0.0]); self.d = np.array([c[0], 1.0]) / math.hypot(c[0], 1.0)
             self.left = np.clip((bx[:, None] - 6 - X) / 8, 0, 1).astype(np.float32)        # 白格（左）蒙版
             self.right = np.clip((X - bx[:, None] - 6) / 8, 0, 1).astype(np.float32)
-            self.emp = flut('C1_emp', 0.6); self.gt = flut('C1_gt_face', 0.8)
+            self.emp = shaped_bottom(flut('C1_emp', 0.6), 0.80, 0.10, 0.08, 32)     # 下颌以下按云形 / 撕口淡出，不平切
+            self.gt = shaped_bottom(flut('C1_gt_face', 0.8), 0.78, 0.10, 0.08, 33)
             self.T_Z, self.T_X = V(CT(13, 4)), V(CT(13, 5))
         def panels(self, t):
             fr = self.bg.copy()
@@ -403,7 +412,7 @@ def install(G):
             lum = w.mean(-1)
             self.seam = np.clip((cv2.GaussianBlur(lum, (0, 0), 5) - lum) * 5, 0, 1) * (lum < 0.4)
             xx = np.linspace(0, 1, w.shape[1], dtype=np.float32)[None, :, None]
-            self.wall = (w * (1.12 - 0.35 * xx)).astype(np.float32)           # 左侧掠射光、右侧压暗（保留现版光向）
+            self.wall = (w * (0.86 - 0.28 * xx)).astype(np.float32)           # 压低：保纯黑砖缝和网点密度
             self.dtex = K.tile(512, 3403, 4, 5)
         def render(self, t):
             u = self.u(t)
@@ -416,11 +425,14 @@ def install(G):
             p1 = clamp01((t - self.t0 - 0.1) / (self.T_POP - self.t0 - 0.1))
             rr = np.sqrt(((X - 900) / 1.25) ** 2 + (Y - 560) ** 2)
             if t < self.T_POP:
-                gm = np.exp(-(rr / (140 + 200 * eio(p1))) ** 2) * eio(p1) ** 2 * 0.22
+                dg = 0.5 + 0.5 * np.sin(X / 5.2) * np.sin(Y / 5.2)          # 网点（不是平滑径向光斑）
+                gm = np.exp(-(rr / (140 + 200 * eio(p1))) ** 2) * eio(p1) ** 2 * (0.10 + 0.26 * dg)
             else:
                 a = t - self.T_POP
                 R = 300 + 1400 * eout(a / 0.6, 2)
-                gm = np.exp(-(rr / 420) ** 2) * (0.35 + 0.5 * math.exp(-a / 0.35)) + np.exp(-((rr - R) / 240) ** 2) * 0.6 * math.exp(-a / 0.4)
+                dg = 0.5 + 0.5 * np.sin(X / 5.2) * np.sin(Y / 5.2)
+                gm = (np.exp(-(rr / 420) ** 2) * (0.14 + 0.22 * dg) * (0.7 + math.exp(-a / 0.35))
+                      + np.exp(-((rr - R) / 240) ** 2) * (0.25 + 0.45 * dg) * math.exp(-a / 0.4))
             nf = int(round((t - self.T_POP) * 30))
             gm = gm * {-1: 0.55, 0: 1.9, 1: 0.9}.get(nf, 1.0)
             sl = np.clip(K.blur_ds(sw_, 2) * gm * 2.5, 0, 1)
@@ -451,11 +463,12 @@ def install(G):
         T_K2 = V(70.582)
         AFT_H, AFT_FOOT = 770.0, (740.0, 925.0)
         def __init__(self):
-            self.wallA = plate(C1 + 'C1_wall.png', (2496, 1404))
-            self.wallC = plate(C1 + 'C1_wall.png')
+            self.wallA = plate(C1 + 'C1_wall.png', (2496, 1404), gain=0.72)
+            self.wallC = plate(C1 + 'C1_wall.png', gain=0.72)
             self.gapp = plate(R1 + 'D035_gap.png')
             self.dash = flut('dash', 0.8, R1 + 'D035_dash_cut.png')
-            self.strike = flut('C1_strike', 0.8); self.after = flut('C1_after_back', 1.2)
+            self.dash2 = flut('C1_dash2', 0.8); self.strike = flut('C1_strike', 0.8)
+            self.after = flut('C1_after_back', 1.2)
             # 斩后：刀身方向（精灵内实测主轴）→ 画面里的刀尖与劈缝直线
             a_, s_ = self.after.fit(self.AFT_H)
             self.aft = (a_, s_)
@@ -479,22 +492,26 @@ def install(G):
                 a = t - self.T_LAND
                 g = 56 + 50 * eout(a / 0.07, 2) + 26 * eio(a / 0.85)
             return g, g * 0.5
+        DASH_STEPS = ((V(69.80), 'dash'), (V(69.87), 'dash2'), (V(69.93), 'strike'))   # 三姿势按拍硬切（图生图衍生，同角色同画面）
+        def _pose_at(self, t):
+            nm = 'dash'
+            for T0, n in self.DASH_STEPS:
+                if t >= T0 - 1e-6: nm = n
+            return nm
         def _dashpanel(self, t):
             k = clamp01((t - self.t0) / (self.T_STRK - self.t0))
             ox = 60 + 420 * k
             fr = K.motion_blur(self.wallA[170:170 + H, int(ox):int(ox) + W].copy(), 46, 0)
             fr = speed_lines(fr, t, 3561, 0.8)
-            ph = (t - self.t0) * 30 / 3.0                                  # 3 帧一步
-            bob = 16 * abs(math.sin(math.pi * ph)); lean = 2.5 * math.sin(math.pi * ph)
-            if t < V(69.80):                                               # 冲刺（2089–2094）
-                a_, s_ = self.dash.fit(620 * (1 + 0.03 * k))
-                fr, A = draw(self.dash, fr, t, a_, (690 + 90 * eout(k, 2), 975 - bob), s_, rot=-1.5 * k + lean, mblur=(12, 0),
-                             wind_amp=12)
-            else:                                                          # 起刀（2095–2098）：刀举过顶
-                kk = clamp01((t - V(69.80)) / 0.12)
-                a_, s_ = self.strike.fit(640)
-                fr, A = draw(self.strike, fr, t, a_, (820 + 40 * eout(kk, 2), 975 - bob * 0.5), s_, rot=-3 * (1 - kk),
-                             mblur=(14 * (1 - kk), 0), wind_amp=14)
+            nm = self._pose_at(t)
+            sp = getattr(self, nm)
+            spw = {'dash': 620, 'dash2': 630, 'strike': 640}[nm]
+            step = int(round((t - self.t0) * 30)) % 3                      # 3 帧一步的起伏（姿势之间靠硬切，不再整张摆动）
+            bob = (0, -13, 0)[step]
+            a_, s_ = sp.fit(spw * (1 + 0.03 * k))
+            fx = {'dash': 690 + 90 * eout(k, 2), 'dash2': 760 + 90 * eout(k, 2), 'strike': 820 + 40 * eout(clamp01((t - V(69.93)) / 0.06), 2)}[nm]
+            fr, A = draw(sp, fr, t, a_, (fx, 975 - bob), s_, rot=(-1.5 * k + (2.5, 0, -2)[step]) * (nm != 'strike'), mblur=(12, 0),
+                         wind_amp=12 if nm != 'strike' else 14)
             return fr, A
         def _impact(self, t):
             """一闪帧：出刀姿势硬边反白 + 血红线贯穿全画面"""
@@ -576,16 +593,20 @@ def install(G):
                                 speed=(20, 60), up=0, grav=1400, size=(0.10, 0.18), area=(10, 4), life=0.8)
             x, y = X, Y
             nf = int(round(a * 30))
-            if nf == 0:
-                fl = np.exp(-((x - self.gc[0]) ** 2 + (y - self.gc[1]) ** 2) / (2 * 420.0 ** 2)).astype(np.float32)
-                fr = fr + (fl * 0.5)[..., None]
-            if int(round((t - self.T_LAND) * 30)) == 0: fr = fr * 1.06 + 0.03
+            if nf == 0:                                            # 命中：硬边整帧白闪（对齐 74 分样镜密度）
+                fr = fr * 0.30 + 0.72
+            if nf == 1:
+                fr = fr * 0.80 + 0.16
+            if int(round((t - self.T_LAND) * 30)) == 0:            # 二次冲击：再闪一帧 + 火星
+                fr = fr * 0.42 + 0.55
+                fr = sparks2(fr, t, 3597, tuple(self.gc), n=40, life=0.5, speed=(400, 1500), dirc=(-self.n[0], -self.n[1]),
+                             spread=1.4, grav=900, burst=True, t0=self.T_LAND, area=(220, 120))
             sk = pulse(t, self.T_HIT, 0.10) + 0.9 * pulse(t, self.T_LAND, 0.10) * (t >= self.T_LAND) \
                 + 0.35 * pulse(t, self.T_K2, 0.08) * (t >= self.T_K2)
-            dx, dy, dr = shake(t, 14 * sk + 1.5, 16, 3562)
+            dx, dy, dr = shake(t, 26 * sk + 1.5, 16, 3562)          # 命中 14px（shake 内部系数 0.6 → 幅度加倍）
             cx, cy = (self.tip[0] * 0.5 + 724 * 0.5, self.tip[1] * 0.5 + 240 * 0.5)     # 推镜中心：脸（左上）–刀尖（右下）对角中点
             z = 1.0 + 0.07 * eio(u) + 0.03 * sk
-            ca = 3 if nf in (0, 1) or int(round((t - self.T_LAND) * 30)) == 0 else 0
+            ca = 4 if nf in (0, 1) or int(round((t - self.T_LAND) * 30)) == 0 else 0
             return cam(fr, z, dx, dy, dr, center=(cx, cy)), ca
 
     # ================================================================== S036 CU 墙缝一线白光（体积光），沿缝推进；前景生图碎块虚焦
@@ -593,7 +614,7 @@ def install(G):
         """S035 劈缝的特写：白石墙沿同一方向（右上 → 左下）被劈开，缝里血红速度线 + 白热缝心，体积光向镜头散；沿缝推进"""
         def __init__(self):
             w = plate(C1 + 'C1_wall.png', (3456, 1944))
-            self.wall = np.ascontiguousarray(w[300:300 + 1300, 400:400 + 2400] * 0.78).astype(np.float32)
+            self.wall = np.ascontiguousarray(w[300:300 + 1300, 400:400 + 2400] * 0.56).astype(np.float32)
             self.gapp = plate(R1 + 'D035_gap.png', (2400, 1350))[:1300]
             self.d = np.array([-0.80, 0.60])
             self.fogt = K.tile(512, 363, 5, 5)
@@ -605,10 +626,25 @@ def install(G):
             P0 = np.array([1180.0, 540.0])
             g = 58 + 8 * math.sin(t * 7)
             fr, gm, sd = split_frame(wall, P0, self.d, g, 18)
-            gp = cv2.warpAffine(self.gapp, np.float32([[1.6, 0, 2700 - 1200 * 1.6], [0, 1.6, -700 - 650 * 1.6]]), (W, H),
-                                borderMode=cv2.BORDER_REFLECT)
             breath = 0.95 + 0.15 * math.sin(t * 9)
-            gp = gp * breath + np.exp(-(sd / 2.5) ** 2)[..., None] * 0.9
+            # 缝内：沿缝方向的白色干线（长短粗细随机）+ 血红墨点（不是红白格丝带）
+            r = np.random.default_rng(3605)
+            Lw = np.zeros((H // 2, W // 2), np.float32); Lr = np.zeros_like(Lw)
+            d_ = self.d; n_ = np.array([-d_[1], d_[0]])
+            for i in range(70):
+                s0 = r.uniform(-0.55, 0.55); off = r.normal(0, 10)
+                b0 = P0 + d_ * s0 * 1000 + n_ * off; ln = r.uniform(40, 320)
+                b1 = b0 + d_ * ln
+                cv2.line(Lw, (int(b0[0] / 2), int(b0[1] / 2)), (int(b1[0] / 2), int(b1[1] / 2)), r.uniform(0.4, 1.0),
+                         1 if r.random() < 0.7 else 2, cv2.LINE_AA)
+            for i in range(90):
+                s0 = r.uniform(-0.6, 0.6); off = r.normal(0, 16)
+                b0 = P0 + d_ * s0 * 1000 + n_ * off
+                cv2.circle(Lr, (int(b0[0] / 2), int(b0[1] / 2)), max(1, int(r.uniform(2, 22) / 2)), r.uniform(0.4, 1.0), -1, cv2.LINE_AA)
+            Lw = cv2.resize(cv2.GaussianBlur(Lw, (0, 0), 0.7), (W, H)) * breath
+            Lr = cv2.resize(cv2.GaussianBlur(Lr, (0, 0), 1.0), (W, H)) * breath
+            gp = Lw[..., None] * 1.15 * breath + Lr[..., None] * BLOOD * 0.9
+            gp = gp + np.exp(-(sd / 2.5) ** 2)[..., None] * 1.1
             fr = fr * (1 - gm[..., None]) + gp * gm[..., None]
             ink = np.exp(-((np.abs(sd) - g / 2) / 2.2) ** 2)
             fr = fr * (1 - 0.9 * ink)[..., None]
@@ -650,7 +686,7 @@ def install(G):
     # ================================================================== S038 CU 刃面倒映寒眼（生图），血墨沿刃流下；巨字「血」去掉
     class S038D(S038):
         def __init__(self):
-            self.bg = plate(C1 + 'C1_bg038.png', gain=0.92)                # 白纸 + 墨溅（不与 S028 血墨底复用，不虚焦）
+            self.bg = plate(C1 + 'C1_bg038.png', gain=0.78)                # 白纸 + 墨溅（不与 S028 血墨底复用，不虚焦）
             self.bl = flut('C1_blade_eye', 0.0)
         def render(self, t):
             u = self.u(t); e = eio(u)
@@ -682,7 +718,7 @@ def install(G):
     # ================================================================== S039 MS 战后断枪，鬼屠缓步穿过；两步态交替 + 起伏，墨线细雨
     class S039D(S039):
         def __init__(self):
-            self.bg = plate(C1 + 'C1_battle.png', (2304, 1296))
+            self.bg = plate(C1 + 'C1_battle.png', (2304, 1296), gain=0.88)
             self.wa = flut('C1_walk_a', 1.0); self.wb = flut('C1_walk_b', 1.0)
         def render(self, t):
             u = self.u(t)
@@ -704,7 +740,7 @@ def install(G):
         M_, G_ = 70, 26
         def __init__(self):
             self.pap = plate(C1 + 'C1_paper.png')
-            red = plate(C1 + 'C1_split_bg.png')[:, 1060:]
+            red = plate(C1 + 'C1_split_bg.png', gain=0.62, sat=1.35)[:, 1060:]     # 红格压深（不读成粉红）
             x0, x1, y0, y1 = self.M_, W - self.M_, 140, 940
             xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
             g = self.G_ / 2
@@ -719,8 +755,11 @@ def install(G):
                     self.fill.append(full)
                 else:
                     self.fill.append(None)
-            self.sps = [(flut('C1_eyes_gt', 0.8), (0.5, 0.52), 0.62), (flut('C1_eyes_emp', 0.6), (0.5, 0.62), 0.62),
-                        (flut('C1_gt_profile', 0.8), (0.47, 0.43), 1.0), (flut('C1_bladeface', 0.6), (0.52, 0.42), 1.0)]
+            # (精灵, 精灵内眼睛锚点, 目标比例尺)：四格都要读到眼睛
+            # 锚点 = 各图实测的眼睛位置（归一化画布坐标）：眼睛对眼睛，脸放大也不会把眼顶出格
+            self.sps = [(flut('C1_eyes_gt', 0.8), (0.500, 0.820), 1.0), (flut('C1_eyes_emp', 0.6), (0.505, 0.610), 1.0),
+                        (flut('C1_gt_profile', 0.8), (0.265, 0.445), 1.05), (flut('C1_bladeface2', 0.6), (0.500, 0.360), 1.0)]
+            self.EY = (0.40, 0.42, 0.42, 0.42)                        # 四格眼睛统一在格高 40–42%（脸的墨重部分占满格子）
             self.bt = K.tile(512, 404, 5, 4)
         def borders(self, t):
             """墨线分格：干笔质感（噪声断墨），逐段画出"""
@@ -740,6 +779,9 @@ def install(G):
         def render(self, t):
             u = self.u(t)
             fr = self.pap.copy()
+            u0 = clamp01((t - self.t0) / 0.7)
+            bl = np.clip(K.ink_blot(0.075 * eout(u0, 2), seed=4002, center=(260, 900)) + K.ink_blot(0.06 * eout(u0, 2), seed=4003, center=(1700, 200)), 0, 1)
+            fr = fr * (1 - bl[..., None] * 0.9) + bl[..., None] * BLOOD * 0.55     # 前 0.7s 空纸：边角红墨晕（不糊成粉毯）
             for i, (m, T0) in enumerate(zip(self.masks, self.TS)):
                 if t < T0: continue
                 k = eout(clamp01((t - T0) / 0.12), 2)
@@ -749,7 +791,7 @@ def install(G):
                     fr = fr * (1 - m[..., None] * 0.04)
                 sp, anc, s0 = self.sps[i]
                 a, b, c, d = self.P[i]
-                dst = ((a + c) / 2 + (18 if i % 2 else -18) * eio(u), (b + d) / 2)
+                dst = ((a + c) / 2 + (18 if i % 2 else -18) * eio(u), b + (d - b) * self.EY[i])
                 lay, A = draw(sp, np.zeros_like(fr), t, anc, dst, s0 * (1.15 - 0.15 * k) * (1 + 0.02 * u), wind_amp=8, extra_A=m)
                 fr = fr * (1 - A[..., None]) + lay
                 if int(round((t - T0) * 30)) == 0:                     # 砸入帧：格内反相
@@ -799,7 +841,7 @@ def install(G):
     # ================================================================== S042 ELS 白月（生图）→「不」干笔刀光横过月面 → 月洇成血月，天幕红云苏醒
     class S042D(S042):
         def __init__(self):
-            self.sky = plate(C1 + 'C1_nightsky.png', (2016, 1134))
+            self.sky = plate(C1 + 'C1_nightsky2.png', (2016, 1134))     # 换板（与 S045 不再同板）
             l = self.sky.mean(-1, keepdims=True)
             self.sky0 = (l * np.ones(3, np.float32)).astype(np.float32)     # 变色前：去色（红云 = 灰云）
             mo = cv2.cvtColor(cv2.imread(C1 + 'C1_moon_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
@@ -833,7 +875,12 @@ def install(G):
             q = (t - self.T_SL + 0.05) / 0.3
             if 0 <= q < 0.5:                                             # 干笔刀光（白）横过月面：起划 + 命中 + 两帧余墨
                 P = np.array(self.MC) - self.dir * 1350; Q = np.array(self.MC) + self.dir * 1350   # 两端都在画外
-                fr = BR.paint(fr, P, Q, clamp01(q / 0.18), wk=0.25, color=(1.0, 1.0, 1.0), alpha=1 - clamp01((q - 0.24) / 0.26))
+                fr = BR.paint(fr, Q, P - self.dir * 500, 1.0, wk=0.42, color=(1.0, 1.0, 1.0),
+                              alpha=clamp01(q / 0.14) * (1 - clamp01((q - 0.24) / 0.26)))   # 反向画：收笔端是笔刷尖端（渐细），重端在画外
+            if self.T_SL - 1 / 30 <= t < self.T_SL + 3 / 30:              # 「不」字头：星芒 + 轻震
+                fr = star(fr, (self.MC[0] - 520, self.MC[1] + 300), 0.9 * (1 - clamp01((t - self.T_SL) / 0.1)), 120, 40)
+                dx0, dy0, dr0 = shake(t, 9, 22, 425)
+                fr = cam(fr, 1.0, dx0, dy0, dr0)
             if 0 <= a < 1 / 30 + 1e-3: fr = fr * 0.7 + BLOOD * 0.3 + 0.05
             k = pulse(t, self.T_PAN, 0.12) * (t >= self.T_PAN)
             z = (1.0 + 0.06 * eio(u)) * (1 + 0.10 * k)
@@ -848,7 +895,7 @@ def install(G):
         T_SW = V(82.15)
         T_GLINT = 82.62
         def __init__(self):
-            self.bg = plate(C1 + 'C1_bg043.png', (2016, 1134), gain=0.9)     # 雨夜专用背景板，不虚焦（清晰墨线）
+            self.bg = plate(C1 + 'C1_bg043.png', (2016, 1134), gain=1.50)     # 雨夜专用背景板，不虚焦（清晰墨线）
             self.pf = flut('C1_gt_profile', 1.0); self.fc = flut('C1_gt_face', 1.0)
         def render(self, t):
             u = self.u(t)
@@ -871,22 +918,42 @@ def install(G):
 
     # ================================================================== S044 CU 手按刀鞘，拇指推开护手，鞘口一线白光（吸气，风停）
     class S044D(S044):
-        GAP = (0.683, 0.603)                                  # C1_thumb2：鞘口露刃处（直刀、中式护手、红穗）
+        GAP = (0.688, 0.495)                                  # C1_hand3：鞘口露刃处（护手与鞘口之间，实测 x 0.655–0.69）
+        GUARD = (0.628, 0.692, 0.33, 0.66)                    # 护手 + 露刃区（x0, x1, y0, y1，归一化；实测护手 x≈0.63–0.65）
+        T_PUSH = 2500 / 30.0
         def __init__(self):
-            self.bg = plate(C1 + 'C1_bg044.png', (2016, 1134))              # 夜风专用背景板，不虚焦
-            self.sp = flut('C1_thumb2', 1.0)                                     # 红穗 / 红带风吹（风停 → 只留极轻微摆动）
+            self.bg = plate(C1 + 'C1_bg044.png', (2016, 1134), gain=1.15)   # 提亮 ≥65
+            base = flut('C1_hand3', 1.0)
+            h_, w_ = base.A.shape
+            x0, x1, y0, y1 = self.GUARD
+            xx = np.arange(w_, dtype=np.float32)[None, :] / w_; yy = np.arange(h_, dtype=np.float32)[:, None] / h_
+            def box(a, b, c, d, f=0.004):                             # 软边框（4px 级羽化，不露直边）
+                return (np.clip((xx - a) / f, 0, 1) * np.clip((b - xx) / f, 0, 1) * np.clip((yy - c) / f, 0, 1) * np.clip((d - yy) / f, 0, 1))
+            g = box(x0, x1, y0, y1).astype(np.float32)
+            right = np.clip((xx - x1) / 0.004, 0, 1).astype(np.float32)
+            right = np.broadcast_to(right, (h_, w_))
+            def mk(m):
+                L_ = SP.SpriteLayer(C1 + 'C1_hand3_cut.png'); L_.A = (base.A * m).astype(np.float32); L_.wind_w = base.wind_w
+                return L_
+            self.guard = mk(g)                                            # 护手 + 露刃：随拇指前推
+            self.sheath = mk(right * (1 - g))                             # 鞘 + 穗
+            self.hand = mk(np.clip(1 - g - right, 0, 1))                  # 手 + 护腕
         def render(self, t):
             u = self.u(t)
             fr = self.bg[27:27 + H, 48 - int(24 * eio(u)):48 - int(24 * eio(u)) + W].copy()
-            prog = eio(clamp01((t - self.t0 - 0.15) / 0.8))
-            s = W / self.sp.w * 1.08
-            ax, ay = 960 - 12 * prog, 560
-            fr, _ = draw(self.sp, fr, t, (0.5, 0.5), (ax, ay), s, wind_amp=2.5, breathe=0.002)
-            gx, gy = src2scr(self.sp, (0.5, 0.5), (ax, ay), s, self.GAP)
+            push = eout(clamp01((t - self.T_PUSH) / 0.55), 2)              # 拇指推开护手：6 → 10px
+            s = W / self.hand.w * 1.02
+            ax, ay = 960.0, 560.0
+            fr, _ = draw(self.sheath, fr, t, (0.5, 0.5), (ax, ay), s, wind_amp=2.0, breathe=0.002)
+            kx = ax + (6 + 4 * push) * (push > 0.01)                       # 护手 + 露刃被拇指推出 6→10px
+            fr, _ = draw(self.guard, fr, t, (0.5, 0.5), (kx, ay), s, wind_amp=0.0, breathe=0.002)
+            fr, A = draw(self.hand, fr, t, (0.5, 0.5), (ax + 3 * push, ay - 1.0 * push), s, wind_amp=1.2, breathe=0.002)   # 拇指跟着前移
+            gx, gy0 = src2scr(self.hand, (0.5, 0.5), (kx, ay), s, self.GAP)
+            g = (0.25 + 0.75 * push) * (0.85 + 0.15 * math.sin(t * 13))
+            hh = 70 + 18 * push
             Lg = np.zeros((H, W), np.float32)
-            cv2.line(Lg, (int(gx), int(gy - 55)), (int(gx), int(gy + 55)), 1.0, 3, cv2.LINE_AA)
-            g = prog * (0.8 + 0.2 * math.sin(t * 13))
-            fr = fr + (Lg * 0.9 + cv2.GaussianBlur(Lg, (0, 0), 6) * 1.2 + cv2.GaussianBlur(Lg, (0, 0), 30) * 1.2)[..., None] * g
+            cv2.line(Lg, (int(gx), int(gy0 - hh)), (int(gx), int(gy0 + hh)), 1.0, 3, cv2.LINE_AA)
+            fr = fr + (Lg + cv2.GaussianBlur(Lg, (0, 0), 5) * 1.3 + cv2.GaussianBlur(Lg, (0, 0), 26) * 1.0)[..., None] * g
             fr = K.dust(fr, (t - self.t0) * 0.05, 4401, n=50, amt=0.4, size=(1, 3), blur=1.5, color=(1, 1, 1))
             return cam(fr, 1.0 + 0.08 * eio(u), 0, 0), 0
 
@@ -896,7 +963,7 @@ def install(G):
         P0, P1 = (1880.0, 670.0), (40.0, 390.0)
         MOON = (1500, 372)
         def __init__(self):
-            self.bg = plate(C1 + 'C1_moor.png')                          # 血月荒原专用背景板（远山墨线 + 网点渐隐做纵深，不虚焦）
+            self.bg = plate(C1 + 'C1_moor2.png', gain=1.65)      # 换板：S042 用雾海夜，本镜用血月荒原                          # 血月荒原专用背景板（远山墨线 + 网点渐隐做纵深，不虚焦）
             self.gm = (Y >= 800).astype(np.float32)
             self.w1, self.w3 = flut('C1_spin_a', 1.0), flut('C1_spin_b', 1.0)
             x0, y0 = self.P0; x1, y1 = self.P1
@@ -905,7 +972,8 @@ def install(G):
         def render(self, t):
             fr = self.bg.copy()
             fy = 868
-            if t < self.T_HIT:
+            nf0 = int(round((t - self.T_HIT) * 30))
+            if nf0 < 0:                                                # 蓄势：只有蓄势姿势（中间帧不会出现两个身体）
                 k = clamp01((t - self.t0) / (self.T_HIT - self.t0))
                 kk = clamp01((t - self.T_GO) / (self.T_HIT - self.T_GO))
                 a_, s_ = self.w1.fit(560 * (1 + 0.03 * eio(k)))
@@ -913,20 +981,25 @@ def install(G):
                 g = clamp01((t - V(84.22)) / 0.2) * (1 - 0.6 * kk)
                 p = src2scr(self.w1, a_, (950 + 10 * k, fy), s_, (0.434, 0.876))
                 fr = star(fr, p, g * 0.6 * (0.6 + 0.4 * math.sin(40 * t)), 70, 26)
-            else:
+            else:                                                      # 收势：硬切进来，只有收势姿势
                 a = t - self.T_HIT; k = eout(clamp01(a / 0.12), 2)
                 a_, s_ = self.w3.fit(600)
-                fr, _ = draw(self.w3, fr, t, a_, (960 + 10 * k, fy), s_ * (0.985 + 0.015 * k), mblur=(-36 * (1 - k), 0), wind_amp=-14)
+                fr, _ = draw(self.w3, fr, t, a_, (960 + 10 * k, fy), s_ * (0.985 + 0.015 * k), wind_amp=-14)
             if t >= self.T_GO:                                         # 剑光：白色干笔飞白，命中帧贯穿全画面
                 q = (t - self.T_GO) / (self.T_HIT - self.T_GO)
                 fade = 1.0 if t < self.T_HIT else math.exp(-(t - self.T_HIT) / 0.12)
                 p0 = np.array(self.P0) + self.dirv * -260                     # 重端起笔在画外右侧
-                fr = BR.paint(fr, p0, self.P1, clamp01(0.20 + 0.80 * q), wk=0.3, color=(1.0, 1.0, 1.0), alpha=fade)
+                fr = BR.paint(fr, p0, self.P1, clamp01(0.20 + 0.80 * q), wk=0.46, color=(1.0, 1.0, 1.0), alpha=fade)   # 加粗
                 if t >= self.T_HIT:
-                    fr = BR.paint(fr, p0, self.P1, 1.0, wk=0.12, alpha=0.8 * fade)       # 血红细缘
+                    fr = BR.paint(fr, p0 + self.dirv * 40, self.P1, 1.0, wk=0.20, alpha=0.9 * fade)   # 血红细缘（加粗）
             nf = int(round((t - self.T_HIT) * 30))
-            wv = (0.45, 0.15)[nf] if 0 <= nf < 2 else 0.0
-            fr = fr * (1 - wv) + wv * 1.1
+            wv = 0.92 if nf == 0 else ((0.55, 0.20)[nf - 1] if 1 <= nf <= 2 else 0.0)  # 命中帧整帧白闪（切点）
+            fr = fr * (1 - wv) + wv * 1.12
+            if 0 <= nf <= 1:                                               # 白闪里一条血红刀路硬边 + 墨线（冲击帧可读）
+                fr = BR.paint(fr, np.array(self.P0) + self.dirv * -260, self.P1, 1.0, wk=0.22, alpha=1.0 - 0.4 * nf)
+                fr = sparks2(fr, t, 4529, ((self.P0[0] + self.P1[0]) / 2, (self.P0[1] + self.P1[1]) / 2), n=60, life=0.45,
+                             speed=(500, 1500), dirc=(-self.dirv[1], self.dirv[0]), spread=2.6, grav=900, burst=True, t0=self.T_HIT - 0.01,
+                             area=(800, 30))
             band = 1 - np.exp(-(self.dist / 20) ** 2) * (t >= self.T_HIT)
             fr = ink_rain(fr, t, 451, n=320, amt=0.5, speed=2000 if t > 84.36 else 600, angle=6, region=band, near=0.0)
             if t >= self.T_HIT:
@@ -941,8 +1014,8 @@ def install(G):
     class S046D(S046):
         EYE = (0.592, 0.405)
         def __init__(self):
-            self.bg = plate(C1 + 'C1_bg046.png', gain=0.85)                # 暴雨云专用背景板，不虚焦
-            self.sp = flut('C1_bladeface', 0.8)
+            self.bg = plate(C1 + 'C1_bg046.png', gain=1.0)                # 暴雨云专用背景板，不虚焦
+            self.sp = flut('C1_bladeface2', 0.8)
             n_ = cv2.resize(K.tile_crop(K.tile(512, 4646, 4, 5), 0, 0, H // 8, W // 8), (W, H))
             ex = 620 + 55 * np.sin(Y / 97.0 + 0.7) * np.cos(Y / 233.0) + 140 * (n_ - 0.5)        # 撕口墨晕：边线随 y 起伏，不成直线
             self.inkm = np.clip(0.5 - (X - ex) / 40, 0, 1).astype(np.float32)
@@ -950,11 +1023,11 @@ def install(G):
             tr = REAL_T[0] if REAL_T[0] is not None else t
             fr = self.bg.copy()
             s = 1.0 * (1 + 0.03 * eio(clamp01((t - self.t0) / (self.t1 - self.t0))))
-            ex, ey = 1100, 430
+            ex, ey = 1080, 430
             x0 = ex - self.EYE[0] * self.sp.w * s; x1 = x0 + self.sp.w * s
             ea = (np.clip((X - x0) / 120, 0, 1) * np.clip((x1 - X) / 120, 0, 1)).astype(np.float32)
             fr, Aw = draw(self.sp, fr, tr, self.EYE, (ex, ey), s, wind_amp=-8, breathe=0.004, extra_A=ea)
-            bx0, bx1 = x0 + 0.385 * self.sp.w * s, x0 + 0.47 * self.sp.w * s
+            bx0, bx1 = x0 + 0.405 * self.sp.w * s, x0 + 0.50 * self.sp.w * s
             bm = sstep(bx0 - 2, bx0 + 8, X) * sstep(bx1 + 2, bx1 - 8, X) * Aw
             sh = 0.0
             for ts, dur in ((self.t0 + 0.05, 0.55), (self.T_ANS - 0.30, 0.30)):
