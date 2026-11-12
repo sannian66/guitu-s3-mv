@@ -862,3 +862,6 @@
 | 11-11 12:52 | R8_D/sheet/taishanghuang_sheet | RH_image2 | 2K 16:9 | 3 | b36f3ed3-2ede-40d5-95dd-68b5aa85c65b | ✔ 采用 | assets/gen/R8_D/taishanghuang_sheet.png | 太上皇风格 D 定妆照，参考官方设定图 最终boss_太上皇.webp；CDN 68023565-40d4-4a36-acc1-7a6404184505.jpg |
 | 11-11 19:40 | R8_D/EB/E34_h3_walk | minimax-h3-metaso multimodal_ref | 2K 16:9 4s | 12 | 2120481650198892544 | ✔ 试做成功 | 视频生成试做：背影走路绿幕 → 抠像合成回风格 D 背景 | 用户 19:30 要求试做一个片段送审 |
 | 11-11 19:52 | R8_D/EB/E34_h3_full | minimax-h3-metaso image2video_first | 2K 16:9 4s | 12 | (见 /tmp/vidtest) | 试做 | 整张画面视频生成：以合成好的首帧（风格 D 山水 + 背影）为起点 | 用户 19:50 要求对比「整图生成」 |
+| 11-11 20:35 | 视频 S039.mp4 | minimax-h3-metaso image2video_first | 2K 16:9 4s | 12 | 2120495233102692352 | ✔ 采用 | assets/gen/R8_D/vid/C1/S039.mp4 | The lone swordsman shown from behind walks slowly and steadily away from camera over the t |
+| 11-11 20:35 | 视频 S037.mp4 | minimax-h3-metaso image2video_first | 2K 16:9 4s | 12 | 2120495243657269248 | ✔ 采用 | assets/gen/R8_D/vid/C1/S037.mp4 | A lone swordsman seen from behind stands in the rain before a huge white stone wall split  |
+| 11-11 20:36 | 视频 test.mp4 | minimax-h3-metaso image2video_first | 2K 16:9 4s | 12 | 2120495497079083008 | ✔ 采用 | ../../../../../../../tmp/mv_r8d_c1/vid/out/test.mp4 | Camera completely locked off, tripod still: no pan, no zoom, no shake, no cut. |
