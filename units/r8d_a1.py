@@ -98,8 +98,57 @@ def spears(keep):
     mk = cv2.dilate(mk, np.ones((7, 7), np.uint8))
     mk = cv2.GaussianBlur(mk, (0, 0), 1.0) * (A > 0.01)
     h, w = A.shape; yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    mk = mk * np.clip(np.minimum(np.minimum(xx, w - 1 - xx), yy) / 40.0, 0, 1)   # §11.7：红缨碰到画布左/右/上缘的部分 40px 羽化掉，不留直线截断（下缘始终在画外）
+    mk = mk * np.clip(np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy)) / 90.0, 0, 1)   # §11.7 / 评审 P1：四边 90px 羽化，白底上不再露纯黑直边
     return P * mk[..., None], A * mk
+
+
+def tassel(fr, t, x, y, size=36.0, seed=0):
+    """刀鞘红穗：一束长红丝从鞘口垂下，随风轻摆；墨边压底，红底 / 白底都读得出（§11-3）。"""
+    r = np.random.default_rng(seed)
+    L = np.zeros((H, W), np.float32)
+    cv2.line(L, (int(x), int(y - size * 0.18)), (int(x + 2), int(y + size * 0.22)), 1.0, max(2, int(size * 0.08)), cv2.LINE_AA)
+    for i in range(7):
+        a = (i - 3) / 3 * 0.45; ln = size * r.uniform(1.3, 2.0)
+        sway = 4.0 * math.sin(t * 3.1 + i * 0.9)
+        x1, y1 = x + math.sin(a) * ln + sway, y + math.cos(a) * ln
+        x2, y2 = x1 + sway * 1.8, y1 + ln * 0.22
+        th = max(1, int(round(size * 0.055)))
+        cv2.line(L, (int(x), int(y)), (int(x1), int(y1)), 1.0, th, cv2.LINE_AA)
+        cv2.line(L, (int(x1), int(y1)), (int(x2), int(y2)), 0.9, th, cv2.LINE_AA)
+    cv2.circle(L, (int(x), int(y)), max(2, int(size * 0.13)), 1.0, -1, cv2.LINE_AA)
+    L = cv2.GaussianBlur(L, (0, 0), 0.6)
+    Lb = np.clip(cv2.dilate(L, np.ones((5, 5), np.uint8)), 0, 1) * 0.7
+    fr = fr * (1 - Lb[..., None]) + 0.02 * Lb[..., None]
+    A = (L * 0.97)[..., None]
+    return fr * (1 - A) + RED * 1.18 * A
+
+
+def fg_spears(fr, t, t0, t1):
+    """V04 前景两根枪：代码画的锥形干笔杆 + 枪头 + 小红缨，随镜头高速掠过；不用生图整杆，避免露出图层直边（评审 P1）。"""
+    u = clamp01((t - t0) / (t1 - t0))
+    for i, (xa, xb, ya, yb, w, sd) in enumerate(((-140, 820, 1000, 170, 14, 41), (1500, 2160, 1040, 270, 10, 42))):
+        hd = clamp01(u * 1.35 - 0.18 * i)
+        if hd <= 0.02 or hd >= 1: continue
+        x0 = xa + (xb - xa) * (hd - 0.45); y0 = ya + (yb - ya) * (hd - 0.45)
+        x1 = xa + (xb - xa) * (hd + 0.45); y1 = ya + (yb - ya) * (hd + 0.45)
+        fr = brush(fr, (x0, y0), (x1, y1), 1.0, w, col=np.array([0.05, 0.05, 0.06], np.float32),
+                   dry=0.42, red_edge=0.0, splat=0, seed=sd)
+        hx, hy = xa + (xb - xa) * hd, ya + (yb - ya) * hd
+        L = np.zeros((H // 2, W // 2), np.float32)
+        cv2.fillPoly(L, [np.array([(hx / 2, hy / 2), ((hx + 28) / 2, (hy - 10) / 2), ((hx + 32) / 2, (hy + 10) / 2)], np.int32)],
+                     1.0, cv2.LINE_AA)
+        L = cv2.resize(L, (W, H))[..., None]
+        fr = fr * (1 - L) + np.array([0.04, 0.04, 0.05], np.float32) * L
+        fr = tassel(fr, t, hx + 26, hy + 8, 15, seed=sd + 5)                  # 枪头小红缨
+    return fr
+
+
+def front_strip(img, frac=0.24, feather=70):
+    """把背景板底部 frac 裁成「前排」层：上缘 70px 羽化，叠加时给一点点额外位移，制造前排二级运动（不新增生图）。"""
+    h = img.shape[0]; y0 = int(h * (1 - frac))
+    P = np.ascontiguousarray(img[y0:])
+    A = np.ones(P.shape[:2], np.float32) * np.clip(np.arange(P.shape[0], dtype=np.float32)[:, None] / feather, 0, 1)
+    return P * A[..., None], A
 
 
 WALK_DY = (0.0, -1.0, 0.0, -1.0)                              # 四拍循环的重心：接触拍低、过身拍高（× 振幅）
@@ -182,10 +231,11 @@ def brush(fr, p0, p1, prog, width, col=WHITE, tail=0.0, fade=1.0, dry=0.55, red_
     wv = width * np.clip(np.sin(np.pi * np.clip(s, 0, 1)), 0, 1) ** 0.5 + 1.0
     inside = np.clip((wv / 2 - np.abs(dd)) / 1.2, 0, 1) * np.clip((hd - s) * L / 8, 0, 1) * np.clip((s - tail) * L / 40, 0, 1)
     if inside.max() <= 0: return fr
-    idx = (np.clip(dd / wv * 0.5 + 0.5, 0, 1) * 300 + seed * 37).astype(np.int32) % 1024
+    sidx = np.floor(np.clip(s, 0, 1) * 160).astype(np.int32)                 # 沿笔画长度取样：笔毛断成飞白短丝，不再排成连续白条码（评审 P0-2）
+    idx = (np.clip(dd / wv * 0.5 + 0.5, 0, 1) * 300 + seed * 37 + sidx * 131).astype(np.int32) % 1024
     br = _BR[idx]
     thr = dry * np.clip((hd - s) / max(hd, 1e-3), 0, 1) ** 0.8               # 笔尾更干（飞白多），笔头饱满
-    m = inside * np.clip((br - thr) * 6 + 0.5, 0, 1)
+    m = inside * np.clip((br - thr) * 5 + 0.5, 0, 1)
     edge = inside * np.clip((np.abs(dd) / (wv / 2) - 0.55) / 0.3, 0, 1)
     m = cv2.resize(m, (W, H)); edge = cv2.resize(edge, (W, H))
     c = np.asarray(col, np.float32)
@@ -271,7 +321,14 @@ class TitleD:
         e = eout(clamp01(k / 0.22))
         P1, A1 = self._part('main', self._M(t, 1 + 0.25 * (1 - e)), 1.0, blur=7 * (1 - e), extra=reveal)
         se = eout(clamp01((t - M.V(8.35)) / 0.45))
-        P2, A2 = self._part('sub', self._M(t), se, blur=4 * (1 - se)) if se > 0 else (0.0, 0.0)
+        if se > 0:
+            P2, A2 = self._part('sub', self._M(t), se, blur=4 * (1 - se))
+            P2 = A2[..., None] * WHITE                                  # 副标题改纯白墨：深墨红压在血月上 1080p 读不出（评审 P0-1）
+            ring = np.clip(cv2.dilate(A2, np.ones((5, 5), np.uint8)) - A2, 0, 1)
+            P2 = P2 + ring[..., None] * 0.02                            # 细黑描边，压灰砖墙 / 血月都清楚
+            A2 = np.clip(A2 + ring * 0.9, 0, 1)
+        else:
+            P2, A2 = 0.0, 0.0
         ks = t - M.V(8.31)
         if ks > 0:
             q = clamp01(ks / 0.10)
@@ -374,6 +431,7 @@ def _build(mod):
                 band = np.exp(-((np.arange(W, dtype=np.float32)[None] - x) / 70) ** 2)
                 fr = fr + (stw * band)[..., None] * 1.2                    # 白扫光只在露刃段（硬边，不加柔光晕）
             mouth = tuple(Mx @ np.array([s1 + 20, 540.0, 1.0]))
+            fr = tassel(fr, t, mouth[0] + 8, mouth[1] + 26, 40, seed=131)       # 鞘口红穗（§11-3）
             fr = sparks2(fr, t, 33, mouth, n=60, life=0.9, speed=(40, 260), dirc=(0, -1), spread=2.4, grav=-60, area=(80, 40), amt=0.6,
                          t0=V(4.53), burst=True)
             fr = mod.ASH.draw(fr, t, 0.3, wind=(-60, -30))
@@ -632,10 +690,17 @@ def _build(mod):
     class V03D(mod.V03):
         def __init__(self):
             self.bg = plate('V03_army'); self.rs = fx2.RainSheet(935, density=0.7)
+            self.fP, self.fA = front_strip(self.bg)                         # 前排拆层（评审 P1）：底 24% 单独叠，行军时多 12px 横移 + 2.5px 起伏
         def render(self, t):
             u = self.u(t); m = u - 0.5
             march = 3.0 * math.sin(2 * math.pi * (t - self.t0) / 0.47)
-            fr = at(self.bg, 1.10 * (1 + 0.05 * u), dx=-50 * m, dy=-30 * m + march)
+            k = 1.10 * (1 + 0.05 * u); dx, dy = -50 * m, -30 * m + march
+            fr = at(self.bg, k, dx=dx, dy=dy)
+            fsx = 12.0 * math.sin(2 * math.pi * (t - self.t0) / 0.94)
+            fsy = 2.5 * math.sin(2 * math.pi * (t - self.t0) / 0.47)
+            hh, ww = self.bg.shape[:2]; y0 = hh - self.fP.shape[0]               # 前排条带在原图中的起点（blit 用条带自身坐标，要补 k*y0）
+            Mx = np.float32([[k, 0, 960 + dx + fsx - k * (ww / 2)], [0, k, 540 + dy + fsy + k * (y0 - hh / 2)]])
+            fr, _ = blit(fr, self.fP, self.fA, Mx)
             fr = fog(fr, t, 1, 300, 960, 0.26, (0.82, 0.82, 0.82), speed=(60, 10))
             fr = fog(fr, t, 2, 600, 1080, 0.18, (0.65, 0.65, 0.65), speed=(-40, 5))
             fr = ink_rain(fr, t, self.rs, 0.8, angle=12)
@@ -649,7 +714,6 @@ def _build(mod):
             self.bg = plate('V04_bg2')                                         # 评审 P1-3 / 用户 20:05-5：中式札甲群演，单一消失点、同一地平面
             self.walk = [lay(n) for n in ('V04_walk1',)] + [lay_soft(n) for n in ('V04_w2', 'V04_w3', 'V04_w4')]   # 迎镜走四拍（图生图衍生，软边防直边）
             self.feet = {id(L_): foot_of(L_) for L_ in self.walk}
-            self.spP, self.spA = spears((0, 5))
             self.rs = fx2.RainSheet(945, density=0.8)
         def render(self, t):
             u = self.u(t); m = u - 0.5; e = eio(u); tm = (self.t0 + self.t1) / 2
@@ -658,16 +722,15 @@ def _build(mod):
             fr = ink_rain(fr, t, self.rs, 0.8, angle=10, layers=(0, 1))
             pose, bob = walk_pose(self.walk, t, self.t0, 0.155)
             fx_, fy_ = self.feet[id(pose)]
-            hh = 600 + 200 * e; _, k_ = pose.fit(hh)
-            px, py = 1250 - 180 * e, 930 + 20 * e
+            hh = 600 + 130 * e; _, k_ = pose.fit(hh)                            # 评审 P1：封顶 730px，头顶不再越过 2.39 上边
+            px, py = 1250 - 180 * e, 935 + 10 * e
             yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)                 # 接地阴影（与背景群演同一地面、同一光向）
             shd = np.exp(-(((xx - px) / (0.22 * hh)) ** 2 + ((yy - py - 4) / (0.02 * hh)) ** 2))
             fr = fr * (1 - 0.55 * shd[..., None])
             fr, _ = pose.draw(fr, t, (fx_ / pose.w, fy_ / pose.h), (px, py + 0.012 * hh * bob), k_, wind_amp=9, breathe=0, **KW)
             fr = ink_rain(fr, t, self.rs, 0.7, angle=10, layers=(2,))
             fr = fg_rain(fr, t, tm, amt=0.45, vel=(150, 860))
-            Mx = affine((1024, 576), (960 - 1600 * m, 500), 1.25)
-            fr, _ = blit(fr, self.spP * 0.35, self.spA, Mx)                   # 前景枪杆 = 清晰墨剪影（压暗），不做景深虚化
+            fr = fg_spears(fr, t, self.t0, self.t1)                            # 评审 P1：代码画的前景枪（锥形干笔杆 + 枪头 + 红缨），无图层直边
             return fr, 0
     out['V04'] = V04D
 
@@ -692,6 +755,8 @@ def _build(mod):
                 Ls = np.zeros((H, W), np.float32); cv2.line(Ls, (int(a_[0]), int(a_[1] - 6)), (int(b_[0]), int(b_[1] - 6)), 1.0, 3, cv2.LINE_AA)
                 fr = fr + Ls[..., None] * 0.9 * math.sin(math.pi * q)
             gp = S(self.B0 + (self.B1 - self.B0) * 0.45)
+            mb = S(self.B0)
+            fr = tassel(fr, t, mb[0] + 20, mb[1] + 70, 40, seed=211)            # 鞘口红穗（§11-3）：垂到刃身上方，避免和红衣摆同色
             fr = mod.pupil_glint(fr, gp, 1.0 * g, 1.6, col=(1.0, 1.0, 1.0))      # 墨线星芒
             return fr, (3 if g > 0.5 else 0)
     out['V05'] = V05D
@@ -758,15 +823,7 @@ def _build(mod):
                 a_ = t - t0_
                 if a_ < 0: continue
                 g = math.exp(-a_ / 0.55)
-                for sgn, col in ((1, RED * 0.9), (-1, np.array([0.05, 0.05, 0.06], np.float32))):
-                    band = np.zeros((H // 2, W // 2), np.float32)
-                    off = sgn * 10 * eout(clamp01(a_ / 0.06))
-                    y0b, y1b = p0[1] + off + sgn * 4, p1[1] + off + sgn * 4
-                    cv2.fillPoly(band, [np.array([(p0[0] / 2, y0b / 2), (p1[0] / 2, y1b / 2),
-                                                  (p1[0] / 2, (y1b + sgn * 24) / 2), (p0[0] / 2, (y0b + sgn * 24) / 2)], np.int32)], 1.0, cv2.LINE_AA)
-                    wb = cv2.resize(band, (W, H))[..., None] * 0.55 * (g ** 3)       # 分格缝只在命中 1–2 帧可见；三次方衰减，避免留下一条灰条
-                    fr = fr * (1 - wb) + col * wb
-                fr = brush(fr, p0, p1, clamp01(a_ / 0.07), wd, fade=g, seed=sd, splat=16)
+                fr = brush(fr, p0, p1, clamp01(a_ / 0.07), wd, fade=g ** 2, seed=sd, splat=16)   # 评审 P0-2：去掉矩形分格底，只留不规则飞白；衰减更快
                 if a_ < 0.09:
                     fr = fr * (1 + 0.85 * (1 - a_ / 0.09)) + 0.08 * (1 - a_ / 0.09)
             a1 = t - ts; a2 = t - ts2
@@ -794,11 +851,12 @@ def _build(mod):
         def render(self, t):
             u = self.u(t); m = u - 0.5
             fr = at(self.bg, 1.3, dx=-20 * m, cx=1024, cy=760, dy=60)
-            fr = fx2.god_rays(fr, (960, 380), strength=0.22, length=1.0, color=(1.0, 1.0, 1.0), t=t, src_r=160)
+            fr = fx2.god_rays(fr, (960, 380), strength=0.12, length=1.0, color=(1.0, 1.0, 1.0), t=t, src_r=130)
             ge = dict(expo=0.55, sat=1.0, tint=(1, 1, 1), lift=0.0, gamma=1.0)
             fr, _ = put(fr, t, self.emp, (1018, 1033), (960, 602), 0.39 * (1 + 0.04 * u), wind_amp=5, breathe=0.003, grade=ge)
             fr = mod.ASH.draw(fr, t, 0.5, wind=(30, -20))
-            fr = fog(fr, t, 1, 860, 1080, 0.25, (0.55, 0.55, 0.55), speed=(40, 0))
+            fr = fog(fr, t, 1, 860, 1080, 0.12, (0.55, 0.55, 0.55), speed=(40, 0))     # 评审 P1：地雾减半，台阶 / 门钉保住墨线
+            fr = np.clip((fr - 0.5) * 1.15 + 0.5, 0, 1)                                 # 提高黑白对比
             return fr * self.gain, 0
     out['V07'] = V07D
     return out
@@ -820,6 +878,7 @@ def apply(mod):
         mod.EXPO[sid] = 1.0 / mod.EXPO_ALL                            # 抵消段落 EXPO_ALL=1.15 提亮，保留生图本身的白纸 / 网点层次
     mod.EXPO['V01'] = mod.EXPO['V01'] * 1.30                                   # 评审 P1-6：V01 墨云占满画面、偏暗 → 提到 ≥65
     mod.EXPO['V03'] = mod.EXPO['V03'] * 1.20
+    mod.EXPO['A04'] = mod.EXPO['A04'] * 1.35                                   # 评审 P1：A04 亮度 62.6 < 65 → 提亮
     mod.FG.update({'A06': ('ash', 0.4), 'V07': ('ash', 0.3)})          # 金 / 橙火星前景 → 灰烬（火星由镜头自己画白 + 血红）
     mod.MOVES3['V06'] = mod.M3('sine_io', None, z=(1.05, 1.03), yaw=(-6, 6), note='风格 D：去掉 expo_out 急拉（径向模糊把前 3 帧整帧糊掉），冲击由镜内刀光 / 曝光脉冲 / 硬切冲击承担')
     n, pre, post, kw = mod.CUTS['V07']
