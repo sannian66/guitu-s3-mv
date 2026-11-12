@@ -32,9 +32,10 @@ def plate(name, scale=1.0):
     return _P[k]
 
 
-def bgview(name, scale=1.1, dx=0.0, dy=0.0, z=1.0, rot=0.0, pivot=(0.5, 0.5), at=None, blur=0.0):
-    """背景板：按 scale 预放大（留视差余量），板内 pivot 点（归一化）落到屏幕 at（默认画面中心 + (dx,dy)），绕该点缩放 z / 旋转 rot。"""
-    im = plate(name, scale)
+def bgview(name, scale=1.1, dx=0.0, dy=0.0, z=1.0, rot=0.0, pivot=(0.5, 0.5), at=None, blur=0.0, ink=None):
+    """背景板：按 scale 预放大（留视差余量），板内 pivot 点（归一化）落到屏幕 at（默认画面中心 + (dx,dy)），绕该点缩放 z / 旋转 rot。
+    ink=dict(...) 时先做墨线化（去照片感 / 镜面高光）。"""
+    im = inkplate(name, scale, **ink) if ink else plate(name, scale)
     h, w = im.shape[:2]
     px, py = pivot[0] * w, pivot[1] * h
     ax, ay = at if at else (W / 2 + (px - w / 2), H / 2 + (py - h / 2))
@@ -94,22 +95,32 @@ def brighten(fr, k):
     return 1 - (1 - np.clip(fr, 0, 1)) ** (1 + 1.4 * k) if k > 0 else fr
 
 
+def lift(fr, k):
+    """向白软提亮：fr*(1-k)+k（只压对比、不动色相），用于整段偏暗的镜（单帧亮度下限 65）"""
+    return fr * (1 - k) + k if k > 0.001 else fr
+
+
+def _aslay(x):
+    """名字（str）或已载入的 SpriteLayer 都接受"""
+    return x if hasattr(x, 'draw') else lay(x)
+
+
 def sput(fr, t, name, a_src, dst, s, **kw):
     k = dict(grade=NEU, rim=NORIM, wrap=0, shade=None, breathe=0, wind_amp=0)
     k.update(kw)
-    return lay(name).draw(fr, t, a_src, dst, s, **k)
+    return _aslay(name).draw(fr, t, a_src, dst, s, **k)
 
 
 def sfit(fr, t, name, h, foot, **kw):
     """按包围盒高度落脚（脚底中点 → foot）；人物默认带呼吸"""
-    a, s = lay(name).fit(h)
+    a, s = _aslay(name).fit(h)
     kw.setdefault('breathe', 0.004)
     return sput(fr, t, name, a, foot, s, **kw)
 
 
 def spt(name, a_src, dst, s, p, rot=0.0):
     """精灵内归一化点 p 在屏幕上的位置（与 draw 同一仿射）"""
-    sp = lay(name)
+    sp = _aslay(name)
     ax, ay = a_src[0] * sp.w, a_src[1] * sp.h
     M = cv2.getRotationMatrix2D((ax, ay), rot, s)
     M[0, 2] += dst[0] - ax; M[1, 2] += dst[1] - ay
@@ -145,6 +156,138 @@ def INKNZ():
 def over(fr, a, col):
     a = a[..., None] if a.ndim == 2 else a
     return fr * (1 - a) + np.asarray(col, np.float32) * a
+
+
+_SC = {}
+def _screen(h, w, period=10, ang=-24.0):
+    """45° 网点屏（screentone 用的抖动阈值图），缓存。"""
+    k = (h, w, period, ang)
+    if k not in _SC:
+        if len(_SC) > 3: _SC.clear()
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        a = math.radians(ang)
+        u = (xx * math.cos(a) + yy * math.sin(a)) / period
+        v = (-xx * math.sin(a) + yy * math.cos(a)) / period
+        _SC[k] = (0.5 + 0.5 * np.cos(2 * np.pi * u) * np.cos(2 * np.pi * v)).astype(np.float32)
+    return _SC[k]
+
+
+def inkify(rgb, period=10, lv=6, hi=0.60, ink=0.55, crush=0.80, rd=0, wt=None):
+    """把有「照片感 / CG 镜面高光」的一层压成墨线稿（不新增积分：纯后处理）。
+    ① 高光回流：把 hi 以上的连续高光梯度压平（镜面反光 → 中性白）；② 网点分阶（screentone）；
+    ③ 强边勾墨（轮廓 = 墨线）。色相保留，只动明暗。rd>0 时把血红的软渐变也压成 rd 阶平涂（去掉「一片软红晕」）；
+    wt=alpha 时按它加权把平均亮度补回原值（精灵只换质感、不改曝光）。"""
+    h, w = rgb.shape[:2]
+    V = rgb.max(-1)
+    V2 = V - np.clip(V - hi, 0, None) ** 1.5 * crush * 2.4
+    T = _screen(h, w, period)
+    q = np.clip(np.round(V2 * (lv - 1) + (T - 0.5) * 0.85) / (lv - 1), 0, 1)
+    gx = cv2.Sobel(q, cv2.CV_32F, 1, 0, ksize=3); gy = cv2.Sobel(q, cv2.CV_32F, 0, 1, ksize=3)
+    m = np.clip((np.hypot(gx, gy) - 0.10) / 0.55, 0, 1) * ink
+    out = q * (1 - m)
+    res = np.clip(rgb * (out / np.maximum(V, 0.06))[..., None], 0, 1)
+    if rd:
+        R, G, B = res[..., 0], res[..., 1], res[..., 2]
+        red = (R > 0.10) & (R > G * 1.5 + 0.04) & (R > B * 1.5 + 0.04)
+        qr = np.clip(np.round(R * (rd - 1) + (T - 0.5) * 0.8) / (rd - 1), 0, 1)
+        res = res.copy(); res[..., 0] = np.where(red, qr, R)
+    ww = wt[..., None] if wt is not None else 1
+    gm = float((rgb * ww).mean()) / max(float((res * ww).mean()), 1e-4)
+    return np.clip(res * gm, 0, 1)
+
+
+_IKC = {}
+def inkilay(name, rag=None, **kw):
+    """载入一张精灵并做墨线化（缓存）。kw 见 inkify；rag=dict(...) 时同时抠干笔撕边（ragged）。"""
+    k = (name, tuple(sorted(kw.items())), tuple(sorted((rag or {}).items())))
+    if k not in _IKC:
+        if len(_IKC) > 6: _IKC.clear()
+        src = lay(name)
+        dst = SP.SpriteLayer.__new__(SP.SpriteLayer)
+        dst.__dict__.update(src.__dict__)
+        dst.F = inkify(src.F, wt=src.A, **kw)
+        if rag: dst.A = ragged(src.A, **rag)
+        SP._UID[0] += 1; dst._uid = SP._UID[0]
+        dst._supp = None; dst._supp_for = None; dst._box = {}
+        _IKC[k] = dst
+    return _IKC[k]
+
+
+_IKP = {}
+def inkplate(name, scale=1.0, **kw):
+    """载入一张背景板并做墨线化（缓存）。"""
+    k = (name, scale, tuple(sorted(kw.items())))
+    if k not in _IKP:
+        if len(_IKP) > 3: _IKP.clear()
+        _IKP[k] = inkify(plate(name, scale), **kw)
+    return _IKP[k]
+
+
+def SHRD():
+    """前景碎石：去照片感 + 干笔撕边（V15 / V17 共用，避免「直边多边形」）"""
+    return inkilay('A2_shards', lv=6, hi=0.64, ink=0.50, rag=dict(amt=0.85, sig=10.0, seed=3))
+
+
+_SQ = {}
+def squash(name, k, cx=0.5):
+    """以 cx（归一化）为中心横向收窄 k 倍：对齐 V19 的瘦长脸 / 细眼型。
+    内容点 x_src 会落到 x' = cx + (x_src-cx)*k（锚点常量用 sq() 一起换算）。"""
+    src = _aslay(name)
+    key = ('__sq', src._uid, k, cx)
+    if key not in _SQ:
+        if len(_SQ) > 6: _SQ.clear()
+        h, w = src.F.shape[:2]
+        xx, yy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+        mx = (cx * w + (xx - cx * w) / k).astype(np.float32)
+        dst = SP.SpriteLayer.__new__(SP.SpriteLayer)
+        dst.__dict__.update(src.__dict__)
+        dst.F = cv2.remap(src.F, mx, yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
+        dst.A = cv2.remap(src.A, mx, yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        dst.wind_w = cv2.remap(src.wind_w, mx, yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        dst.ring = cv2.remap(src.ring, mx, yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        SP._UID[0] += 1; dst._uid = SP._UID[0]
+        dst._supp = None; dst._supp_for = None; dst._box = {}
+        _SQ[key] = dst
+    return _SQ[key]
+
+
+def sq(x, cx=0.5, k=0.96):
+    """收窄后锚点的新归一化坐标"""
+    return cx + (x - cx) * k
+
+
+_CLO = {}
+def cloth(name, r=6, ymax=0.50):
+    """发间的散红丝读起来像挑染 → 只保留成块的布带 / 内领 / 腰带：细碎红丝按周围发色 inpaint 掉。
+    只在上半身（y < ymax）动，避免误伤刀穗 / 腰带 / 内领。"""
+    src = _aslay(name)
+    key = ('__clo', src._uid, r, ymax)
+    if key not in _CLO:
+        if len(_CLO) > 4: _CLO.clear()
+        R, G, B = src.F[..., 0], src.F[..., 1], src.F[..., 2]
+        region = (np.arange(src.F.shape[0], dtype=np.float32) < ymax * src.F.shape[0])[:, None]
+        red = ((R > 0.10) & (R > G * 1.45 + 0.03) & (R > B * 1.45 + 0.03) & (src.A > 0.4) & region).astype(np.uint8)
+        kk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
+        big = cv2.morphologyEx(red, cv2.MORPH_OPEN, kk)
+        thin = (red & (cv2.dilate(big, kk) == 0)).astype(np.uint8)
+        F = np.clip(src.F * 255, 0, 255).astype(np.uint8)
+        if thin.any(): F = cv2.inpaint(F, thin * 255, 6, cv2.INPAINT_TELEA)
+        dst = SP.SpriteLayer.__new__(SP.SpriteLayer)
+        dst.__dict__.update(src.__dict__)
+        dst.F = F.astype(np.float32) / 255
+        SP._UID[0] += 1; dst._uid = SP._UID[0]
+        dst._supp = None; dst._supp_for = None; dst._box = {}
+        _CLO[key] = dst
+    return _CLO[key]
+
+
+def ragged(a, amt=0.55, sig=7.0, seed=0):
+    """把硬边 alpha 抠成干笔撕边（碎石/纸片用），去掉「直边多边形」感。"""
+    ab = cv2.GaussianBlur(a, (0, 0), sig)
+    r = np.random.default_rng(seed)
+    nz = cv2.GaussianBlur(r.random(a.shape).astype(np.float32), (0, 0), a.shape[1] / 60.0)
+    nz = (nz - nz.min()) / max(1e-6, nz.max() - nz.min())
+    return np.clip((ab - (0.5 + (nz - 0.5) * amt)) * 9.0, 0, 1)
 
 
 def flash(fr, amt):
@@ -244,25 +387,36 @@ def brush(fr, pts, width, prog, fade, seed, core=WHITE, edge=BLOOD, ink=True):
     return fr
 
 
+_ST = {}
 def star(fr, p, g, size=1.0, rot=0.0):
-    """墨线星芒（替代柔光十字 pupil_glint，SPREAD §11-2）：硬边白色四角星 + 细墨线勾边 + 两根细长白刺，g 0..1 控制大小与不透明"""
+    """生图墨笔星芒 A2_star（干笔飞白四芒 + 短芒；替代 §11-2 之前代码画的矢量多边形星）：
+    取生图亮度当 alpha，外面补一圈细墨线勾边，g 0..1 控制大小与不透明。"""
     if g <= 0.02: return fr
-    q = 2; L = np.zeros((H // q, W // q), np.float32); K_ = np.zeros_like(L)
-    r1 = 46 * size * (0.4 + 0.6 * g); r0 = r1 * 0.16
-    pts = []
-    for i in range(8):
-        a = math.radians(rot + 45 * i); r = r1 * (1.0 if i % 4 == 0 else (0.62 if i % 2 == 0 else r0 / r1))
-        pts.append((p[0] + math.cos(a) * r, p[1] + math.sin(a) * r))
-    P = (np.array(pts) / q * 4).astype(np.int32)
-    cv2.fillPoly(K_, [P], 1.0, cv2.LINE_AA, 2); cv2.polylines(K_, [P], True, 1.0, 3, cv2.LINE_AA, 2)
-    cv2.fillPoly(L, [P], 1.0, cv2.LINE_AA, 2)
-    for a in (rot, rot + 180):
-        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        cv2.line(L, (int(p[0] / q * 4), int(p[1] / q * 4)), (int((p[0] + ca * r1 * 3.2) / q * 4), int((p[1] + sa * r1 * 3.2) / q * 4)), 1.0, 1, cv2.LINE_AA, 2)
-    ink = np.clip(cv2.resize(K_, (W, H)) - cv2.resize(cv2.erode(L, np.ones((3, 3), np.uint8)), (W, H)), 0, 1)
+    if 'A' not in _ST:
+        im = cv2.imread(GEN + 'A2_star.png')
+        g0 = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255
+        ys, xs = np.nonzero(g0 > 0.12)
+        g0 = g0[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        k = 560 / max(g0.shape)
+        _ST['A'] = np.clip((cv2.resize(g0, (max(2, int(g0.shape[1] * k)), max(2, int(g0.shape[0] * k))),
+                                       interpolation=cv2.INTER_AREA) - 0.10) / 0.90, 0, 1).astype(np.float32)
+    A0 = _ST['A']; h0, w0 = A0.shape
+    E = 150.0 * size * (0.4 + 0.6 * g)                       # 星芒半幅（px）
+    k = E / (w0 / 2)
+    R = int(E * 1.5) + 4
+    cx, cy = int(round(p[0])), int(round(p[1]))
+    x0, x1 = max(0, cx - R), min(W, cx + R); y0, y1 = max(0, cy - R), min(H, cy + R)
+    if x1 - x0 < 4 or y1 - y0 < 4: return fr
+    M = cv2.getRotationMatrix2D((w0 / 2, h0 / 2), rot, k)
+    M[0, 2] += (cx - x0) - w0 / 2; M[1, 2] += (cy - y0) - h0 / 2
+    sub = cv2.warpAffine(A0, M, (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
     al = min(1.0, 1.3 * g)
-    fr = over(fr, ink * al, INKC)
-    return over(fr, cv2.resize(L, (W, H)) * al, WHITE)
+    ink = np.clip(cv2.dilate(sub, np.ones((3, 3), np.uint8)) - sub, 0, 1)
+    reg = fr[y0:y1, x0:x1]
+    reg = reg * (1 - (ink * al * 0.9)[..., None]) + INKC * (ink * al * 0.9)[..., None]
+    reg = reg * (1 - (sub * al)[..., None]) + WHITE * (sub * al)[..., None]
+    fr = fr.copy(); fr[y0:y1, x0:x1] = reg
+    return fr
 
 
 def bez(p0, p1, p2, n=60):
@@ -402,12 +556,14 @@ class V09D(DShot):
         u = self.u(t); e = eio(u)
         par = e - 0.5
         fr = flowwrap(brighten(bgview('A2_v09_bg', 1.14, dx=-70 * par), 0.55), t, 6, 0.3, 9)
-        a_, s_ = lay('A2_v09_scale').fit(self.HGT)
+        fr = lift(fr, 0.02)                                            # 墨线化压平高光会让整镜掉 3 点 → 补回原来的曝光
+        sp = inkilay('A2_v09_scale', lv=6, hi=0.58, ink=0.55)          # 去通体镜面高光 → 网点墨线
+        a_, s_ = sp.fit(self.HGT)
         fx, fy = self.FOOT
         dst = (fx + 18 * par, fy)
-        P, Al = sput(np.zeros_like(fr), t, 'A2_v09_scale', a_, dst, s_)
-        piv = spt('A2_v09_scale', a_, dst, s_, self.PIV)
-        half = float((self.PANR[0] - self.PIV[0]) * lay('A2_v09_scale').w * s_)
+        P, Al = sput(np.zeros_like(fr), t, sp, a_, dst, s_)
+        piv = spt(sp, a_, dst, s_, self.PIV)
+        half = float((self.PANR[0] - self.PIV[0]) * sp.w * s_)
         tm = CT(3, 3); a = t - tm
         sl = -0.012 + 0.010 * math.sin(t * 4.2)
         if a >= 0: sl += 0.085 * (1 - math.exp(-a / 0.07)) + 0.030 * math.exp(-a / 0.28) * math.sin(a * 26)
@@ -421,7 +577,7 @@ class V09D(DShot):
         fr[y0:y0 + hh] = fr[y0:y0 + hh] * (1 - Ra[:hh] * g) + cv2.GaussianBlur(Rf[:hh], (0, 0), 3) * g
         fr = fr * (1 - Al) + P
         # 「装进」：纸人自上方落入左盘
-        pl = spt('A2_v09_scale', a_, dst, s_, self.PANL)
+        pl = spt(sp, a_, dst, s_, self.PANL)
         pl = (pl[0], pl[1] - sl * half)
         tz = CT(3, 4) - 0.30
         if tz <= t:
@@ -431,7 +587,7 @@ class V09D(DShot):
             clip = np.clip((pl[1] - 70 - np.arange(H, dtype=np.float32)[:, None]) / 12, 0, 1)
             fr = fr * (1 - (Af * clip)[..., None]) + Pf * clip[..., None]
         if a >= 0:
-            pr = spt('A2_v09_scale', a_, dst, s_, self.PANR)
+            pr = spt(sp, a_, dst, s_, self.PANR)
             fr = K.sparks(fr, t, 91, (pr[0], pr[1] + sl * half), n=60, life=0.5, speed=(200, 700), dirc=(0, -1), spread=1.6, grav=1200,
                           area=(160, 10), amt=0.9, t0=tm, burst=True, color=(1.0, 1.0, 1.0))
             fr = flash(fr, 0.35 * math.exp(-a / 0.06))
@@ -462,13 +618,14 @@ class V10D(DShot):
         fr = paper_bg(1001, red=(1500, 260, 420))
         fr = speed_lines(fr, t, 1003, 90, 0.35, n=40)
         rot, drop = self.swing(t)
-        s = W / lay('A2_v10_pan').w * 0.92
+        sp = inkilay('A2_v10_pan', lv=6, hi=0.55, ink=0.60)           # 盘沿写实水珠 / 通体镜面高光 → 网点墨点
+        s = W / sp.w * 0.92
         top = (960 + 20 * (e - 0.5), -10 + drop)                  # 链顶画布边：最大摆角 ≈9° 时 y<100（藏在上黑边里）
         tl = CT(3, 8)
         # 中景落纸人（「里」起）：自盘沿翻落
         a1 = t - (tl - 0.04)
-        fr, Ap = sput(fr, t, 'A2_v10_pan', (0.5, 0.0), top, s, rot=rot, wind_amp=2.0)
-        rim = spt('A2_v10_pan', (0.5, 0.0), top, s, (0.5, 0.62), rot)
+        fr, Ap = sput(fr, t, sp, (0.5, 0.0), top, s, rot=rot, wind_amp=2.0)
+        rim = spt(sp, (0.5, 0.0), top, s, (0.5, 0.62), rot)
         if a1 >= 0:
             y = rim[1] - 40 + 0.5 * 1500 * a1 * a1 + 120 * a1
             al = clamp01(1 - (a1 - 0.6) / 0.4)
@@ -511,8 +668,9 @@ class V11D(DShot):
     def render(self, t):
         u = self.u(t); e = eio(u); par = e - 0.5
         fr = self.bg.copy()
-        s = W / lay('A2_v11_face').w * 1.12 * (1 + 0.04 * e)
-        fr, _ = sput(fr, t, 'A2_v11_face', (0.54, 0.52), (960 + 10 * par, 560), s, wind_amp=4.0)
+        sp = squash('A2_v11_face', 0.94, 0.54)                 # 横向收窄：脸宽 / 眼型对齐 V19（脸中心 0.54 不动，竖刃仍劈在中线）
+        s = W / sp.w * 1.12 * (1 + 0.04 * e)
+        fr, _ = sput(fr, t, sp, (0.54, 0.52), (960 + 10 * par, 560), s, wind_amp=4.0)
         sb = 1250 / (0.976 * lay('A2_v11_blade').h)
         bx = 958 + 1.6 * 24 * par
         fr, Ab = sput(fr, t, 'A2_v11_blade', (0.5, 0.5), (bx, 540), sb)
@@ -673,12 +831,15 @@ class V14D(DShot):
     def render(self, t):
         u = self.u(t); e = eio(u); par = e - 0.5
         fr = flowwrap(bgview('A2_v14_bg', 1.12, dx=-50 * par, rot=-1.5 * par), t, 10, 0.45, 14, swell=0.7)
+        fr = lift(fr, 0.09 * u)                                       # 板子右下沉，镜头推进去越走越暗 → 随时间补亮（单帧亮度下限 65）
         fr = RAIN.draw(fr, t, 0.5, angle=-10, color=(0.7, 0.7, 0.7), layers=(0, 1))
         i, tb, td = self.pose(t)
         name = self.POSE[i]
-        sp = lay(name)
+        SQK = 0.96                                             # 横向收窄：对齐 V19 的瘦长脸 / 细眼型
+        sp = squash(cloth(name), SQK)                          # 发间散红丝（像挑染）先吸成发色，只留下成块的布带
         s = W / sp.w * self.S[i]
-        a_src = self.FACE[i]
+        a_src = (sq(self.FACE[i][0], 0.5, SQK), self.FACE[i][1])
+        gsrc = (sq(self.GUARD[i][0], 0.5, SQK), self.GUARD[i][1])
         dx_, mb = 0.0, (0.0, 0.0)
         if i == 0:
             press = 0.0
@@ -695,8 +856,8 @@ class V14D(DShot):
             b = t - td
             mb = (60 * max(0.0, 1 - b / 0.07), 0)
             dst = (self.HEAD[0] - 8 * eout(b / 0.25), self.HEAD[1])
-        fr, Am = sput(fr, t, name, a_src, dst, s, wind_amp=4.0 if i < 2 else 5.5, mblur=mb)
-        G = spt(name, a_src, dst, s, self.GUARD[i])
+        fr, Am = sput(fr, t, sp, a_src, dst, s, wind_amp=4.0 if i < 2 else 5.5, mblur=mb)
+        G = spt(sp, a_src, dst, s, gsrc)
         if i == 0:
             for k in range(3):
                 b = t - (CT(5, k) - 0.03)
@@ -707,7 +868,7 @@ class V14D(DShot):
         elif i == 1:
             b = t - tb
             # 出鞘白光沿刃滑过（护手 → 鞘口方向）
-            T_ = spt(name, a_src, dst, s, (0.62, 0.86))
+            T_ = spt(sp, a_src, dst, s, (sq(0.62, 0.5, SQK), 0.86))
             q = clamp01(b / 0.22)
             P = (G[0] + (T_[0] - G[0]) * q, G[1] + (T_[1] - G[1]) * q)
             fr = star(fr, P, 1.0 - 0.5 * q, 1.0, rot=31)
@@ -715,11 +876,11 @@ class V14D(DShot):
             fr = speed_lines(fr, t, 1410, 28, 0.5 * max(0.0, 1 - b / 0.15))
         else:
             b = t - td
-            tip = spt(name, a_src, dst, s, (0.868, 0.365))
+            tip = spt(sp, a_src, dst, s, (sq(0.868, 0.5, SQK), 0.365))
             pts = bez((G[0] + 120, G[1] + 260), (G[0] + 600, G[1] + 40), (tip[0] + 60, tip[1] - 10), 60)
             fade = 1.0 if b < 0.10 else math.exp(-(b - 0.10) / 0.22)
             fr = brush(fr, pts, 80, clamp01(b / 0.07), fade, 1411)
-            mouth = spt(name, a_src, dst, s, (0.62, 0.86))
+            mouth = spt(sp, a_src, dst, s, (sq(0.62, 0.5, SQK), 0.86))
             fr = K.sparks(fr, t, 1412, mouth, n=50, life=0.5, speed=(300, 900), dirc=(1, -0.6), spread=0.9, grav=700,
                           area=(10, 10), amt=1.0, t0=td, burst=True, color=(1.0, 1.0, 1.0))
             fr = K.sparks(fr, t, 1413, mouth, n=30, life=0.45, speed=(250, 800), dirc=(1, -0.4), spread=1.0, grav=700,
@@ -746,16 +907,16 @@ class V15D(DShot):
         fr = flowwrap(fr, t, 12, 0.5, 15, swell=0.8, mask=np.clip((760 - np.arange(H, dtype=np.float32)) / 200, 0, 1)[:, None])
         fr = RAIN.draw(fr, t, 0.75, angle=-6, color=(0.80, 0.80, 0.80), layers=(0, 1))
         a1 = t - T1
-        if a1 < -1 / 30 + 1e-4:
-            lift = 0.0
+        if a1 < -1 / 30 - 1e-4:                                           # 只留 T1 前一帧给反白冲击帧
+            rise = 0.0
             for k, amt in ((7, 10), (8, 10)):
                 b = t - CT(5, k)
-                if b >= 0: lift += amt * eout(b / 0.15)
-            lift += 22 * ein(clamp01((t - (T1 - 0.20)) / 0.17), 2)
-            name = 'A2_v15_raise'; foot = (self.FOOT[0], self.FOOT[1] - lift)
+                if b >= 0: rise += amt * eout(b / 0.15)
+            rise += 22 * ein(clamp01((t - (T1 - 0.20)) / 0.17), 2)
+            foot = (self.FOOT[0], self.FOOT[1] - rise)
             wind = 5.0 + 5.0 * clamp01((t - CT(5, 8)) / 0.2)
             fr = _contact(fr, self.FOOT[0], self.FOOT[1], rx=210)
-            fr, Am = sfit(fr, t, name, self.HGT, foot, wind_amp=wind)
+            fr, Am = sfit(fr, t, 'A2_v15_raise', self.HGT, foot, wind_amp=wind)
             return fr, 0
         if a1 < 0:                                                       # 反白冲击帧（命中前一帧）
             fr = _contact(fr, self.FOOT[0], self.FOOT[1], rx=210)
@@ -793,8 +954,9 @@ class V15D(DShot):
             q = clamp01(a1 / 0.4)
             al = 0.95 * (1 - K.sstep(0.22, 0.36, a1))
             if al > 0.01:
-                fr, _ = sput(fr, t, 'A2_shards', (0.5, 0.5), (960, 560), W / lay('A2_shards').w * (1.05 + 1.0 * eout(q, 2)),
-                             alpha=al, mblur=(0, 20 * q))
+                sh = SHRD()
+                fr, _ = sput(fr, t, sh, (0.5, 0.5), (960, 560), W / sh.w * (1.05 + 1.0 * eout(q, 2)),
+                             rot=-14, alpha=al, mblur=(0, 20 * q))
         fr = focus_lines(fr, (tip[0], tip[1] - 300), 0.9 * (a1 < 0.067) + 0.6 * (0 <= a2 < 0.034), 1504 + int(a1 * 30), r0=460)
         fr = flash(fr, 0.75 * math.exp(-a1 / 0.04) + (0.35 * math.exp(-a2 / 0.04) if a2 >= 0 else 0))
         sk = K.pulse(t, T1, 0.10) + (0.6 * K.pulse(t, T2, 0.08) if a2 >= 0 else 0)
@@ -860,7 +1022,8 @@ class V17D(DShot):
 
     def top(self, t, a):
         z = 1.10 - 0.08 * eout(a / 0.5)
-        fr = bgview('A2_v17_crater', 1.08, z=z)
+        fr = bgview('A2_v17_crater', 1.08, z=z, ink=dict(lv=6, hi=0.62, ink=0.50, rd=3))   # 石块照片式明暗 + 左侧软红晕 → 网点 / 平涂红 / 勾墨
+        fr = lift(fr, 0.05 * clamp01((t - (self.t1 - 0.45)) / 0.45))   # 交给 V18 的烟转场会把画面压暗，尾段先补亮
         # 裂缝血光脉动（原图里的红）
         rm = SD.red_mask(fr)
         k2 = t - V(38.992)
@@ -877,7 +1040,8 @@ class V17D(DShot):
         if a < 0.4:
             q = clamp01(a / 0.4); al = 0.95 * (1 - K.sstep(0.22, 0.36, a))
             if al > 0.01:
-                fr, _ = sput(fr, t, 'A2_shards', (0.5, 0.5), (960, 540), W / lay('A2_shards').w * (1.0 + 1.1 * eout(q, 2)),
+                sh = SHRD()
+                fr, _ = sput(fr, t, sh, (0.5, 0.5), (960, 540), W / sh.w * (1.0 + 1.1 * eout(q, 2)),
                              rot=180, alpha=al, mblur=(0, 20 * q))
         fr = focus_lines(fr, (960, 560), 0.85 * (a < 0.1), 1704 + int(a * 30), r0=520)
         fr = flash(fr, 0.6 * math.exp(-a / 0.05))
@@ -893,6 +1057,7 @@ class V18D(DShot):
     def render(self, t):
         u = self.u(t); e = eio(u)
         fr = flowwrap(bgview('A2_v18_plate', 1.12, rot=-2.5 * (e - 0.5), z=1.0 + 0.03 * (1 - e)), t, 7, 0.3, 18)
+        fr = lift(fr, 0.11 * clamp01(1 - (t - self.t0) / 0.60))       # 起手镜头还在坑底 + 卷进来的烟会把画面压暗 → 前 0.55s 补亮（单帧亮度下限 65）
         rm = SD.red_mask(fr)
         k = t - V(39.903)
         if k >= 0: fr = fr + K.blur_ds(rm, 10)[..., None] * BLOOD * 0.6 * math.exp(-k / 0.15)
@@ -989,7 +1154,7 @@ class V21D(DShot):
         tf, tm = CT(7, 8), CT(7, 9)
         fr = flowwrap(paper_bg(2100, red=(1500, 760, 520)), t, 6, 0.22, 21, swell=0.5)
         fr = focus_lines(fr, self.C, 0.55, 2103, r0=520, n=80)
-        sp = lay('A2_v21_edge')
+        sp = inkilay('A2_v21_edge', lv=6, hi=0.60, ink=0.48)          # 刀身通体镜面高光 → 网点 + 勾墨
         s = 1.30
         th = math.radians(self.ANG); dv = np.array([math.cos(th), math.sin(th)])
         q = clamp01((t - self.t0) / (tf - self.t0))
@@ -998,9 +1163,9 @@ class V21D(DShot):
         tip0 = np.array(self.C) - dv * 362 - nv * 170            # 落定后刀尖 ≈(640,780)；刀身在劈线左侧 170px，43.30 沿刃旁这条线劈开、左半带刀滑走
         dst = (tip0[0] + dv[0] * off, tip0[1] + dv[1] * off)
         mb = (dv[0] * 60 * (1 - q), dv[1] * 60 * (1 - q)) if q < 1 else (0, 0)
-        fr, Ab = sput(fr, t, 'A2_v21_edge', self.TIPN, dst, s, rot=self.ROT, mblur=mb)
-        tipp = spt('A2_v21_edge', self.TIPN, dst, s, self.TIPN, self.ROT)
-        hilt = spt('A2_v21_edge', self.TIPN, dst, s, self.HILTN, self.ROT)
+        fr, Ab = sput(fr, t, sp, self.TIPN, dst, s, rot=self.ROT, mblur=mb)
+        tipp = spt(sp, self.TIPN, dst, s, self.TIPN, self.ROT)
+        hilt = spt(sp, self.TIPN, dst, s, self.HILTN, self.ROT)
         if hilt[1] < 120:                                         # 白光从刃身入画处起走（护手在黑边外）
             k_ = (120 - tipp[1]) / (hilt[1] - tipp[1]); hilt = (tipp[0] + (hilt[0] - tipp[0]) * k_, 120.0)
         a = t - tf
@@ -1074,6 +1239,7 @@ def apply(mod):
     # 转场：只改含字或金色的两处，切点 / 时长不变
     mod.CUTS['V15'] = ('match_cut', 0.08, 0.12, dict(shape='line', center=(960, 470), angle=0, mode='cut', glow=WHITE))   # 拔刀横刃 ↔ 立刀镜
     mod.CUTS['V16'] = ('ink_bleed', 0.08, 0.34, dict(seed=16, center=(960, 360)))                                     # 原 a_glyph「主」字形遮罩 → 墨晕
+    mod.CUTS['V18'] = ('smoke_through', 0.06, 0.30, dict(seed=18, direction=1, density=0.32))                          # 尘浪卷过：烟薄一点，转场中段不至压到 65 以下
     mod.CUTS['V12'] = ('a_cleave', 0.10, 0.16, dict(angle=58, center=(960, 540), mode='open', col=(1.0, 0.9, 0.9)))     # 斩缝去暖橙
     mod.CUTS['V21'] = ('a_cleave', 0.10, 0.16, dict(angle=-62, center=(1420, 540), mode='open', col=(1.0, 0.9, 0.9)))
     t_lo, t_hi = D['V08'].t0, D['V21'].t1
@@ -1101,8 +1267,6 @@ def apply(mod):
     hi = t_hi
     def lyrics(fr, t, _prev=prev):
         if t >= hi: return _prev(fr, t)                                   # 本段之后照旧
-        k = clamp01((t - lo) / (4 / 30))                                # 切点起 4 帧淡出（V07 里已开写的「谁在高处」不再在切点上硬消失）
-        if k >= 1: return fr
-        out = _prev(fr.copy(), t)
-        return out if k <= 0 else out * (1 - k) + fr * k
+        if t >= lo - 1e-6: return fr                                      # 本段帧内 0 字（上一镜的「谁在高处」随 V08 硬切退净）
+        return _prev(fr, t)
     mod.lyrics = lyrics

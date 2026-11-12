@@ -48,8 +48,9 @@ nananobanana RH_image2，2K 16:9，3 积分/张；提示词 `jobs/r8_D_A2.json`�
 | 11-11 16:05 | A2_v19_mcu_sw | 鬼屠定妆照 | 3 | 5a860da2-ffca-48df-9af5-fcbb8301bae0 | ✔ 采用 | A2_v19_mcu_cut.png | 刀具统一：原图肩后菱形缠柄 + 圆镡 → 素黑柄 + 中式护手 + 环首红穗 |
 | 11-11 16:05 | A2_v21_edge_sw | 纯文生图 | 3 | c21940cf-578c-434f-bedb-727f815b1dcf | ✔ 采用 | A2_v21_edge_cut.png | 原图刃面有波纹刃纹（日式）→ 平直刃线 + 中式护手 |
 | 11-11 16:05 | A2_v17_sky | 纯文生图 | 3 | 5eac29b8-682b-4283-93e1-7118b486172e | ✔ 采用 | A2_v17_sky.png | 背景板不跨镜复用（SPREAD §11-5）：V17 侧面坠印原用广场板 → 独立仰角天幕板 |
+| 11-12 15:45 | A2_star | 纯文生图 | 3 | 92b2ba39-ca3d-4438-a0fe-c531564b4e3b | ✔ 采用 | A2_star.png | 独立评审 P1-4：代码画的矢量四角星被人看出来 → 生图墨笔星芒（干笔飞白四芒 + 短芒，纯黑底取亮度当 alpha），V14 护手 / V19 眼中 / V21 刀尖三处共用 |
 
-合计 44 张 × 3 = **132 积分**（单元上限 150），提交失败 0 次；弃用 9 张（太上皇旧描述 2 张；刀具不合规 7 张：v12_hero / v13_hero / v14_p1 / v14_p2 / v14_p3 / v19_mcu / v21_edge 的 try1，已被 _sw 版覆盖）。
+合计 45 张 × 3 = **135 积分**（单元上限 150），提交失败 0 次；弃用 9 张（太上皇旧描述 2 张；刀具不合规 7 张：v12_hero / v13_hero / v14_p1 / v14_p2 / v14_p3 / v19_mcu / v21_edge 的 try1，已被 _sw 版覆盖）。
 另：`A2_v13_hero_cut.png`（_sw 版）生图里自带一个跪者，抠像后把 x>1100 以 24px 羽化清掉。
 刀具统一采用 A1 单元同一段描述（straight single-edged Chinese dao, Chinese-style cross guard with short down-turned quillons, plain smooth black hilt, ring pommel, straight black scabbard with blood-red tassel）。
 裁切边处理（tools 外的一次性脚本，见 NOTE）：v15_plant / v13_hero / v14_p1–p3 / v19_mcu 顶边、v14_p3 左边、v18_hero 底边（长影）、v20_rise 底边做 30–260px 噪声锥形淡出；其余出画处由代码把画布边放到画幅外。
