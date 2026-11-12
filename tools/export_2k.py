@@ -23,6 +23,12 @@ def probe(p):
     return int(s['width']), int(s['height']), float(num) / float(den)
 
 
+def has_audio(p):
+    out = subprocess.check_output(['ffprobe', '-v', 'error', '-select_streams', 'a',
+                                   '-show_entries', 'stream=index', '-of', 'json', p])
+    return bool(json.loads(out)['streams'])
+
+
 def convert(src, dst, audio=None):
     w, h, fps = probe(src)
     native = (w, h) == (W, H) and abs(fps - FPS) < 0.01
@@ -33,15 +39,18 @@ def convert(src, dst, audio=None):
     if vf:
         cmd += ['-vf', ','.join(vf)]
     cmd += ['-c:v', 'libx264', '-crf', '17', '-preset', 'slow', '-pix_fmt', 'yuv420p']
+    keep = audio is None and has_audio(src)      # 没单独给音频时，不要丢掉源文件自带的音轨
     if audio:
         cmd += ['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '256k', '-shortest']
+    elif keep:
+        cmd += ['-map', '0:v', '-map', '0:a?', '-c:a', 'copy', '-shortest']
     else:
         cmd += ['-an']
     cmd += ['-movflags', '+faststart', dst]
     subprocess.check_call(cmd)
-    print(('%s -> %s  (%dx%d @%.2ffps%s -> %dx%d @%dfps%s)' % (
+    print(('%s -> %s  (%dx%d @%.2ffps%s -> %dx%d @%dfps%s%s)' % (
         os.path.basename(src), os.path.basename(dst), w, h, fps, ' native' if native else '', W, H, FPS,
-        ' native copy' if native else '')).strip())
+        ' native copy' if native else '', ' +audio' if (audio or keep) else ' 无音轨')).strip())
     return dst
 
 
