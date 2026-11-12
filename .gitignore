@@ -37,3 +37,6 @@ out/render_r6/
 /remotion_test/public/
 /remotion_test/out/
 .DS_Store
+
+# 本地 Claude 会话/工作区元数据
+.claude/
