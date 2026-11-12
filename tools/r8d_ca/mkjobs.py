@@ -134,6 +134,21 @@ job('C17_kneel', f"Full-body three-quarter front view of {GT}, dropping onto one
 job('C18_soldiers', "Element only: three heavy-armored ancient Chinese spearmen charging toward the camera, each a separate full-body figure with wide "
     "gaps between them, lamellar armor and helmets with blood-red plumes, long spears leveled forward, faces shadowed under the helmets, drawn in "
     "sharp black ink lines with screentone.", green=True)
+# ---------- 评审第二轮 P0：前排不能是同一张三人组复制 → 另出两组不同姿势
+job('C18_soldiers_b', "Element only: three heavy-armored ancient Chinese spearmen seen from a low three-quarter front angle, each in a different stance: "
+    "the left one thrusting his long spear low at knee height, the middle one bracing his spear diagonally across his chest, the right one raising "
+    "his spear overhead for a downward strike. Wide gaps between the three separate full-body figures, lamellar armor and helmets with blood-red "
+    "plumes, faces shadowed under the helmets, sharp black ink lines with screentone.", green=True)
+job('C18_soldiers_c', "Element only: three heavy-armored ancient Chinese spearmen striding forward toward the camera, each caught at a different moment: "
+    "one half-turned to the side, one crouched low and lunging, one standing tall with his spear angled diagonally upward. Three clearly different "
+    "heights, poses and spear angles, wide gaps between the three separate full-body figures, lamellar armor and helmets with blood-red plumes, "
+    "faces shadowed under the helmets, sharp black ink lines with screentone.", green=True)
+job('C17_kneel2', f"Full-body three-quarter front view of {GT}, dropping onto one knee in shallow water, driving a long straight Chinese jian sword "
+    "point-down into the water in front of him with both hands on the hilt: the hilt has a small flat round disc-shaped Chinese guard (a coin-like "
+    "disc, narrower than his two fists) with no crossbar and no long lateral bar, the grip is plain black cord-wrapped, and one blood-red silk tassel "
+    "hangs from the pommel end; the straight double-edged blade is clearly drawn in sharp black ink lines with a white highlight down its spine, no "
+    "curve and no Japanese tsuba; head bowed, ponytail and red sash swinging down, a splash of water around his knee. Whole body visible.",
+    green=True, ref=True)
 job('C18_draw', f"Full-body front view of {GT}, rising from a crouch while drawing the long straight sword from the scabbard at his hip, the blade "
     "half out and flashing, glaring forward, ponytail and red sash blowing. Whole body visible from head to feet.", green=True, ref=True)
 job('C19_spin', f"Full-body view of {GT}, in the middle of a spinning horizontal slash: body twisted in a full turn, the long straight sword sweeping "
