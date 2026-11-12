@@ -45,4 +45,9 @@
 | 11-11 18:57 | R8_D/CA/C20_turn | RH_image2 | 2K 16:9 | 3 | 48df23f4-d387-413b-b72e-83c66a2296b6 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C20_turn_try3/48df23f4-d387-413b-b72e-83c66a2296b6_0.png | 太上皇定妆照参考 try3；评审第一轮：回头后姿势（黑发为主、髻与黑簪露出）；回头后 3/4 侧身抬手姿势；C21 太上皇也用这张 |
 | 11-11 19:10 | R8_D/CA/C17_kneel | RH_image2 | 2K 16:9 | 3 | 489a64a3-c02a-4b57-adfb-7b941b3a4aa1 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C17_kneel_try4/489a64a3-c02a-4b57-adfb-7b941b3a4aa1_0.png | 定妆照参考 try4；评审第一轮 P1-12：跪姿刀改成直刀 + 中式护手 + 黑柄 + 红穗；直刀 + 中式护手 + 黑柄 + 红穗 |
 
-合计：39 张 × 3 = **117 积分**（预算上限 130）。采用 34 张，弃用 5 张：C10_tablets try1（错字）、C20_emp try1 / C02_hand try1（不像太上皇定妆照）、C20_emp try2 与 C17_kneel try1（评审第一轮返工替换）。入库 assets/gen/R8_D/CA/：抠像 _cut.png 26 张 + 背景板 .jpg 8 张。
+| 11-12 16:15 | R8_D/CA/C18_soldiers_c | RH_image2 | 2K 16:9 | 3 | f723715d-c1b4-49a8-9183-33c2180b6558 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C18_soldiers_c/f723715d-c1b4-49a8-9183-33c2180b6558_0.png | 纯文生图 try1；评审第二轮 P0-1：第三组甲士姿势（三人各不同：侧身 / 低伏 / 举枪） |
+| 11-12 16:15 | R8_D/CA/C18_soldiers_b | RH_image2 | 2K 16:9 | 3 | 86f6581c-8b96-48b2-8865-862cd297d6d6 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C18_soldiers_b/86f6581c-8b96-48b2-8865-862cd297d6d6_0.png | 纯文生图 try1；评审第二轮 P0-1：第二组甲士姿势（低刺 / 横架 / 举枪下砸） |
+| 11-12 16:16 | R8_D/CA/C17_kneel2 | RH_image2 | 2K 16:9 | 3 | bcd21b3d-087e-459f-9691-aa279ddb009c | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C17_kneel2/bcd21b3d-087e-459f-9691-aa279ddb009c_0.png | 定妆照参考 try1；评审第二轮 P1-5：护手改小圆盘（无横向长十字），其余姿势沿用 |
+
+合计：42 张 × 3 = **126 积分**（预算上限 130）。采用 37 张，弃用 5 张：C10_tablets try1（错字）、C20_emp try1 / C02_hand try1（不像太上皇定妆照）、C20_emp try2 与 C17_kneel try1（评审第一轮返工替换）。入库 assets/gen/R8_D/CA/：抠像 _cut.png 29 张 + 背景板 .jpg 8 张。
+

@@ -81,6 +81,20 @@ def halo_tone(fr, c, r, amt, col=(1.0, 1.0, 1.0)):
     return fr * (1 - m[..., None] * 0.55) + m[..., None] * np.asarray(col, np.float32) * 0.85
 
 
+def inkify(fr, A, amt=0.8, dot=0.34, roll=0.26, edge=0.55):
+    """评审 P1-4：把写实 3D 的道具（青铜天平 / 漆箱 / 木板）压回墨线：高光滚降 + 亮部网点 + 1px 墨沿，只作用在 alpha 内。"""
+    a = np.clip(A, 0, 1)[..., None] * amt
+    hi = np.clip((fr - 0.70) / 0.30, 0, 1)
+    fr = fr - hi * roll * a                                     # 压掉镜面高光
+    lum = fr.mean(-1, keepdims=True)
+    m = np.clip((lum - 0.42) / 0.42, 0, 1) * (dots(pitch=6.0) > 0.15)[..., None]
+    fr = fr * (1 - dot * m * a)                                 # 亮部网点
+    if edge > 0:
+        E = np.clip(cv2.dilate(A.astype(np.float32), np.ones((3, 3), np.float32)) - A, 0, 1)[..., None]
+        fr = fr * (1 - edge * E * amt)                          # 墨沿
+    return fr
+
+
 def view(img, z=1.0, ox=0.0, oy=0.0, rot=0.0, c=None, border=cv2.BORDER_REFLECT):
     """背景板取景：以 c（默认画面中心）为中心缩放 z、旋转 rot，再平移 (ox, oy)。img 可比画面大（按自身中心对齐画面中心）。"""
     ih, iw = img.shape[:2]
@@ -216,20 +230,33 @@ def ink_burst(fr, c, r, amt, seed=0, col=(1.0, 1.0, 1.0)):
 
 
 def speed_lines(fr, t, seed, c=None, amt=0.6, n=70, dirx=None, r0=380):
-    """漫画速度线（黑 + 白）。c 给定 = 集中线（指向 c）；否则 dirx 方向的横向速度线。"""
+    """干笔速度线（黑 + 白）。c 给定 = 向心集中线；否则 dirx 方向的横向速度线。
+    评审 P1-6：原来等宽 1–2px 的直线像技术叠加 → 每根由几段宽度/浓淡不同的笔触接成，远端收细、走向略偏，飞白处断墨。"""
     if amt <= 0.01: return fr
     r = np.random.default_rng(seed + int(round(t * 30)))
     Lk = np.zeros((H // 2, W // 2), np.float32); Lw = np.zeros_like(Lk)
     for i in range(n):
         tgt = Lk if i % 3 else Lw
         if c is not None:
-            ang = r.uniform(0, 2 * math.pi); ra = r.uniform(r0, r0 + 200); rb = ra + r.uniform(300, 900)
-            p = (c[0] + math.cos(ang) * ra, c[1] + math.sin(ang) * ra); q = (c[0] + math.cos(ang) * rb, c[1] + math.sin(ang) * rb)
+            ang = r.uniform(0, 2 * math.pi)
+            ra = r.uniform(r0, r0 + 200); rb = ra + r.uniform(300, 900)
+            p = np.array([c[0] + math.cos(ang) * ra, c[1] + math.sin(ang) * ra])
+            q = np.array([c[0] + math.cos(ang) * rb, c[1] + math.sin(ang) * rb])
         else:
             y = r.uniform(140, 940); x = r.uniform(-200, W); ln = r.uniform(180, 700) * (dirx or 1)
-            p, q = (x, y), (x + ln, y)
-        cv2.line(tgt, (int(p[0] / 2), int(p[1] / 2)), (int(q[0] / 2), int(q[1] / 2)), r.uniform(0.4, 1.0), 1 if i % 4 else 2, cv2.LINE_AA)
-    Lk = cv2.resize(cv2.GaussianBlur(Lk, (0, 0), 0.6), (W, H)); Lw = cv2.resize(cv2.GaussianBlur(Lw, (0, 0), 0.6), (W, H))
+            p, q = np.array([x, y], np.float32), np.array([x + ln, y], np.float32)
+        d = q - p; L = np.linalg.norm(d) + 1e-6
+        perp = np.array([-d[1], d[0]]) / L
+        nseg = 4
+        w0 = 1.0 if i % 4 else 2.2
+        for s in range(nseg):                                      # 分 4 段：近端粗、远端收细，每段横向抖 ±2px
+            u0, u1 = s / nseg, (s + 1) / nseg
+            if r.random() < 0.18: continue                         # 断墨（飞白）
+            a0 = p + d * u0 + perp * r.uniform(-2.2, 2.2)
+            a1 = p + d * u1 + perp * r.uniform(-2.2, 2.2)
+            w = 1 if (w0 * (1 - 0.65 * u0)) < 1.7 else 2
+            cv2.line(tgt, tuple((a0 / 2).astype(int)), tuple((a1 / 2).astype(int)), r.uniform(0.25, 0.9) * (1 - 0.55 * u0), w, cv2.LINE_AA)
+    Lk = cv2.resize(cv2.GaussianBlur(Lk, (0, 0), 0.7), (W, H)); Lw = cv2.resize(cv2.GaussianBlur(Lw, (0, 0), 0.7), (W, H))
     fr = fr * (1 - np.clip(Lk * 0.85 * amt, 0, 1))[..., None]
     return fr + (Lw * 0.9 * amt)[..., None]
 
@@ -563,7 +590,7 @@ class C04(Shot):
             px, py = self.scr(x, y); return (960 + (px - 960) * z, 540 + (py - 540) * z)
         pv = P(*self.PIV)
         # 立柱
-        fr, _ = self.post.draw(fr, self.post.src(*self.PIV), pv, S * z)
+        fr, A_ = self.post.draw(fr, self.post.src(*self.PIV), pv, S * z); fr = inkify(fr, A_, 0.85)
         # 秤盘：挂点随横梁转，盘保持竖直
         th = math.radians(tilt)
         def hang(hx, hy):
@@ -571,7 +598,7 @@ class C04(Shot):
             return (pv[0] + dx * math.cos(th) - dy * math.sin(th), pv[1] + dx * math.sin(th) + dy * math.cos(th))
         lh, rh = hang(*self.LH), hang(*self.RH)
         lsw = 1.5 * math.sin(t * 3.1) - 4 * pulse(t, td, 0.3) * (t >= td)
-        fr, _ = self.lp.draw(fr, self.lp.src(*self.LH), lh, S * z, rot=lsw)
+        fr, A_ = self.lp.draw(fr, self.lp.src(*self.LH), lh, S * z, rot=lsw); fr = inkify(fr, A_, 0.85)
         # 左盘皮影小人：盘被翘起时颠起、两个从盘沿滑出画外
         lpan = (lh[0], lh[1] + (self.LPAN[1] - self.LH[1]) * S * z)
         r = np.random.default_rng(41)
@@ -587,7 +614,7 @@ class C04(Shot):
                 ang += (90 if out else 25) * kk * (1 if ox > 0 else -1)
             sc = 150 / (Pp.h / Pp.work) * z
             fr, _ = Pp.draw(fr, (Pp.w / 2, Pp.h), (lpan[0] + ox, lpan[1] - 4 - pop), sc, rot=ang)
-        fr, _ = self.rp.draw(fr, self.rp.src(*self.RH), rh, S * z, rot=-lsw)
+        fr, A_ = self.rp.draw(fr, self.rp.src(*self.RH), rh, S * z, rot=-lsw); fr = inkify(fr, A_, 0.85)
         rpan = (rh[0], rh[1] + (self.RPAN[1] - self.RH[1]) * S * z)
         # 玉玺
         ssz = 0.17 * z
@@ -598,7 +625,7 @@ class C04(Shot):
         else:
             fr, _ = self.seal.draw(fr, self.seal.src(1150, 1100), (rpan[0], rpan[1] - 40 + 10 * pulse(t, td, 0.08)), ssz, rot=4)
         # 横梁（最前，压住挂钩）
-        fr, _ = self.beam.draw(fr, self.beam.src(*self.PIV), pv, S * z, rot=-tilt)
+        fr, A_ = self.beam.draw(fr, self.beam.src(*self.PIV), pv, S * z, rot=-tilt); fr = inkify(fr, A_, 0.85)
         if t >= td:
             fr = ink_burst(fr, (rpan[0], rpan[1] - 40), 190, 0.9 * fl, seed=404)   # 评审 P0-4：不规则墨散垫底（不再是等距网点圆）
             fr = sparks2(fr, t, 401, (rpan[0], rpan[1] - 30), td, n=60, dirc=(0, -1), spread=1.0, speed=(300, 900), life=0.6, area=(120, 10))
@@ -629,7 +656,7 @@ class C05(Shot):
         sh = np.zeros((H // 4, W // 4), np.float32)
         cv2.ellipse(sh, (int(C[0] / 4), int((C[1] + 430 * S) / 4)), (int(700 * S / 4), int(90 * S / 4)), 0, 0, 360, 1.0, -1)
         fr = fr * (1 - 0.7 * cv2.resize(cv2.GaussianBlur(sh, (0, 0), 6), (W, H)))[..., None]
-        fr, _ = self.box.draw(fr, self.box.src(1028, 570), C, S)
+        fr, A_ = self.box.draw(fr, self.box.src(1028, 570), C, S); fr = inkify(fr, A_, 0.9)
         fl, fr_, bl, br = sc(self.FL), sc(self.FR), sc(self.BL), sc(self.BR)
         def front_y(x):  # 箱口前沿（FL→FR）在 x 处的 y
             k = (x - fl[0]) / (fr_[0] - fl[0]); return fl[1] + (fr_[1] - fl[1]) * k
@@ -689,6 +716,7 @@ class C06(Shot):
         Mh = cv2.getPerspectiveTransform(q0, dst)
         shade = 0.55 + 0.45 * c
         fr, Aw = self.lid.draw(fr, None, None, None, persp=Mh, gain=shade)
+        fr = inkify(fr, Aw, 0.85)                                  # 评审 P1-4：木板压掉照片式高光，加网点 + 墨沿
         # 箱壁：四周墨框（越合越黑）
         fr = fr * (1 - 0.75 * self.wall)[..., None]
         if cl > 0:
@@ -1098,7 +1126,7 @@ class C17(Shot):
     """MS 落地：鬼屠从画顶砸进积水单膝跪地、刀插水中（生图），135.71 冲击：水环扩散（涟漪位移）+ 水花（白 + 墨点）+ 冲击白光 + 震屏。
     分层：L1 积水原背景板（视差 0.3）/ L2 低雾 / L3 主体（下落时纵向拖影，落地后衣带、马尾风吹）+ 倒影 / L4 近雨（生图）/ 代码：涟漪、水花、雷光。"""
     def __init__(self):
-        self.sp = spr('C17_kneel'); self.bg = plate('CA_water', 0.85, flip=True)
+        self.sp = spr('C17_kneel2'); self.bg = plate('CA_water', 0.85, flip=True)   # 评审 P1-5：重出小圆盘护手（原图是长十字护手）
 
     def render(self, t):
         u = self.u(t)
@@ -1109,7 +1137,7 @@ class C17(Shot):
         fr = K.fog(fr, t, 17, density=0.35, y0=640, y1=940, color=(0.8, 0.8, 0.8), speed=(50, 0))
         y = 890 if t >= tl else lerp(200, 890, ein(sm(self.t0, tl, t), 2))
         fr = water_ripple(fr, (960, 885), t - tl, flat=0.16, speed=1500, amp=16, wl=60, y_top=640)
-        fr, A = put(fr, self.sp, t, 560, (960, y), wind=8, mblur=(0, 50) if t < tl else (0, 0))
+        fr, A = put(fr, self.sp, t, 720, (960, y), wind=8, mblur=(0, 50) if t < tl else (0, 0))   # 新图头发拉高了包围盒 → 按包围盒高度落脚要放大到 720 才和上一版同大
         if t >= tl: fr = mirror(fr, A, 885, amt=0.25, t=t)
         if t >= tl:
             fr = sparks(fr, t, 171, (960, 885), n=160, life=0.9, speed=(400, 1100), dirc=(0, -1), spread=0.9, grav=2200, burst=True, t0=tl,
@@ -1125,16 +1153,21 @@ class C18(Shot):
     中间通道里鬼屠起身拔刀（生图，半出鞘）；136.64 闪电把盔缨与枪尖全部勾亮。
     分层：L1 积水原背景板 / L2 远排甲士（雾化）/ L3 中雾 / L4 主体 / L5 近排甲士（大虚焦）/ L6 近雨（生图）/ 代码：闪电、雷光。"""
     def __init__(self):
-        self.sold = Prop('C18_soldiers', work=0.5)                  # 三人一组整张刚体（不切：长枪、披风互相交叠）
+        # 评审第二轮 P0-1：前排原来全是同一张三人组 → 另出两组不同姿势（b/c），按排/侧轮换
+        self.sold = [Prop('C18_soldiers', work=0.5), Prop('C18_soldiers_b', work=0.5), Prop('C18_soldiers_c', work=0.5)]
+        lum = []
+        for P in self.sold:
+            lum.append((P.F.mean(-1) * P.A).sum() / max(1e-6, P.A.sum()))
+        self.gain = [min(1.0, max(0.60, lum[0] / max(1e-3, l))) for l in lum]   # b/c 甲胄偏亮 → 压到与 a 同灰
         self.hero = spr('C18_draw'); self.bg = plate('CA_water', 0.8, recede=0.3)
         r = np.random.default_rng(18)
         self.units = []
         for row, z in enumerate((6.0, 4.6, 3.5, 2.6, 1.9, 1.35)):
-            for side in (-1, 1):
+            for si, side in enumerate((-1, 1)):
                 n = 2 if row < 3 else 1
                 for i in range(n):
                     xw = side * (0.95 + (i + (0.5 if row % 2 else 0)) * 1.25 + r.uniform(-0.08, 0.08))
-                    self.units.append(dict(z=z + r.uniform(-0.1, 0.1), xw=xw, k=int(r.integers(3)), ph=r.uniform(0, 6.28)))
+                    self.units.append(dict(z=z + r.uniform(-0.1, 0.1), xw=xw, k=(row + si + i) % 3, ph=r.uniform(0, 6.28)))
         self.units.sort(key=lambda d: -d['z'])
 
     def _draw(self, fr, t, d, adv, fl):
@@ -1147,9 +1180,9 @@ class C18(Shot):
         h = 760 / z
         if x < -h or x > W + h: return fr
         far = min(1.0, max(0.0, (z - 2.0) / 3.5))
-        P = self.sold
+        P = self.sold[d['k']]
         sc = h / 1050
-        fr2, Aw = P.draw(fr, P.src(1024, 1080), (x, y), sc, alpha=fade)
+        fr2, Aw = P.draw(fr, P.src(1024, 1080), (x, y), sc, alpha=fade, gain=self.gain[d['k']])
         if far > 0.05:   # 雾化：远排压向雾色（中灰）
             fr2 = fr2 * (1 - Aw[..., None] * far * 0.65) + Aw[..., None] * far * 0.65 * (0.28 + 0.2 * fl)
         return fr2
@@ -1190,7 +1223,7 @@ class C19(Shot):
             a = -math.pi * 0.98 + (i + r.uniform(-0.3, 0.3)) / (self.N - 1) * math.pi * 0.96
             near = i % 4 == 0
             self.sp.append(dict(a=a, rad=r.uniform(400, 470), dep=1.5 if near else r.uniform(0.5, 0.9), near=near, spin=r.uniform(-9, 9),
-                                fly=r.uniform(500, 900)))
+                                fly=r.uniform(500, 900), rotv=r.uniform(-26, 26), scv=r.uniform(0.86, 1.12)))
 
     def _spear(self, fr, c, sp, close, t, ts, j):
         a = sp['a']; d = np.array([math.cos(a), math.sin(a)])
@@ -1208,7 +1241,9 @@ class C19(Shot):
             back = d * 220 * eout(kk / 0.3)
             fr, _ = self.shaft.draw(fr, tip_src, tuple(P + back), sc, rot=ang, blur=blur)
             off = d * sp['fly'] * kk + np.array([0, 1400 * kk * kk])
-            fr, _ = self.head.draw(fr, tip_src, tuple(P + off), sc, rot=ang + sp['spin'] * kk * 40, blur=blur)
+            # 评审第二轮 P0-2：飞散的枪头不能同素材同角度 → 每个头带自己的起始偏角与大小差，飞行中再自转
+            fr, _ = self.head.draw(fr, tip_src, tuple(P + off), sc * sp['scv'],
+                                   rot=ang + sp['spin'] * kk * 40 + sp['rotv'] * min(1.0, kk * 6), blur=blur)
         return fr
 
     def render(self, t):
@@ -1338,8 +1373,8 @@ CLASSES = dict(C01=C01, C02=C02, C03=C03, C04=C04, C05=C05, C06=C06, C07=C07, C0
 
 
 # 亮度对标标杆（S028–030 画幅区均值 ≈81，SPREAD §10 要求 ≥65）：每镜出画前一条 gamma 曲线——纯黑 / 纯白不动，只抬中灰（暗殿、雷暴夜）。
-TONE = dict(C02=0.72, C04=0.58, C05=0.58, C06=0.68, C07=0.70, C08=0.82, C09=0.74, C10=0.68, C11=0.68, C12=0.85, C13=0.82,
-            C14=0.80, C15=0.88, C16=0.68, C17=0.78, C18=0.74, C19=0.82, C20=0.82)
+TONE = dict(C02=0.72, C04=0.58, C05=0.58, C06=0.62, C07=0.70, C08=0.82, C09=0.74, C10=0.68, C11=0.68, C12=0.85, C13=0.82,
+            C14=0.73, C15=0.88, C16=0.68, C17=0.78, C18=0.74, C19=0.82, C20=0.67)
 
 
 def _toned(cls, g):
