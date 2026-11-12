@@ -319,5 +319,74 @@
   "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no characters, no buildings, no moon, no sun. A bright stormy night sky drawn in manga ink: horizontal layered bands of black ink clouds with sharp white rims stacked across the frame, between them white paper sky with screentone dot gradients, a thin blood-red ink streak running horizontally through the middle band like a cut; fine slanted black rain lines; crisp lines everywhere, nothing blurred, at least half the image light.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
   "ratio": "16:9",
   "size": "2K"
+ },
+ "B1_pommel_i2i": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/92d4e520-2bf8-43c4-b2b7-b78c1affb594.png"
+  ],
+  "prompt": "Same image, next moment of the same action: the swordsman drives the pommel of his sheathed long straight sword hard toward the left edge of the frame — his right arm thrusts the hilt forward to the left, the sheath held reversed along his forearm, his raised left fist pulls back to his chest, body twisting into the strike, ponytail and red sash whipping to the left. Keep exactly the same character, same face, same hair, same black robe and red sash, same art style (high-contrast Japanese manga ink, black, white and blood-red only), same camera angle, same framing, same scale and same position in the image; only change the pose as described. Same perfectly flat pure chroma-key green (#00FF00) background with no shadows. No text."
+ },
+ "B1_slash_i2i": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/6229e7f4-4394-47e2-96b8-db5731218344.png"
+  ],
+  "prompt": "Same image, next moment of the same action: the swordsman explodes out of the crouch into a rising diagonal slash — he rises and steps forward to the right, both hands sweep the straight sword up from his low left hip toward the upper right, the blade now extended high to the upper right, robe hem, ponytail and red sash swinging after the motion; his feet stay on the same ground line. Keep exactly the same character, same face, same hair, same black robe and red sash, same art style (high-contrast Japanese manga ink, black, white and blood-red only), same camera angle, same framing, same scale and same position in the image; only change the pose as described. Same perfectly flat pure chroma-key green (#00FF00) background with no shadows. No text."
+ },
+ "B1_slash_i2i_r2": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/6229e7f4-4394-47e2-96b8-db5731218344.png"
+  ],
+  "prompt": "Same image, the very next moment of the same action. The swordsman holds ONLY ONE sword (the same single straight sword from the input image, no second sword, no sheath in his hands). He rises out of the crouch and swings that one sword in a rising diagonal arc: both hands together on the single hilt, now in front of his right hip, the blade swept forward and up so it points to the UPPER RIGHT corner of the image. His body turns to face right, front foot planted forward on the same ground line, robe hem, ponytail and red sash swinging after the motion to the left. Keep exactly the same character, same face, same hair, same black robe and red sash, same art style (high-contrast Japanese manga ink, black, white and blood-red only), same camera angle, same framing, same scale, same feet position on the ground. Same perfectly flat pure chroma-key green (#00FF00) background with no shadows. No text."
+ },
+ "B1_guard_i2i": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/1bb3eb75-c098-4d3a-9e30-c352efb14b94.png"
+  ],
+  "prompt": "Same image, the next moment: the swordsman tightens his grip and settles into a ready stance — his front hand slides closer to the guard and both wrists turn slightly so the straight blade tilts a few degrees (tip a little lower, still pointing to the left and still level at eye level), his eyes narrow and lock along the blade, shoulders drop slightly. Only one sword. Keep exactly the same character, same face, same high ponytail with red hair tie, same black robe and red sash, same art style (high-contrast Japanese manga ink, black, white and blood-red only), same camera angle, same framing, same scale and same position in the image; only the small change of grip and blade tilt. Same perfectly flat pure chroma-key green (#00FF00) background with no shadows. No text."
+ },
+ "B1_door2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no characters, no text. Close-up, straight front view of an ancient palace gate door filling the whole frame, drawn as flat manga ink illustration: black-lacquered wooden planks with bold black ink outlines and fine ink cracks, a regular grid of large round iron door studs (five rows, seven columns) — every stud drawn as a FLAT matte black disc with a bold black outline and screentone dot shading on its lower side, at most one small hard-edged white highlight dash, NO glossy sphere shading, NO reflections, NO gradients; screentone dot shading between the studs, one vertical plank seam, a little dry-brush blood-red staining on the left edge.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "B1_splash_i2i": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/a61238da-2512-4e71-970c-7c8839836997.png"
+  ],
+  "prompt": "Same image, same blood-red ink crown splash, but redrawn as MATTE printed ink: remove every glossy wet highlight and every white specular reflection; the surfaces of the droplets are flat blood-red with black ink outlines and a little screentone shading instead of highlights, dry-brush rough edges, manga ink illustration style. Keep exactly the same overall crown splash shape, same position and same size."
+ },
+ "B1_slash2_i2i": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/0a79c463-07a8-4476-8976-5044e4c7371d.png"
+  ],
+  "prompt": "Same image, same pose and same framing, but the sword is corrected: he holds ONE straight single-edged Chinese dao sword (straight blade, NOT a Japanese katana, no curve, no tsuba disc): a plain black hilt smoothly wrapped in black cord, a short flat Chinese cross guard with slightly upturned ends, the straight blade extended high toward the upper right, the same length and width proportions as before. Only the sword changes; the body, face, hair, robe and sash stay exactly the same. Keep exactly the same character, same face, same high ponytail with red hair tie, same black robe and red sash, same art style (high-contrast Japanese manga ink, black, white and blood-red only), same camera angle, same framing, same scale and the same feet position on the ground. Same perfectly flat pure chroma-key green (#00FF00) background with no shadows. No text."
+ },
+ "B1_grip_i2i": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/5d85625b-68a8-4ca8-b10b-2bd54fdb6152.png"
+  ],
+  "prompt": "Same image, same hand, same grip, same sword, same camera angle and framing, but CLEAN the blade: remove the red paint stroke that lies along the lower part of the blade — the whole straight blade must be plain polished steel, drawn with black ink lines, white highlights and grey screentone only, with no red on the blade at all. Only the black sleeve edge on the left may stay blood-red. High-contrast Japanese manga ink style, black, white and blood-red only. Same perfectly flat pure chroma-key green (#00FF00) background with no shadows. No text."
  }
 }

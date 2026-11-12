@@ -284,9 +284,9 @@ def lift(fr, black=0.10, gamma=0.80):
 
 
 def flutter(fr, t, sp, src, dst, wpx, region, amp=10.0, freq=1.3, seed=0, rot=0.0):
-    """二级运动（返工）：把精灵里 region（归一化 x0,y0,x1,y1，软边）那部分（发丝 / 红带 / 衣摆 / 刀穗）拆成独立层，
-    按横向波位移飘动（离 x1 一侧越远越大，amp<0 时反向），盖回本体之上"""
-    k = ('flut', id(sp), region)
+    """二级运动（返工二 §12-3）：发丝 / 红带 / 衣摆 / 刀穗拆层，用**低振幅、低频、随时间慢变的噪声位移**驱动（不是规则正弦，不果冻）；
+    位移只在轮廓附近一条带宽里生效（离轮廓越远越不动），且离锚边越远越大（发梢 / 带尾飘，根部不动）。振幅上限按屏幕像素算，默认减半。"""
+    k = ('flut2', id(sp), region)
     if k not in _P:
         h, w = sp.A.shape
         x0, y0, x1, y1 = region
@@ -294,13 +294,20 @@ def flutter(fr, t, sp, src, dst, wpx, region, amp=10.0, freq=1.3, seed=0, rot=0.
         m = sstep(x0 - 0.03, x0, xx) * sstep(x1 + 0.03, x1, xx) * sstep(y0 - 0.03, y0, yy) * sstep(y1 + 0.03, y1, yy)
         gy, gx = np.mgrid[0:h, 0:w].astype(np.float32)
         fall = np.clip((xx - x1) / (x0 - x1 - 1e-6), 0, 1) if amp >= 0 else np.clip((xx - x0) / (x1 - x0 + 1e-6), 0, 1)
-        _P[k] = (np.ascontiguousarray((sp.A * m).astype(np.float32)), xx, yy, gx, gy, fall.astype(np.float32))
-    Am0, xx, yy, gx, gy, fall = _P[k]
+        inside = np.ascontiguousarray(sp.A > 0.5).astype(np.uint8)
+        dist = cv2.distanceTransform(inside, cv2.DIST_L2, 5)
+        band = np.clip(1 - dist / (0.06 * w), 0, 1).astype(np.float32)              # 只有轮廓 6% 宽度内的像素（发梢、带边）会动
+        r = np.random.default_rng(seed + 900)
+        nf = [cv2.resize(r.random((6, 10)).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC) - 0.5 for _ in range(8)]   # 低频噪声场
+        _P[k] = (np.ascontiguousarray((sp.A * m).astype(np.float32)), gx, gy, (fall * band).astype(np.float32), nf)
+    Am0, gx, gy, wgt, nf = _P[k]
     h, w = sp.A.shape
-    ph = 2 * math.pi * freq * t
-    sc = w / max(1.0, wpx)                                                     # 屏幕像素 → 精灵像素
-    dx = (np.sin(ph + yy * 9 + seed) * 0.6 + np.sin(1.7 * ph + yy * 17 + seed * 2) * 0.4) * abs(amp) * fall * sc
-    dy = np.cos(ph * 1.3 + xx * 7 + seed) * abs(amp) * 0.5 * fall * sc
+    p = (t * freq * 0.6) % len(nf); i = int(p); j = (i + 1) % len(nf); q = p - i; q = q * q * (3 - 2 * q)
+    j2 = (i + 3) % len(nf); i2 = (i + 4) % len(nf)
+    nx = nf[i] * (1 - q) + nf[j] * q; ny = nf[i2] * (1 - q) + nf[j2] * q
+    sc = w / max(1.0, wpx)
+    A_ = min(abs(amp), 10.0) * 0.6                                             # 屏幕像素振幅上限 6px
+    dx = nx * 2.0 * A_ * wgt * sc * np.sign(amp or 1); dy = ny * 1.2 * A_ * wgt * sc
     mx = (gx - dx).astype(np.float32); my = (gy - dy).astype(np.float32)
     Fm = cv2.remap(sp.F, mx, my, cv2.INTER_LINEAR); Am = cv2.remap(Am0, mx, my, cv2.INTER_LINEAR)
     s = wpx / w
@@ -338,6 +345,67 @@ def lightning_bolt(seed, p0, p1, branches=6):
 
 
 def tm(s): return 0.5 * (s.t0 + s.t1)
+
+
+# ------------------------------------------------------------------------------- §12-2 流动天空 / 云（返工二：不许整张图旋转或平移）
+_FLOW = {}
+
+
+def _flow_noise(seed, n=6, base=5):
+    """n 张循环噪声场（H/8 × W/8），供时间上交叉淡化的 UV 位移；首尾相接成环（6 帧左右一个淡化周期之外的慢变）"""
+    k = ('fn', seed, n, base)
+    if k not in _FLOW:
+        _FLOW[k] = [cv2.resize(K.fbm(H // 8, W // 8, seed * 31 + i, base=base, octaves=4), (W, H)).astype(np.float32) - 0.5 for i in range(n)]
+    return _FLOW[k]
+
+
+def _ring(t, period, n):
+    """时间 → (i, j, w)：在 n 张噪声场之间按 period 周期循环交叉淡化"""
+    p = (t / period) % n
+    i = int(p); j = (i + 1) % n; w = p - i
+    return i, j, w * w * (3 - 2 * w)
+
+
+def flow_layers(img, t, z, c, flow='swirl', speeds=(0.6, 1.0, 1.6), amp=(10.0, 18.0, 28.0), alphas=(1.0, 0.55, 0.40),
+                swirl_c=(0.5, 0.42), seed=0, dx=0.0, dy=0.0, crossfade=True):
+    """把一张生图天空拆成 3 层同源云层：
+       - 每层沿流向（flow='swirl'：绕 swirl_c 的切向，越靠外越慢；flow=(vx,vy)：直线方向）按不同速度做 UV 平移，
+       - 叠加随时间滚动的噪声 UV 位移（湍流，低频），
+       - 前后两层取同一位置的不同相位并交叉淡化（避免「一张图在转」），
+       - 远层（第 0 层）最慢、近层最快 → 视差。返回合成后的 RGB。
+    不做整张旋转：漩涡的「转」完全由切向流场驱动，中心几乎不动、外圈拖曳，云团自身在形变。"""
+    h, w = img.shape[:2]
+    s = W / w * z
+    x, y = K.grid()
+    # 屏幕 → 源图（基础取景，无旋转）
+    sx0 = (x - W / 2 - dx) / s + c[0] * w
+    sy0 = (y - H / 2 - dy) / s + c[1] * h
+    cxp, cyp = swirl_c[0] * w, swirl_c[1] * h
+    rx, ry = sx0 - cxp, sy0 - cyp
+    r = np.sqrt(rx * rx + ry * ry) + 1e-3
+    nz = _flow_noise(seed)
+    out = np.zeros((H, W, 3), np.float32); wsum = 0.0
+    for li, (sp, a, al) in enumerate(zip(speeds, amp, alphas)):
+        i, j, wj = _ring(t * (0.8 + 0.25 * li), 0.22, len(nz))                 # 噪声场 0.22s 一换（约 6–7 帧）
+        n1 = nz[i] * (1 - wj) + nz[j] * wj
+        n2 = nz[(i + 2) % len(nz)] * (1 - wj) + nz[(j + 2) % len(nz)] * wj
+        if flow == 'swirl':
+            ang = t * sp * 0.09 * (0.35 + 0.65 * np.exp(-r / (0.55 * w)))         # 内快外慢的切向流（角速度随半径衰减）
+            ca, sa = np.cos(ang), np.sin(ang)
+            ux = cxp + rx * ca - ry * sa; uy = cyp + rx * sa + ry * ca
+        else:
+            ux = sx0 - flow[0] * sp * t * 40.0; uy = sy0 - flow[1] * sp * t * 40.0
+        ux = ux + n1 * a * 2.0; uy = uy + n2 * a * 2.0                          # 湍流 UV 位移（随时间滚动）
+        L = cv2.remap(img, ux.astype(np.float32), uy.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        if crossfade and li > 0:                                                # 前后层交叉淡化：同层再取一个错相位的版本
+            i2, j2, w2 = _ring(t * (0.8 + 0.25 * li) + 0.11, 0.22, len(nz))
+            m1 = nz[i2] * (1 - w2) + nz[j2] * w2
+            L2 = cv2.remap(img, (ux + m1 * a * 1.5).astype(np.float32), (uy - m1 * a * 1.5).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            k = 0.5 + 0.5 * math.sin(2 * math.pi * t / 0.4 + li)
+            L = L * (1 - 0.5 * k) + L2 * (0.5 * k)
+        out += L * al; wsum += al
+    return out / wsum
+
 
 
 # =================================================================================== P01
@@ -404,7 +472,7 @@ class P02D(Shot):
     C0 = (960.0, 470.0)                 # 落点（屏幕）
     def __init__(self):
         self.bg = plate('B1_macro2')                                       # 群演：中年百姓（头巾、胡茬），不是鬼屠
-        self.sp = lay('B1_splash_cut')
+        self.sp = lay('B1_splash_i2i_cut')                                 # 返工二 #8：img2img 重绘为哑光墨红，去湿亮高光
         self.nz = cv2.resize(K.fbm(H // 4, W // 4, 22, base=6, octaves=5), (W, H))
 
     def render(self, t):
@@ -544,7 +612,7 @@ class P05D(Shot):
         u = self.u(t)
         x, y = K.grid()
         off = 22 * (eio(u) - 0.5)                                            # 主体微升（中点为零），天空视差 0.4
-        fr = view(self.sky, 1.15, (0.5, 0.40), 0, -0.4 * off, rot=4 * (t - tm(self)))
+        fr = flow_layers(self.sky, t - tm(self), 1.15, (0.5, 0.40), flow='swirl', speeds=(0.5, 0.9, 1.4), amp=(6.0, 10.0, 16.0), swirl_c=(0.45, 0.35), seed=5, dy=-0.4 * off)   # §12-2：云沿漩涡切向流动
         fr, Ag = put_at(fr, self.gate, t, self.SRC, (self.DST[0], self.DST[1] - off), self.WPX)
         Mo = self.M.copy(); Mo[1, 2] -= off
         # 门面受光：一道冷白光带自左向右扫过门钉（谁 / 的 两拍各提一下）
@@ -581,11 +649,12 @@ class P05D(Shot):
 class P06D(Shot):
     T_XUE = V(49.62)
     def __init__(self):
-        self.door = plate('B1_door')
+        self.door = plate('B1_door2')                                      # 返工二 #6：门钉 = 平涂墨线 + 网点，去镜面球体
         self.blood = lay('B1_blood2_cut')
         self.sp = lay('B1_splat2_cut')
+        self.sp2 = lay('B1_splash_i2i_cut')
         L = self.door.mean(-1)
-        self.stud = np.clip((L - 0.62) * 3, 0, 1).astype(np.float32)
+        self.stud = np.clip((L - 0.72) * 4, 0, 1).astype(np.float32)      # 只取硬边白高光（哑光板高光本来就少）
 
     def render(self, t):
         u = self.u(t)
@@ -619,8 +688,9 @@ VORTEX_C = (0.50, 0.42)
 
 
 def vortex(t, z, rot0=0.0, blur=0.0, gain=1.0, dy=0.0):
+    """返工二 §12-2：漩涡天 = 切向流场驱动的三层同源云（内快外慢、各层不同速度）+ 随时间滚动的湍流 UV + 前后层交叉淡化；不整张旋转"""
     img = plate('B1_vortex', blur=blur, gain=gain)
-    return view(img, z, VORTEX_C, 0, dy - 60, rot=rot0 + t * 4.6)
+    return flow_layers(img, t + rot0 * 0.01, z, VORTEX_C, flow='swirl', speeds=(0.7, 1.2, 1.9), amp=(8.0, 14.0, 22.0), swirl_c=VORTEX_C, seed=7, dy=dy - 60)
 
 
 class P07D(Shot):
@@ -634,10 +704,10 @@ class P07D(Shot):
     def render(self, t):
         u = self.u(t)
         crane = -60 + 90 * eio(u)
-        fr = view(self.sky, 1.25, (0.55, 0.45), 0, -0.35 * crane, rot=2.5 * (t - tm(self)))
+        fr = flow_layers(self.sky, t - tm(self), 1.25, (0.55, 0.45), flow='swirl', speeds=(0.6, 1.0, 1.5), amp=(6.0, 11.0, 18.0), swirl_c=(0.45, 0.35), seed=11, dy=-0.35 * crane)
         fr = fx2.cloud_flash(fr, t, t0=self.T_FL, center=(1350, 250), radius=650, seed=7, intensity=0.5, color=(0.9, 0.9, 0.9))
         dst = (880, 600 + crane); WP = 1950 * (1 + 0.008 * math.sin(2 * math.pi * t / 2.6))   # 呼吸
-        fr, _ = put_at(fr, self.sp, t, self.SRC, dst, WP, wind=7.0)
+        fr, _ = put_at(fr, self.sp, t, self.SRC, dst, WP, wind=2.0)
         fr = flutter(fr, t, self.sp, self.SRC, dst, WP, (0.00, 0.05, 0.42, 0.62), amp=16, freq=1.4, seed=3)      # 左侧发丝 + 红带
         fr = flutter(fr, t, self.sp, self.SRC, dst, WP, (0.00, 0.62, 0.40, 1.00), amp=12, freq=1.1, seed=5)      # 下摆红带
         fr = rain(fr, t, 971, amt=0.42, n=650, angle=-8, speed=2500)
@@ -702,14 +772,14 @@ class P09D(Shot):
     def __init__(self):
         self.bg = plate('B1_whitered')
         self.a = lay('B1_fist_cut', feather=dict(left=0.16))
-        self.b = lay('B1_pommel_cut')
+        self.b = lay('B1_pommel_i2i_cut')                                # §12-1：由 B1_fist 图生图衍生（nano-banana-pro），同机位同比例
         self.chain = rgba('B1_chain_cut'); self.shards = lay('B1_shards_cut')
         self.ring_x, self.ring_y = None, None
 
     def render(self, t):
         u = self.u(t)
         x, y = K.grid()
-        fr = cv2.flip(view(self.bg, 1.10, (0.45, 0.5), rot=2 * (t - tm(self))), 1)   # 返工：白纸 + 血红笔块（人物背后），锁链落在白纸上
+        fr = cv2.flip(flow_layers(self.bg, t - tm(self), 1.10, (0.45, 0.5), flow=(0.0, 0.0), speeds=(0.0, 0.0, 0.0), amp=(3.0, 5.0, 7.0), seed=9), 1)   # §12-2：纸上血墨缓慢洇动（不旋转）
         # 锁链（刚体层，左）：斜挂，字头从 2.2 倍砸到位 + 落定抖
         F, A = self.chain
         cs = 0.62
@@ -738,11 +808,12 @@ class P09D(Shot):
                 fr = dry_ring(fr, self.HIT, 60 + 640 * eout(ring, 2), clamp01(ring * 3), 92, w=9 * (1 - ring) + 3, color=(0.03, 0.03, 0.03))
         # 人物（右）：握拳 → 刀柄回撞（两姿势，撞击帧硬切 + 横向动势模糊）
         if t < self.T_HIT:
-            fr, _ = put_at(fr, self.a, t, (0.45, 0.30), (1270, 380), 1650, wind=6.0, breathe=0.006)
+            fr, _ = put_at(fr, self.a, t, (0.45, 0.30), (1270, 380), 1650, wind=2.0, breathe=0.006)
             fr = flutter(fr, t, self.a, (0.45, 0.30), (1270, 380), 1650, (0.00, 0.05, 0.30, 0.95), amp=14, freq=1.3, seed=9)
         else:
             k = clamp01((t - self.T_HIT) / 0.08)
-            fr, _ = put_at(fr, self.b, t, (0.75, 0.40), (1565 - 40 * (1 - k), 480), 1530 * (1.03 - 0.03 * k), wind=7.0, mblur=(-60 * (1 - k), 0))
+            fr, _ = put_at(fr, self.b, t, (0.45, 0.30), (1270 - 30 * (1 - k), 380), 1650, wind=2.0, mblur=(-60 * (1 - k), 0))   # 同锚点同尺寸 = 姿势不跳
+            fr = flutter(fr, t, self.b, (0.45, 0.30), (1270, 380), 1650, (0.00, 0.05, 0.30, 0.95), amp=14, freq=1.3, seed=9)
         k2 = pulse(t, self.T_MING, 0.1) * (t >= self.T_MING) + pulse(t, self.T_HIT, 0.12) * (t >= self.T_HIT)
         dx, dy, dr = shake(t, 6 + 14 * k2, 8, 9)
         fr = cam(fr, 1.0 + 0.05 * k2 + 0.03 * eio(u), dx, dy, dr)
@@ -871,20 +942,21 @@ class P12D(Shot):
         x, y = K.grid()
         fr = view(self.bg, 1.12, (0.5, 0.45), -30 * (eio(u) - 0.5), 0)
         if t < self.T_FLIP:
-            fr, Aw = put_at(fr, self.sp, t, self.SRC, self.DST, self.WPX, wind=6.0, breathe=0.006)
+            fr, Aw = put_at(fr, self.sp, t, self.SRC, self.DST, self.WPX, wind=2.0, breathe=0.006)
             fr = flutter(fr, t, self.sp, self.SRC, self.DST, self.WPX, (0.18, 0.12, 0.44, 0.62), amp=14, freq=1.2, seed=12)   # 左侧发丝
             fr = flutter(fr, t, self.sp, self.SRC, self.DST, self.WPX, (0.05, 0.62, 0.32, 1.00), amp=12, freq=1.0, seed=13)   # 左下红带
         else:
             k = clamp01((t - self.T_FLIP) / 0.08)
-            fr, Aw = put_at(fr, self.sp2, t, self.SRC, (self.DST[0], self.DST[1] + 8 * (1 - k)), self.WPX, wind=7.0, breathe=0.006,
+            fr, Aw = put_at(fr, self.sp2, t, self.SRC, (self.DST[0], self.DST[1] + 8 * (1 - k)), self.WPX, wind=2.0, breathe=0.006,
                             mblur=(40 * (1 - k), -30 * (1 - k)))
             fr = flutter(fr, t, self.sp2, self.SRC, self.DST, self.WPX, (0.00, 0.55, 0.30, 0.95), amp=12, freq=1.1, seed=14)   # 左下红带
             a = spt(self.sp2, self.SRC, self.DST, self.WPX, (0.37, 0.27)); b = spt(self.sp2, self.SRC, self.DST, self.WPX, (0.80, 0.71))
             q = clamp01((t - self.T_FLIP) / 0.25)                             # 刃面反光：一道硬边白光沿刀身扫下，只在精灵内
             pp = a + (b - a) * eio(q)
             d = b - a; d /= np.linalg.norm(d)
-            g = np.exp(-((((x - pp[0]) * d[0] + (y - pp[1]) * d[1]) / 40) ** 2 + (((x - pp[0]) * -d[1] + (y - pp[1]) * d[0]) / 7) ** 2))
-            fr = fr + (np.clip(g * 3, 0, 1) * Aw)[..., None] * (1 - q) * 0.9
+            g = np.exp(-((((x - pp[0]) * d[0] + (y - pp[1]) * d[1]) / 26) ** 2 + (((x - pp[0]) * -d[1] + (y - pp[1]) * d[0]) / 3.2) ** 2))
+            g = g * Aw                                                      # 严格裁在刀身 alpha 内（不外溢、不成横向线）
+            fr = fr + np.clip(g * 2.2, 0, 1)[..., None] * (1 - q) * 0.85
             fr = fr + (pulse(t, self.T_FLIP, 0.06) * (t >= self.T_FLIP)) * 0.25
         fr = ink_sparks(fr, t, 1212, (960, 980), n=20, life=1.2, speed=(60, 200), dirc=(0, -1), spread=0.8, grav=-60, area=(900, 40), amt=0.8)
         pk = pulse(t, self.T_FLIP, 0.1) * (t >= self.T_FLIP)
@@ -899,7 +971,7 @@ class P13D(Shot):
     T_DAO = V(56.50)
     FOOT = (860.0, 975.0)
     def __init__(self):
-        self.w = lay('B1_windup_cut'); self.a = lay('B1_slash_a_cut'); self.b = lay('B1_slash_b_cut')
+        self.w = lay('B1_windup_cut'); self.a = lay('B1_slash_i2i_r2_cut'); self.b = lay('B1_slash2_i2i_cut')   # 返工二 #10：三姿势都由图生图衍生，刀形制与 P12/P14 一致   # §12-1：出刀帧由蓄势帧图生图，同脚位同比例
         self.arc = rgba('B1_arc_cut')
         h, w = self.arc[1].shape
         yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
@@ -910,7 +982,8 @@ class P13D(Shot):
         x, y = K.grid()
         ka = clamp01((t - (self.T_DAO - 0.10)) / 0.14)
         glow = (1 - clamp01((t - self.T_DAO) / 0.5)) * (ka > 0)
-        fr = view(plate('B1_field'), 1.12, (0.55, 0.52), -30 * (eio(u) - 0.5), 30) * (0.90 + 0.10 * glow)   # 返工 §11⑤：独立板（旷野）
+        fr = flow_layers(plate('B1_field'), t - tm(self), 1.12, (0.55, 0.52), flow=(1.0, -0.25), speeds=(0.8, 1.5, 2.4), amp=(5.0, 9.0, 14.0), seed=13,
+                         dx=-30 * (eio(u) - 0.5), dy=30) * (0.90 + 0.10 * glow)   # §12-2：云条沿风向三层不同速度流过
         fr = fr * (1 - 0.45 * sstep(840, 1000, y))[..., None]                 # 地面压暗
         fr = K.fog(fr, t, 1301, amt=0.22, y0=0.72, y1=1.0, color=(0.5, 0.5, 0.5))
         # 收势姿势的刀尖（刀弧终点、火星发射点）
@@ -927,10 +1000,10 @@ class P13D(Shot):
             fr = fr + K.blur_ds(Aw, 20)[..., None] * BLOOD * 0.6 * glow
         # 返工 #3：三姿势——蓄势（windup）→「刀」字头硬切出刀（slash_a）→ 收势（slash_b，0.2s 后）
         sp = self.w if t < self.T_DAO else (self.a if t < self.T_DAO + 0.20 else self.b)
-        hpx = 760 if sp is self.w else (800 if sp is self.a else 840)
-        a_, s_ = sp.fit(hpx)
+        hpx = 760 if sp is self.w else (760 if sp is self.a else 840)
+        a_, s_ = sp.fit(hpx) if sp is not self.a else self.w.fit(760)          # 出刀帧沿用蓄势帧的落脚与缩放（同一张底图衍生）
         k = clamp01((t - self.T_DAO) / 0.08)
-        fr, _ = sp.draw(fr, t, a_, (self.FOOT[0] + (20 if sp is self.b else 0), self.FOOT[1]), s_, breathe=0.004 if sp is self.w else 0.0, wind_amp=7.0,
+        fr, _ = sp.draw(fr, t, a_, (self.FOOT[0] + (20 if sp is self.b else 0), self.FOOT[1]), s_, breathe=0.004 if sp is self.w else 0.0, wind_amp=2.0,
                         mblur=(50 * (1 - k), -60 * (1 - k)) if sp is self.a else (0, 0), **SPK)
         if 0 < ka and t < self.T_DAO + 0.1:                                   # 刀尖一线白光（出刀那一下）
             q_ = clamp01((t - self.T_DAO + 0.10) / 0.3)
@@ -946,7 +1019,58 @@ class P13D(Shot):
 
 # =================================================================================== P14
 # CU 斜构图：握刀的手，刀身从护手斜出右上；57.43「滚」热从刀尖往护手烧下来（白热芯 + 血红），57.73「烫」整段通红、火星剥落、热浪
-def blade_heat_d(fr, Aw, g, tip, half_w, heat, front=1.0, t=0.0, seed=0, edge_side=1.0):
+def blade_heat_sprite(sp, src, heat, front, t, seed=0, chips=None, g_src=(0.53, 0.47), tip_src=(1.03, -0.03)):
+    """返工二 #3：刀身烧红在**精灵空间**算（跟着精灵一起仿射）→ 贴真实刃口。
+    刀身轴 = 护手 g_src → 刀尖 tip_src；along>0 才算刀身（手在负向，不会被烧到）；
+    热 = 刃口一侧的一条线起烧、向刀背渗进，渗进边界 wavy + 噪声；只用血红 + 刃口一线白热；
+    叠沿刀向的墨线裂纹 + 从刃口剥落的红片。返回 (Frgb, Aout, Ink)。"""
+    h, w = sp.A.shape
+    ax, ay = src[0] * w, src[1] * h
+    P0 = np.array([g_src[0] * w, g_src[1] * h], np.float32); P1 = np.array([tip_src[0] * w, tip_src[1] * h], np.float32)
+    dvec = P1 - P0; L = float(np.linalg.norm(dvec)); dvec /= L
+    nrm = np.array([-dvec[1], dvec[0]], np.float32)                                       # 指向刀背
+    gy, gx = np.mgrid[0:h, 0:w].astype(np.float32)
+    along = ((gx - P0[0]) * dvec[0] + (gy - P0[1]) * dvec[1]) / L
+    side = ((gx - P0[0]) * nrm[0] + (gy - P0[1]) * nrm[1])
+    lum = sp.F.mean(-1)
+    steel = (sp.A > 0.5) & (lum > 0.42) & (along > 0.02) & (along < 1.02) & (np.abs(side) < 0.10 * h)
+    if steel.sum() < 200: return np.zeros((h, w, 3), np.float32), np.zeros((h, w), np.float32), np.zeros((h, w), np.float32)
+    hw = float(np.percentile(np.abs(side[steel]), 92)) or (0.02 * h)                       # 刀身半宽（实测）
+    edge = side * np.sign(np.median(side[steel]) if np.median(np.abs(side[steel])) > 1e-3 else 1.0)
+    e0 = float(np.max(np.abs(side[steel]))) * 0 + hw                                        # 刃口在 -hw 侧（离轴最远的那侧）
+    s_in = (hw - np.abs(side)) / max(1.0, hw)                                               # 0 = 刃口边, 1 = 轴
+    e_in = 1.0 - s_in                                                                       # 0 = 刃口边, 1 = 刀背
+    r = np.random.default_rng(seed)
+    wv = cv2.resize(r.random((1, 40)).astype(np.float32), (w, 1), interpolation=cv2.INTER_CUBIC)[0]
+    wv2 = cv2.resize(r.random((1, 120)).astype(np.float32), (h, 1), interpolation=cv2.INTER_CUBIC)[:, 0]
+    wob = ((wv - 0.5) * 0.85)[None, :] + ((wv2 - 0.5) * 0.45)[:, None]
+    depth = clamp01(heat) * 1.28                                                            # 渗进深度（刃口 → 刀背比例）
+    hot = np.clip((depth - e_in - wob * 0.18) / 0.10, 0, 1) * steel.astype(np.float32)
+    reach = np.ones_like(along, np.float32) if front >= 1 else np.clip((along - (1 - front) * 1.05) / 0.08, 0, 1)
+    hot = np.clip(hot * reach, 0, 1)
+    cr = np.zeros((h, w), np.float32)
+    for a0, s0, l0, a1, s1, w0 in r.random((70, 6)).astype(np.float32):
+        c0 = P0 + dvec * (a0 * L * 0.95) + nrm * (hw * (s0 * 1.6 - 0.8))
+        c1 = c0 + dvec * (l0 * 0.05 * L) + nrm * (hw * (s1 - 0.5) * 0.7)
+        cv2.line(cr, tuple(c0.astype(int)), tuple(c1.astype(int)), 1.0, 1 + int(w0 * 2), cv2.LINE_AA)
+    cr = cr * hot
+    fl = np.zeros((h, w), np.float32)
+    if chips is None: chips = clamp01(heat - 0.55) * 1.6
+    if chips > 0.01:
+        for a0, s0, l0, r0 in r.random((26, 4)).astype(np.float32):
+            c = P0 + dvec * ((0.12 + 0.85 * a0) * L) + nrm * (hw * (1.02 + 0.12 * s0))
+            m = np.zeros((h // 2, w // 2), np.float32)
+            cv2.ellipse(m, (int(c[0] / 2), int(c[1] / 2)), (max(2, int(3 + 5 * r0)), max(1, int(2 + 2 * r0))), -30 - 60 * l0, 0, 360, 1.0, -1, cv2.LINE_AA, 2)
+            fl = np.maximum(fl, cv2.resize(m, (w, h)) * chips)
+    rim = np.exp(-((e_in - 0.02) / 0.05) ** 2) * hot * 0.8                                   # 刃口一线白热（细）
+    Frgb = hot[..., None] * (BLOOD * 1.3) + rim[..., None] * 0.85 + fl[..., None] * (BLOOD * 1.2)
+    Aout = np.clip(hot + rim * 0.8 + fl, 0, 1)
+    ink = np.clip(cv2.dilate(hot, np.ones((3, 3), np.uint8)) - hot, 0, 1) * 0.75 + cr * 0.9 + \
+        np.clip(cv2.dilate(fl, np.ones((3, 3), np.uint8)) - fl, 0, 1) * 0.9
+    return Frgb, Aout, np.clip(ink, 0, 1)
+
+
+def blade_heat_sprite_UNUSED(fr, Aw, g, tip, half_w, heat, front=1.0, t=0.0, seed=0, edge_side=1.0):
     """返工 #6：刀身烧红 = 由刃口一侧向内推进的血红（硬边 + 墨线裂纹 + 刃口一线白热），不是光剑式整条发光渐变"""
     x, y = K.grid()
     g = np.asarray(g, float); tip = np.asarray(tip, float)
@@ -980,11 +1104,20 @@ def blade_heat_d(fr, Aw, g, tip, half_w, heat, front=1.0, t=0.0, seed=0, edge_si
 
 
 class P14D(Shot):
+    """返工二 #3：刀身烧红 = 贴着真实刃口的一条线起烧、向刀背渗进（wavy 边界 + 墨线 + 红片剥落），
+    整个热层在精灵空间算完再跟精灵一起做仿射 → 不会变成横跨刀身的直红条"""
     SRC, DST, WPX = (0.48, 0.52), (880.0, 620.0), 2450.0
     def __init__(self):
-        self.sp = lay('B1_grip2_cut')
+        self.sp = lay('B1_grip_i2i_cut')                                  # 返工二 #3：img2img 洗掉刀身上的红色涂条（原图自带），只剩钢色 → 热层自己做刃口烧红
         self.bg = plate('B1_whitered')
         self.tex = K.tile(512, 914, 6, 4)
+        self.heat = {}
+
+    def heat_layer(self, t, heat, front):
+        k = round(heat, 3), round(front, 3)
+        if k not in self.heat:
+            self.heat[k] = blade_heat_sprite(self.sp, self.SRC, heat, front, t, seed=14)
+        return self.heat[k]
 
     def render(self, t):
         u = self.u(t)
@@ -992,15 +1125,24 @@ class P14D(Shot):
         dst = (self.DST[0] - 40 * eio(u), self.DST[1] + 30 * eio(u))
         wpx = self.WPX * z
         x, y = K.grid()
-        fr = view(self.bg, 1.15, (0.45, 0.50), -30 * eio(u) * 0.4, 0, rot=12)
-        heat = 0.35 + 0.65 * clamp01((t - V(57.48) + 0.1) / 0.4)
-        front = clamp01((t - (V(57.48) - 0.15)) / 0.45)
+        fr = flow_layers(self.bg, t - tm(self), 1.15, (0.45, 0.50), flow=(0.0, 0.0), speeds=(0.0, 0.0, 0.0), amp=(3.0, 5.0, 7.0), seed=14, dx=-12 * eio(u))
+        heat = 0.30 + 0.70 * clamp01((t - V(57.48) + 0.10) / 0.42)
+        front = clamp01((t - (V(57.48) - 0.15)) / 0.45)                       # 0..1：从刀尖往护手烧过来
         fr, Aw = put_at(fr, self.sp, t, self.SRC, dst, wpx, wind=0.0)
+        Frgb, Ah, Ink = self.heat_layer(t, heat, front)
+        s = wpx / self.sp.w
+        M = cv2.getRotationMatrix2D((self.SRC[0] * self.sp.w, self.SRC[1] * self.sp.h), 0.0, s)
+        M[0, 2] += dst[0] - self.SRC[0] * self.sp.w; M[1, 2] += dst[1] - self.SRC[1] * self.sp.h
+        M = M.astype(np.float32)
+        Fw = cv2.warpAffine(Frgb, M, (W, H)); Aw2 = cv2.warpAffine(Ah, M, (W, H))[..., None]
+        Iw = cv2.warpAffine(Ink, M, (W, H))
+        fr = fr * (1 - Aw2) + Fw * Aw2
+        fr = over(fr, Iw, INK)
         g = spt(self.sp, self.SRC, dst, wpx, (0.53, 0.47)); tip = spt(self.sp, self.SRC, dst, wpx, (1.03, -0.03))
-        fr, band = blade_heat_d(fr, Aw, g, tip, 0.026 * wpx, heat, front, t, seed=14, edge_side=-1.0)
+        band = Aw * (np.float32(1.0))
         mid = ((g + tip) / 2).astype(int)
-        fr = ink_sparks(fr, t, 1414, tuple(mid), n=50, life=0.9, speed=(120, 420), dirc=(-0.4, -1), spread=0.8, grav=-80, area=(160, 220), amt=min(1.0, 0.5 + 0.6 * front))
-        fr = _SEC['mod'].heat_haze(fr, t, self.tex, 4 + 8 * heat * front)
+        fr = ink_sparks(fr, t, 1414, tuple(mid), n=44, life=0.9, speed=(120, 420), dirc=(-0.4, -1), spread=0.8, grav=-80, area=(160, 220), amt=min(1.0, 0.5 + 0.6 * front))
+        fr = _SEC['mod'].heat_haze(fr, t, self.tex, 3 + 6 * heat * front)
         dx, dy, dr = shake(t, 3 + 5 * front, 13, 14)
         return cam(fr, 1.0, dx, dy, dr), 0
 
@@ -1011,7 +1153,7 @@ class P15D(Shot):
     T_HOLD = V(59.13)
     SRC, DST, WPX = (0.55, 0.47), (1010.0, 600.0), 1660.0
     def __init__(self):
-        self.sp = lay('B1_guard2_cut')
+        self.sp = lay('B1_guard2_cut'); self.sp2 = lay('B1_guard_i2i_cut')   # §12-1：第二拍握紧（guard2 图生图）
         self.tex = K.tile(512, 915, 6, 4)
 
     def render(self, t):
@@ -1019,21 +1161,32 @@ class P15D(Shot):
         if t > self.T_HOLD: t = self.T_HOLD + (t - self.T_HOLD) * 0.05
         u = clamp01((t - self.t0) / (self.T_HOLD - self.t0))
         x, y = K.grid()
-        fr = view(plate('B1_bands'), 1.12, (0.5, 0.48), -60 * (eio(u) - 0.5), 0)   # 返工 §11⑤：独立板（云带），慢横移视差
+        fr = flow_layers(plate('B1_bands'), t - tm(self), 1.12, (0.5, 0.48), flow=(1.0, 0.0), speeds=(0.7, 1.3, 2.1), amp=(5.0, 9.0, 14.0), seed=15)   # §12-2：云带三层不同速度横流
         dst = (self.DST[0] + 30 * (1 - eio(u)), self.DST[1])
         wpx = self.WPX * (1.0 + 0.07 * eio(u))
         fr = K.fog(fr, t, 1501, amt=0.22, y0=0.6, y1=1.0, color=(0.45, 0.45, 0.45))
-        fr, Aw = put_at(fr, self.sp, t, self.SRC, dst, wpx, wind=6.0, breathe=0.006)
-        fr = flutter(fr, t, self.sp, self.SRC, dst, wpx, (0.15, 0.62, 0.48, 1.00), amp=18, freq=1.3, seed=15)   # 返工 #3：左下红带拆层飘
-        fr = flutter(fr, t, self.sp, self.SRC, dst, wpx, (0.62, 0.00, 1.00, 0.36), amp=-12, freq=1.1, seed=16)  # 马尾发丝向右飘（刀身行 0.40–0.46 不动）
-        fr = flutter(fr, t, self.sp, self.SRC, dst, wpx, (0.72, 0.72, 1.00, 0.95), amp=-10, freq=1.5, seed=17)  # 右下红带
-        g = spt(self.sp, self.SRC, dst, wpx, (0.680, 0.430)); tip = spt(self.sp, self.SRC, dst, wpx, (0.020, 0.430))
+        spx = self.sp if t < V(58.66) else self.sp2                          # 58.63（军鼓）握紧换第二姿势，同锚点同尺寸
+        fr, Aw = put_at(fr, spx, t, self.SRC, dst, wpx, wind=2.0, breathe=0.006)
+        fr = flutter(fr, t, spx, self.SRC, dst, wpx, (0.15, 0.62, 0.48, 1.00), amp=18, freq=1.3, seed=15)   # 返工 #3：左下红带拆层飘
+        fr = flutter(fr, t, spx, self.SRC, dst, wpx, (0.62, 0.00, 1.00, 0.36), amp=-12, freq=1.1, seed=16)  # 马尾发丝向右飘（刀身行 0.40–0.46 不动）
+        fr = flutter(fr, t, spx, self.SRC, dst, wpx, (0.72, 0.72, 1.00, 0.95), amp=-10, freq=1.5, seed=17)  # 右下红带
+        g = spt(spx, self.SRC, dst, wpx, (0.680, 0.430)); tip = spt(spx, self.SRC, dst, wpx, (0.020, 0.430))
         qs = clamp01((t - (self.t0 + 0.15)) / 0.35)                            # 返工 #3：入镜后第一道寒光扫过刀身（刀镡 → 刀尖）
         if 0 < qs < 1:
             px = g[0] + (tip[0] - g[0]) * eio(qs); py = g[1] + (tip[1] - g[1]) * eio(qs)
             sh0 = np.exp(-(((x - px) / 80) ** 2 + ((y - py) / 8) ** 2)) * Aw
             fr = fr + np.clip(sh0 * 2, 0, 1)[..., None] * (1 - qs)
-        fr, band = blade_heat_d(fr, Aw, g, tip, 0.006 * wpx + 4, 0.38, 1.0, t, seed=15)
+        # 返工二：刀身余烬红 = 精灵空间热层（贴刃口一条线；刀身很薄，depth 只给一点点）
+        kk = ('p15h', round(t, 2), int(t < V(58.66)))
+        if kk not in _P:
+            _P[kk] = blade_heat_sprite(spx, self.SRC, 0.22, 1.0, t, seed=15, g_src=(0.680, 0.430), tip_src=(-0.02, 0.430), chips=0.0)
+        Frgb, Ah, Inkh = _P[kk]
+        sc = wpx / spx.w
+        M = cv2.getRotationMatrix2D((self.SRC[0] * spx.w, self.SRC[1] * spx.h), 0.0, sc).astype(np.float32)
+        M[0, 2] += dst[0] - self.SRC[0] * spx.w; M[1, 2] += dst[1] - self.SRC[1] * spx.h
+        Fw = cv2.warpAffine(Frgb, M, (W, H)); Aw2 = cv2.warpAffine(Ah, M, (W, H))[..., None]
+        fr = fr * (1 - Aw2) + Fw * Aw2
+        band = Aw
         q = clamp01((t - (self.T_HOLD - 0.20)) / 0.22)
         if q > 0:
             px = g[0] + (tip[0] - g[0]) * eio(q); py = g[1] + (tip[1] - g[1]) * eio(q)
@@ -1071,7 +1224,7 @@ def apply(mod):
     mod.SHOTS[:] = new
     W3 = np.full(3, 0.85, np.float32)
     mod.CUTS['P11'] = ('flash', 0, 0, {})                                     # 金闪 → 白闪（风格 D 无金）
-    mod.CUTS['P12'] = ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 470), radius=140, glow=W3))   # 同一转场，金边 → 中性白
+    mod.CUTS['P12'] = ('match_cut', 0.0, 0.12, dict(shape='rect', center=(960, 470), radius=140, glow=np.zeros(3, np.float32)))   # 返工二 #1：矩形边光 = 全幅横向白线（f1664–1666 穿帮）→ 取消边光，只保留图形匹配的展开
     for k, (kind, a) in list(mod.FG.items()):
         if kind == 'ember': mod.FG[k] = ('ash', min(0.45, a))                 # 橙余烬 → 灰烬
     for S in mod.SHOTS:
