@@ -45,3 +45,13 @@
 | 11-11 15:18 | R8_D/B1/B1_field | RH_image2 | 2K 16:9 | 3 | 96bd07e1-c94c-4a9f-891b-7ffe45fb6fd9 | ✔ 采用 | assets/gen/R8_D/B1/B1_field.png | §11⑤ 背景板不复用：P13 旷野 |
 | 11-11 15:18 | R8_D/B1/B1_bladeface_b2 | RH_image2 | 2K 16:9 | 3 | a69a899c-61b5-493f-9be5-2d701fbce3dd | ✔ 采用 | assets/gen/R8_D/B1/B1_bladeface_b2_cut.png | §11③ 刀统一：P12 姿势二（替 bladeface_b） |
 | 11-11 15:20 | R8_D/B1/B1_bands | RH_image2 | 2K 16:9 | 3 | 3918a2a0-70df-4778-9fdf-369361984e34 | ✔ 采用 | assets/gen/R8_D/B1/B1_bands.png | §11⑤ 背景板不复用：P15 云带 |
+| 11-11 19:26 | R8_D/B1/B1_pommel_i2i | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_pommel_i2i_cut.png | 返工二 §12-1 P09 刀柄回撞：由 B1_fist 图生图，同机位同比例 |
+| 11-11 19:26 | R8_D/B1/B1_slash_i2i | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✘ 弃用：出刀帧里画出了两把刀（一手一鞘）→ slash_i2i_r2 | 仅仓库外候选 |  |
+| 11-11 19:42 | R8_D/B1/B1_guard_i2i | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_guard_i2i_cut.png | 返工二 §12-1 P15 第二拍握紧：由 B1_guard2 图生图 |
+| 11-11 19:49 | R8_D/B1/B1_slash_i2i_r2 | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_slash_i2i_r2_cut.png | 返工二 §12-1 P13 出刀：由 B1_windup 图生图，单刀同脚位 |
+| 11-11 20:06 | R8_D/B1/B1_door2 | RH_image2 | 2K 16:9 | 3 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_door2.png | 返工二 #6 P06 门钉：平涂墨线 + 网点，去镜面球体 |
+| 11-11 20:07 | R8_D/B1/B1_slash2_i2i | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_slash2_i2i_cut.png | 返工二 #10 P13 收势：由图生图衍生，直刀形制与 P12/P14 一致 |
+| 11-11 20:08 | R8_D/B1/B1_splash_i2i | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_splash_i2i_cut.png | 返工二 #8 P02/P06 血花：重绘成哑光墨红，去湿亮高光 |
+| 11-11 20:20 | R8_D/B1/B1_grip_i2i | nano-banana-pro | 2K 16:9 | 2 | 会话中断未记录 | ✔ 采用 | assets/gen/R8_D/B1/B1_grip_i2i_cut.png | 返工二 P14 握刀手：去掉刀身上的红色涂痕 |
+
+返工二共 8 张 = **17 积分**（图生图 7 张 × 2 + RH_image2 1 张 × 3，含弃用 1 张）。B1 累计 45 + 8 = **53 张 = 152 积分**。
