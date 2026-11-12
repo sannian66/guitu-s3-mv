@@ -30,7 +30,7 @@
 | 11-11 12:33 | R8_D/CA/C15_flick | RH_image2 | 2K 16:9 | 3 | 4ed4aac4-b4d0-4547-b2b0-9db7a5912066 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C15_flick/4ed4aac4-b4d0-4547-b2b0-9db7a5912066_0.png | 定妆照参考 try1 |
 | 11-11 12:33 | R8_D/CA/C16_blood | RH_image2 | 2K 16:9 | 3 | 63b2d5ff-8410-415e-9ab6-568d82893226 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C16_blood/63b2d5ff-8410-415e-9ab6-568d82893226_0.png | 纯文生图 try1；「血」字形正确 |
 | 11-11 12:33 | R8_D/CA/C15_stand | RH_image2 | 2K 16:9 | 3 | 08b86364-5bc8-4a2b-ba1a-cafb4040cda3 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C15_stand/08b86364-5bc8-4a2b-ba1a-cafb4040cda3_0.png | 定妆照参考 try1 |
-| 11-11 12:33 | R8_D/CA/C17_kneel | RH_image2 | 2K 16:9 | 3 | 0581301a-f495-4ae0-ae2a-2417226e57ec | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C17_kneel/0581301a-f495-4ae0-ae2a-2417226e57ec_0.png | 定妆照参考 try1 |
+| 11-11 12:33 | R8_D/CA/C17_kneel | RH_image2 | 2K 16:9 | 3 | 0581301a-f495-4ae0-ae2a-2417226e57ec | ✘ 弃用 | ~/Downloads/gen_cands/R8_D/CA/C17_kneel/0581301a-f495-4ae0-ae2a-2417226e57ec_0.png | 定妆照参考 try1；评审第一轮 P1-12 返工：刀被画成十字剑 → try4 直刀中式护手 |
 | 11-11 12:34 | R8_D/CA/C18_soldiers | RH_image2 | 2K 16:9 | 3 | 34604ab2-0c10-442e-8049-8763c0f8f530 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C18_soldiers/34604ab2-0c10-442e-8049-8763c0f8f530_0.png | 纯文生图 try1 |
 | 11-11 12:34 | R8_D/CA/C18_draw | RH_image2 | 2K 16:9 | 3 | 5a35d269-38ca-4fd2-96e9-936fcf78b5bd | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C18_draw/5a35d269-38ca-4fd2-96e9-936fcf78b5bd_0.png | 定妆照参考 try1 |
 | 11-11 12:35 | R8_D/CA/C19_spin | RH_image2 | 2K 16:9 | 3 | ddc3342e-2be5-4bb9-92b5-5af9f23832ad | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C19_spin/ddc3342e-2be5-4bb9-92b5-5af9f23832ad_0.png | 定妆照参考 try1 |
@@ -38,7 +38,11 @@
 | 11-11 12:36 | R8_D/CA/C19_spear | RH_image2 | 2K 16:9 | 3 | cfdacc84-66a2-4429-ad8e-65cf0d962ea7 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C19_spear/cfdacc84-66a2-4429-ad8e-65cf0d962ea7_0.png | 纯文生图 try1 |
 | 11-11 12:36 | R8_D/CA/C21_split | RH_image2 | 2K 16:9 | 3 | e027e5ed-8419-4875-a79f-b5f2cf64950b | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C21_split/e027e5ed-8419-4875-a79f-b5f2cf64950b_0.png | 纯文生图 try1；「邪」「正」字形正确 |
 | 11-11 12:39 | R8_D/CA/C10_tablets | RH_image2 | 2K 16:9 | 3 | 0759f4b6-99f4-4618-b9ff-11a606a4f989 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C10_tablets_try2/0759f4b6-99f4-4618-b9ff-11a606a4f989_0.png | 纯文生图 try2；「大局为上」四字逐字核对全对（大 = 三笔无点） |
-| 11-11 13:00 | R8_D/CA/C20_emp | RH_image2 | 2K 16:9 | 3 | 31665419-1620-4beb-a2b5-8f395ee9d56f | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C20_emp_try2/31665419-1620-4beb-a2b5-8f395ee9d56f_0.png | 太上皇定妆照参考 try2；太上皇定妆照返工 |
+| 11-11 13:00 | R8_D/CA/C20_emp | RH_image2 | 2K 16:9 | 3 | 31665419-1620-4beb-a2b5-8f395ee9d56f | ✘ 弃用 | ~/Downloads/gen_cands/R8_D/CA/C20_emp_try2/31665419-1620-4beb-a2b5-8f395ee9d56f_0.png | 太上皇定妆照参考 try2；太上皇定妆照返工；评审第一轮 P0-2 返工：换成两套姿势（try3 C20_emp 正面 + C20_turn 回头），黑发为主 |
 | 11-11 13:03 | R8_D/CA/C02_hand | RH_image2 | 2K 16:9 | 3 | 6d61d5a5-2056-4736-91a1-542952752a25 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C02_hand_try2/6d61d5a5-2056-4736-91a1-542952752a25_0.png | 太上皇定妆照参考 try2；太上皇定妆照返工 |
 
-合计：36 张 × 3 = **108 积分**（采用 33 张，弃用 3 张；预算上限 130）。入库 assets/gen/R8_D/CA/：抠像 _cut.png 25 张 + 背景板 .jpg 8 张。
+| 11-11 18:54 | R8_D/CA/C20_emp | RH_image2 | 2K 16:9 | 3 | 296c16ab-47c8-4c88-882a-df74ed541e74 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C20_emp_try3/296c16ab-47c8-4c88-882a-df74ed541e74_0.png | 太上皇定妆照参考 try3；评审第一轮：回头前姿势（黑发为主、髻与黑簪露出）；回头前正面姿势（黑发为主、髻与黑簪露出） |
+| 11-11 18:57 | R8_D/CA/C20_turn | RH_image2 | 2K 16:9 | 3 | 48df23f4-d387-413b-b72e-83c66a2296b6 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C20_turn_try3/48df23f4-d387-413b-b72e-83c66a2296b6_0.png | 太上皇定妆照参考 try3；评审第一轮：回头后姿势（黑发为主、髻与黑簪露出）；回头后 3/4 侧身抬手姿势；C21 太上皇也用这张 |
+| 11-11 19:10 | R8_D/CA/C17_kneel | RH_image2 | 2K 16:9 | 3 | 489a64a3-c02a-4b57-adfb-7b941b3a4aa1 | ✔ 采用 | ~/Downloads/gen_cands/R8_D/CA/C17_kneel_try4/489a64a3-c02a-4b57-adfb-7b941b3a4aa1_0.png | 定妆照参考 try4；评审第一轮 P1-12：跪姿刀改成直刀 + 中式护手 + 黑柄 + 红穗；直刀 + 中式护手 + 黑柄 + 红穗 |
+
+合计：39 张 × 3 = **117 积分**（预算上限 130）。采用 34 张，弃用 5 张：C10_tablets try1（错字）、C20_emp try1 / C02_hand try1（不像太上皇定妆照）、C20_emp try2 与 C17_kneel try1（评审第一轮返工替换）。入库 assets/gen/R8_D/CA/：抠像 _cut.png 26 张 + 背景板 .jpg 8 张。

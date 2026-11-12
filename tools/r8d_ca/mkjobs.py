@@ -20,8 +20,9 @@ EMP_SHEET = ("https://filescos.nananobanana.cn/skills/default-tenant-001/279297c
              "68023565-40d4-4a36-acc1-7a6404184505.jpg")
 EMP = ("the Retired Emperor (keep exactly the face, hair and costume of the reference model sheet): a tall gaunt old man, long narrow face with "
        "deep wrinkles and heavy eye bags, half-lidded cold eyes, thin down-turned lips, clean-shaven with no beard and no moustache, no crown; "
-       "black hair streaked with long silver-white hair, a small topknot pierced by one black hairpin, the rest hanging loose past the waist; "
-       "wide-sleeved floor-length robe of black semi-transparent gauze, dark blood-red sash with long tassels; pale bony fingers")
+       "hair mostly solid jet-black with only a few thin silver-white strands at the temples, the black topknot and its black hairpin clearly "
+       "visible above the brow with no hair blown across it, the rest of the hair hanging loose past the waist; wide-sleeved floor-length robe of "
+       "black semi-transparent gauze, dark blood-red sash with long tassels; pale bony fingers")
 J = {}
 
 
@@ -125,9 +126,11 @@ job('C15_flick', f"Full-body front view of {GT}, performing a sharp blood-flick 
 job('C16_blood', "Element only: the single Chinese character 血 formed by blood-red ink diffusing in water, seen from directly above, bold "
     "brush-calligraphy strokes with wet bleeding edges, fine ink tendrils curling off the strokes, a few black ink flecks; one character in the "
     "center of the frame.", green=True, text='血')
-job('C17_kneel', f"Full-body front view of {GT}, dropping onto one knee in shallow water, driving the long straight sword point-down into the water "
-    "in front of him with both hands on the hilt, head bowed, ponytail and red sash swinging down, a splash of water around his knee. Whole body "
-    "visible.", green=True, ref=True)
+job('C17_kneel', f"Full-body three-quarter front view of {GT}, dropping onto one knee in shallow water, driving a long straight Chinese jian sword "
+    "point-down into the water in front of him with both hands on the hilt: the cross-hilt has a wide flat Chinese guard, the grip is plain black "
+    "cord-wrapped, and one blood-red silk tassel hangs from the pommel end; the straight double-edged blade is clearly drawn in sharp black ink "
+    "lines with a white highlight down its spine, no curve and no Japanese tsuba; head bowed, ponytail and red sash swinging down, a splash of "
+    "water around his knee. Whole body visible.", green=True, ref=True)
 job('C18_soldiers', "Element only: three heavy-armored ancient Chinese spearmen charging toward the camera, each a separate full-body figure with wide "
     "gaps between them, lamellar armor and helmets with blood-red plumes, long spears leveled forward, faces shadowed under the helmets, drawn in "
     "sharp black ink lines with screentone.", green=True)
@@ -139,9 +142,11 @@ job('C19_spin', f"Full-body view of {GT}, in the middle of a spinning horizontal
 job('C19_spear', "Element only: one single long ancient Chinese spear lying perfectly horizontal across the frame, a steel leaf-shaped spearhead "
     "pointing right with a bushy blood-red horsehair tassel just behind the head, a black wooden shaft, black ink line art with screentone.",
     green=True)
-job('C20_emp', f"Close-up portrait of {EMP}; head and shoulders, his head slowly turning toward the camera over his shoulder with a cold "
-    "cunning look, one pale bony hand raised with clawed fingers near his chest, loose silver-streaked hair blowing, strong white lightning backlight "
-    "behind him, rain.", green=True, emp=True)
+job('C20_emp', f"Close-up portrait of {EMP}; head and shoulders squared to the camera, face front-on and level, chin slightly down, long hair "
+    "hanging still, robe collar closed, cold impassive stare, strong white lightning backlight behind him, rain.", green=True, emp=True)
+job('C20_turn', f"Close-up portrait of {EMP}; the same character now turned three-quarters over his shoulder toward the camera, head tilted, a cold "
+    "cunning sidelong stare, one pale bony hand raised with clawed fingers near his chest, loose hair sweeping, wide gauze sleeve swinging, strong "
+    "white lightning backlight behind him, rain.", green=True, emp=True)
 job('C21_split', "Background plate only, no people. A stormy sky split into two halves: the left half is black storm clouds lit blood-red, with one "
     "huge Chinese character 邪 painted in blood-red brush calligraphy in its upper left; the right half is pale white storm clouds with screentone, "
     "with one huge Chinese character 正 painted in black brush calligraphy in its upper right. The middle of the frame is plain clouds without "
