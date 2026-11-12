@@ -188,9 +188,10 @@ class S01_Drop(Shot):
     def render(self, t):
         u = self.u(t)
         bg, _, _ = view(plate('D01_water'), 0.5, 0.52, 1.0 / (1.0 + 0.08 * eio(u)))
+        bg = np.power(np.clip(bg, 0, 1), 0.47) * 1.15 + 0.06   # P1：黑水大幅提亮（暗部仍压得住），水面对比不丢
         lum = bg @ np.array([0.3, 0.59, 0.11], np.float32)
         x, y = K.grid()
-        m = np.full((H, W), 0.12, np.float32)
+        m = np.full((H, W), 0.55, np.float32)                  # P1：露出生图黑水的面积从 12% 提到 55%
         for th, c, s in self.hits:
             age = t - th
             if age <= 0: continue
@@ -583,16 +584,16 @@ class S15_Hole(Shot):
         e = eio(self.u(t))
         G, img = fun_state(t)
         back = bg_flow('D16_embers', t, self.tm, z=1.25, cy=0.55 - 0.05 * e, drift=(0.5, 0, -40), turb=28, seed=15)   # 洞里的烟往上飘
-        back, _ = put(back, 'D15_kneel', t, 380, (560, 860), wind=4)
-        back = embers_d(back, t, 1510, n=90, area=(150, 300, 1000, H - BAR), rise=(60, 200))
-        fr, M = warp(img, (0.56 * 3200, (0.52 - 0.04 * e) * 1800), (960, 540), lerp(0.58, 0.62, e), border=cv2.BORDER_REFLECT)
+        back, _ = put(back, 'D15_kneel', t, 380, (440, 860), wind=4)
+        back = embers_d(back, t, 1510, n=90, area=(120, 300, 900, H - BAR), rise=(60, 200))
+        fr, M = warp(img, (0.56 * 3200, (0.52 - 0.04 * e) * 1800), (1110, 540), lerp(0.58, 0.62, e), border=cv2.BORDER_REFLECT)   # P0：纸面右移，「陪葬」列避开洞口
         fr = fun_fx(fr, t, G, M, (7,))
         x, y = K.grid()
         key = ('holen', 1)
         if key not in _PL: _PL[key] = cv2.resize(D._tile(1501)[:H // 8, :W // 8], (W, H), interpolation=cv2.INTER_CUBIC)
         n = _PL[key]
-        Rr = 120 + 420 * eo(cl((t - self.t0) / 0.9), 2)
-        d = np.sqrt(((x - 560) / 1.15) ** 2 + (y - 640) ** 2) + (n - 0.5) * 220
+        Rr = 120 + 320 * eo(cl((t - self.t0) / 0.9), 2)          # P0：洞缩小到 440，且整体压到左侧（中心 250,700）
+        d = np.sqrt(((x - 250) / 1.15) ** 2 + (y - 700) ** 2) + (n - 0.5) * 220
         f = Rr - d
         hole = np.clip(f / 4, 0, 1)
         char = np.clip(1 - np.abs(f + 30) / 40, 0, 1) * (f < 0)
@@ -618,7 +619,7 @@ class S15_Hole(Shot):
 # ---------------------------------------------------------------- 2:58 以后：画面不出字
 class S16_Closed(Shot):
     """余烬里低头闭目的侧脸：灰从上往下落、火星往上飘，一粒余烬飞向下一镜瞳孔的位置"""
-    t0, t1 = 178.26, 179.17
+    t0, t1 = 178.26, 179.09
     def render(self, t):
         e = eio(self.u(t))
         fr = bg_cover('D02_void', t, self.tm, z=1.25, cy=0.4, par=(-30, 0), blur=3)
@@ -635,7 +636,7 @@ class S16_Closed(Shot):
 
 class S17_Eye(Shot):
     """ECU 睁眼：瞳孔里一点火；「刀」字头一道白刃寒光横扫过双眼（反白一帧）"""
-    t0, t1 = 179.17, 180.09
+    t0, t1 = 179.09, 180.09                     # 入点对齐 179.09s 的音频瞬态（原 179.17 晚 84ms）
     def render(self, t):
         e = eio(self.u(t))
         fr = bg_cover('D02_void', t, self.tm, z=1.3, blur=10, gain=0.9)
@@ -710,7 +711,7 @@ class S20_Wall(Shot):
         k = sum(hit(t, h, 0.15) for h in hits)
         r = fr[..., 0] - np.maximum(fr[..., 1], fr[..., 2])
         crack = np.clip((r - 0.15) / 0.3, 0, 1)
-        fr = np.clip(fr * 1.25 + 0.06, 0, 1) + crack[..., None] * (RED * 1.2 + 0.6 * k) * (0.3 + 0.9 * k)
+        fr = np.clip(fr * 1.85 + 0.14, 0, 1) + crack[..., None] * (RED * 1.2 + 0.6 * k) * (0.3 + 0.9 * k)
         fr = fr + cv2.GaussianBlur(crack, (0, 0), 18)[..., None] * RED * 1.5 * k
         for i, h in enumerate(hits):
             fr = chips(fr, t, h, (700 + 500 * i, 300), 2000 + i, n=60, power=500, life=0.7, size=(3, 10))
@@ -743,6 +744,7 @@ class S22_Chuang(Shot):
         e = eio(self.u(t))
         th = tv(45, 8)
         wall, _, _ = view(plate('D20_wall'), 0.48, 0.52, 0.55 - 0.05 * e)
+        wall = np.clip(wall * 1.45 + 0.08, 0, 1)                # P1：墙面的墨线/纸白抬起来（裂墙镜偏暗）
         x, y = K.grid()
         q = cl((t - self.t0) / (th - self.t0))
         key = ('cr22',)
@@ -804,7 +806,7 @@ class S23_Eye(Shot):
     t0, t1 = 184.67, 185.57
     def render(self, t):
         e = eio(self.u(t))
-        fr = bg_flow('D23_storm', t, self.tm, z=1.15, cx=0.6, cy=0.45, gain=0.95, swirl=(0.51, 0.356, 70, 240), turb=34, seed=23)   # 风眼差速旋转（内快外慢、亮云带快）+ 湍流，不是整张旋转
+        fr = bg_flow('D23_storm', t, self.tm, z=1.15, cx=0.6, cy=0.45, gain=1.05, swirl=(0.51, 0.356, 70, 240), turb=34, seed=23)   # 风眼差速旋转（内快外慢、亮云带快）+ 湍流，不是整张旋转
         th = tv(46, 0)
         fr = D.lightning(fr, t, th, (1250, BAR), (1110, 884), seed=231, life=0.2, amt=1.5, col=(1.0, 1.0, 1.0), branches=5, width=3)
         fr = fr * (1 + 0.6 * K.pulse(t, th, 0.06) * (t >= th))
@@ -839,7 +841,7 @@ class S25_Leap(Shot):
     t0, t1 = 186.5, 187.41
     def render(self, t):
         e = eio(self.u(t))
-        fr = bg_flow('D30_sky', t, self.tm, z=1.3, cx=0.62, cy=0.32, drift=(0.506, 80, 10), turb=40, seed=25)   # 斩开天幕：云往两侧急流
+        fr = bg_flow('D30_sky', t, self.tm, z=1.3, cx=0.62, cy=0.32, gain=1.60, drift=(0.506, 80, 10), turb=40, seed=25)   # 斩开天幕：云往两侧急流（提亮到评审要求的底亮度）
         fr = speedlines(fr, t, 2501, c=(1080, 420), n=80, amt=0.5, r0=420, col=0.02)
         ts = tv(46, 3)
         rise = eo(cl((t - self.t0) / 0.35), 2)
@@ -891,6 +893,24 @@ class S26_Judge(Shot):
         return shake_cam(fr, t, [th], amp=18), 0
 
 
+def frozen_rain(fr, seed, n=64, orbit=0.0, length=(14, 46), amt=0.85):
+    """子弹时间的近层雨：冻结的细墨线短划（长短、粗细、方向、深浅都有变化），不是白色椭圆光斑。
+    orbit 为近层环绕视差（像素，离画面中心越远位移越大）。"""
+    r = np.random.default_rng(seed)
+    L = np.zeros((H, W), np.float32)
+    xs = r.uniform(-40, W + 40, n); ys = r.uniform(BAR - 20, H - BAR + 20, n)
+    ln = r.uniform(*length, n); wd = r.choice([1, 1, 2, 2, 3], n)
+    ang = np.radians(r.uniform(4, 15, n)); al = r.uniform(0.35, 0.9, n)
+    for i in range(n):
+        px = xs[i] + orbit * (xs[i] - W / 2) / W
+        cv2.line(L, (int(px), int(ys[i])), (int(px - math.sin(ang[i]) * ln[i]), int(ys[i] - math.cos(ang[i]) * ln[i])),
+                 float(al[i]), int(wd[i]), cv2.LINE_AA)
+    lum = cv2.GaussianBlur(fr.mean(-1), (0, 0), 10)
+    col = np.where(lum[..., None] > 0.55, np.float32(0.03), np.float32(0.93))
+    a3 = (L * amt)[..., None]
+    return fr * (1 - a3) + col * a3
+
+
 class S27_Bullet(Shot):
     """CU 子弹时间：雨滴悬停，插地的刀与按在刀柄上的手静立其中，镜头缓慢环绕；189.00「刀」寒光沿刃一闪"""
     t0, t1 = 188.34, 189.71
@@ -905,7 +925,7 @@ class S27_Bullet(Shot):
         sy = lerp(BAR, H - BAR, cl((t - th) / 0.3))
         band = np.exp(-((y - sy) / 50) ** 2) * ((t >= th) and (t < th + 0.35))
         fr = fr + (A * np.clip((lum - 0.45) / 0.3, 0, 1) * band * 1.6)[..., None]
-        fr = D.droplets(fr, t, 2702, n=60, frozen=True, orbit=-(e - 0.5) * 1.6, focus=0.9)
+        fr = frozen_rain(fr, 2702, n=96, orbit=-(e - 0.5) * 26)      # P1：近层雨改成冻结的细墨线短划（不再是白色椭圆光斑）
         return shake_cam(fr, t, [th], amp=4, z=1.0 + 0.06 * e), 0
 
 
@@ -920,8 +940,8 @@ class S28_Spin(Shot):
         q = eo(cl((t - self.t0) / 0.2), 2)
         if q < 1:
             for k in range(4, 0, -1):
-                fr, _ = put(fr, 'D28_spin', t, 880, (960 + 70 * k * (1 - q), 1040), rot=-12 * k * (1 - q), alpha=0.18, wind=0)
-        fr, _ = put(fr, 'D28_spin', t, 880, (960, 1040), rot=-10 * (1 - q), wind=8, mblur=(30 * (1 - q), 0))
+                fr, _ = put(fr, 'D28_slash', t, 880, (960 + 70 * k * (1 - q), 1040), rot=-12 * k * (1 - q), alpha=0.18, wind=0)
+        fr, _ = put(fr, 'D28_slash', t, 880, (960, 1040), rot=-10 * (1 - q), wind=8, mblur=(30 * (1 - q), 0))
         fr = sparks_d(fr, t, 2810, (960, 640), n=80, red_frac=0.5, life=0.6, speed=(500, 1500), dirc=(1, 0), spread=3.0, grav=200,
                       size=2, burst=True, t0=th, area=(300, 40))
         return shake_cam(fr, t, [th], amp=14, z=1.0 + 0.04 * e), 0
@@ -933,8 +953,8 @@ class S29_Thrust(Shot):
     FOOT, HH = (900, 1110), 860
     def render(self, t):
         e = eio(self.u(t))
-        fr = bg_flow('D23_storm', t, self.tm, z=1.2, cx=0.25, cy=0.35, gain=1.05, par=(0, 25), swirl=(0.51, 0.356, 45, 300), turb=28, seed=29)
-        tp = spt('D29_thrust', self.HH, self.FOOT, *tip_of('D29_thrust'))
+        fr = bg_flow('D23_storm', t, self.tm, z=1.2, cx=0.25, cy=0.35, gain=1.15, par=(0, 25), swirl=(0.51, 0.356, 45, 300), turb=28, seed=29)
+        tp = spt('D29_raise', self.HH, self.FOOT, *tip_of('D29_raise'))
         th = tv(47, 4)
         if t >= th - 0.05:
             a = eo(cl((t - (th - 0.05)) / 0.3), 2)
@@ -948,7 +968,7 @@ class S29_Thrust(Shot):
             fr = fr * (1 - core[..., None]) + core[..., None] * 1.2
             fr = fr + (np.exp(-(dx / (60 + 120 * a)) ** 2) * (y < tp[1]) * (y > top) * 0.6 * a)[..., None] * WHT
             fr = fr + (np.exp(-(dx / (20 + 60 * a)) ** 2) * (y < tp[1]) * (y > top) * 0.4)[..., None] * RED
-        fr, _ = put(fr, 'D29_thrust', t, self.HH, self.FOOT, wind=8)
+        fr, _ = put(fr, 'D29_raise', t, self.HH, self.FOOT, wind=8)
         fr = glow_at(fr, tp, 100, 1.2 * K.pulse(t, th, 0.08) * (t >= th) + 0.3 * (t >= th))
         fr = ink_rain(fr, t, 2902, n=140, angle=8, amt=0.4)
         return shake_cam(fr, t, [th], amp=10, z=1.0 + 0.04 * e), 0
@@ -962,8 +982,8 @@ class S30_Da(Shot):
         e = eio(self.u(t))
         fr = bg_flow('D30_sky', t, self.tm, z=1.25 - 0.12 * e, cy=lerp(0.62, 0.42, e), drift=(0.506, 40, -15), turb=24, seed=30)
         th = tv(47, 5)
-        fr, _ = put(fr, 'D29_thrust', t, self.HH, self.FOOT, wind=6, look='sil')
-        tp = spt('D29_thrust', self.HH, self.FOOT, *tip_of('D29_thrust'))
+        fr, _ = put(fr, 'D29_raise', t, self.HH, self.FOOT, wind=6, look='sil')
+        tp = spt('D29_raise', self.HH, self.FOOT, *tip_of('D29_raise'))
         fr = glow_at(fr, tp, 60 + 200 * cl((t - th) / 0.4), 1.5 * (t >= th) + 0.4)
         if t >= th:
             x, y = K.grid(); a = cl((t - th) / 0.5)
@@ -982,7 +1002,7 @@ SHOTS = [S01_Drop, S02_Steles, S03_TypeSlam, S04_Snow, S05_Ren, S06_Scale, S07_H
 
 def s29_tip():
     """S29 画面上的刀尖（S28→S29 白光竖劈、S29→S30 刀尖白光圆都从这里出）"""
-    return spt('D29_thrust', S29_Thrust.HH, S29_Thrust.FOOT, *tip_of('D29_thrust'))
+    return spt('D29_raise', S29_Thrust.HH, S29_Thrust.FOOT, *tip_of('D29_raise'))
 
 
 def tip_iris(A, B, p, tip=None, seed=0):
