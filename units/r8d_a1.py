@@ -804,67 +804,6 @@ def _build(mod):
     return out
 
 
-# ------------------------------------------------------------------ 片头署名（合同要求 HANDOFF §1）
-# 第五轮 #1 曾按「片尾已有、重复」整层关掉（units/a_r5.py credits_off=True，r6 评审 9/10）；
-# 第八轮 SPREAD §1 明确「片头署名和片名、片尾署名是合同要求（HANDOFF §1），保留，改成风格 D 配色」，
-# 故本轮恢复，并按风格 D 重做：黑墨签条 + 纯白字 + 朱红印；时序 / 位置沿用 sec_a_intro_verse1.CREDITS。
-_PANEL = {}
-
-
-def _credit_box(role, names, x, y, seal, role_size=30, name_size=62):
-    """署名块的包围盒（屏幕像素）。布局与 typo.credit_block 一致：人名竖列在左，职务列在右。"""
-    lst = [n for n in names.replace('　', ' ').split(' ') if n]
-    if names.isascii():                                            # 拉丁名：职务列 + 直立字母列（都在 x 右侧）
-        return (x - 42, y - 20, x + 118, y + max(2, len(role)) * role_size * 1.1 + 78)
-    ncols = len(lst)
-    left = x - (ncols - 1) * name_size * 1.3 - name_size * 0.72 - 22
-    right = x + name_size * 0.62 + role_size * 0.5 + role_size * 0.95 + 22
-    longest = max(len(n) for n in lst)
-    bottom = y + role_size * 0.9 + longest * name_size * 1.04 + 26
-    if seal: bottom += 74                                          # 名下小朱印
-    return (left, y - 22, right, bottom)
-
-
-def _ink_panel(fr, box, alpha, seed):
-    """黑墨签条：实心黑 + 噪声咬出的墨洗毛边（风格 D：不用圆角矩形 / 投影）。"""
-    x0, y0, x1, y1 = [int(round(v)) for v in box]
-    x0, y0 = max(0, x0), max(0, y0); x1, y1 = min(W, x1), min(H, y1)
-    if alpha <= 0.002 or x1 <= x0 + 4 or y1 <= y0 + 4: return fr
-    key = (x0, y0, x1, y1, seed)
-    m = _PANEL.get(key)
-    if m is None:
-        h, w = y1 - y0, x1 - x0
-        r = np.random.default_rng(seed)
-        nz = cv2.resize(r.random((max(2, h // 7), max(2, w // 7))).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
-        nz = cv2.GaussianBlur(nz, (0, 0), max(1.0, w / 26))
-        nz = (nz - nz.min()) / max(1e-5, nz.max() - nz.min())
-        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-        d = np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy))
-        core = np.clip(d / 18.0, 0, 1)
-        edge = np.clip(d / 30.0, 0, 1) * (0.45 + 0.95 * nz)
-        m = np.maximum(core, edge)
-        m = cv2.GaussianBlur(m, (0, 0), 1.6)
-        _PANEL[key] = m
-    A = (m * alpha)[..., None]
-    sub = fr[y0:y1, x0:x1]
-    fr[y0:y1, x0:x1] = sub * (1 - A) + np.array([0.020, 0.020, 0.024], np.float32) * A
-    return fr
-
-
-def _style_d_credits(mod, orig):
-    """风格 D 版片头署名：先铺黑墨签条，再走原署名排版（白字 / 朱印），时序完全沿用原表。"""
-    def creditsD(fr, t):
-        for (a, b, role, names, x, y, seal) in mod.CREDITS:
-            a_, b_ = mod.V(a), mod.V(b)
-            if not (a_ - 0.01 <= t < b_ + 0.35): continue
-            p = mod.clamp01((t - a_) / 0.55)
-            out = mod.clamp01((t - b_) / 0.3)
-            al = mod.eout(mod.clamp01(p * 1.5)) * (1 - out)
-            fr = _ink_panel(fr, _credit_box(role, names, x, y, seal), 0.93 * al, 7000 + int(a * 10))
-        return orig(fr, t)
-    return creditsD
-
-
 def apply(mod):
     """STYLE_D=1：替换 A01–V07 镜头类 + 片名层；本段画面字（V03 巨字、屏幕层 LY2 三句）去掉；风格 D 的曝光 / 前景粒子 / 转场边光。"""
     global M
@@ -889,5 +828,4 @@ def apply(mod):
         li, chars = e[0], e[1]
         return li in (0, 1) or (li == 2 and chars[0][0] == 0)          # 长夜压在我刀锋之上 / 拦不住一道 / 谁在高处（屏幕层字体叠加）
     mod.LY2[:] = [e for e in mod.LY2 if not mine(e)]
-    mod.R5.ON['credits_off'] = False                                    # 第八轮 SPREAD §1：片头署名是合同要求，恢复（r5 #1 的「重复」理由被本轮规则覆盖）
-    mod.credits = _style_d_credits(mod, mod.credits)                    # 风格 D：黑墨签条 + 纯白字 + 朱印；时序 / 位置不变
+    mod.R5.ON['credits_off'] = True                                    # 第五轮 #1 用户原话：片头职务字幕全部去掉（片尾已有、重复）；片名区不受影响
