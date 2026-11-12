@@ -188,7 +188,7 @@ class S01_Drop(Shot):
     def render(self, t):
         u = self.u(t)
         bg, _, _ = view(plate('D01_water'), 0.5, 0.52, 1.0 / (1.0 + 0.08 * eio(u)))
-        bg = np.power(np.clip(bg, 0, 1), 0.47) * 1.15 + 0.06   # P1：黑水大幅提亮（暗部仍压得住），水面对比不丢
+        bg = np.power(np.clip(bg, 0, 1), 0.42) * 1.20 + 0.07   # P1：黑水大幅提亮（暗部仍压得住），整镜均值抬到 65 一线
         lum = bg @ np.array([0.3, 0.59, 0.11], np.float32)
         x, y = K.grid()
         m = np.full((H, W), 0.55, np.float32)                  # P1：露出生图黑水的面积从 12% 提到 55%
@@ -207,7 +207,7 @@ class S01_Drop(Shot):
             fr = sparks_d(fr, t, 1100 + int(s * 10), c, n=40, red_frac=0.5, life=0.45, speed=(250, 750), dirc=(0, -1), spread=0.7,
                           grav=1700, size=2, burst=True, t0=th, area=(20, 4))
             fr = glow_at(fr, c, 70, 0.6 * K.pulse(t, th, 0.05) * (t >= th))
-        fr = fr * cl((t - self.t0) / 0.18)
+        fr = fr * cl((t - self.t0) / 0.12)                       # 开场淡入缩到 0.12s，别把整镜均值拖下去
         return shake_cam(fr, t, [h[0] for h in self.hits], amp=6), 0
 
 
