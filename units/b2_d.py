@@ -22,6 +22,7 @@ NEU = dict(expo=1.0, sat=1.0, tint=(1.0, 1.0, 1.0), lift=0.0, gamma=1.0)
 NORIM = dict(col=(1.0, 1.0, 1.0), amt=0.0, dir=(0.0, -1.0))
 DKW = dict(grade=NEU, rim=NORIM, wrap=0, shade=None)
 WHITE = np.array([0.95, 0.95, 0.95], np.float32)
+BAR = 120                                          # 2.39 黑边
 INK = np.array([0.02, 0.02, 0.02], np.float32)
 REDC = tuple(float(v) for v in RED * 1.1)
 
@@ -358,36 +359,60 @@ class V02D(Shot):
 
 
 # ===================================================================== 群臣（V03 / V04 / V05 / V14 共用一张纸扎百官分姿势表）
-_FIGS = []
+_FIGS = {}
 
 
-def figs():
-    """V03_figs 拆成 6 个单体（从直立到深躬，按 x 排序）：[(F, A, foot_src)]"""
-    if not _FIGS:
-        F, A = rgba('V03_figs')
-        n, lab, st, _ = cv2.connectedComponentsWithStats((A > 0.3).astype(np.uint8), 8)
-        idx = [i for i in range(1, n) if st[i, 4] > 50000]
-        for i in sorted(idx, key=lambda i: st[i, 0]):
-            mk = cv2.dilate((lab == i).astype(np.uint8), np.ones((7, 7), np.uint8)).astype(np.float32)
-            ys, xs = np.nonzero((lab == i) & (A > 0.5))
-            rows = np.bincount(ys, minlength=A.shape[0]); ok = np.nonzero(rows > 6)[0]
-            ya, yb = int(ok.min()), int(ok.max()) + 1
-            xa, xb = int(xs.min()), int(xs.max()) + 1
-            Fc = F[ya:yb, xa:xb].copy(); Ac = (A * mk)[ya:yb, xa:xb].copy()
-            bot = np.nonzero(Ac[-8:].max(0) > 0.5)[0]
-            fx = float(bot.mean()) if len(bot) else Ac.shape[1] / 2
-            # 用户硬规则：不许露出裁切直边 —— 先垫透明边，再按形状羽化（帧里看不到直线切边）
-            pd = max(20, int(0.10 * min(Ac.shape[:2])))
-            Fc = cv2.copyMakeBorder(Fc, pd, pd, pd, pd, cv2.BORDER_CONSTANT, value=0)
-            Ac = cv2.copyMakeBorder(Ac, pd, pd, pd, pd, cv2.BORDER_CONSTANT, value=0)
-            band = max(18.0, min(Ac.shape[:2]) * 0.09)
-            Ac = (Ac * _edge_fade(Ac, 3100 + i, band).astype(np.float32)).astype(np.float32)
-            _FIGS.append((Fc, Ac, (fx + pd, float(yb - ya + pd)), 2 * pd))
-    return _FIGS
+def figs(sheet='V03_figs', skip=()):
+    """V03_figs 拆成 6 个单体（从直立到深躬，按 x 排序）：[(F, A, foot_src, pad)]
+    另有 img2img 出的背面版 V03_figs_back（同角色、同袍服，背对镜头朝殿躬身）；
+    背面版第 1、2 个人与生图自带的大殿线稿粘连，直接跳过不用。"""
+    key = (sheet, skip)
+    if key in _FIGS: return _FIGS[key]
+    out = []
+    F, A = rgba(sheet)
+    n, lab, st, _ = cv2.connectedComponentsWithStats((A > 0.3).astype(np.uint8), 8)
+    idx = [i for i in range(1, n) if st[i, 4] > 50000]
+    for j, i in enumerate(sorted(idx, key=lambda i: st[i, 0])):
+        if j in skip: continue
+        mk = cv2.dilate((lab == i).astype(np.uint8), np.ones((7, 7), np.uint8)).astype(np.float32)
+        ys, xs = np.nonzero((lab == i) & (A > 0.5))
+        rows = np.bincount(ys, minlength=A.shape[0]); ok = np.nonzero(rows > 6)[0]
+        ya, yb = int(ok.min()), int(ok.max()) + 1
+        xa, xb = int(xs.min()), int(xs.max()) + 1
+        Fc = F[ya:yb, xa:xb].copy(); Ac = (A * mk)[ya:yb, xa:xb].copy()
+        bot = np.nonzero(Ac[-8:].max(0) > 0.5)[0]
+        fx = float(bot.mean()) if len(bot) else Ac.shape[1] / 2
+        # 用户硬规则：不许露出裁切直边 —— 先垫透明边，再按形状羽化（帧里看不到直线切边）
+        pd = max(20, int(0.10 * min(Ac.shape[:2])))
+        Fc = cv2.copyMakeBorder(Fc, pd, pd, pd, pd, cv2.BORDER_CONSTANT, value=0)
+        Ac = cv2.copyMakeBorder(Ac, pd, pd, pd, pd, cv2.BORDER_CONSTANT, value=0)
+        band = max(18.0, min(Ac.shape[:2]) * 0.09)
+        Ac = (Ac * _edge_fade(Ac, 3100 + i, band).astype(np.float32)).astype(np.float32)
+        out.append((Fc, Ac, (fx + pd, float(yb - ya + pd)), 2 * pd))
+    _FIGS[key] = out
+    if not out:
+        raise RuntimeError('figs(%r) 没拆出人物' % (sheet,))
+    return out
 
 
-def draw_fig(fr, k, foot, h_px, rot=0.0, flip=False, blur=0.0, tone=None, alpha=1.0):
-    Fc, Ac, fs, pad = figs()[k]
+def contact(fr, foot, h_px, k=1.0):
+    """接地阴影：脚下一团椭圆墨影（统一光源：光从左上方来，影子落在右下方）+ 湿地面往下渗出一点反光"""
+    x0 = int(max(0, foot[0] - 0.42 * h_px)); x1 = int(min(W, foot[0] + 0.42 * h_px))
+    y0 = int(max(BAR, foot[1] - 0.045 * h_px)); y1 = int(min(H - BAR, foot[1] + 0.115 * h_px))
+    if x1 - x0 < 4 or y1 - y0 < 4: return fr
+    w = x1 - x0; h = y1 - y0
+    xx, yy = np.mgrid[0:h, 0:w].astype(np.float32)
+    ex = (xx - w * (0.50 + 0.10 * k)) / (w * 0.50); ey = (yy - h * 0.42) / (h * 0.55)
+    r = np.sqrt(ex * ex + ey * ey)
+    sh = np.clip(1 - r, 0, 1) ** 1.6 * 0.62 * k
+    roi = fr[y0:y1, x0:x1]
+    fr[y0:y1, x0:x1] = roi * (1 - sh[..., None])
+    return fr
+
+
+def draw_fig(fr, k, foot, h_px, rot=0.0, flip=False, blur=0.0, tone=None, alpha=1.0, sheet='V03_figs', skip=(), shadow=0.0):
+    if shadow > 0: fr = contact(fr, foot, h_px, shadow)
+    Fc, Ac, fs, pad = figs(sheet, skip)[k]
     s = h_px / (Ac.shape[0] - pad)
     M = M_foot(Ac.shape[1], Ac.shape[0], fs, foot, s, rot, False)
     if flip:
@@ -397,34 +422,49 @@ def draw_fig(fr, k, foot, h_px, rot=0.0, flip=False, blur=0.0, tone=None, alpha=
 
 
 class V03D(Shot):
-    """V03 平视雨中宫院：三排纸扎百官由左向右依次躬身（姿势表逐级切换，不平移），横移 + 雾"""
+    """V03 平视雨中宫院：百官分两列站成四排，由近及远依次躬身。用户 20:05 意见：群臣必须站在同一个地面上——
+    按底板里石灯笼的基座定地平线（HY）和消失点（VPX），每排的交点落在同一地面上，脚高按「离地平线多少像素」收束。"""
+    HY = 870.0          # 地平线：底板两座石灯笼基座 (935, 高≈420) / (890, 高≈230) 反解 ≈ 870
+    VPX = 1090.0        # 消失点（正殿门洞，板上红路尽头）
+    # 同一地面：石灯笼 3.5m 高，解出「1.8m 的人屏上身高 ≈ 2.9 × (脚底线 y − HY)」。
+    # 四排脚底线都落在这条地面上，脚越高（越远）人越小，横向也按同一景深比向消失点收束。
+    #        排  脚底线 y  横向偏移（相对消失点）  人数  景深雾（大气透视）
+    ROWS = ((0, 1000, -470, 5, 0.00),
+            (1, 968, -300, 6, 0.14),
+            (2, 936, 420, 5, 0.32),
+            (3, 912, 210, 6, 0.52))
+    K_PX = 2.9          # 每 1px「脚底线到地平线」对应的人高像素
+
     def __init__(self):
         self.P = plate('V03_bg', 1.12)
         r = np.random.default_rng(4903)
         self.rows = []
-        for row, (n, fy, hh, bl, mist) in enumerate(((9, 690, 200, 0.0, 0.55), (7, 800, 320, 0.0, 0.28), (5, 1010, 520, 0.0, 0.0))):   # 远排不虚化，只网点淡出
+        for (row, gy, cx, n, mist) in self.ROWS:
+            dep = (gy - self.HY) / (self.ROWS[0][1] - self.HY)      # 1 = 最近排，越小越远
+            hh0 = self.K_PX * (gy - self.HY)                          # 同一人高在不同景深的像素高
             for i in range(n):
-                if r.uniform() < 0.12: continue
-                x_ = -120 + (2200 / n) * (i + 0.5) + r.uniform(-0.35, 0.35) * (2200 / n) + (row % 2) * 60
-                dfy = r.uniform(-18, 18) * (1 + row)
-                self.rows.append((row, x_, fy + dfy, hh * r.uniform(0.9, 1.1), bl, mist, (x_ + 200) / 2400 * 0.55 + row * 0.05 + r.uniform(-0.1, 0.15),
-                                  r.uniform(-2, 2)))
+                u_ = (i / max(n - 1, 1) - 0.5) * 2.0                 # -1 … 1
+                xs = self.VPX + (cx + u_ * 520 + r.uniform(-40, 40)) * dep   # 横向也按景深收束向消失点
+                self.rows.append((row, xs, gy + r.uniform(-3, 3), hh0 * r.uniform(0.95, 1.05), mist, dep,
+                                  row * 0.055 + r.uniform(-0.06, 0.10), r.uniform(-1.0, 1.0) + u_ * 5 * dep))
         self.rows.sort(key=lambda q: q[2])
         self.fog = fx2.Fog(4902)
         self.rain = InkRain(4904, n=520, angle=12)
+        self.SKIP = ()                                   # 背面表已裁掉和大殿线稿粘连的两个人，剩 4 个单体全用
 
     def render(self, t):
         u = self.u(t); e = eio(u)
         pan = -180 * (e - 0.5)
         fr = view(self.P, self.P.shape[1] / 2, self.P.shape[0] / 2, 1.0, 0, 0.25 * pan, 0)
         fr = self.fog.draw(fr, t, density=0.35, y0=480, y1=880, color=(0.90, 0.90, 0.90), speed=(30, 0), cam=(pan * 0.3, 0))
-        par = (0.45, 0.7, 1.0)
         tb = V(CT(20, 4)) - 0.55
-        for (row, x_, fy, hh, bl, mist, dl, tj) in self.rows:
+        for (row, xs, gy, hh, mist, dep, dl, tj) in self.rows:
             bk = clamp01((t - tb - dl) / 0.45)
-            k = int(min(4, math.floor(bk * 4.999)))              # 姿势表：0 直立 … 4 深躬（关键姿势逐级切换）
-            fr = draw_fig(fr, k, (x_ + pan * par[row], fy), hh * (1 - 0.04 * k), rot=tj + 0.8 * math.sin(t * 2 + x_),
-                          blur=bl, tone=((0.82, 0.82, 0.82), mist) if mist else None)
+            k = int(min(2, math.floor(bk * 2.999)))          # 背面表 3 档：站立 → 45° → 深躬（表里只剩 4 人，跳过 2 个粘连的）
+            fr = draw_fig(fr, k, (xs + pan * dep, gy), hh, rot=tj + 0.6 * math.sin(t * 2 + xs),
+                          sheet='V03_figs_back', skip=self.SKIP,
+                          tone=((0.80, 0.80, 0.80), 0.92 * mist) if mist else None,
+                          shadow=0.55 * (1 - 0.75 * mist))
         fr = self.rain.draw(fr, t, 1.0, cam=(-pan, 0))
         return cam(fr, 1.02 + 0.02 * e, 0, 0, 0.6 * e), 0
 
@@ -927,7 +967,16 @@ class V14D(Shot):
         self.P = plate('V13_bg', 1.30)
         self.sp = spr('V14_defy')
         r = np.random.default_rng(5903)
-        self.back = [(r.uniform(-50, 1970), r.uniform(770, 800), r.uniform(150, 200)) for _ in range(12)]
+        # 同一地面 + 同一消失点：跪伏的人分两弧排在鬼屠两侧，脚底线 y 决定高度（用户 20:05 意见）
+        self.HY, self.VPX, self.KP = 520.0, 960.0, 0.62          # 地平线 / 消失点 / 每 1px 地面距离的人高
+        self.back = []
+        for k in range(18):
+            dep = 0.10 + 0.90 * (k // 2) / 8.0                    # 1 = 最近；成对分左右
+            side = -1 if k % 2 == 0 else 1
+            gy = self.HY + dep * 420                              # 脚底线只在地平线以下：所有人都踩在雨原上
+            bx = 960 + side * (300 + 520 * dep + r.uniform(-60, 60))
+            self.back.append((bx, gy, self.KP * (gy - self.HY) * r.uniform(0.9, 1.08), dep))
+        self.back.sort(key=lambda q: q[1])
         self.rain = InkRain(5905, n=560, angle=8)
         self.spl = fx2.Splashes(5906)
 
@@ -936,10 +985,10 @@ class V14D(Shot):
         fr = view(self.P, self.P.shape[1] * 0.42, self.P.shape[0] * 0.52, 1.0)
         tf = V(CT(23, 10)); tk2 = V(CT(23, 11))
         push = eout(clamp01((t - tf) / 0.5), 2)
-        for (bx, fy, hh) in self.back:
+        for (bx, fy, hh, dep) in self.back:
             away = 1 if bx > self.FOOT[0] else -1
-            fr = draw_fig(fr, 4 if push < 0.3 else 2, (bx, fy), hh, rot=14 * push * away, flip=bx < self.FOOT[0], blur=0.0,
-                          tone=((0.80, 0.80, 0.80), 0.30))
+            fr = draw_fig(fr, 2 if push < 0.3 else 0, (bx, fy), hh, rot=14 * push * away, flip=bx < self.FOOT[0], blur=0.0,
+                          tone=((0.80, 0.80, 0.80), 0.42 - 0.22 * dep), shadow=0.5)
         rise = eout(clamp01((t - self.t0) / 0.30), 3)
         fr, _ = put(fr, self.sp, t, 880 * (0.96 + 0.04 * rise), (self.FOOT[0], self.FOOT[1] + 170 * (1 - rise)), wind_amp=12, mblur=(0, 30 * (1 - rise)))
         if t >= tf:

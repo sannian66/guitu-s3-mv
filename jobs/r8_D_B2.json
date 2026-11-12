@@ -310,5 +310,23 @@
   "input": [
    "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg"
   ]
+ },
+ "V03_figs_back": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/d57d2c9b-0c6d-4615-ab6c-e31bd5d3cb8d.png"
+  ],
+  "prompt": "Keep exactly the same art style as the input image: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone folds, strictly black, white and one blood-red (only the red inner lining of the robes). Same imperial court officials, same plain black robes with red lining and the same tall black square court hats with stiff side wings, but now seen from a three-quarter REAR view, backs turned to the viewer, facing away into the distance toward a palace hall on the upper left, bowing toward it; faces not visible. Six separate full-body figures in one row with wide empty green space between them, feet fully visible, nothing touching the image border, ordered from left to right: standing straight, slight bow, bow about 30 degrees, bow about 45 degrees, bow about 60 degrees, deepest bow about 80 degrees. Isolated on the same perfectly flat pure chroma-key green (#00FF00) background with no shadows and no floor. No text, no logos. 16:9."
+ },
+ "V03_figs_var": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/d57d2c9b-0c6d-4615-ab6c-e31bd5d3cb8d.png"
+  ],
+  "prompt": "Keep exactly the same art style as the input image: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone folds, strictly black, white and one blood-red (only the red inner lining of the robes). Same imperial court officials and costume, but six DIFFERENT individuals with varied builds and ages: a stout heavy official, a thin old official with a long white beard, a tall young official, a short hunched official, a broad-shouldered official, a slender official; side view all facing RIGHT, each holding a court tablet, faces mostly hidden by sleeves and hat brims. Six separate full-body figures in one row with wide empty green space between them, feet fully visible, nothing touching the image border, ordered from left to right: standing straight, slight bow, bow about 30 degrees, bow about 45 degrees, bow about 60 degrees, deepest bow about 80 degrees. Isolated on the same perfectly flat pure chroma-key green (#00FF00) background with no shadows and no floor. No text, no logos. 16:9."
  }
 }
