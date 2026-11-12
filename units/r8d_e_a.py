@@ -1378,11 +1378,11 @@ class E19(Shot):
         bg = plate('EA_cross', blur=14)
         # P1-8：平涂暗灰 → 网点灰（画面区 ~0.65）。底 = 提亮的朱红板（压成中灰）+ 网点；人物半脸的实黑不动
         base = np.roll(bg, -700, 1)
-        base = base.mean(-1, keepdims=True) * np.array([1.0, 0.985, 0.97], np.float32)
+        base = base.mean(-1, keepdims=True) * np.array([1.0, 0.985, 0.97], np.float32)[None, None, :]
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         dots = (np.sin(xx * 1.55) * np.sin(yy * 1.55) > 0.62).astype(np.float32)
         dots = cv2.GaussianBlur(dots, (0, 0), 0.6)
-        self.bg = np.ascontiguousarray(np.clip((0.66 - 0.11 * dots) + 0.13 * (base - base.mean()), 0, 1) * np.ones(3, np.float32), np.float32)
+        self.bg = np.ascontiguousarray(np.clip(0.66 - 0.11 * dots[..., None] + 0.13 * (base - base.mean()), 0, 1), np.float32)
         self.sp = spr('EA_E19')
         self.chips = Chips(125, n=26, size=(14, 40), spread=(1100, 500), zr=(1.2, 2.8), tones=(0.92, 0.5, 0.05))
         self.chips_f = Chips(126, n=10, size=(20, 50), spread=(1100, 520), zr=(0.45, 0.8), tones=(0.9, 0.08))
