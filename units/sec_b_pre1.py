@@ -1138,6 +1138,12 @@ MOVE = {'P07': (1.0, 1.08, 0, -40, 0), 'P12': (1.0, 1.07, 0, 30, 0), 'P14': (1.0
 _SEC = [None]
 _C1 = [None]
 
+# 第八轮 STYLE_D（B1 单元）：STYLE_D=1 时 units/r8d_b1.py 把 P01–P15 换成风格 D 版（同名类，CUTS / FG / 字幕键不变）；
+# STYLE_D=0 时不加载，现版逐像素不变。
+if os.environ.get('STYLE_D') == '1':
+    import r8d_b1
+    r8d_b1.apply(sys.modules[__name__])
+
 
 def section():
     if _SEC[0] is None: _SEC[0] = Section(SHOTS, CUTS, FG, EXPO, expo_all=1.12); _SEC[0].move = MOVE
