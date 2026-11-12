@@ -112,7 +112,7 @@
 - 新增 `units/chorus1_d.py`：18 个风格 D 镜头类（S027、S031–S047，含 S035 返工版），只在 STYLE_D=1 且 SPRITE_MODE=1 时由 `chorus1_sprites.install` 装载。
 - `units/chorus1_sprites.py`：STYLE_D 分支末尾装载 chorus1_d（`C1D=0` 关）。
 - `units/chorus1.py`（只在 STYLE_D=1 + SPRITE_MODE + C1D 下生效）：前景余烬 / 金尘改灰烬（S028–S030 不动）；去掉 S033 / S036 代码碎砖遮挡（暖色 rim，改由镜内生图碎块代替）；HLYR 画面内横排句关掉。
-- **共享文件：没有改**（lib/、fx.py、c1kit.py、subtitle.py、style_d.py、render_sprite_full.py 都没动）。
+- **共享文件**：核心渲染文件（lib/、fx.py、c1kit.py、subtitle.py、style_d.py、render_sprite_full.py）没动。`tools/vidgen.py`（视频生成工具）和 `crew/genlog.md`（vidgen 自动记日志）与 main 并行改动，合并时需协调者处理；本单元只在 genlog 里追加了 4 行视频记录。
 - 返工新增的代码都在 `units/chorus1_d.py` 内：`shaped_bottom` / `ray_lines` / `box` 软掩码（S044 三层手）/ S035 三姿势 `DASH_STEPS` / S040 眼睛锚点表。
 
 ## 逐像素校验
