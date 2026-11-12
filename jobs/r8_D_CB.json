@@ -304,5 +304,14 @@
    "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/bdc12df4-673b-4012-9a59-8634d9fde0e3.png"
   ],
   "prompt": "Same character, same drawing as the input image. Only change this step of the action: he has just finished a downward diagonal cut — dropped onto one knee, both hands on the hilt, the long straight sword slanted down to the lower right with the tip near the ground, head lowered and eyes looking up fiercely, ponytail, hair and red sash still flying from the swing. Keep exactly the same character, face, hair, costume, sword, line style, screentone and colors as the input image (plain black robe, blood-red sash, no extra red stains), the same scale and the same camera angle. Keep the perfectly flat pure chroma-key green (#00FF00) background with no shadows. Full body inside the frame with generous green margin on all sides, nothing cropped, the whole sword visible including the tip."
+ },
+ "CB_grip2": {
+  "model": "nano-banana-pro",
+  "prompt": "Same character, same image: keep the exact same composition, framing, hand pose, black leather bracer, wet sleeve, straight blade with central ridge, water drops, blood-red accents, lighting and the flat chroma-key green (#00FF00) background. Change ONLY the sword handle: the grip is wrapped in plain matte black cloth strips, evenly wound — NO diamond lattice, NO braided Japanese tsuka-ito pattern, no metal fittings on the grip; the guard is a simple plain dark-iron disc with a smooth rim (Chinese jian guard), NO ornate engraved katana tsuba. The pommel is a plain black cloth end with a short blood-red tassel. Art style: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone; color scheme strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/12/53b44ec1-c1a4-481e-ba65-89499b1eb92b.png"
+  ]
  }
 }
