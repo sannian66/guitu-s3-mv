@@ -17,6 +17,7 @@ import sprite as SP
 import c1kit as K
 import fx2
 from a_kit import clamp01, eio, eout, ein
+from c1kit import pulse
 
 W, H = 1920, 1080
 ROOT = os.environ.get('MV_ROOT', '/workspace/work/mv')
@@ -49,6 +50,29 @@ def rgba(name):
 def lay(name): return SP.layer(G + name + '_cut.png')
 
 
+def lay_soft(name, px=36):
+    """图生图的走路 / 连斩帧：人物在图里本来就顶到画布边（头发、靴底、刀尖），放大到画面里会露出画布直边。
+    载入时把四边 px 像素内的 alpha 做羽化（墨一样淡出），保证任何位移 / 推镜都不会出现直线裁切（SPREAD §11.7）。"""
+    key = ('soft', name, px)
+    if key in _SOFT: return _SOFT[key]
+    P, A = rgba(name)
+    h, w = A.shape
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    ramp = np.clip(np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy)) / px, 0, 1)
+    A = A * ramp
+    path = '/tmp/mv_r8d_a1/soft_%s_%d.png' % (name, px)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if not os.path.exists(path):
+        from PIL import Image
+        Image.fromarray((np.dstack([np.clip(P / np.clip(A[..., None], 1e-3, None), 0, 1), A]) * 255 + 0.5).astype(np.uint8), 'RGBA').save(path)
+    L = SP.layer(path)
+    _SOFT[key] = L
+    return L
+
+
+_SOFT = {}
+
+
 def at(img, k, dx=0.0, dy=0.0, cx=None, cy=None):
     """背景板：源点 (cx,cy)（默认图心）按 k 缩放落到屏幕 (960+dx, 540+dy)。返回新数组（可原地改）。"""
     h, w = img.shape[:2]
@@ -76,6 +100,15 @@ def spears(keep):
     h, w = A.shape; yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     mk = mk * np.clip(np.minimum(np.minimum(xx, w - 1 - xx), yy) / 40.0, 0, 1)   # §11.7：红缨碰到画布左/右/上缘的部分 40px 羽化掉，不留直线截断（下缘始终在画外）
     return P * mk[..., None], A * mk
+
+
+WALK_DY = (0.0, -1.0, 0.0, -1.0)                              # 四拍循环的重心：接触拍低、过身拍高（× 振幅）
+
+
+def walk_pose(poses, t, t0, beat):
+    """连续走路：poses = 四张同机位图生图（接触 L / 过身 / 接触 R / 过身）；返回 (当前姿势, 重心偏移系数)。"""
+    k = int((t - t0) / beat) % 4
+    return poses[k], WALK_DY[k]
 
 
 def foot_of(L, rows=40):
@@ -386,13 +419,13 @@ def _build(mod):
     #   前景焦外白光斑；片名本身是屏幕层 TitleD（画进生图的书法片名）
     class A06D(mod.A06):
         def __init__(self):
-            self.bg = plate('A02_bg', flip=True); self.ridge = lay('A01_ridge')
+            self.bg = plate('A06_bg2'); self.ridge = lay('A01_ridge')      # §11-⑤ / 评审 P1-7：独立血月板，不再与 A02 共用
             self.bolt = fx2.Lightning(968, p0=(1500, 40), p1=(1760, 520), branches=6)
         def render(self, t):
             u = self.u(t); k = t - mod.TITLE_HIT; cr = eio(u); tc = t - (self.t0 + self.t1) / 2
             bp = sum(math.exp(-max(0.0, t - V(b)) / 0.16) * (t >= V(b)) for b in (8.75, 9.22, 9.68, 10.15))
-            fr = at(self.bg, 1.16, dx=180, dy=-20 + 60 * cr)
-            mx, my = 960 + 180 + 1.16 * (198 - 1024), 540 - 20 + 60 * cr + 1.16 * (380 - 576)
+            fr = at(self.bg, 1.16, dx=60, dy=-20 + 60 * cr)
+            mx, my = 960 + 60 + 1.16 * (760 - 1024), 540 - 20 + 60 * cr + 1.16 * (330 - 576)   # 新月位（板里月在偏左中）
             fr = glow(fr, (mx, my), 420, 0.10 + 0.22 * bp, RED)
             fr = fog(fr, t - 7.0, 0, 150, 560, 0.42, (0.08, 0.08, 0.08), speed=(-150, 0))
             lt = t - V(9.68)
@@ -421,7 +454,7 @@ def _build(mod):
     class A07aD(mod.A07a):
         def __init__(self):
             self.sky = plate('A07_sky'); self.tower = lay('A07_tower')
-            self.w1, self.w2 = lay('A08_walk1'), lay('A08_walk2')
+            self.walk = [lay('A08_walk1')] + [lay_soft(n) for n in ('A08_w2', 'A08_w3', 'A08_w4')]
             self.bolts = (fx2.Lightning(1198, p0=(260, 30), p1=(520, 360), branches=6), fx2.Lightning(1289, p0=(1660, 30), p1=(1420, 330), branches=5))
             self.rs = fx2.RainSheet(705, density=0.8)
         def render(self, t):
@@ -434,10 +467,10 @@ def _build(mod):
             fr = fog(fr, t, 0, 300, 640, 0.25, (0.7, 0.7, 0.7), speed=(50, 0))
             tw = dict(expo=1.0 + 0.9 * env, sat=1.0, tint=(1, 1, 1), lift=0.0, gamma=1.0)
             fr, _ = put(fr, t, self.tower, (1024, 1152), (960, 1010), 1.06, wind_amp=0, breathe=0, grade=tw)
-            pose = self.w1 if int((t - self.t0) / 0.27) % 2 == 0 else self.w2
+            pose, bob = walk_pose(self.walk, t, self.t0, 0.135)
             hh = 150 - 50 * eio(u)
             a_, k_ = pose.fit(hh)
-            fr, _ = pose.draw(fr, t, a_, (960 + 14 * math.sin(t * 2.4), 965 - 30 * eio(u)), k_, wind_amp=4, breathe=0,
+            fr, _ = pose.draw(fr, t, a_, (960, 965 - 30 * eio(u) + 1.5 * bob), k_, wind_amp=4, breathe=0,
                               grade=dict(expo=0.5, sat=1.0, tint=(1, 1, 1), lift=0.0, gamma=1.0), rim=NORIM, wrap=0, shade=None)
             fr = fog(fr, t, 1, 820, 1060, 0.4, (0.6, 0.6, 0.6), speed=(-60, 0))
             fr = ink_rain(fr, t, self.rs, 0.9, angle=10, layers=(1, 2), cam=(0, -60 * m))
@@ -447,11 +480,16 @@ def _build(mod):
             cv2.rectangle(Lp, (int(px - 16), 0), (int(px + 16), H // 2), 1.0, -1)
             Lp = cv2.resize(cv2.GaussianBlur(Lp, (0, 0), 7), (W, H))[..., None]
             fr = fr * (1 - Lp * 0.96) + Lp * 0.02
-            if not hasattr(self, 'tz'):                                   # 片名区一块柔白雾（墨字压在白上，城楼闪电时仍透出轮廓）
-                tz = np.zeros((H // 4, W // 4), np.float32); cv2.ellipse(tz, (240, 158), (205, 58), 0, 0, 360, 1.0, -1)
-                self.tz = cv2.resize(cv2.GaussianBlur(tz, (0, 0), 16), (W, H))[..., None]
+            if not hasattr(self, 'tz'):                                   # 片名区：不规则墨洗「纸雾」（评审 P1-5：不要椭圆白块）
+                h4, w4 = H // 4, W // 4
+                yy, xx = np.mgrid[0:h4, 0:w4].astype(np.float32)
+                nz = cv2.resize(M.A.ink_noise(91, 256), (w4, h4)) if hasattr(M.A, 'ink_noise') else np.zeros((h4, w4), np.float32)
+                d = np.sqrt(((xx - 240) / 205.) ** 2 + ((yy - 150) / 62.) ** 2)
+                edge = np.clip((1.15 - d) / 0.55, 0, 1) * (0.55 + 0.9 * nz)          # 边缘被噪声咬成墨洗状
+                tz = np.clip(edge ** 1.35, 0, 1) * 0.39                              # 峰值 0.39 × 加法只补到 100/255
+                self.tz = cv2.resize(tz.astype(np.float32), (W, H))[..., None]
             fade = clamp01((V(13.42) - t) / 0.2)
-            fr = fr * (1 - self.tz * 0.82 * fade) + self.tz * 0.92 * 0.82 * fade
+            fr = fr + self.tz * fade * (1 - fr)                                  # 只往上补亮（不压暗），峰值 ≤100
             return fr, 0
     out['A07a'] = A07aD
 
@@ -462,7 +500,8 @@ def _build(mod):
         HZ, K_WALL = 640.0, 1920 / 2048
         def __init__(self):
             self.out = plate('A08_out'); self.wall = lay('A08_wall')
-            self.w1, self.w2 = lay('A08_walk1'), lay('A08_walk2')
+            self.walk = [lay(n) for n in ('A08_walk1',) ] + [lay_soft(n) for n in ('A08_w2', 'A08_w3', 'A08_w4')]   # 图生图四拍（同机位同比例）；软边防画布直边
+            self.feet = {id(L_): foot_of(L_) for L_ in self.walk}
             P, A = rgba('A08_door')
             lum = P.mean(-1, keepdims=True); P = lum + (P - lum) * 0.25          # 门板原图的大片红压到 25%（读成旧漆痕，不抢戏）
             ys, xs = np.nonzero(A > 0.5)
@@ -498,14 +537,15 @@ def _build(mod):
             fr = fr * (1 - np.clip(bz[..., :1], 0, 1))                       # 白天幕上的闪电 = 墨线（减色）
             fr = ink_rain(fr, t, self.rs, 0.8, angle=6, layers=(0,))
             s_ = clamp01((t - self.t0) / (V(14.98) - self.t0)); z = 1 + 2.6 * s_
-            hh = 760 / z; by = self.HZ + (1060 - self.HZ) / z + 7 * abs(math.sin(t * 6.2)) / z
+            pose, bob = walk_pose(self.walk, t, self.t0, 0.135)            # 一步 0.27s = 两拍
+            hh = 760 / z; by = self.HZ + (1060 - self.HZ) / z + 6 * bob / z
             outside = by < 905                                               # 跨过门槛：此后先画人再画门 / 墙，门在他身后合上
             sil = clamp01((1000 - by) / 95)                                  # 走近门洞时渐变成逆光剪影（不在跨门槛那一帧跳变）
-            pose = self.w1 if int((t - self.t0) / 0.27) % 2 == 0 else self.w2
             def hero(fr):
-                a_, k_ = pose.fit(hh)
+                fx_, fy_ = self.feet[id(pose)]
+                _, k_ = pose.fit(hh)
                 g = dict(expo=(1.0 - 0.88 * sil) * (1 - 0.85 * env), sat=1.0, tint=(1, 1, 1), lift=0.0, gamma=1.0)
-                return pose.draw(fr, t, a_, (960 + 22 * math.sin(t * 3.1) / z, by), k_, wind_amp=6, breathe=0, grade=g, rim=NORIM, wrap=0, shade=None)[0]
+                return pose.draw(fr, t, (fx_ / pose.w, fy_ / pose.h), (960, by), k_, wind_amp=6, breathe=0, grade=g, rim=NORIM, wrap=0, shade=None)[0]
             if outside:
                 yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
                 shd = np.exp(-(((xx - 960) / (90 / z)) ** 2 + ((yy - by) / (8 / z)) ** 2))
@@ -564,37 +604,27 @@ def _build(mod):
 
     # V02 16.97–17.90 CU 低机位：靴子踏进水洼（风格 D 生图：靴 + 衣摆精灵，湿石街夜雨背景板）；起脚（抬靴 + 前倾）→ 17.46 一脚踏下：
     #   水洼白溅 + 涟漪 + 震；衣摆风吹二级运动；水洼倒影（波纹扰动）；墨线雨 + 贴镜生图雨
+    # 用户 20:05：脚步特写「假」的根因是整身图裁腿。改成同一机位的两张生图（踏下前 / 踏下，nano-banana-pro 图生图衍生），
+    #   机位、街道、水洼、光向完全一致，只在 17.46 这一拍硬切，水花是生图里本来的，代码只补涟漪、白色硬边溅点和震。
     class V02D(mod.V02):
         def __init__(self):
-            self.bg = plate('V02_bg'); self.boot = lay('V02_boot1')
+            self.gain = 1.45                                               # 用户 20:05 返工后 V02 偏暗（平均 53）→ 提到 65 以上
+            self.lift = plate('V02_lift3')                    # 踏下前一拍：靴抬起（外侧看，布底无纹路）、水洼平静
+            self.stamp = plate('V02_boot3')                   # 踏下：布底靴踩实、溅水
             self.rs = fx2.RainSheet(925, density=0.8)
         def render(self, t):
-            u = self.u(t); m = u - 0.5; tm = (self.t0 + self.t1) / 2
-            fr = at(self.bg, 1.1, dx=-40 * m, dy=40)
-            fr = ink_rain(fr, t, self.rs, 0.9, angle=8, layers=(0, 1))
+            u = self.u(t); m = u - 0.5; tm = (t - (self.t0 + self.t1) / 2)
             ts = V(17.46)
-            lift = 1 - eio(clamp01((t - (ts - 0.22)) / 0.22))
-            bx = 860 + 200 * eio(min(u, (ts - self.t0) / (self.t1 - self.t0)))    # 踏下后靴钉在地上，不再横移
-            bob = -10 * abs(math.sin(math.pi * (t - self.t0) / 0.47))
-            FY, GY = 840, 886                                                     # 靴锚点屏幕 y / 前靴靴底（地面线）
-            fr, _ = put(fr, t, self.boot, (1024, 1010), (bx, FY - 46 * lift + bob * (t < ts)), 0.95, rot=-5 * lift, wind_amp=10, breathe=0)
-            n_ = H - GY
-            refl = cv2.flip(fr[GY - n_:GY], 0)                                    # 按地面线镜像（靴底以下才有倒影，不叠到靴子本身）
-            ph = np.sin(np.arange(n_, dtype=np.float32)[:, None] / 6 + t * 12) * 6
-            mx = (np.arange(W, dtype=np.float32)[None] + ph).astype(np.float32); my = np.repeat(np.arange(n_, dtype=np.float32)[:, None], W, 1)
-            refl = cv2.remap(refl, mx, my, cv2.INTER_LINEAR)
-            yy = np.arange(GY, H, dtype=np.float32)[:, None, None]
-            xw = np.exp(-((np.arange(W, dtype=np.float32)[None, :, None] - (bx + 60)) / 520) ** 2)   # 只在靴下这片水洼
-            mm = np.clip((yy - GY) / 12, 0, 1) * 0.42 * xw
-            fr[GY:H] = fr[GY:H] * (1 - mm) + refl * mm
+            fr = at(self.stamp if t >= ts else self.lift, 1.06, dx=-24 * m, dy=10 * m)      # 机位缓移，以中点为零
+            fr = ink_rain(fr, t, self.rs, 0.55, angle=8, layers=(0, 2))
+            fr = fg_rain(fr, t, tm, amt=0.40, vel=(110, 900))
             if t >= ts:
-                sp = (bx + 167, GY)
-                fr = fx2.ripples(fr, t, [sp], [ts], color=(0.95, 0.95, 0.95), speed=520, amt=1.0, life=0.8)
-                fr = sparks2(fr, t, 17, sp, n=50, life=0.5, speed=(200, 650), dirc=(0, -1), spread=1.2, grav=1400, area=(120, 10), amt=0.8,
+                a = t - ts
+                sp = (1180.0, 900.0)                                                     # 靴底入水点（两张图里同一处）
+                fr = fx2.ripples(fr, t, [sp], [ts], color=(0.95, 0.95, 0.95), speed=520, amt=0.9, life=0.8)
+                fr = sparks2(fr, t, 17, sp, n=34, life=0.45, speed=(260, 700), dirc=(0, -1), spread=1.3, grav=1500, area=(150, 12), amt=0.7,
                              t0=ts, burst=True)
-            fr = ink_rain(fr, t, self.rs, 0.7, angle=8, layers=(2,))
-            fr = fg_rain(fr, t, tm, amt=0.45, vel=(110, 900))
-            return fr, (2 if 0 <= t - ts < 0.07 else 0)
+            return fr * self.gain, (2 if 0 <= t - ts < 0.07 else 0)
     out['V02'] = V02D
 
     # V03 17.90–19.73 大俯瞰五百重甲方阵（风格 D 生图铺满画面，红缨、枪林）；去掉巨字「五百重甲」（不是点名保留的字）→ 方阵本身做主体：
@@ -616,7 +646,9 @@ def _build(mod):
     #   身形 600→800px，发丝 / 红带风吹）；背景板与人物视差（侧移 + 前推）；前景两支虚焦枪杆（生图）高速反向掠过；墨线雨 + 贴镜雨
     class V04D(mod.V04):
         def __init__(self):
-            self.bg = plate('V04_bg'); self.w1, self.w2 = lay('V04_walk1'), lay('V04_walk2')
+            self.bg = plate('V04_bg2')                                         # 评审 P1-3 / 用户 20:05-5：中式札甲群演，单一消失点、同一地平面
+            self.walk = [lay(n) for n in ('V04_walk1',)] + [lay_soft(n) for n in ('V04_w2', 'V04_w3', 'V04_w4')]   # 迎镜走四拍（图生图衍生，软边防直边）
+            self.feet = {id(L_): foot_of(L_) for L_ in self.walk}
             self.spP, self.spA = spears((0, 5))
             self.rs = fx2.RainSheet(945, density=0.8)
         def render(self, t):
@@ -624,12 +656,14 @@ def _build(mod):
             fr = at(self.bg, 1.12 * (1 + 0.04 * u), dx=-60 * m, dy=-20)
             fr = fog(fr, t, 2, 450, 760, 0.35, (0.78, 0.78, 0.78), speed=(-50, 0), cam=(-160 * e, 0))
             fr = ink_rain(fr, t, self.rs, 0.8, angle=10, layers=(0, 1))
-            ph = (t - self.t0) / 0.31
-            pose = self.w1 if int(ph) % 2 == 0 else self.w2
-            stp = abs(math.sin(math.pi * ph))
-            a_, k_ = pose.fit(600 + 200 * e)
-            fr, _ = pose.draw(fr, t, a_, (1250 - 180 * e + 6 * math.sin(math.pi * ph), 930 + 20 * e - 10 * stp), k_, wind_amp=9, breathe=0,
-                              rot=1.0 * math.sin(math.pi * ph), **KW)
+            pose, bob = walk_pose(self.walk, t, self.t0, 0.155)
+            fx_, fy_ = self.feet[id(pose)]
+            hh = 600 + 200 * e; _, k_ = pose.fit(hh)
+            px, py = 1250 - 180 * e, 930 + 20 * e
+            yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)                 # 接地阴影（与背景群演同一地面、同一光向）
+            shd = np.exp(-(((xx - px) / (0.22 * hh)) ** 2 + ((yy - py - 4) / (0.02 * hh)) ** 2))
+            fr = fr * (1 - 0.55 * shd[..., None])
+            fr, _ = pose.draw(fr, t, (fx_ / pose.w, fy_ / pose.h), (px, py + 0.012 * hh * bob), k_, wind_amp=9, breathe=0, **KW)
             fr = ink_rain(fr, t, self.rs, 0.7, angle=10, layers=(2,))
             fr = fg_rain(fr, t, tm, amt=0.45, vel=(150, 860))
             Mx = affine((1024, 576), (960 - 1600 * m, 500), 1.25)
@@ -662,55 +696,91 @@ def _build(mod):
             return fr, (3 if g > 0.5 else 0)
     out['V05'] = V05D
 
-    # V06 21.17–22.50 LS 横斩（风格 D 生图分层）：军阵前排背景板（环绕 orbit：随机位同向滑、轻虚焦）/ 鬼屠三张关键姿势
-    #   蓄势 → 21.20 第一刀横斩送出 → 21.47 收刀回蓄势 → 21.86 第二刀上撩（切姿势帧带横向动态模糊）/ 前景虚焦枪杆反向急掠；
-    #   21.20 一道干笔白刀光横贯画面（y≈600，接 V07 丹陛顶边的匹配剪辑）+ 前排血红裂线；21.86 第二刀斜向干笔刀光 + 白 / 血红火星；
-    #   两刀命中帧曝光脉冲 + 色差 + 震；墨线雨
+    # V06 21.17–22.50 三连击（用户 20:05：「三连击很假，角色跟背景人物的高度不一致 → 换个方式，不必主角与敌人同框」）
+    #   呈现 = 主角单人三连击 + 干笔刀光分格：白色纸底 + 放射墨线，鬼屠站在自己的接地阴影上（不再与军阵同框，比例矛盾从根上消失）；
+    #   四张姿势由同一张图生图衍生（蓄势 → 21.20 横斩 → 21.47 收刀 → 21.86 上撩），切姿势帧是硬切（不带动态模糊），
+    #   每刀命中：画面沿刀线被干笔刀光劈开一道白缝，缝里透出血红 / 墨色分格（两格不同明度、错开 10px），加白硬边闪、白 + 血红火星、震屏；
+    #   21.20 那一刀的刀线 y≈600 与 V07 丹陛顶边做匹配剪辑（保留）。
     class V06D(mod.V06):
         RC = 21.47
+        GROUND = 905.0
+        SCALE = 0.66
+        @staticmethod
+        @lru_cache(None)
+        def _paper():
+            """漫画纸底：白纸 + 网点渐隐 + 从人物胸口放射的干笔速度线（两端收尖、笔毛飞白），全部代码画线，不用平滑渐变。"""
+            q = 2
+            base = np.full((H // q, W // q, 3), 0.80, np.float32)          # 纸底压到浅墨灰（V06 原 0.93 全白，亮度 178 过曝）
+            yy, xx = np.mgrid[0:H // q, 0:W // q].astype(np.float32)
+            d = np.hypot((xx - W / 4) / (W / 4), (yy - 540 / q) / (H / 3))
+            dots = (np.sin(xx * 1.6) * np.sin(yy * 1.6) > 0.86).astype(np.float32)      # 网点
+            tp = np.clip((d - 0.55) / 0.5, 0, 1)
+            base = base * (1 - (0.38 * tp)[..., None] * (0.55 + 0.45 * dots[..., None]))
+            cx, cy = W / q, 240.0
+            L = np.zeros((H // q, W // q), np.float32)
+            r = np.random.default_rng(6601)
+            for i in range(150):
+                ang = r.uniform(0, 2 * math.pi); ln = r.uniform(120, 620) / q
+                r0 = r.uniform(60, 190) / q
+                x0, y0 = cx + math.cos(ang) * r0, cy + math.sin(ang) * r0
+                x1, y1 = cx + math.cos(ang) * (r0 + ln), cy + math.sin(ang) * (r0 + ln)
+                w_ = r.uniform(0.6, 2.2)
+                cv2.line(L, (int(x0), int(y0)), (int(x1), int(y1)), float(r.uniform(0.35, 1.0)), max(1, int(round(w_))), cv2.LINE_AA)
+            L = cv2.GaussianBlur(L, (0, 0), 0.7)
+            base = base * (1 - (L * 0.95)[..., None])
+            base = cv2.resize(base, (W, H), interpolation=cv2.INTER_LINEAR)
+            band = np.clip((np.arange(H, dtype=np.float32)[:, None] - 880) / 60, 0, 1)   # 地平线以下的灰场（墨洗，带网点）
+            base = base * (1 - band[..., None] * 0.42)
+            return base
+
         def __init__(self):
-            self.bg = plate('V06_bg')
-            self.pw, self.pa, self.pb = lay('V06_wind'), lay('V06_slashA'), lay('V06_slashB')
-            self.ft = {id(L_): foot_of(L_) for L_ in (self.pw, self.pa, self.pb)}
-            self.spP, self.spA = spears((0, 3, 5))
-            self.rs = fx2.RainSheet(965, density=0.8)
+            self.poses = [lay('V06_wind')] + [lay_soft(n, 30) for n in ('V06_k1', 'V06_k2', 'V06_k3')]
+            self.feet = {id(L_): foot_of(L_) for L_ in self.poses}
+            self.rs = fx2.RainSheet(965, density=0.5)
         def render(self, t):
-            u = self.u(t); m = u - 0.5; ts = CT(1, 10); ts2 = V(21.86)
-            th = math.radians(-11 + 22 * eio(u))
-            fr = at(self.bg, 1.10, dx=300 * math.tan(th), dy=-40)
-            a = t - ts
-            if a >= 0:
-                Lr = np.zeros((H, W), np.float32); cv2.line(Lr, (0, 612), (W, 592), 1.0, 3, cv2.LINE_AA)
-                fr = fr * (1 - cv2.GaussianBlur(Lr, (0, 0), 2)[..., None] * 0.6 * math.exp(-a / 0.8))
-                fr = fr + (cv2.GaussianBlur(Lr, (0, 0), 2) * 1.3 + cv2.GaussianBlur(Lr, (0, 0), 14))[..., None] * RED * 1.3 * math.exp(-a / 0.8)
-            fr = fog(fr, t, 0, 640, 960, 0.35, (0.75, 0.75, 0.75), speed=(80, 0))
-            fr = ink_rain(fr, t, self.rs, 0.8, angle=10, layers=(0, 1), cam=(300 * math.tan(th), 0))
-            F_ = int(round(t * 30)); b1 = int(round(ts * 30)); b2 = int(round(ts2 * 30)); rc = int(round(V(self.RC) * 30))
-            if F_ < b1: L_, prv = self.pw, None
-            elif F_ < rc: L_, prv = self.pa, (self.pw if F_ == b1 else None)
-            elif F_ < b2: L_, prv = self.pw, (self.pa if F_ == rc else None)
-            else: L_, prv = self.pb, (self.pw if F_ == b2 else None)
-            fw = 30 * eout(clamp01((t - ts) / 0.4)) + 30 * eout(clamp01((t - ts2) / 0.5))
-            back = -14 * eio(clamp01((t - V(self.RC)) / 0.25)) * (F_ < b2)
-            ax = 860 + fw + back
-            yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-            shd = np.exp(-(((xx - ax) / 330) ** 2 + ((yy - 909) / 16) ** 2)) * 0.7
-            fr = fr * (1 - 0.7 * shd[..., None])
-            mb = (34, 0) if prv is not None else (0, 0)
-            fr, _ = put(fr, t, L_, self.ft[id(L_)], (ax, 905), 0.62, wind_amp=8, breathe=0, mblur=mb)
-            if a >= 0:
-                fr = brush(fr, (-100, 606), (2020, 594), a / 0.08, 20, fade=1 - clamp01((a - 0.1) / 0.35), seed=61)
-            a2 = t - ts2
+            u = self.u(t); m = u - 0.5; ts = CT(1, 10); ts2 = V(21.86); rc = V(self.RC)
+            fr = self._paper().copy()
+            fr = K.cam(fr, 1.0 + 0.02 * eio(u), 6 * m, 0)                       # 纸底极慢推，位移以中点为零
+            F_ = int(round(t * 30))
+            b1, rcF, b2 = int(round(ts * 30)), int(round(rc * 30)), int(round(ts2 * 30))
+            k = 0 if F_ < b1 else (1 if F_ < rcF else (0 if F_ < b2 else 3))
+            L_ = self.poses[k]
+            fx_, fy_ = self.feet[id(L_)]
+            fw = 26 * eout(clamp01((t - ts) / 0.3)) + 26 * eout(clamp01((t - ts2) / 0.4))
+            ax = 900 + fw
+            yy2, xx2 = np.mgrid[0:H, 0:W].astype(np.float32)
+            shd = np.exp(-(((xx2 - ax) / 300) ** 2 + ((yy2 - self.GROUND) / 18) ** 2)) * 0.7 + \
+                  np.exp(-(((xx2 - ax) / 520) ** 2 + ((yy2 - self.GROUND) / 46) ** 2)) * 0.25
+            fr = fr * (1 - 0.85 * shd[..., None])
+            fr, _ = put(fr, t, L_, (fx_, fy_), (ax, self.GROUND), self.SCALE, wind_amp=8, breathe=0, mblur=(0, 0))
+            for (t0_, p0, p1, wd, sd) in ((ts, (ax - 250, 612), (ax + 720, 590), 26, 61),
+                                         (ts2, (ax - 270, 780), (ax + 660, 150), 32, 62)):
+                a_ = t - t0_
+                if a_ < 0: continue
+                g = math.exp(-a_ / 0.55)
+                for sgn, col in ((1, RED * 0.9), (-1, np.array([0.05, 0.05, 0.06], np.float32))):
+                    band = np.zeros((H // 2, W // 2), np.float32)
+                    off = sgn * 10 * eout(clamp01(a_ / 0.06))
+                    y0b, y1b = p0[1] + off + sgn * 4, p1[1] + off + sgn * 4
+                    cv2.fillPoly(band, [np.array([(p0[0] / 2, y0b / 2), (p1[0] / 2, y1b / 2),
+                                                  (p1[0] / 2, (y1b + sgn * 24) / 2), (p0[0] / 2, (y0b + sgn * 24) / 2)], np.int32)], 1.0, cv2.LINE_AA)
+                    wb = cv2.resize(band, (W, H))[..., None] * 0.7 * g
+                    fr = fr * (1 - wb) + col * wb
+                fr = brush(fr, p0, p1, clamp01(a_ / 0.07), wd, fade=g, seed=sd, splat=16)
+                if a_ < 0.09:
+                    fr = fr * (1 + 0.85 * (1 - a_ / 0.09)) + 0.08 * (1 - a_ / 0.09)
+            a1 = t - ts; a2 = t - ts2
+            if a1 >= 0:
+                fr = sparks2(fr, t, 663, (ax + 430, 600), n=55, life=0.5, speed=(400, 1300), dirc=(1, -0.2), spread=0.8, grav=900,
+                             burst=True, t0=ts, area=(120, 30), amt=0.9)
             if a2 >= 0:
-                fr = brush(fr, (ax - 220, 760), (ax + 680, 150), a2 / 0.07, 30, fade=1 - clamp01((a2 - 0.1) / 0.35), seed=62)
-                fr = sparks2(fr, t, 663, (ax + 420, 330), n=60, life=0.5, speed=(400, 1300), dirc=(1, -0.6), spread=0.9, grav=900,
-                             burst=True, t0=ts2, area=(80, 40), amt=0.9)
-            if 0 <= a < 0.07: fr = fr * 1.45 + 0.05
-            if 0 <= a2 < 0.07: fr = fr * 1.25 + 0.03
-            xs = -1500 * math.tan(th) * 1.3
-            fr, _ = blit(fr, self.spP * 0.35, self.spA, affine((1024, 576), (960 + xs, 520), 1.3))
-            fr = ink_rain(fr, t, self.rs, 0.7, angle=10, layers=(2,))
-            return fr, (5 if (0 <= a < 0.1 or 0 <= a2 < 0.1) else 0)
+                fr = sparks2(fr, t, 673, (ax + 380, 420), n=60, life=0.5, speed=(400, 1300), dirc=(1, -0.8), spread=0.9, grav=900,
+                             burst=True, t0=ts2, area=(90, 40), amt=0.9)
+            sk = pulse(t, ts, 0.09) * (t >= ts) + 0.9 * pulse(t, ts2, 0.09) * (t >= ts2)
+            dx, dy, dr = K.shake(t, 13 * sk + 1.2, 15, 966)
+            z = 1.0 + 0.03 * eio(u) + 0.025 * sk
+            fr = ink_rain(fr, t, self.rs, 0.30, angle=12, layers=(0, 2), cam=(10 * m, 0))
+            return K.cam(fr, z, dx, dy, dr), (5 if (0 <= a1 < 0.08 or 0 <= a2 < 0.08) else 0)
     out['V06'] = V06D
 
     # V07 22.50–23.43 LS 仰拍宫阶（风格 D 生图：殿门白光大逆光、黑檐压顶、两列血红宫灯）；丹陛顶边 y=600 接 V06 横刀光（匹配剪辑）；
@@ -748,6 +818,8 @@ def apply(mod):
     mod.TITLE = TitleD()
     for sid in MINE[:-1]:                                              # V07 在 V07D.__init__ 里按 V08 设（见那里）
         mod.EXPO[sid] = 1.0 / mod.EXPO_ALL                            # 抵消段落 EXPO_ALL=1.15 提亮，保留生图本身的白纸 / 网点层次
+    mod.EXPO['V01'] = mod.EXPO['V01'] * 1.30                                   # 评审 P1-6：V01 墨云占满画面、偏暗 → 提到 ≥65
+    mod.EXPO['V03'] = mod.EXPO['V03'] * 1.20
     mod.FG.update({'A06': ('ash', 0.4), 'V07': ('ash', 0.3)})          # 金 / 橙火星前景 → 灰烬（火星由镜头自己画白 + 血红）
     mod.MOVES3['V06'] = mod.M3('sine_io', None, z=(1.05, 1.03), yaw=(-6, 6), note='风格 D：去掉 expo_out 急拉（径向模糊把前 3 帧整帧糊掉），冲击由镜内刀光 / 曝光脉冲 / 硬切冲击承担')
     n, pre, post, kw = mod.CUTS['V07']

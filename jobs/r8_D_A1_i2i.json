@@ -1,0 +1,156 @@
+{
+ "A08_w2": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: passing position of a walk seen from behind: his left foot flat on the ground carrying his weight directly under his body, the right leg swinging forward past it with the right knee bent and the right heel lifted, body slightly higher, robe hem swaying.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/ef10757a-2dce-4379-a59c-244b8775ee1c.png"
+  ]
+ },
+ "A08_w3": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: contact position of a walk seen from behind: the RIGHT foot now forward, its heel just touching the ground, the left foot behind with the left heel lifted onto the toes, body slightly lower, arms swinging opposite, robe hem and red sash swaying the other way.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/ef10757a-2dce-4379-a59c-244b8775ee1c.png"
+  ]
+ },
+ "A08_w4": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: passing position of a walk seen from behind: his right foot flat on the ground carrying his weight directly under his body, the left leg swinging forward past it with the left knee bent and the left heel lifted, body slightly higher, robe hem swaying.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/ef10757a-2dce-4379-a59c-244b8775ee1c.png"
+  ]
+ },
+ "V04_w2": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: passing position of a walk toward the camera: his left foot flat on the ground under his body carrying the weight, the right leg swinging forward with the knee bent and the foot lifted off the ground, body slightly higher, right hand still on the sword hilt.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/0dbfe37e-2093-4b57-bf39-55e131dedf00.png"
+  ]
+ },
+ "V04_w3": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: contact position of a walk toward the camera: the RIGHT foot now forward with its heel striking the ground, the left foot behind lifted onto the toes, body slightly lower, shoulders turned a little the other way, right hand still on the sword hilt.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/0dbfe37e-2093-4b57-bf39-55e131dedf00.png"
+  ]
+ },
+ "V04_w4": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: passing position of a walk toward the camera: his right foot flat on the ground under his body carrying the weight, the left leg swinging forward with the knee bent and the foot lifted off the ground, body slightly higher, right hand still on the sword hilt.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/0dbfe37e-2093-4b57-bf39-55e131dedf00.png"
+  ]
+ },
+ "V06_k1": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: the instant of a powerful horizontal slash toward the right: both feet still planted in the same wide stance, torso whipped around to the right, the right arm fully extended to the right holding the straight sword perfectly level at chest height, left arm thrown back for balance, hair and red sash flung by the motion.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/5392763b-1294-46aa-8459-8ac81e70057f.png"
+  ]
+ },
+ "V06_k2": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: recovery after a horizontal slash: same wide stance, the sword pulled back across his body to his left hip with both hands, blade pointing back and low behind him, knees bent deeper, coiled for the next strike, eyes fixed forward to the right.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/5392763b-1294-46aa-8459-8ac81e70057f.png"
+  ]
+ },
+ "V06_k3": {
+  "model": "nano-banana-pro",
+  "prompt": "Edit this image. Keep exactly the same character, same face, hair, costume, sword and red sash, same art style (black-white-blood-red manga ink, screentone), same camera angle, same framing, same scale and the same position in the frame, same flat pure chroma-key green (#00FF00) background with no shadows. Change ONLY his pose to the next step of the motion: the instant of a rising diagonal slash: same feet positions, body stretched upward from the wide stance, the straight sword swept up high to the upper right with the right arm extended overhead, hair and red sash whipping upward.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/5392763b-1294-46aa-8459-8ac81e70057f.png"
+  ]
+ },
+ "V04_bg2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no hero. Low-angle view down a long rainy stone street at night; in the misty middle distance a dark wall of ancient Chinese Tang-Song dynasty soldiers in lamellar armor made of small overlapping iron plates laced together, round Chinese lamellar helmets with neck flaps and a small blood-red tassel on top (NOT European closed helmets, no visors, no knights) standing in tight ranks with a forest of upright spears and blood-red war banners, every soldier standing on the same wet ground plane and receding in perspective toward a single vanishing point at the center; wet stones reflect them; rain in fine black pen lines; white-grey mist. No close buildings, no moon, no sun.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "V06_bg2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no hero. Eye-level view of the front ranks of an army of ancient Chinese Tang-Song dynasty soldiers in lamellar armor made of small overlapping iron plates laced together, round Chinese lamellar helmets with neck flaps and a small blood-red tassel on top (NOT European closed helmets, no visors, no knights) standing in rain at night, holding long spears and halberds upright, ranks receding into mist along one flat ground plane toward a single vanishing point, drawn in black ink and screentone with white rim light on the armor plates, wet ground in the foreground. No moon, no sun, no buildings.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "V02_boot2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Low-angle extreme close-up at ground level of Gui Tu (keep exactly the face, hair and costume of the reference model sheet)'s right foot stamping down into a rain puddle on wet stone paving: an ancient Chinese black cloth-soled long boot (soft black cloth upper wrapped to the shin, thick flat white-edged layered cloth sole, no rubber tread, no modern laces), the sole landing flat, a crown of white water splash bursting up around it, ripples spreading, the hem of his black robe with red lining falling over the boot top, the left boot behind lifting on its toes. Real contact with the ground: dark contact shadow under the sole. Background plate included: wet night street, rain in fine black pen lines.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg"
+  ]
+ },
+ "A06_bg2": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Background plate only, no characters, no mountains, no buildings. A colossal blood-red moon rising behind a layered bank of manga storm clouds, the moon low and slightly left of center, half hidden by black ink cloud bands that cut across it in horizontal strokes, white paper sky with screentone dots above, thin white rim light on the cloud edges. No sun.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K"
+ },
+ "V07_tsh_half": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/a1c44d64-5ccc-4aa8-a42e-5abf8c48fdf9.png",
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/68023565-40d4-4a36-acc1-7a6404184505.jpg"
+  ],
+  "prompt": "Using the first image as the scene and the second image as the character model sheet: re-frame as a low-angle MEDIUM CLOSE-UP of the same Retired Emperor from the chest up, filling most of the frame height, keep exactly the face, hair and costume of the model sheet: no beard, no crown, small topknot pierced by a single black hairpin, long black hair streaked with silver-white strands, gaunt narrow face with deep wrinkles, heavy eye bags, half-lidded cold eyes looking down at the viewer, thin down-turned lips, black semi-transparent gauze robe. Strong white backlight from behind with crisp white rim light on his hair and shoulders. Same black-white-blood-red manga ink style with screentone. Flat pure chroma-key green (#00FF00) background with no shadows."
+ },
+ "V02_lift": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/4b41d768-23d9-46db-9a6b-01ea579fafca.png"
+  ],
+  "prompt": "Edit this image. Keep exactly the same scene, camera angle, framing, wet street, puddle, lighting and art style (black-white-blood-red manga ink, screentone). Change ONLY the moment: one beat BEFORE the step — the same right boot is lifted about a hand-width above the puddle, sole tilted slightly toward camera, water dripping from the sole, the puddle surface calm and mirror-like with no splash yet, the left boot behind flat on the ground carrying his weight, robe hem swinging forward."
+ },
+ "V02_boot3": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/937490a6-7ed1-4be3-b312-7eaa67247605.png"
+  ],
+  "prompt": "Edit this image. Keep exactly the same scene, camera angle, framing, wet street, puddle, splash, lighting and art style (black-white-blood-red manga ink, screentone). Change ONLY the footwear to match a Chinese swordsman: black cloth-soled long boots — soft black cloth upper wrapped tightly to the shin with cross-bound cloth strips, the sole a thick flat edge of LAYERED WHITE CLOTH, completely flat with NO tread pattern, NO rubber, NO rubber toe cap, NO modern shoe silhouette. The same foot keeps stamping into the puddle with the same crown of splash."
+ },
+ "V02_lift2": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/9d4ab8e3-d517-46ed-a353-0ac614c5ebd1.png"
+  ],
+  "prompt": "Edit this image. Keep exactly the same scene, camera angle, framing, Chinese cloth-soled long boot, wet street, puddle, lighting and art style (black-white-blood-red manga ink, screentone). Change ONLY the moment: one beat BEFORE the stamp — the same right boot is lifted about a hand-width above the puddle, sole tilted slightly toward the camera, water dripping from the layered white cloth sole, the puddle surface calm and mirror-like with NO splash, the left boot behind flat on the ground carrying his weight, robe hem swinging forward."
+ },
+ "V02_lift3": {
+  "model": "nano-banana-pro",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/11/9248cce2-0e9d-40be-8923-9ce1db2aa99a.png"
+  ],
+  "prompt": "Edit this image. Keep exactly the same scene, camera angle, framing, wet street, puddle, lighting and art style. Change ONLY the moment and the boot being shown: one beat BEFORE the stamp. The camera now sees the CLOTH-SOLED boot from the OUTER SIDE, raising the boot so the sole faces away from the camera and is barely visible at all — we see the black wrapped cloth upper in profile, the ankle and shin wrappings, and a thin flat edge of layered white cloth at the bottom rim (completely smooth, plain, absolutely no tread grooves, no rubber, no visible underside). Water drips from the boot. The puddle below is calm and mirror-like with NO splash. The other boot stays flat on the ground behind, carrying his weight."
+ }
+}
