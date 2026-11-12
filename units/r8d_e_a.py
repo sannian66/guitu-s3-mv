@@ -9,7 +9,7 @@
           EA_topground（俯拍焦土）、EA_check（✓ 白纸 + 红日）、EA_cross（✗ 朱红底）
   抠像：EA_sun（血红日）、EA_ridge（前景山脊）、EA_line（贴地火线一点透视）、EA_blade（竖刀）、EA_plaque（「天理昭彰」匾）、
         EA_tablet（「天理」木律令牌）、EA_E12（「鬼屠」朱印 + 印心插刀，同一张图）、EA_shreds（碎纸）、
-        EA_emperor / EA_effigy（太上皇 / 纸扎）、主角 EA_E02 E09 E11 E12man E13 E14 E16 E17 E19 E21 E22 E23 E25
+        EA_emperor / EA_effigy（太上皇 / 纸扎）、主角 EA_E02 E09b E11 E12man E13 E14 E16 E17 E19 E21 E22 E23 E25
 保留的字（都在生图里，代码只做点亮 / 揭开 / 盖印）：E04/E05「天理昭彰」匾、E12「鬼屠」印（剑与印同图生成）、
   E14T/E15「天理」木牌、E16 ✓ / E17 ✗ / E18 ✓✗。其余画面字全部去掉（原 E01 血、E02 刀不放印、E03 世间从来没有、E06 若规则是、
   E07 谎言、E08 伪装、E09 那就撕碎、E10 它自己、E11 定、E12 自己定规章、E13 血、E19 何须伪装、E20 天、E21 我、E22 我来量、
@@ -151,6 +151,18 @@ def flipped(sp):
 def _wind(w):
     """SPREAD §12.3：置换只做弱的——幅度压到原来的 45%、上限 4.5px（精灵 wind_w 只在发梢 / 衣带边缘非零，脸和身体不动）。"""
     return min(4.5, 0.45 * w)
+
+
+def shadow_gray(im, floor=0.30, dk=0.45, freq=1.45):
+    """SPREAD §10.1：低调光镜的暗部抬到网点灰——L<floor 的区域按权重换成 floor 的网点，
+    亮部（光柱、白纸、保留的字）基本不动，暗部不再是一片死黑。"""
+    yy, xx = grid()
+    d = (np.sin(xx * freq) * np.sin(yy * freq) > 0.45).astype(np.float32)
+    d = cv2.GaussianBlur(d, (0, 0), 0.65)[..., None]
+    L = im.mean(-1, keepdims=True)
+    w = np.clip((floor - L) / max(floor, 1e-3), 0, 1) ** 0.8
+    tone = floor * (1 - dk * d)
+    return np.ascontiguousarray(im * (1 - w) + tone * w, np.float32)
 
 
 def put(fr, sp, t, h, foot, wind=6.0, breathe=0.004, **kw):
@@ -689,6 +701,7 @@ class E04(Shot):
     def render(self, t):
         u = self.u(t); pv = u - 0.5
         fr = warp_plate(self.bg, 1.08, 960 + 30 * pv * 0.3, 560)
+        fr = shadow_gray(fr, floor=0.43, dk=0.40)                           # §10.1 暗殿暗部抬到网点灰
         lit, fl = self.lit(t)
         sp = lit_plaque(self.pl, lit, fl)
         fr, A = put_at(fr, sp, t, (0.5, 0.49), (960, 470), 1320 / 2048 / 0.945, wind=0, breathe=0)
@@ -874,6 +887,7 @@ class E08(Shot):
     def render(self, t):
         u = self.u(t)
         fr = warp_plate(self.img, 1.0 + 0.02 * u, 960, 540 - 8 * u)
+        fr = shadow_gray(fr, floor=0.34, dk=0.40)                           # §10.1 纸面暗部抬到网点灰（烧洞黑保留）
         R = self.radius(t)
         if R >= 0:
             F = self.D - R
@@ -901,24 +915,15 @@ class E08(Shot):
 
 # ==================================================================== E09 S118 MS 交叉斩：挂轴沿刀线断开（203.40–204.33）
 class E09(Shot):
-    """挂轴林（E06 同一背景板）+ 斩击全身（生图，自带血红干笔刀弧）：「撕」字头前主角在起势（旋转 +8°、动态模糊），
+    """挂轴林（E06 同一背景板）+ 斩击全身（生图，动作收势、剑身低垂向右下，无自带刀弧）：「撕」字头前主角在起势（旋转 +8°、动态模糊），
     字头硬切到斩完姿势 + 一帧反白冲击 + 干笔飞白斩痕贯穿全画面 + 背景挂轴沿刀线断开下坠（断口血红）+ 火星 + 震屏。"""
     P0, P1 = (180.0, 230.0), (1760.0, 900.0)
 
     def __init__(self):
         self.bg = plate('EA_E06', blur=1.5, gain=1.05)
-        sp = spr('EA_E09')
-        # P1-9：生图自带的血红刀弧不是「刀光」，是一块死像素——先从精灵里抹掉（换成同亮度的中性灰，接缝由干笔飞白盖住），
-        # 刀光改由代码画：斩后沿同一道弧线刷出干笔白芯 + 血红外沿。
-        F = sp.F
-        red = (F[..., 0] - np.maximum(F[..., 1], F[..., 2]) > 0.18) & (F[..., 0] > 0.2)
-        red = cv2.dilate(red.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(np.float32)
-        red = cv2.GaussianBlur(red, (0, 0), 2.0)[..., None]
-        lum = F.mean(-1, keepdims=True)
-        grey = np.clip(lum * 1.02, 0, 1) * np.ones(3, np.float32)
-        self.sp = sub_layer(sp, 1.0)
-        self.sp.F = np.ascontiguousarray(F * (1 - red) + grey * red, np.float32)
-        self.arcmask = np.ascontiguousarray(np.clip(red[..., 0] * 1.6, 0, 1), np.float32)   # 原刀弧所在的像素（屏幕空间里再按变换取）
+        # 11-12 重抽：动作收势姿势，生图不带刀弧（不再需要把红斑抹成灰，红带/红袖保留原色）；
+        # 刀光完全由代码画在精灵之上。
+        self.sp = spr('EA_E09b')
         self.ts = CT(51, 2)
 
     def render(self, t):
@@ -935,9 +940,9 @@ class E09(Shot):
         foot = (930 - 30 * u, 1000)
         if q < 0:
             k = c01((t - self.t0) / max(1e-3, self.ts - self.t0))
-            fr, A = put(fr, self.sp, t, 860, (foot[0] + 40 * (1 - k), foot[1]), wind=8.0, rot=8 * (1 - k), mblur=(40 * (1 - k), -25 * (1 - k)))
+            fr, A = put(fr, self.sp, t, 920, (foot[0] + 40 * (1 - k), foot[1]), wind=8.0, rot=8 * (1 - k), mblur=(40 * (1 - k), -25 * (1 - k)))
         else:
-            fr, A = put(fr, self.sp, t, 860, foot, wind=8.0)
+            fr, A = put(fr, self.sp, t, 920, foot, wind=8.0)
         if -0.04 <= q < 0.4:
             fr = ink_slash(fr, self.P0, self.P1, eout((q + 0.04) / 0.08), 1 - c01((q - 0.12) / 0.28), width=60, seed=91)
         # 刀光（代码画）：斩后 0.1s 起沿一道下压的弧抡出，0.5s 内渐隐；干笔白芯 + 血红外沿，压在精灵之上
