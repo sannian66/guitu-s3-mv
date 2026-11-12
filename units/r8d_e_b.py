@@ -7,7 +7,8 @@
   - E31（S134）灼烧露出的「天」「理」「规」「章」「律」—— 画进生图 EB_scraps（逐字放大核对），代码只做「灰烬烧开、露出字」的动画。
   - 片名「谁定正邪」/「鬼屠 · 第二季」/「主题曲《谁定正邪》」、6 行出品署名、「鬼屠」印章 —— 合同要求（HANDOFF §1），保留；
     改为宣纸墨书（墨晕洇开，无描边/投影/外发光的电脑字效果），「邪」与印章血红，不用金。
-  - 其余画面字一律不出（E27c 匾只给背面，不出「天理昭彰」）。
+  - E27c「天理昭彰」匾字（用户 11-11 要求看到）：画进生图 EB_plaque_front，代码只做斩开 —— 斩线落在「理｜昭」字缝。
+  - 其余画面字一律不出。
 """
 import math, os, zlib
 import numpy as np, cv2
@@ -52,23 +53,138 @@ def plate(name, flip=False, blur=0.0, gain=1.0):
     return _P[k]
 
 
+def plate4(name):
+    """4K 背景板（3840×2160 原分辨率；配 view4 取景，推近不糊）。"""
+    k = ('4k', name)
+    if k not in _P:
+        _P[k] = cv2.cvtColor(cv2.imread(D + name + '.png'), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
+    return _P[k]
+
+
+def view4(img, z=1.0, cx=W / 2, cy=H / 2, rot=0.0):
+    """4K 板按 1920 坐标取景：z=1 = 整幅铺满画面。"""
+    k = img.shape[1] / W
+    return view(img, z / k, cx * k, cy * k, rot)
+
+
 _L = {}
-def lay(name, flip=False, base=D):
-    """精灵层（绿幕抠像 *_cut.png）；flip 水平翻转（同 c_kit.spr 的做法，只读共享数组拷贝一份）。"""
-    k = (base + name, flip)
+def lay(name, flip=False, base=D, feather=0):
+    """精灵层（绿幕抠像 *_cut.png）；flip 水平翻转（同 c_kit.spr 的做法）。
+    feather>0：alpha 碰到画布边的地方按噪声形状羽化掉 feather px（用户硬规则：任何图层不得露出裁切直边）。"""
+    k = (base + name, flip, feather)
     if k not in _L:
-        L = SP.SpriteLayer(base + name + '_cut.png') if flip else SP.layer(base + name + '_cut.png')
+        L = SP.SpriteLayer(base + name + '_cut.png') if (flip or feather) else SP.layer(base + name + '_cut.png')
         if flip:                                                                                 # 翻转写法同 c_kit.spr（新实例，不改共享缓存）
             for a in ('A', 'F', 'wind_w', 'ring'): setattr(L, a, np.ascontiguousarray(getattr(L, a)[:, ::-1]))
             x0, y0, x1, y1 = L.bbox; L.bbox = (1 - x1, y0, 1 - x0, y1); L.top = (1 - L.top[0], L.top[1])
+        if feather:
+            h, w = L.A.shape
+            yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+            dmin = np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy))
+            nz = cv2.resize(np.random.default_rng(len(name)).random((h // 24 + 2, w // 24 + 2)).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+            A2 = L.A * np.clip((dmin - feather * (0.4 + 0.9 * nz)) / (feather * 0.5), 0, 1)
+            L.A = np.ascontiguousarray(A2).astype(np.float32)
+            ys, xs = np.nonzero(L.A > 0.5)                                                        # 羽化后重算包围盒 / 最高点 / 描边环（否则落脚与身高偏）
+            if len(xs):
+                L.bbox = (xs.min() / w, ys.min() / h, xs.max() / w, ys.max() / h)
+                L.top = (xs[ys.argmin()] / w, ys.min() / h)
+            L.ring = cv2.GaussianBlur(np.clip(L.A - cv2.erode(L.A, np.ones((5, 5), np.uint8)), 0, 1), (0, 0), 1.5)
+        L._path = name
         _L[k] = L
     return _L[k]
+
+
+EDGE_LOG = []
+EV_LOG = []
+def edge_check(L, M2, tag):
+    """EB_EDGECHECK=1：精灵画布上 alpha>0 的边界点映射到画面后不得落进可见区（画幅 0..W × BAR..H-BAR，留 4px），否则记一条。"""
+    if os.environ.get('EB_EDGECHECK') != '1': return
+    A = L.A; h, w = A.shape
+    pts = []
+    for (ys, xs) in ((np.zeros(w, int), np.arange(w)), (np.full(w, h - 1), np.arange(w)), (np.arange(h), np.zeros(h, int)), (np.arange(h), np.full(h, w - 1))):
+        m = A[ys, xs] > 0.06
+        pts += list(zip(xs[m], ys[m]))
+    if not pts: return
+    P = np.float32(pts) @ M2[:, :2].T + M2[:, 2]
+    vis = (P[:, 0] > 4) & (P[:, 0] < W - 4) & (P[:, 1] > BAR + 4) & (P[:, 1] < H - BAR - 4)
+    if vis.any(): EDGE_LOG.append((tag, int(vis.sum())))
 
 
 def draw(fr, L, t, src_px, dst, s, **kw):
     """src_px：精灵像素坐标（2048 宽工作分辨率）→ 画面 dst；s = 画面像素 / 精灵像素。"""
     a = dict(KW); a.update(kw)
+    if os.environ.get('EB_EDGECHECK') == '1':
+        Mx = cv2.getRotationMatrix2D((float(src_px[0]), float(src_px[1])), a.get('rot', 0.0), s); Mx[0, 2] += dst[0] - src_px[0]; Mx[1, 2] += dst[1] - src_px[1]
+        edge_check(L, Mx, '%s@%.3f' % (os.path.basename(str(getattr(L, '_path', '?'))), t))
     return L.draw(fr, t, (src_px[0] / L.w, src_px[1] / L.h), dst, s, **a)
+
+
+def draw_fit(fr, L, t, foot, h, **kw):
+    """按包围盒高度落脚（put / fit 的写法）。"""
+    a_, s_ = L.fit(h)
+    return draw(fr, L, t, (a_[0] * L.w, a_[1] * L.h), foot, s_, **kw)
+
+
+_NF = {}
+def _noise2(seed, t, rate=0.7, gh=5, gw=9):
+    """低频、随时间缓慢变化的 2 通道噪声场（约 -1..1）：粗网格随机数按 t*rate 在相邻两帧间 smoothstep 插值，再三次插值放大。
+    rate 小 = 变化慢（0.6–0.9，1 秒才换 0.6–0.9 个网格）。"""
+    q = t * rate; k0 = int(math.floor(q)); f = q - k0; f = f * f * (3 - 2 * f)
+    out = []
+    for k in (k0, k0 + 1):
+        key = (seed, k, gh, gw)
+        if key not in _NF:
+            g = np.random.default_rng(int(seed) * 1009 + k).uniform(-1, 1, (gh, gw, 2)).astype(np.float32)
+            _NF[key] = cv2.resize(g, (W, H), interpolation=cv2.INTER_CUBIC)
+            if len(_NF) > 48: _NF.pop(next(iter(_NF)))
+        out.append(_NF[key])
+    return out[0] * (1 - f) + out[1] * f
+
+
+def flutter(z, A, t, amp, band=36.0, seed=0, hair=1.0, cloth=1.0, red=1.0, wdir=(-1.0, 0.0)):
+    """二级运动（用户 20:05：「湍流置换波浪太假」）：对透明底人物层 (z 预乘, A) 做**低振幅（2–5px）、低频、
+    随时间缓慢变化**的噪声位移；只在轮廓内外 band px 的带里生效——躯干内部、脸、刀身一律不动。
+    发丝（上部深色）/ 衣摆（下部）/ 红带（血红）各用一张独立噪声场驱动，互不同相；不加规则正弦（不会整张脸「水波」）。"""
+    if amp <= 0: return z, A
+    m = (A > 0.5).astype(np.uint8)
+    din = cv2.distanceTransform(m, cv2.DIST_L2, 5)
+    edge = np.clip(1 - din / band, 0, 1) ** 1.5                                              # 轮廓内 band 宽的带
+    ys, xs = np.nonzero(m)
+    if not len(ys): return z, A
+    top, bot = ys.min(), ys.max(); hh = max(1, bot - top)
+    yy = np.arange(H, dtype=np.float32)[:, None]
+    C = z / np.maximum(A, 1e-3)[..., None]
+    lum = C.mean(-1); redm = np.clip((C[..., 0] - np.maximum(C[..., 1], C[..., 2])) * 3, 0, 1)
+    skin = np.clip((lum - 0.55) * 5, 0, 1) * (1 - redm)                                       # 肤色 / 亮面（脸、手）：不动
+    up = 1 - np.clip((yy - top - 0.45 * hh) / (0.15 * hh), 0, 1)
+    low = np.clip((yy - top - 0.55 * hh) / (0.20 * hh), 0, 1)
+    sup = cv2.dilate(A, np.ones((int(band) | 1, int(band) | 1), np.uint8))                     # 轮廓外一圈（飘出去的发梢）
+    wh = cv2.GaussianBlur((up * (1 - redm) * (lum < 0.35)).astype(np.float32), (0, 0), 5) * hair
+    wc = cv2.GaussianBlur((low * (1 - redm)).astype(np.float32), (0, 0), 5) * cloth
+    wr = cv2.GaussianBlur(redm * A, (0, 0), 5) * red
+    base = edge * sup * (1 - skin)
+    N1, N2, N3 = _noise2(seed + 1, t, 0.8), _noise2(seed + 2, t, 0.6), _noise2(seed + 3, t, 0.9)
+    dx = (wh * N1[..., 0] + wc * N2[..., 0] + wr * N3[..., 0] * 1.3 + (wh + wr) * 0.35 * wdir[0]) * base * amp
+    dy = (wh * N1[..., 1] + wc * N2[..., 1] * 0.5 + wr * N3[..., 1]) * base * amp * 0.7
+    dx = cv2.GaussianBlur(dx.astype(np.float32), (0, 0), 6); dy = cv2.GaussianBlur(dy.astype(np.float32), (0, 0), 6)
+    yg, xg = E.grid()
+    mx = (xg - dx).astype(np.float32); my = (yg - dy).astype(np.float32)
+    return cv2.remap(z, mx, my, cv2.INTER_LINEAR), cv2.remap(A, mx, my, cv2.INTER_LINEAR)
+
+
+def hard_star(fr, c, r, amt=1.0, n=8, rot=0.0, col=(1.0, 1.0, 1.0)):
+    """墨线星芒：硬边白色尖刺（无高斯光晕），四长四短，外加一圈墨线勾边。"""
+    if amt <= 0.02 or r < 2: return fr
+    Lw = np.zeros((H, W), np.float32)                                                       # 1:1 画布（不要 *8 再缩小 —— 会整块落进画布外）
+    for i in range(n):
+        a = math.radians(rot + i * 360.0 / n); ln = r * (1.0 if i % 2 == 0 else 0.45); wd = r * (0.06 if i % 2 == 0 else 0.04)
+        tip = (c[0] + math.cos(a) * ln, c[1] + math.sin(a) * ln)
+        b1 = (c[0] + math.cos(a + 1.5708) * wd, c[1] + math.sin(a + 1.5708) * wd); b2 = (c[0] - math.cos(a + 1.5708) * wd, c[1] - math.sin(a + 1.5708) * wd)
+        cv2.fillConvexPoly(Lw, np.float32([tip, b1, b2]).astype(np.int32), 1.0, cv2.LINE_AA, 3)
+    cv2.circle(Lw, (int(c[0]), int(c[1])), max(1, int(r * 0.09)), 1.0, -1, cv2.LINE_AA, 3)
+    ink = np.clip(cv2.dilate(Lw, np.ones((5, 5), np.uint8)) - Lw, 0, 1)
+    fr = fr * (1 - (ink * amt * 0.8)[..., None]) + (ink * amt * 0.8)[..., None] * INKC
+    return fr * (1 - (Lw * amt)[..., None]) + (Lw * amt)[..., None] * np.asarray(col, np.float32)
 
 
 def to_scr(L, src_px, dst, s, p, rot=0.0):
@@ -78,7 +194,14 @@ def to_scr(L, src_px, dst, s, p, rot=0.0):
 
 
 def view(img, z=1.0, cx=W / 2, cy=H / 2, rot=0.0):
-    """全幅图层：图上 (cx,cy) 放到画面中心、缩放 z（反射边界）。"""
+    """全幅图层：图上 (cx,cy) 放到画面中心、缩放 z。取景中心夹回图内（倍率 z 本身不动），保证画面不越出图外、
+    不会出现反射接缝或图层直边；确实夹了才记一条 EV_LOG（EB_EDGECHECK=1 时打印）。"""
+    h, w = img.shape[:2]
+    hw, hh = W / (2.0 * z), H / (2.0 * z)
+    cx2 = float(np.clip(cx, hw, max(hw, w - hw))); cy2 = float(np.clip(cy, hh, max(hh, h - hh)))
+    if (abs(cx2 - cx) > 0.5 or abs(cy2 - cy) > 0.5) and os.environ.get('EB_EDGECHECK') == '1':
+        EV_LOG.append(('view clamp', round(cx, 1), round(cy, 1), round(cx2, 1), round(cy2, 1), round(z, 3), (w, h)))
+    cx, cy = cx2, cy2
     Mx = cv2.getRotationMatrix2D((float(cx), float(cy)), rot, z)
     Mx[0, 2] += W / 2 - cx; Mx[1, 2] += H / 2 - cy
     return cv2.warpAffine(img, Mx, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
@@ -172,11 +295,31 @@ from e_r9 import beat_pulse, step_zoom                                          
 
 
 # ------------------------------------------------------------------ 署名（合同署名，HANDOFF §1 一字不差）
-def credit(fr, role, names, x, y, p, color, role_size=32, name_size=66, seal_text=None, seed=None):
+def credit(fr, role, names, x, y, p, color, role_size=42, name_size=84, seal_text=None, seed=None, bed=True):
+    """署名（用户 20:05「文字信息看不清」）：字号加大到职务 42 / 人名 84（原 32 / 66）；bed=True 时先在字块下铺一块干净的底——
+    墨字铺宣纸白（毛边、淡网点边），白字铺墨黑——底与字一起淡入，保证 1080p 下清楚；章也随字号放大。"""
     st = seal_text or (role[0] if names[0][0].isascii() else names[0][0])
     sd = zlib.crc32(role.encode('utf-8')) % 50 if seed is None else seed
-    return R3.credit_block_up(fr, role, names, x, y, p, role_size=role_size, name_size=name_size, seal_text=st,
-                              seal_size=46, color=color, name_font='kai', seed=sd)
+    kw = dict(role_size=role_size, name_size=name_size, seal_text=st, seal_size=int(name_size * 0.62), color=color, name_font='kai', seed=sd)
+    if bed:
+        ink = color != 'white'
+        base = np.full((H, W, 3), 1.0 if ink else 0.0, np.float32)
+        g = R3.credit_block_up(base.copy(), role, names, x, y, 1.0, **kw)
+        m = np.clip(np.abs(g - base).max(-1) * 3, 0, 1)
+        if m.max() > 0:
+            k = ('bed', role, x, y, int(ink))
+            if k not in _P:
+                ys_, xs_ = np.nonzero(m > 0.05)
+                pad = int(name_size * 0.5)
+                bx0, by0, bx1, by1 = xs_.min() - pad, ys_.min() - pad, xs_.max() + pad, ys_.max() + pad
+                yy, xx = E.grid()
+                nz = cv2.resize(np.random.default_rng(sd).random((H // 24 + 2, W // 24 + 2)).astype(np.float32), (W, H), interpolation=cv2.INTER_CUBIC)
+                d = np.minimum.reduce([xx - bx0, bx1 - xx, yy - by0, by1 - yy]) + (nz - 0.5) * pad * 0.9          # 毛边纸块
+                _P[k] = (np.clip(d / (pad * 0.55), 0, 1) * np.clip((bx1 - bx0) / 320, 0.35, 1)).astype(np.float32)
+            b = _P[k] * eout(c01(p * 3))
+            col = np.float32([0.975, 0.975, 0.965]) if ink else np.float32([0.025, 0.025, 0.025])
+            fr = fr * (1 - b[..., None] * 0.94) + col * b[..., None] * 0.94
+    return R3.credit_block_up(fr, role, names, x, y, p, **kw)
 
 
 class CreditsD(Shot):
@@ -201,7 +344,7 @@ class CreditsD(Shot):
 # ================================================================== 副歌终章收尾
 class E27a(Shot):   # S132 眼 ECU：EB_eyes（左半脸压在墨影里、右颊血红轮廓光）；入点集中线 + 冲击，镜内急推；发丝随风
     def __init__(self):
-        self.L = lay('EB_eyes')
+        self.L = lay('EB_eyes', feather=30)
         yy, xx = E.grid()
         self.bg = (np.zeros((H, W, 3), np.float32) + 0.02) + (np.exp(-((xx - 1500) / 380) ** 2) * 0.9)[..., None] * REDC
 
@@ -220,41 +363,49 @@ class E27a(Shot):   # S132 眼 ECU：EB_eyes（左半脸压在墨影里、右颊
         return fr
 
 
-class E27b(Shot):   # S132x 斩：EB_slash 出刀定姿剪影 + EB_stroke 生图飞白斩痕沿弧线一笔写出（干笔飞白 + 溅墨）；入点两帧反白冲击
+class E27b(Shot):   # S132x 斩（返工：亮底 + 两个关键姿势）：白天血红日（EB_sky）前，EB_stroke 生图飞白斩痕沿弧线一笔写出（墨线勾边，白芯在亮底上也读得出）；
+    #  6658–6659 反白冲击（硬边纯黑剪影 + 只留血红）→ 出刀定姿 EB_slash → 6666 鼓点硬切收势 EB_slash_end（起身、刀尖垂向右下）；发梢 / 红带二级飘动
+    T_END = 6666 / 30
+
     def __init__(self):
-        self.L = lay('EB_slash'); self.S = lay('EB_stroke')
-        n = cv2.resize(K.fbm(H // 4, W // 4, 2710, base=5, octaves=5), (W, H))
-        self.bg = (0.025 + 0.05 * n)[..., None] * np.ones(3, np.float32)
-        yy, xx = E.grid()
-        self.bg = self.bg + (np.exp(-(((xx - 1400) / 700) ** 2 + ((yy - 300) / 420) ** 2)) * 0.55)[..., None] * REDC
-        self.sx = np.ascontiguousarray(np.broadcast_to(self.S.gx / max(1, self.S.w - 1), (self.S.h, self.S.w))).astype(np.float32)                       # 笔画沿 x 的进度
+        self.L = lay('EB_slash'); self.L2 = lay('EB_slash_end', feather=12); self.S = lay('EB_stroke')
+        self.bg = view4(plate4('EB_sky'), 1.30, 1060, 470)
+        self.sx = np.ascontiguousarray(np.broadcast_to(self.S.gx / max(1, self.S.w - 1), (self.S.h, self.S.w))).astype(np.float32)
 
     def render(self, t):
         u = self.u(t); a = t - self.t0; k = int(round(a * FPS))
-        pr = eout(c01(a / 0.20), 3)                                                             # 斩痕 0.2s 写完
+        pr = eout(c01(a / 0.20), 3)
         head = 0.02 + 1.03 * pr
         ext = np.clip((head - self.sx) / 0.04, 0, 1)
-        fr = self.bg.copy()
-        ss = W / self.S.w * 1.06
-        z, As = draw(np.zeros_like(fr), self.S, t, (1024, 576), (960 + 30 * (u - 0.5), 520), ss, breathe=0, wind_amp=0, extra_A=None)
-        # 写出遮罩：在精灵空间按 x 进度裁切，再按同一仿射搬到画面
-        Mx = cv2.getRotationMatrix2D((1024.0, 576.0), 0, ss); Mx[0, 2] += 960 + 30 * (u - 0.5) - 1024; Mx[1, 2] += 520 - 576
+        fr = view(self.bg, 1.06 + 0.02 * u, 960 + 20 * (u - 0.5), 540)
+        ss = W / self.S.w * 1.06; dst = (960 + 30 * (u - 0.5), 520)
+        z, As = draw(np.zeros_like(fr), self.S, t, (1024, 576), dst, ss, breathe=0, wind_amp=0)
+        Mx = cv2.getRotationMatrix2D((1024.0, 576.0), 0, ss); Mx[0, 2] += dst[0] - 1024; Mx[1, 2] += dst[1] - 576
         ew = cv2.warpAffine(ext, Mx, (W, H))
         Aw = As * ew
         Fz = z / np.maximum(As, 1e-3)[..., None]
+        ink = np.clip(cv2.dilate(Aw, np.ones((5, 5), np.uint8)) - Aw, 0, 1)                    # 斩痕墨线勾边
+        fr = fr * (1 - 0.9 * ink[..., None]) + INKC * 0.9 * ink[..., None]
         fr = fr * (1 - Aw[..., None]) + Fz * Aw[..., None]
-        hx = to_scr(self.S, (1024, 576), (960 + 30 * (u - 0.5), 520), ss, (head * self.S.w, 0))[0]
-        # 笔头白热（只在写出过程中）
-        if pr < 0.98:
-            yy, xx = E.grid()
-            hg = np.exp(-((xx - hx) / 60) ** 2) * Aw * (1 - pr)
-            fr = fr + hg[..., None] * 1.2
-        # 人物：出刀定姿，随斩痕落地（微滑入 + 横向模糊衰减），刀尖在斩痕尾端
+        # 人物：出刀定姿（滑入 + 横向模糊衰减）→ 鼓点硬切收势；发梢 / 红带二级飘动
         sp = 1 - eout(c01(a / 0.12), 2)
-        fr, A = draw(fr, self.L, t, (1072, 1146), (720 - 50 * sp, 1010), 880 / 1141, mblur=(int(40 * sp) if k >= 2 else 0, 0), wind_amp=9.0, breathe=0.004)
-        tip = to_scr(self.L, (1072, 1146), (720 - 50 * sp, 1010), 880 / 1141, (1990, 1060))
+        zc = np.zeros_like(fr)
+        if t < self.T_END:
+            zc, A = draw(zc, self.L, t, (1072, 1146), (720 - 50 * sp, 1010), 880 / 1141, mblur=(int(40 * sp) if k >= 2 else 0, 0), wind_amp=6.0, breathe=0)
+        else:
+            zc, A = draw_fit(zc, self.L2, t, (800, 1012), 905, wind_amp=6.0, breathe=0.004)
+        zc, A = flutter(zc, A, t, 4.0, band=40.0, seed=2)
+        fr = fr * (1 - A[..., None]) + zc
+        if t >= self.T_END and t < self.T_END + 2 / 30:                                         # 收势硬切：一帧白边闪
+            fr = fr * 1.12 + 0.05
+        if t < self.T_END:
+            tip = to_scr(self.L, (1072, 1146), (720 - 50 * sp, 1010), 880 / 1141, (1990, 1060))
+        else:
+            a2, s2 = self.L2.fit(905)
+            tip = to_scr(self.L2, (a2[0] * self.L2.w, a2[1] * self.L2.h), (800, 1012), s2, (1345, 925))
         fr = spark2(fr, t, 2720, tip, self.t0 + 0.02, n=70, life=0.55, speed=(500, 1500), dirc=(0.6, -0.5), spread=1.0, grav=1300, area=(30, 20))
-        fr = ash(fr, t, self.t0, 2725, n=40, amt=0.5, drift=(80, -60), red=0.3)
+        fr = ink_spatter(fr, t, 2726, tip, self.t0 + 0.02, n=60, life=0.5, speed=(400, 1300), dirc=(0.7, -0.4), spread=1.2, grav=1200, area=(40, 20))
+        fr = ash(fr, t, self.t0, 2725, n=30, amt=0.45, drift=(80, -60), red=0.3)
         if k < 2:                                                                              # 反白冲击帧：白底、人物硬边纯黑剪影、只留斩痕的血红
             Ah = np.clip((A - 0.35) * 4, 0, 1)
             red = np.clip((Fz[..., 0] - np.maximum(Fz[..., 1], Fz[..., 2])) * 3, 0, 1) * Aw
@@ -262,56 +413,89 @@ class E27b(Shot):   # S132x 斩：EB_slash 出刀定姿剪影 + EB_stroke 生图
             fr = fr * (1 - red[..., None]) + REDC * red[..., None]
             fr = fr * (1 - Ah[..., None]) + 0.015 * Ah[..., None]
         elif k == 2:
-            fr = fr * 1.25 + 0.06
+            fr = fr * 1.15 + 0.04
         return fr
 
 
-class E27c(Shot):   # S132y 匾碎：EB_hall 暗殿（高窗斜光、红墙）+ EB_plaque 匾被一刀两断（只给背面，不出字）：两半各自翻转下坠、断口血红余烬、碎木片扑镜
+class E27c(Shot):   # S132y 匾碎（用户 11-11：「天理昭彰」要看得到字）：EB_plaque_front 墨线黑漆匾，「天理昭彰」白字刻进生图（逐字核对）；
+    #  低角度 3/4 透视（左近右远、仰视），一刀从「理｜昭」字缝斩开（斩线按生图字形蒙版定位，不碰任何笔画），两半各自翻转错开、下坠，
+    #  断口血红余烬 + 白热斩线，碎木片扑镜（EB_plaque 的碎片层），背景 EB_hall 暗殿慢推
+    CUT = ((1078.0, 163.0), (1032.0, 949.0))              # 生图 2048 宽坐标：理 右缘 x≈1001、昭 左缘 x≈1107，斩线全程在字缝内
+    SRC = ((29.0, 163.0), (2021.0, 163.0), (2021.0, 949.0), (29.0, 949.0))   # 匾包围盒四角（2048 宽）
+    DST = ((70.0, 250.0), (1790.0, 175.0), (1820.0, 735.0), (40.0, 895.0))   # 画面：左近右远、轻仰视
+
     def __init__(self):
-        self.bg = plate('EB_hall')
-        P = cv2.cvtColor(cv2.imread(D + 'EB_plaque_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
-        P = cv2.resize(P, (W, H), interpolation=cv2.INTER_AREA)
+        self.bg = np.clip(plate('EB_hall'), 0, 1) ** 0.55                                       # 暗殿提一档（网点中灰，不压成一团黑）
+        P = cv2.cvtColor(cv2.imread(D + 'EB_plaque_front_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
         F, A = P[..., :3], P[..., 3]
-        k, lab, st, cen = cv2.connectedComponentsWithStats((A > 0.04).astype(np.uint8), 8)
-        big = sorted(range(1, k), key=lambda i: -st[i, 4])[:2]
-        big = sorted(big, key=lambda i: cen[i][0])
+        h, w = A.shape
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        (x0, y0), (x1, y1) = self.CUT
+        side = (xx - (x0 + (x1 - x0) * (yy - y0) / (y1 - y0))) > 0                         # True = 右半（昭彰）
+        sd = np.abs(xx - (x0 + (x1 - x0) * (yy - y0) / (y1 - y0)))
+        edge = (np.exp(-(sd / 7.0) ** 2) * A).astype(np.float32)                             # 断口带（生图空间）
+        Mp = cv2.getPerspectiveTransform(np.float32(self.SRC), np.float32(self.DST))
+        warp = lambda a: cv2.warpPerspective(a, Mp, (W, H), flags=cv2.INTER_LINEAR)
         self.halves = []
-        for i in big:
-            m = (lab == i).astype(np.float32)
-            m = cv2.dilate(m, np.ones((3, 3), np.uint8))
-            self.halves.append((F, A * m, tuple(cen[i])))
-        deb = A * (1 - np.clip(sum(cv2.dilate((lab == i).astype(np.float32), np.ones((3, 3), np.uint8)) for i in big), 0, 1))
-        self.deb = (F, deb)
-        self.red = np.clip((F[..., 0] - np.maximum(F[..., 1], F[..., 2])) * 3, 0, 1) * A        # 断口余烬（生图里的血红断面）
+        for sg in (False, True):
+            m = (side == sg).astype(np.float32)
+            Am = warp(A * m); Fm = warp(F * (A * m)[..., None]); Em = warp(edge * m)
+            ys_, xs_ = np.nonzero(Am > 0.5)
+            self.halves.append((Fm, Am, Em, (float(xs_.mean()), float(ys_.mean()))))
+        c0 = cv2.perspectiveTransform(np.float32([[self.CUT[0], self.CUT[1]]]), Mp)[0]
+        self.cut_scr = (tuple(c0[0]), tuple(c0[1]))
+        # 碎木片：从同一张正面匾里切下断口两侧的一窄条木料 + 边框屑，按斩线重新散射（不再借用另一张背面匾）
+        band = (sd < 26).astype(np.float32) * A                                                # 生图空间（h×w）
+        ys_, xs_ = np.nonzero(band > 0.4)
+        if len(xs_) > 200:
+            r = np.random.default_rng(2731)
+            pick = r.choice(len(xs_), size=min(700, len(xs_)), replace=False)
+            db = np.zeros(A.shape, np.float32); db[ys_[pick], xs_[pick]] = 1.0
+            db = cv2.dilate(db, np.ones((3, 3), np.uint8)) * A
+            Fw = warp(F * db[..., None].repeat(3, -1)); Aw = warp(db)
+            self.deb = (Fw, Aw)
+        else:
+            self.deb = None
+        yv, xv = E.grid()
+        (a0x, a0y), (a1x, a1y) = self.cut_scr
+        d = np.array([a1x - a0x, a1y - a0y]); d /= np.linalg.norm(d); n = np.array([-d[1], d[0]])
+        self.sline = ((xv - a0x) * n[0] + (yv - a0y) * n[1]).astype(np.float32)                # 画面上斩线的有符号距离
+        self.cmid = ((a0x + a1x) / 2, (a0y + a1y) / 2)
 
     def render(self, t):
         u = self.u(t); a = t - self.t0
-        fr = view(self.bg, 1.04 + 0.03 * u, 960, 540 - 20 * (u - 0.5))                         # 背景慢推（视差：比匾慢）
-        q = eout(c01(a / 0.5), 2)
-        hot = 1.0 + 1.2 * math.exp(-a / 0.12)
-        for j, (F, Ah, c) in enumerate(self.halves):
-            sgn = -1 if j == 0 else 1
-            rot = sgn * 9 * q; dx = sgn * 70 * q; dy = 30 * q + 260 * (a / 0.5) ** 2 * (0.8 if j == 0 else 1.0)
-            ex = (self.red * Ah)[..., None] * REDC * (hot - 1) * 1.2
-            fr, Aw = rgba_piece(fr, F, Ah, c[0] + dx, c[1] + dy, 1.0, rot, pc=c, extra=ex)
-        F, Ad = self.deb                                                                         # 碎片：以画面中心为原点扑向镜头
+        fr = view(self.bg, 1.04 + 0.03 * u, 960, 540 - 20 * (u - 0.5))                         # 背景慢推（比匾慢 = 视差）
+        g = eout(c01(a / 0.10), 2)                                                              # 0–0.1s：沿斩线裂开一道缝（字完整清楚）
+        q = c01((a - 0.10) / 0.40)                                                              # 0.1s 起两半错开、翻转、下坠
+        hot = 1.0 + 1.4 * math.exp(-a / 0.12)
+        for j, (Fm, Am, Em, c) in enumerate(self.halves):
+            sg = -1 if j == 0 else 1
+            rot = -sg * 7 * eout(q, 2)
+            dx = sg * (14 * g + 80 * eout(q, 2)); dy = (0 if j == 0 else -10 * g) + 170 * q * q * (0.8 if j == 0 else 1.0)
+            Mx = cv2.getRotationMatrix2D(c, rot, 1.0); Mx[0, 2] += dx; Mx[1, 2] += dy
+            Fw = cv2.warpAffine(Fm, Mx, (W, H)); Aw = cv2.warpAffine(Am, Mx, (W, H)); Ew = cv2.warpAffine(Em, Mx, (W, H))
+            fr = fr * (1 - Aw[..., None]) + Fw + (Ew * (hot - 1) * 1.1)[..., None] * REDC + (Ew * math.exp(-a / 0.06))[..., None] * 0.9
+        sl = np.exp(-(self.sline / (3 + 30 * q)) ** 2) * math.exp(-a / 0.08)                  # 白热斩线余光（墨线画面上一道硬白）
+        fr = fr + sl[..., None] * 1.2
         sd = 1.0 + 0.9 * eout(c01(a / 0.5), 2)
         al = 1 - sstep(0.25, 0.5, a)
-        if al > 0.01:
+        if self.deb is not None and al > 0.01:                                                   # 断口木屑扑镜
+            F, Ad = self.deb
             fr, _ = rgba_piece(fr, F, Ad * al, 960, 540, sd, 0, pc=(960, 540))
-        fr = spark2(fr, t, 2730, (930, 520), self.t0, n=60, life=0.5, speed=(300, 1200), dirc=(0, -1), spread=1.5, grav=900, area=(40, 160))
+        fr = spark2(fr, t, 2730, self.cmid, self.t0, n=60, life=0.5, speed=(300, 1200), dirc=(0, -1), spread=1.5, grav=900, area=(30, 200))
+        fr = ink_spatter(fr, t, 2733, self.cmid, self.t0, n=40, life=0.5, speed=(300, 1000), dirc=(1, 0), spread=2.5, grav=800, area=(20, 220))
         return fr
 
 
 class E28(Shot):   # S132b ECU 马尾 + 血红腰带在逆光里翻飞：EB_sash（风吹 + 腰带行波二级运动），背景 EB_dawn 天空虚焦
     def __init__(self):
-        self.L = lay('EB_sash')
-        self.bg = view(plate('EB_dawn', flip=True, blur=7), 1.5, 1300, 330)
+        self.L = lay('EB_sash', feather=30)
+        self.bg = view4(plate4('EB_sky'), 1.45, 700, 440)
         yy, xx = E.grid(); self.xx, self.yy = xx, yy
 
     def render(self, t):
         u = self.u(t)
-        fr = view(self.bg, 1.0, 960 - 30 * (u - 0.5), 540)                                        # 背景视差（以中点为零）
+        fr = view(self.bg, 1.06, 960 - 30 * (u - 0.5), 540)                                        # 背景视差（以中点为零）
         z, A = draw(np.zeros_like(fr), self.L, t, (1024, 576), (960 + 20 * (u - 0.5), 540), W / self.L.w * 1.04, breathe=0, wind_amp=14.0)
         w = np.clip((1250 - self.xx) / 1250, 0, 1) ** 1.4                                        # 自由端（左）摆幅大，靠头（右）不动
         dy = (26 * np.sin(self.xx / 210.0 + t * 9.0) + 10 * np.sin(self.xx / 90.0 - t * 13.0)) * w
@@ -341,14 +525,48 @@ def title_ink(t, start=223.97, stagger=0.10, dur=0.32):
 
 
 class TitleD(Shot):
-    """片名底板：EB_paper 宣纸 + 下方墨染远山与淡血红朝日；墨雾横向漂移（两层不同速度 = 视差）。"""
+    """片名底板：EB_paper 拆层——宣纸底（去掉山和日后补纸）/ 远山 / 近山与溅墨 / 血红朝日；各层慢视差（以镜头中点为零），
+    朝日缓升，远山墨色轻轻呼吸（墨晕一涨一收），两层墨雾横向漂移。图层都比画面大 PAD，位移不会露出图层直边。"""
+    PAD = 48
+    _LAY = {}
+
     def __init__(self):
-        self.bg = plate('EB_paper')
+        if not TitleD._LAY:
+            p = self.PAD
+            im = cv2.resize(cv2.cvtColor(cv2.imread(D + 'EB_paper.png'), cv2.COLOR_BGR2RGB), (W + 2 * p, H + 2 * p), interpolation=cv2.INTER_AREA).astype(np.float32) / 255
+            lum = im.mean(-1)
+            red = np.clip((im[..., 0] - np.maximum(im[..., 1], im[..., 2])) * 3, 0, 1)
+            red = cv2.GaussianBlur(cv2.dilate(red, np.ones((5, 5), np.uint8)), (0, 0), 1.5)
+            ink = np.clip((0.86 - lum) / 0.5, 0, 1) * (1 - red)
+            yy = np.arange(H + 2 * p, dtype=np.float32)[:, None]
+            far = ink * (1 - sstep(760, 860, yy)); near = ink * sstep(760, 860, yy)
+            hole = (cv2.dilate(((red > 0.05) | (ink > 0.05)).astype(np.uint8), np.ones((9, 9), np.uint8)))
+            sm = cv2.resize(im, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA)
+            hs = cv2.resize(hole, (sm.shape[1], sm.shape[0]), interpolation=cv2.INTER_NEAREST)
+            fill = cv2.inpaint((sm * 255).astype(np.uint8), hs, 6, cv2.INPAINT_TELEA).astype(np.float32) / 255
+            fill = cv2.resize(fill, (W + 2 * p, H + 2 * p))
+            grain = im - cv2.GaussianBlur(im, (0, 0), 3)
+            paper = np.where(hole[..., None] > 0, fill + grain * 0.5, im)
+            TitleD._LAY.update(paper=paper.astype(np.float32), im=im, red=red.astype(np.float32), far=far.astype(np.float32), near=near.astype(np.float32))
+
+    def _crop(self, a, dx, dy):
+        p = self.PAD; x0 = int(round(p - dx)); y0 = int(round(p - dy))
+        return a[y0:y0 + H, x0:x0 + W]
 
     def base(self, t):
-        u = self.u(t)
-        fr = view(self.bg, 1.0 + 0.01 * u, 960 + 10 * (u - 0.5), 540)
-        tm = (self.t0 + self.t1) / 2
+        u = self.u(t); tm = (self.t0 + self.t1) / 2; L = TitleD._LAY
+        v = (t - tm)                                                                            # 中点为零
+        fr = self._crop(L['paper'], 3 * v, 0).copy()
+        br = 1.0 + 0.10 * math.sin(2 * math.pi * t / 1.7)                                       # 墨晕呼吸
+        for key, dx, halo in (('far', 8 * v, 0.05), ('near', 18 * v, 0.03)):
+            a = self._crop(L[key], dx, 0); c = self._crop(L['im'], dx, 0)
+            hal = cv2.GaussianBlur(a, (0, 0), 10) * halo * (0.5 + 0.5 * math.sin(2 * math.pi * t / 1.7))
+            fr = fr * (1 - hal[..., None])
+            a = np.clip(a * br, 0, 1)
+            fr = fr * (1 - a[..., None]) + c * a[..., None]
+        a = self._crop(L['red'], 5 * v, -14 * v)                                                # 朝日缓升
+        c = self._crop(L['im'], 5 * v, -14 * v)
+        fr = fr * (1 - a[..., None]) + c * a[..., None]
         fr = mist(fr, t, 1341, 700, 960, 22, amt=0.30, col=(0.97, 0.97, 0.97), t_ref=tm)
         fr = mist(fr, t, 1342, 820, 960, 40, amt=0.22, col=(0.55, 0.55, 0.55), scale=6, t_ref=tm)
         return fr
@@ -361,7 +579,8 @@ class E29(TitleD):   # S133 片名「谁定正邪」墨书洇开
         return T.compose(fr, L, shadow=0, glow=0)
 
 
-class E30(TitleD):   # S133b 一道血红干笔斩痕劈过片名 → 宣纸上的墨字沿斩线错开淡去，洇出「鬼屠 · 第二季」+「主题曲《谁定正邪》」+ 鬼屠朱印
+class E30(TitleD):   # S133b 血红干笔斩痕（EB_brush_line 生图飞白 + 溅墨）劈过片名 → 「谁定正邪」沿斩线碎成墨屑散干净（0.45s）→
+    #  再墨晕洇出「鬼屠 · 第二季」→ 血红「鬼屠」印 → 副标题「主题曲《谁定正邪》」（加大、墨黑）。两段不叠。
     def __init__(self):
         TitleD.__init__(self)
         ang = math.radians(-12)
@@ -369,22 +588,19 @@ class E30(TitleD):   # S133b 一道血红干笔斩痕劈过片名 → 宣纸上�
         c = np.array([960.0, 470.0])
         self.d, self.n, self.c = d, n, c
         yy, xx = E.grid()
-        self.s = ((xx - c[0]) * n[0] + (yy - c[1]) * n[1]).astype(np.float32)                  # 到斩线的有符号距离
-        self.uu = (((xx - c[0]) * d[0] + (yy - c[1]) * d[1]) / 2200 + 0.5).astype(np.float32)     # 沿线进度
-        # 斩痕笔刷（route1/D035_slash，本轮风格 D 生图）：按 alpha 主轴映射到斩线，横向压扁
-        sl = cv2.cvtColor(cv2.imread(R1 + 'D035_slash_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
+        self.s = ((xx - c[0]) * n[0] + (yy - c[1]) * n[1]).astype(np.float32)
+        self.uu = (((xx - c[0]) * d[0] + (yy - c[1]) * d[1]) / 2200 + 0.5).astype(np.float32)
+        sl = cv2.cvtColor(cv2.imread(D + 'EB_brush_line_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
         ys, xs = np.nonzero(sl[..., 3] > 0.5)
-        P = np.stack([xs, ys], -1).astype(np.float64); pc = P.mean(0)
-        e = np.linalg.eigh(np.cov((P - pc).T))[1][:, -1]
-        if e[0] < 0: e = -e
-        pr = (P - pc) @ e; A0, B0 = pc + e * pr.min(), pc + e * pr.max()
-        Q0, Q1 = c - d * 1150, c + d * 1150
-        sc = np.linalg.norm(Q1 - Q0) / np.linalg.norm(B0 - A0); ep = np.array([-e[1], e[0]])
-        M2 = sc * np.outer(d, e) + 0.35 * sc * np.outer(n, ep)
-        Mx = np.hstack([M2, (Q0 - M2 @ A0)[:, None]])
+        x0, x1 = xs.min(), xs.max(); y0 = float(np.median(ys))
+        Q0, Q1 = c - d * 1180, c + d * 1180
+        sc = np.linalg.norm(Q1 - Q0) / (x1 - x0)
+        M2 = sc * np.outer(d, [1, 0]) + 0.75 * sc * np.outer(n, [0, 1])
+        Mx = np.hstack([M2, (Q0 - M2 @ np.array([x0, y0]))[:, None]])
         w_ = cv2.warpAffine(sl, Mx, (W, H), flags=cv2.INTER_LINEAR)
         self.slF, self.slA = w_[..., :3], w_[..., 3]
         self.title = None
+        self.nz = cv2.resize(K.fbm(H // 8, W // 8, 3021, base=6, octaves=4), (W, H)).astype(np.float32)
 
     def render(self, t):
         fr = self.base(t)
@@ -393,27 +609,29 @@ class E30(TitleD):   # S133b 一道血红干笔斩痕劈过片名 → 宣纸上�
         L = self.title
         if q < 0:
             return T.compose(fr, L, shadow=0, glow=0)
-        if q < 0.9:                                                                             # 墨字沿斩线上下错开 + 淡去
-            e = eout(q / 0.5)
+        if q < 0.45:                                                                            # 片名沿斩线错开、碎成墨屑散尽
+            e = eout(q / 0.30)
+            dis = c01(q / 0.42)
             up = (self.s < 0)
             Lz = T.Layer()
             for part, sg in ((up, -1), (~up, 1)):
-                Mx = np.float32([[1, 0, sg * 60 * e], [0, 1, sg * 34 * e]])
+                Mx = np.float32([[1, 0, sg * 50 * e], [0, 1, sg * 30 * e + 40 * q * q]])
                 Ap = cv2.warpAffine(L.A * part, Mx, (W, H)); Cp = cv2.warpAffine(L.C * part[..., None], Mx, (W, H))
                 sel = Ap > Lz.A; Lz.A = np.maximum(Lz.A, Ap); Lz.C[sel] = Cp[sel]
+            keep = np.clip((self.nz - dis * 1.15 + 0.05) * 9, 0, 1)                             # 噪声溶解：一块块剥成墨屑
+            Lz.A = Lz.A * keep
             Lz._touch(0, 0, W, H)
-            fr = T.compose(fr, Lz, shadow=0, glow=0, opacity=1 - c01(q / 0.9))
-        hd = c01((q + 0.03) / 0.08)                                                            # 斩痕一笔写出（左→右）、0.6s 内褪成淡痕
+            fr = T.compose(fr, Lz, shadow=0, glow=0)
+            fr = ink_spatter(fr, t, 3016, (960, 470), TS + 0.08, n=90, life=0.45, speed=(150, 700), dirc=(0, 1), spread=2.6, grav=700, area=(480, 90))
+        hd = c01((q + 0.03) / 0.08)                                                            # 干笔斩痕一笔写出（左→右）、0.22s 起沿笔势收走
         if hd > 0:
-            er = 1.08 * eio(c01((q - 0.22) / 0.30))                                              # 0.22s 起斩痕沿笔势收走（保持血红，不淡成粉灰），副标题出来前收干净
+            er = 1.08 * eio(c01((q - 0.22) / 0.26))
             rev = np.clip((hd * 1.05 - self.uu) / 0.03, 0, 1) * np.clip((self.uu - er) / 0.03, 0, 1) * self.slA
             fr = fr * (1 - rev[..., None]) + self.slF * rev[..., None]
-            core = np.exp(-(self.s / 3.0) ** 2) * math.exp(-max(0.0, q) / 0.10) * (self.uu < hd)
-            fr = fr + core[..., None] * 0.8
         fr = ink_spatter(fr, t, 3010, (960, 470), TS, n=50, life=0.5, speed=(300, 1100), dirc=(self.n[0], self.n[1]), spread=1.4, grav=900, area=(500, 10))
         fr = K.sparks(fr, t, 3012, (960, 470), n=30, life=0.45, speed=(250, 900), dirc=(-self.n[0], -self.n[1]), spread=1.2, grav=900, burst=True, t0=TS,
                       area=(500, 10), color=(0.75, -0.25, -0.25))
-        p = c01((q - 0.25) / 0.6)
+        p = c01((q - 0.50) / 0.6)                                                               # 片名散尽后才洇出主标题
         if p > 0:
             L2 = T.Layer()
             for i, (ch, x, sz) in enumerate((('鬼', 505, 200), ('屠', 705, 200), ('第', 1025, 200), ('二', 1215, 214), ('季', 1405, 200))):
@@ -422,14 +640,14 @@ class E30(TitleD):   # S133b 一道血红干笔斩痕劈过片名 → 宣纸上�
                 L2.paste(T.ink_bleed_glyph(ch, 'kai', sz, e, seed=21 + i, bleed=0.5), x, 470, tuple(INKC))
             fr = T.compose(fr, L2, shadow=0, glow=0)
             cv2.circle(fr, (860, 475), int(13 * eout(p)), tuple(float(v) for v in REDC), -1, cv2.LINE_AA)
-            s2 = c01((q - 0.75) / 0.5)
+            sp = c01((q - 0.80) / 0.5)
+            if sp > 0: fr = T.stamp_seal(fr, '鬼屠', 1610, 470, 130, sp, style='yin', rot=-5, seed=9, color=tuple(REDC))
+            s2 = c01((q - 1.00) / 0.5)
             if s2 > 0:
                 L3 = T.Layer()
                 for i, ch in enumerate('主题曲《谁定正邪》'):
-                    T.place(L3, ch, 960 + (i - 4) * 58, 650, 46, tuple(INKC), 'serif_m', alpha=eout(s2), texture=False)
+                    T.place(L3, ch, 960 + (i - 4) * 70, 660, 58, (0.015, 0.015, 0.015), 'serif_b', alpha=eout(s2), texture=False)
                 fr = T.compose(fr, L3, shadow=0, glow=0)
-            sp = c01((q - 0.55) / 0.5)
-            if sp > 0: fr = T.stamp_seal(fr, '鬼屠', 1610, 470, 130, sp, style='yin', rot=-5, seed=9, color=tuple(REDC))
         return fr
 
 
@@ -440,8 +658,8 @@ class E31(CreditsD):   # S134 正俯拍：焦土（EB_ground）上散着五片�
     ORDER = ['理', '天', '规', '章', '律']     # 生图里的连通块按质心 (x,y) 映射：见 __init__
 
     def __init__(self):
-        self.blocks = [('出品人', ['西几王传媒'], 1660, 230, 227.85, 0.9), ('编剧 / 导演', ['苏打'], 1430, 230, 228.45, 0.8)]
-        self.bg = plate('EB_ground', flip=True, gain=0.92)
+        self.blocks = [('出品人', ['西几王传媒'], 1700, 185, 227.85, 0.9), ('编剧 / 导演', ['苏打'], 1430, 185, 228.45, 0.8)]
+        self.bg = np.clip(plate('EB_ground', flip=True), 0, 1) ** 0.62                        # 焦土提一档（网点中灰，白灰烬占面积）
         P = cv2.cvtColor(cv2.imread(D + 'EB_scraps_cut.png', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255
         F, A = P[..., :3], P[..., 3]
         k, lab, st, cen = cv2.connectedComponentsWithStats((A > 0.04).astype(np.uint8), 8)
@@ -471,7 +689,7 @@ class E31(CreditsD):   # S134 正俯拍：焦土（EB_ground）上散着五片�
 
     def render(self, t):
         u = self.u(t); a = t - self.t0
-        fr = view(self.bg, 1.0, 960 - 14 * (u - 0.5), 540)
+        fr = view(self.bg, 1.06, 960 - 14 * (u - 0.5), 540)
         EMB = np.zeros((H, W), np.float32)
         for k, pc in enumerate(self.pcs):
             cx, cy, rot, s = self.LAYOUT[pc['ch']]
@@ -504,61 +722,79 @@ class E31(CreditsD):   # S134 正俯拍：焦土（EB_ground）上散着五片�
         return fr
 
 
-class E32(CreditsD):   # S135 CU 握刀柄的手沿刀身滑移（EB_hilt），刀身寒光自镡扫到刀尖；背景 EB_dawn 云天虚焦；署名② 美术设计 / 后期总监（墨书，亮底）
+class E32(CreditsD):   # S135 握刀（返工：中式直刀 + 中式护手 EB_hilt2，与定妆照 / E35 统一）手沿刀身滑移，寒光自护手扫到刀尖（硬边白条 + 墨线星芒）；
+    #  背景清晰的白天墨云（EB_sky，无景深虚化）；署名② 移到右上纯白天空（墨书）
     ccol = 'ink'
 
     def __init__(self):
-        self.blocks = [('美术设计', ['Cait'], 1700, 230, 230.15, 0.8), ('后期总监', ['沉溺'], 1470, 230, 230.75, 0.8)]
-        self.L = lay('EB_hilt')
-        self.bg = view(plate('EB_dawn', blur=6), 1.35, 1200, 360)
+        self.blocks = [('美术设计', ['Cait'], 1720, 170, 230.15, 0.8), ('后期总监', ['沉溺'], 1440, 170, 230.75, 0.8)]
+        self.L = lay('EB_hilt2', feather=30)
+        self.bg = view4(plate4('EB_sky'), 1.35, 1100, 520)          # 白天墨云上部（1.35 倍，取景中心在窗口内）
+        self.d = np.array([0.964, -0.268])
 
     def render(self, t):
         u = self.u(t)
-        fr = view(self.bg, 1.0, 960 + 25 * (u - 0.5), 540 - 10 * (u - 0.5))
-        d = np.array([0.74, -0.67])
-        sl = 60 * eio(u)
-        s = W / self.L.w * 1.0
-        dst = (960 - 380 + d[0] * sl, 600 + d[1] * sl)
-        fr, A = draw(fr, self.L, t, (1024, 576), dst, s, breathe=0.002, wind_amp=2.0)
-        g0 = to_scr(self.L, (1024, 576), dst, s, (1470, 300)); g1 = to_scr(self.L, (1024, 576), dst, s, (2040, -120))
-        k = eio(c01((u - 0.15) / 0.7))                                                          # 寒光自镡扫到刀尖（只亮在刀身上）
+        fr = view(self.bg, 1.06 + 0.02 * u, 960 + 20 * (u - 0.5), 540)
+        sl = 60 * (eio(u) - 0.5)
+        s = 1.10; src = (860, 840)
+        dst = (990 + self.d[0] * sl, 780 + self.d[1] * sl)
+        zc, A = draw(np.zeros_like(fr), self.L, t, src, dst, s, breathe=0.002, wind_amp=3.0)
+        zc, A = flutter(zc, A, t, 2.5, band=50.0, seed=5, red=0.3, cloth=0.6)                 # 发梢 / 衣领：只动轮廓带
+        fr = fr * (1 - A[..., None]) + zc
+        g0 = to_scr(self.L, src, dst, s, (930, 815)); g1 = to_scr(self.L, src, dst, s, (2040, 505))
+        k = eio(c01((u - 0.15) / 0.7))
         px, py = g0[0] + (g1[0] - g0[0]) * k, g0[1] + (g1[1] - g0[1]) * k
-        yy, xx = E.grid()
-        along = ((xx - px) * d[0] + (yy - py) * d[1])
-        perp = ((xx - g0[0]) * -d[1] + (yy - g0[1]) * d[0])
-        bl = np.exp(-(along / 70) ** 2) * np.exp(-(perp / 40) ** 2) * A * (1.0 if 0.3 < k < 0.999 else 0.0)
-        fr = fr + bl[..., None] * 1.3
-        if 0.05 < k < 0.98: fr = E.flare_streak(fr, (px, py), amt=0.25, angle=-42, length=0.35, col=(1.0, 1.0, 1.0))
+        if 0.02 < k < 0.99:
+            yy, xx = E.grid()
+            along = (xx - px) * self.d[0] + (yy - py) * self.d[1]
+            band = np.clip(1 - np.abs(along) / 46, 0, 1) ** 0.3 * (np.abs(along) < 46)            # 硬边白条（刃面反光，只落在刀身上）
+            C = zc / np.maximum(A, 1e-3)[..., None]
+            steel = np.clip((C.mean(-1) - 0.45) * 4, 0, 1) * A
+            fr = fr + (band * steel)[..., None] * 0.6
+            fr = hard_star(fr, (px, py), 46, amt=0.9 * math.sin(math.pi * k), rot=12)
         return fr
 
 
-class E33(CreditsD):   # S135b 焦土上横着一柄黑漆刀鞘（EB_scabbard），血红穗在晨风里摆、漆面晨光掠过、灰烬飘落；署名③ AI画师（白字，左侧）
+class E33(CreditsD):   # S135b（返工：换景 + 去亮漆）雪地上横着一柄中式直刀（EB_scabbard2，哑光墨线 + 网点），血红穗在晨风里摆；
+    #  刀身压进雪里一道浅槽 + 网点接触影，细雪飘落；署名③ AI画师（墨书，左上）
+    ccol = 'ink'
+
     def __init__(self):
-        self.blocks = [('AI画师', ['沉溺', '雪晴', '索恩'], 330, 200, 232.35, 1.0)]
-        self.kws = dict(role_size=40, name_size=62, seal_text='画', seed=7)
+        self.blocks = [('AI画师', ['沉溺', '雪晴', '索恩'], 380, 175, 232.35, 1.0)]
+        self.kws = dict(role_size=44, name_size=82, seal_text='画', seed=7)
         self.fade = False
-        self.L = lay('EB_scabbard', flip=True)
-        self.bg = view(plate('EB_ground', gain=0.95), 1.25, 1100, 600)
+        self.L = lay('EB_scabbard2')
+        self.bg = view4(plate4('EB_snow'), 2.1, 1000, 790)
         yy, xx = E.grid(); self.xx, self.yy = xx, yy
 
     def render(self, t):
         u = self.u(t)
-        fr = view(self.bg, 1.0, 960 - 30 * (u - 0.5), 540)
-        s = 0.80; src = (1024, 576); dst = (1180 - 40 * (u - 0.5), 560)
-        z, A = draw(np.zeros_like(fr), self.L, t, src, dst, s, breathe=0, wind_amp=0)
-        top = to_scr(self.L, src, dst, s, (2048 - 170, 500)); bot = to_scr(self.L, src, dst, s, (2048 - 330, 1060))
+        fr = view(self.bg, 1.06 + 0.02 * u, 960 - 24 * (u - 0.5), 540)
+        s = 0.84; src = (1024, 510); dst = (1010 - 36 * (u - 0.5), 650)
+        zc, A = draw(np.zeros_like(fr), self.L, t, src, dst, s, breathe=0, wind_amp=0)
+        top = to_scr(self.L, src, dst, s, (40, 560)); bot = to_scr(self.L, src, dst, s, (480, 1000))
         wy = np.clip((self.yy - top[1]) / max(1.0, bot[1] - top[1]), 0, 1) ** 1.3
-        wx = np.exp(-((self.xx - (top[0] + bot[0]) / 2) / 240) ** 2)
-        dx = (28 * math.sin(t * 2.6) + 10 * math.sin(t * 5.3 + 1.0)) * wy * wx                 # 红穗摆（越往下越大）
-        mx = (self.xx - dx).astype(np.float32); my = self.yy.astype(np.float32)
-        z = cv2.remap(z, mx, my, cv2.INTER_LINEAR); A = cv2.remap(A, mx, my, cv2.INTER_LINEAR)
-        sh = cv2.GaussianBlur(A, (0, 0), 20)
-        fr = fr * (1 - 0.65 * np.roll(np.roll(sh, 24, 0), -16, 1)[..., None])
-        fr = fr * (1 - A[..., None]) + z
-        notred = 1 - np.clip((z[..., 0] - np.maximum(z[..., 1], z[..., 2])) * 4, 0, 1)
-        sweep = np.exp(-((self.xx - (200 + 1700 * u) + (self.yy - 540) * 0.6) / 110) ** 2) * A * notred
-        fr = fr + sweep[..., None] * 0.45
-        fr = ash(fr, t, self.t0, 1373, n=70, amt=0.8, drift=(-40, 150), red=0.12)
+        wx = np.clip((self.xx - (top[0] - 60)) / 600, 0, 1) * (self.xx < bot[0] + 160)
+        dx = (30 * math.sin(t * 2.6) + 11 * math.sin(t * 5.3 + 1.0)) * wy * wx                 # 红穗摆（越往下越大）
+        dy = 6 * math.sin(t * 3.1) * wy * wx
+        mx = (self.xx - dx).astype(np.float32); my = (self.yy - dy).astype(np.float32)
+        zc = cv2.remap(zc, mx, my, cv2.INTER_LINEAR); A = cv2.remap(A, mx, my, cv2.INTER_LINEAR)
+        C = zc / np.maximum(A, 1e-3)[..., None]
+        red = np.clip((C[..., 0] - np.maximum(C[..., 1], C[..., 2])) * 3, 0, 1)
+        lum = C.mean(-1, keepdims=True)
+        matte = np.minimum(C, 0.30 + 0.25 * lum)                                                 # 去镜面亮漆：高光压成哑光
+        C = C * red[..., None] + matte * (1 - red[..., None])
+        zc = C * A[..., None]
+        body = A * (1 - red)                                                                     # 雪槽 + 网点接触影（只在刀身下）
+        sh = cv2.GaussianBlur(np.roll(body, 14, 0), (0, 0), 7)
+        groove = np.clip(cv2.dilate(body, np.ones((1, 9), np.uint8)) - body, 0, 1)                 # 雪面压痕：一道浅槽（唯一的一层压暗）
+        shade = np.clip(0.22 * sh + 0.25 * cv2.GaussianBlur(np.roll(body, 10, 0), (0, 0), 6) + 0.16 * groove, 0, 0.42)
+        fr = fr * (1 - shade[..., None]) + toned(shade * 0.6, 1.0)[..., None] * 0.10
+        ink = np.clip(cv2.dilate(A, np.ones((3, 3), np.uint8)) - A, 0, 1)                         # 墨线勾边
+        fr = fr * (1 - ink[..., None] * 0.85) + INKC * ink[..., None] * 0.85
+        fr = fr * (1 - A[..., None]) + zc
+        fr = E.dust_motes(fr, t, 1373, n=70, amt=0.5, drift=(-30, 70), col=(1.0, 1.0, 1.0), size=(1, 3))   # 细雪
+        fr = ash(fr, t, self.t0, 1374, n=18, amt=0.5, drift=(-40, 110), red=0.25)
         return fr
 
 
@@ -570,22 +806,47 @@ SUN = (440.0, 452.0)            # EB_dawn 缩到 1920 后的日心（画面坐�
 
 class _Dawn:
     def dawn_init(self):
-        self.pl = plate('EB_dawn')
-        im = self.pl
-        sunm = np.clip((im[..., 0] - np.maximum(im[..., 1], im[..., 2])) * 3, 0, 1).astype(np.float32)   # 红日 / 红云遮罩
-        self.glow = cv2.GaussianBlur(sunm, (0, 0), 30)[..., None] * REDC * 0.35
-        self.back = lay('EB_back')
+        self.pl = plate4('EB_dawn4k')
+        if 'dglow' not in _P:
+            im = cv2.resize(self.pl, (W, H), interpolation=cv2.INTER_AREA)
+            sunm = np.clip((im[..., 0] - np.maximum(im[..., 1], im[..., 2])) * 3, 0, 1).astype(np.float32)
+            _P['dglow'] = cv2.resize(cv2.GaussianBlur(sunm, (0, 0), 30), (self.pl.shape[1], self.pl.shape[0]))[..., None] * REDC * 0.35
+        self.glow = _P['dglow']
+        self.walk = WALK()
 
     def sky(self, t, z, cx, cy, hits):
         k = beat_pulse(t, hits)
-        fr = self.pl + self.glow * k                                                            # 鼓点：红日辉光呼吸
-        return (fr if (z == 1.0 and cx == W / 2 and cy == H / 2) else view(fr, z, cx, cy)), k
+        fr = self.pl + self.glow * k if k > 0.01 else self.pl                                   # 鼓点：红日辉光呼吸
+        return view4(fr, z, cx, cy), k
 
 
-def walker(fr, t, L, foot, h, rot=0.0, wind=6.0):
-    """背影行走：按包围盒高度落脚；步伐起伏。"""
-    a_, s_ = L.fit(h)
-    return L.draw(fr, t, a_, foot, s_, rot=rot, breathe=0.004, wind_amp=wind, **KW)
+STEPS = [f / 30 for f in range(7033, 7130, 7)]                                                  # 步点：与强 / 弱拍 7040·7047·7054·7061… 同相，每 7 帧一步
+
+
+def WALK():
+    """走路三姿势（用户 20:05：两张分别生图的走姿位置不一致 → 来回跳）：EB_walk2a 为母图，
+    nano-banana-pro 图生图衍生「过渡步」EB_walk_pass 与「换脚」EB_walk_b——同一画布、同一位置与比例
+    （肩线中心 x 515±1px），所以三张共用同一个变换，切换时不会跳。"""
+    return (lay('EB_walk2a'), lay('EB_walk_pass'), lay('EB_walk_b'))
+
+
+def gait(t):
+    """(姿势序号：0 = 左脚前着地 / 1 = 过渡 / 2 = 右脚前着地, 步内相位 0..1)。
+    每步 7 帧（对齐 hitmap 的 kick 间隔）：着地姿势 4 帧 + 过渡姿势 3 帧，左右交替 → 是一个连续步循环，不再是两张图硬切。"""
+    i = max(0, sum(1 for s_ in STEPS if t >= s_ - 1e-6) - 1)
+    ph = c01((t - STEPS[i]) / (7 / 30))
+    return (1 if ph >= 4 / 7 else (0 if i % 2 == 0 else 2)), ph
+
+
+def walker(fr, t, poses, foot, h, amp, seed=0):
+    """背影行走（独立人物层）：三姿势按步点循环，落脚与比例**统一取母图 poses[0] 的包围盒**（三张同画布，切姿势不跳）；
+    步内起伏；发丝 / 红带 / 衣摆低频噪声二级运动（低振幅，只在轮廓带）。返回 (fr, A)。"""
+    i, ph = gait(t)
+    a_, s_ = poses[0].fit(h)
+    bob = h * 0.010 * math.sin(math.pi * ph)
+    z, A = draw(np.zeros_like(fr), poses[i], t, (a_[0] * poses[0].w, a_[1] * poses[0].h), (foot[0], foot[1] - bob), s_, wind_amp=0, breathe=0)
+    z, A = flutter(z, A, t, amp, band=max(9.0, h * 0.05), seed=seed)
+    return fr * (1 - A[..., None]) + z, A
 
 
 def shadow(fr, fx, fy, L=90.0, lean=0.9, wmax=26, amt=0.7):
@@ -600,7 +861,7 @@ def shadow(fr, fx, fy, L=90.0, lean=0.9, wmax=26, amt=0.7):
 
 
 def kick_dust(fr, t, hits, foot, seed, n=60, spread=260):
-    """强拍：脚下 / 地平线扬起一排白尘 + 血红火星（0.5s 散）。"""
+    """强拍 / 落脚：白尘 + 血红火星（0.5s 散）。"""
     for j, th in enumerate(hits):
         q = t - th + 1 / 30
         if q < 0 or q > 0.6: continue
@@ -611,38 +872,39 @@ def kick_dust(fr, t, hits, foot, seed, n=60, spread=260):
         yy, xx = E.grid()
         r = 40 + 160 * eout(q / 0.4)
         puff = np.exp(-(((xx - foot[0]) / (r * 1.8)) ** 2 + ((yy - foot[1] + 0.3 * r) / (r * 0.45)) ** 2)) * math.exp(-q / 0.35) * 0.55
-        fr = fr * (1 - puff[..., None]) + puff[..., None] * 0.9
+        fr = fr * (1 - toned(puff, 1.0)[..., None] * 0.3) + puff[..., None] * 0.35
     return fr
 
 
-class E34(CreditsD, _Dawn):   # S136 ELS：晨雾山水、血红朝日在左，刀客小背影在右 1/3 向远方走去；强拍 7040 阶梯推镜 + 脚下扬尘，弱拍红日呼吸；署名④ 音乐（墨书）
+class E34(CreditsD, _Dawn):   # S136 ELS：晨雾山水、血红朝日在左，刀客背影（独立层）朝朝日方向往画面深处走去：两张走姿按步点交替、
+    #  位置往地平线移、身高缩小 13%；发尾 / 红带拆层飘；强拍 7040 阶梯推镜 + 脚下扬尘，弱拍红日呼吸；署名④ 音乐（墨书）
     ccol = 'ink'
-    fade = False                                                                                 # 同一署名延续到 E34L（这里不淡出）
+    fade = False
 
     def __init__(self):
-        self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]
+        self.blocks = [('音乐', ['西几王'], 1700, 230, 234.55, 0.5)]
         self.dawn_init()
 
     def render(self, t):
         u = self.u(t); tm = (self.t0 + self.t1) / 2
         z = step_zoom(t, [(7040 / 30, 0.025)]) * (1 + 0.004 * u)
-        fr, k = self.sky(t, 1.0, 960, 540, HITS34)
+        fr, k = self.sky(t, 1.03, 960, 540, HITS34)
         fr = mist(fr, t, 1366, 560, 760, 18, amt=0.30, t_ref=tm)
-        fr = mist(fr, t, 1367, 700, 880, 34, amt=0.25, col=(0.85, 0.85, 0.85), scale=6, t_ref=tm)
-        bob = 3 * abs(math.sin(t * 5.5))
-        fx, fy = 1235 - 22 * u, 905
-        fr = shadow(fr, fx, fy, L=80, lean=0.8, wmax=22, amt=0.55)
-        fr, A = walker(fr, t, self.back, (fx, fy - bob), 230 - 12 * u)
+        fx, fy = 1240 - 60 * u, 912 - 34 * u
+        h = 236 * (1 - 0.13 * u)
+        fr = shadow(fr, fx, fy, L=80, lean=0.8, wmax=22, amt=0.5)
+        fr, A = walker(fr, t, self.walk, (fx, fy), h, 1.5, seed=1)
+        fr = mist(fr, t, 1367, 700, 880, 34, amt=0.22, col=(0.88, 0.88, 0.88), scale=6, t_ref=tm)
         fr = kick_dust(fr, t, STRONG34[:1], (fx, fy), 7340, n=40, spread=140)
         fr = E.dust_motes(fr, t, 1381, n=40, amt=0.25, drift=(-18, -10), col=(0.9, 0.9, 0.9))
         return K.cam(fr, z, center=(fx, 640))
 
 
-class E34L(CreditsD, _Dawn):   # S136L LS（7061 强拍硬切）：同一日出推近，人高 ≈560px；7072 再进一级 + 扬尘
+class E34L(CreditsD, _Dawn):   # S136L LS（7061 强拍硬切）：同一日出推近；人物同样往深处走（身高 620→540），两姿势交替，发尾红带飘；7072 再进一级 + 扬尘
     ccol = 'ink'
 
     def __init__(self):
-        self.blocks = [('音乐', ['西几王'], 1660, 260, 234.55, 0.5)]
+        self.blocks = [('音乐', ['西几王'], 1700, 230, 234.55, 0.5)]
         self.dawn_init()
 
     def render(self, t):
@@ -650,97 +912,112 @@ class E34L(CreditsD, _Dawn):   # S136L LS（7061 强拍硬切）：同一日出�
         z = step_zoom(t, [(7072 / 30, 0.03)]) * (1 + 0.006 * u)
         fr, k = self.sky(t, 1.55, 760, 640, HITS34)
         fr = mist(fr, t, 1396, 520, 760, 26, amt=0.32, t_ref=tm)
-        fr = mist(fr, t, 1397, 760, 960, 50, amt=0.28, col=(0.85, 0.85, 0.85), scale=6, t_ref=tm)
-        bob = 4 * abs(math.sin(t * 5.5))
-        fx, fy = 1250 - 30 * u, 985
-        fr, A = walker(fr, t, self.back, (fx, fy - bob), 620, wind=7.0)
-        fr = kick_dust(fr, t, STRONG34[1:], (fx, fy - 30), 7350, n=50, spread=220)
+        fx, fy = 1250 - 70 * u, 1000 - 70 * u
+        h = 620 * (1 - 0.13 * u)
+        fr, A = walker(fr, t, self.walk, (fx, fy), h, 3.5, seed=3)
+        fr = mist(fr, t, 1397, 800, 980, 50, amt=0.22, col=(0.88, 0.88, 0.88), scale=6, t_ref=tm)
+        fr = kick_dust(fr, t, STRONG34[1:], (fx, fy - 20), 7350, n=50, spread=220)
         fr = E.dust_motes(fr, t, 1394, n=50, amt=0.3, drift=(-22, -12), col=(0.9, 0.9, 0.9))
         return K.cam(fr, z, center=(fx, 600))
 
 
-class E34b(CreditsD, _Dawn):   # S136b MS 背影上半身：红日在头侧，马尾与腰带随风（二级运动），白尘
+class E34b(CreditsD, _Dawn):   # S136b MS 背影上半身（返工）：清晰白天墨云 + 血红日轮在头侧（EB_sky，无景深虚化）；马尾 / 红带拆层大幅飘动，步伐起伏
     def __init__(self):
         self.blocks = []
-        self.dawn_init()
-        self.bgb = view(cv2.GaussianBlur(self.pl, (0, 0), 5), 1.7, 560, 500)
+        self.walk = WALK()                                                                       # 只用走姿层（三姿势同画布）
+        self.bgb = view4(plate4('EB_sky'), 1.4, 700, 480)
 
     def render(self, t):
         u = self.u(t)
-        fr = view(self.bgb, 1.0, 960 + 30 * (u - 0.5), 540)
-        s = 1.36
-        fr, A = draw(fr, self.back, t, (1060, 620), (1010 - 20 * u, 1015 + 6 * abs(math.sin(t * 5.5))), s, breathe=0.004, wind_amp=10.0)
+        fr = view(self.bgb, 1.06 + 0.02 * u, 960 + 24 * (u - 0.5), 540)
+        i, ph = gait(t)
+        bob = 7 * math.sin(math.pi * ph)
+        zc, A = draw(np.zeros_like(fr), self.walk[i], t, (480, 380), (990 - 20 * u, 820 - bob), 1.72, breathe=0.004, wind_amp=0)
+        zc, A = flutter(zc, A, t, 5.0, band=46.0, seed=4)
+        fr = fr * (1 - A[..., None]) + zc
         return E.dust_motes(fr, t, 1385, n=50, amt=0.35, drift=(-20, -15), col=(0.9, 0.9, 0.9))
 
 
-class E34c(CreditsD):   # S136c 插入：握鞘的手 + 血红穗（EB_grip），随步伐微摆
+class E34c(CreditsD):   # S136c 插入：握鞘的手 + 血红穗（EB_grip）；刀鞘随步伐以手为轴摆（±2.5°），红带 / 穗拆层飘；清晰白天墨云
     def __init__(self):
         self.blocks = []
-        self.L = lay('EB_grip')
-        self.bg = view(plate('EB_dawn', blur=10), 1.4, 640, 420)
+        self.L = lay('EB_grip', feather=40)
+        self.bg = view4(plate4('EB_sky'), 1.5, 760, 440)
 
     def render(self, t):
         u = self.u(t)
-        fr = view(self.bg, 1.0, 960 + 30 * (u - 0.5), 540)
-        sw = math.sin(t * 5.5)
-        fr, A = draw(fr, self.L, t, (1024, 576), (960 - 25 * u, 560 + 8 * sw), W / self.L.w * 1.06, rot=1.2 * sw, breathe=0, wind_amp=10.0)
+        fr = view(self.bg, 1.06 + 0.02 * u, 960 + 30 * (u - 0.5), 540)
+        i, ph = gait(t)
+        sw = math.sin(math.pi * ph) * (1 if i == 2 else -1)
+        zc, A = draw(np.zeros_like(fr), self.L, t, (1150, 560), (1070 - 25 * u, 560 + 8 * abs(sw)), W / self.L.w * 1.16, rot=2.5 * sw, breathe=0, wind_amp=0)
+        zc, A = flutter(zc, A, t, 4.0, band=44.0, seed=6, red=1.4)
+        fr = fr * (1 - A[..., None]) + zc
         return E.dust_motes(fr, t, 1387, n=40, amt=0.3, drift=(-25, -10), col=(0.9, 0.9, 0.9))
 
 
-class E34d(CreditsD, _Dawn):   # S136d 靴步：低机位贴地，落脚扬尘（白尘 + 血红火星）
+class E34d(CreditsD, _Dawn):   # S136d 靴步：低机位贴地；EB_steps2a 母图 + 图生图衍生的过渡步 / 换脚（同画布同位置），7118 过渡、7120 落脚，同一变换不跳；落脚扬尘
+    T_STEP = 7120 / 30
+
     def __init__(self):
         self.blocks = []
         self.dawn_init()
-        self.bgd = view(self.pl, 1.35, 700, 700)
+        self.bgd = view4(self.pl, 1.6, 900, 690)
+        self.a = lay('EB_steps2a', feather=30); self.m = lay('EB_steps_pass', feather=30); self.b = lay('EB_steps_b', feather=30)
 
     def render(self, t):
         u = self.u(t)
-        fr = view(self.bgd, 1.0, 960 + 20 * (u - 0.5), 540)
-        fr = shadow(fr, 980, 905, L=120, lean=0.6, wmax=60, amt=0.55)
-        fr, A = draw(fr, self.back, t, (975, 1143), (980, 930 - 10 * u), 2.25 - 0.06 * u, breathe=0, wind_amp=8.0)
-        q = t - self.t0
-        fr = kick_dust(fr, t, [self.t0 + 1 / 30], (1000, 905), 1390, n=50, spread=150)
+        fr = view(self.bgd, 1.06 + 0.02 * u, 960 + 20 * (u - 0.5), 540)
+        fr = shadow(fr, 960, 905, L=120, lean=0.6, wmax=60, amt=0.45)
+        L = self.a if t < self.T_STEP - 2 / 30 - 1e-6 else (self.m if t < self.T_STEP - 1e-6 else self.b)
+        zc, A = draw(np.zeros_like(fr), L, t, (430, 1040), (960 - 30 * u, 925), 0.86, breathe=0, wind_amp=0)   # 三张同一变换
+        zc, A = flutter(zc, A, t, 3.0, band=40.0, seed=7, red=1.4)
+        fr = fr * (1 - A[..., None]) + zc
+        fr = kick_dust(fr, t, [self.t0 + 1 / 30, self.T_STEP], (980, 915), 1390, n=50, spread=150)
         return fr
 
 
 HITS35 = [7133 / 30, 7143 / 30, 7160 / 30, 7167 / 30]
 
 
-class E35(Shot):   # S137 ECU 收刀「咔」（EB_sheath）：刀滑入鞘口、7153 最强拍硬停 + 鞘口白闪火星；7157 起「鬼屠」血红印盖在画面中心；背后血红日轮虚焦
+class E35(Shot):   # S137 ECU 收刀「咔」（EB_sheath）：刀滑入鞘口、7153 最强拍硬停 + 鞘口墨线星芒 / 硬边白闪 + 火星；7157 起「鬼屠」血红印；
+    #  背景清晰白天墨云 + 血红日轮（EB_sky，无景深虚化）
     def __init__(self):
-        self.L = lay('EB_sheath')
-        self.bg = view(plate('EB_dawn', blur=9, gain=0.85), 2.2, 520, 470)
+        self.L = lay('EB_sheath', feather=30)
+        self.bg = view4(plate4('EB_sky'), 1.6, 700, 520)
         self.tc = 7153 / 30
 
     def scene(self, t):
-        a = t - self.t0
-        fr = view(self.bg, 1.0, 900 + 0.0 * a, 540)
+        fr = self.bg.copy()
         slide = 0 if t >= self.tc else 80 * (1 - eio((t - self.t0) / (self.tc - self.t0)))
         s = 1.42
         dst = (960 - slide, 640)
-        dim = 0.55 if t >= self.tc + 0.4 else (1.0 - 0.45 * c01((t - self.tc) / 0.4) if t >= self.tc else 1.0)
-        z, A = draw(np.zeros_like(fr), self.L, t, (1050, 790), dst, s, breathe=0, wind_amp=4.0)
-        fr = fr * (1 - A[..., None]) + z * dim
+        z, A = draw(np.zeros_like(fr), self.L, t, (1050, 790), dst, s, breathe=0, wind_amp=0)
+        z, A = flutter(z, A, t, 3.0, band=40.0, seed=8, red=1.4)                              # 发梢 / 红穗
+        fr = fr * (1 - A[..., None]) + z * 1.08
         mouth = to_scr(self.L, (1050, 790), dst, s, (1270, 790))
-        if t < self.tc:                                                                         # 刀身寒光推向鞘口
+        if t < self.tc:                                                                         # 刀身寒光（硬边白条）推向鞘口
             g0 = to_scr(self.L, (1050, 790), dst, s, (780, 790))
             k = eio(c01((t - self.t0) / (self.tc - self.t0)))
             px = g0[0] + (mouth[0] - g0[0]) * k
             yy, xx = E.grid()
-            bl = np.exp(-((xx - px) / 60) ** 2 - ((yy - mouth[1]) / 26) ** 2) * A
-            fr = fr + bl[..., None] * 0.9
+            bl = (np.abs(xx - px) < 34) * (np.abs(yy - mouth[1]) < 40) * A
+            fr = fr + bl[..., None] * 0.45
         return fr, mouth
 
     def render(self, t):
         fr, mouth = self.scene(t)
         if t >= self.tc:
             q = t - self.tc
-            fr = E.flare_streak(fr, mouth, amt=1.2 * math.exp(-q / 0.12), length=0.7, col=(1.0, 1.0, 1.0))
+            fr = hard_star(fr, mouth, 150 * (1 - 0.4 * c01(q / 0.2)), amt=math.exp(-q / 0.14), rot=8)
+            if q < 2 / 30:                                                                      # 硬边白闪：鞘口一道横向白楔（不是镜头光斑）
+                Lw = np.zeros((H, W), np.float32)
+                cv2.fillConvexPoly(Lw, np.int32([[mouth[0] - 520, mouth[1]], [mouth[0], mouth[1] - 9], [mouth[0] + 520, mouth[1]], [mouth[0], mouth[1] + 9]]), 1.0, cv2.LINE_AA)
+                fr = fr * (1 - Lw[..., None]) + Lw[..., None]
             fr = spark2(fr, t, 1391, mouth, self.tc, n=50, life=0.6, speed=(200, 700), dirc=(0, -1), spread=1.6, grav=900)
             p = c01((q - 0.13) / 0.35)
             if p > 0: fr = T.stamp_seal(fr, '鬼屠', 960, 470, 260, p, style='yin', rot=-4, seed=21, color=tuple(REDC))
         for th in HITS35:
-            if t >= th: fr = fr * (1 + 0.12 * math.exp(-(t - th) / 0.08))
+            if t >= th: fr = fr * (1 + 0.10 * math.exp(-(t - th) / 0.08))
         return fr
 
     def text(self, fr, t): return fr
@@ -798,6 +1075,12 @@ def apply(mod):
     M.IDS[:] = [s[0].__name__ for s in shots]
     M.BOUNDS[:] = [s[1] for s in shots] + [M.F1]
     for nm, c in NEW.items(): setattr(M, nm, c)
+    if os.environ.get('EB_EDGECHECK') == '1':                                               # 图层边界自检：每次 import 后汇总一次
+        import atexit, sys as _s
+        def _dump():
+            print('[r8d_e_b] EDGE (sprite canvas in frame):', EDGE_LOG[:20], file=_s.stderr)
+            print('[r8d_e_b] EDGE (view clamped):', EV_LOG[:20], file=_s.stderr)
+        atexit.register(_dump)
     # 风格 D 无金：E27b 入点冲击闪由白金改纯白（E27a/E28 的血红闪保留）
     M.CUTS['E27b'] = ('cut', 0, 0, {})                                                     # 镜内自带两帧反白冲击（现版 impact 的闪会把剪影冲灰）
     M.SHAKE['E27b'] = [(6658 / 30, 14)]
