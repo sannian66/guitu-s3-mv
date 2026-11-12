@@ -2678,6 +2678,8 @@ if STYLE_D:
     import r8d_d_shots as _R8
     SHOTS = _R8.SHOTS
     CUTS = dict(CUTS)
+    CUTS['S18_Draw'] = ('slash_wipe', 0.05, 0.2, dict(angle=-12, center=(960, 860), soft_edges=True))   # 两半滑开不露 A 画布边（用户硬规则：任何图层不得露矩形裁切边）
+    CUTS['S25_Leap'] = ('slash_wipe', 0.05, 0.2, dict(angle=-40, soft_edges=True))
     CUTS['S28_Spin'] = ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.47))   # 固定（不随 R5D_TEXT_CUT 回到需要旧 S27 文字层的 freeze_glitch_keep）
     CUTS['S29_Thrust'] = ('white_beam', 0.08, 0.14, {})                # x0 = S29 刀尖（Bridge.raw 里取）
     CUTS['S30_Da'] = ('tip_iris', 0.1, 0.14, {})

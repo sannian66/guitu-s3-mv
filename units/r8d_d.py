@@ -55,6 +55,11 @@ def plate(name, width=None):
 def view(img, cx, cy, vw, rot=0.0, out=(W, H), border=cv2.BORDER_REFLECT, flags=cv2.INTER_LINEAR):
     """源图（归一化中心 cx,cy，可视宽 vw = 源图宽的比例）→ 画面。缩小超过 0.7 倍时先降一级金字塔避免网点摩尔纹。"""
     h, w = img.shape[:2]
+    ca, sa = abs(math.cos(math.radians(rot))), abs(math.sin(math.radians(rot)))
+    ex = (vw * w * ca + vw * w * out[1] / out[0] * sa) / 2 / w       # 旋转后视窗半宽（归一化）
+    ey = (vw * w * sa + vw * w * out[1] / out[0] * ca) / 2 / h
+    if ex < 0.5: cx = min(max(cx, ex), 1 - ex)                      # 视窗出板会被镜像：夹回板内
+    if ey < 0.5: cy = min(max(cy, ey), 1 - ey)
     s = out[0] / (vw * w)
     src = img
     while s < 0.7 and src.shape[1] > 400:

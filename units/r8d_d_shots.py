@@ -109,7 +109,7 @@ def plate_rgba(G, reveals):
     """揭开状态全是 0/1（没有字正在揭）时按状态缓存整张 RGBA，免得每帧拷一张 4K 浮点图"""
     live = {k: v for k, v in reveals.items() if v is not None}
     done = all(np.isscalar(v[0]) and v[0] >= 1 and v[1] is None for v in live.values())
-    key = (id(G), tuple(sorted(live))) if done else None
+    key = (G.name, tuple(sorted(live))) if done else None
     if key is not None and key in _PR: return _PR[key]
     img = G.compose(live)
     out = img if G.A is None else np.concatenate([img, G.A[..., None]], -1)
@@ -546,7 +546,6 @@ class S13_PaperCut(Shot):
         G, img = fun_state(t)
         fr, M = warp(img, (lerp(0.56, 0.60, e) * 3200, 0.52 * 1800), (960, 540), lerp(0.60, 0.64, e), border=cv2.BORDER_REFLECT)
         fr = fun_fx(fr, t, G, M, range(5))
-        sh = fr.copy()
         fr, Ac = put(fr, 'D13_papercut', t, 600, (560 - 30 * (e - 0.5), 900), wind=3, breathe=0.006)
         s = cv2.GaussianBlur(np.roll(Ac, 18, 1), (0, 0), 14) * (1 - Ac)
         fr = fr * (1 - 0.25 * s[..., None])
