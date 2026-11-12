@@ -316,5 +316,14 @@
   "input": [
    "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg"
   ]
+ },
+ "EA_E09b": {
+  "model": "RH_image2",
+  "prompt": "ART STYLE: high-contrast Japanese manga ink illustration, sharp pen lines, solid blacks, screentone textures, brushed speed of a modern shonen cover. COLOR SCHEME: strictly black, white and one blood-red. Red used boldly on large graphic shapes (sky, sun, background block or light) and on key details, everything else black and white.\n\nScene: Full-body three-quarter view of Gui Tu (keep exactly the face, hair and costume of the reference model sheet), a strikingly handsome young Chinese swordsman, sharp cold eyes, he does not smile; long jet-black hair in a high ponytail (pure black, no colored highlights), black robe with a red sash, caught at the very end of a ferocious diagonal downward slash: body twisted toward the viewer, the long straight sword now held low and angled down across the lower right of the frame, front knee bent, hair and red sash whipping, explosive dynamic manga action pose, whole body visible from head to feet. The blade is plain polished steel with a clean edge, drawn with black pen lines and white highlights; do NOT draw any motion trail, swipe arc, crescent slash, speed line, afterimage, glowing streak or red brush arc around the sword, the arm or the body; the background must be completely empty except for the flat green key. Isolated on a perfectly flat pure chroma-key green (#00FF00) background with no shadows; the green is only a keying backdrop, not part of the palette.\n\nThis is a multi-color palette distributed across different objects and lights, NOT a single-color filter or monochrome tint over the whole image. Anime illustration only, not photorealistic, no real people. Bold but controlled color design, refined and high-end, one clear focal point; not a cheap mobile-game ad, no particle spam. No text, captions, logos or watermark. 16:9 widescreen.\n\nReminder — art style: high-contrast Japanese manga ink illustration; color scheme: strictly black, white and one blood-red.",
+  "ratio": "16:9",
+  "size": "2K",
+  "input": [
+   "https://filescos.nananobanana.cn/skills/default-tenant-001/279297c7-dd4b-401e-9d7b-4cfc5b57d004/2026/11/10/1b8d32ac-b857-4535-b22e-55d00d333754.jpg"
+  ]
  }
 }
