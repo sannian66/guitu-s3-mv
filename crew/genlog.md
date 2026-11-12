@@ -860,3 +860,5 @@
 | 11-11 05:41 | R8_D/V09/V09_bg | RH_image2 | 2K 16:9 | 3 | da7e7021-f95a-4859-8b30-2946817b1369 | ✔ 采用 | assets/gen/R8_D/B/V09_bg.png | 纯文生图 try1；背景板 |
 | 11-11 05:41 | R8_D/V09/V09_fg | RH_image2 | 2K 16:9 | 3 | b5b1c45d-f49e-42da-b9b6-15a8d9c2127c | ✔ 采用 | assets/gen/R8_D/B/V09_fg.png（cut：V09_fg_cut.png） | 纯文生图 try1；前景雨丝 + 血珠 |
 | 11-11 12:52 | R8_D/sheet/taishanghuang_sheet | RH_image2 | 2K 16:9 | 3 | b36f3ed3-2ede-40d5-95dd-68b5aa85c65b | ✔ 采用 | assets/gen/R8_D/taishanghuang_sheet.png | 太上皇风格 D 定妆照，参考官方设定图 最终boss_太上皇.webp；CDN 68023565-40d4-4a36-acc1-7a6404184505.jpg |
+| 11-11 19:40 | R8_D/EB/E34_h3_walk | minimax-h3-metaso multimodal_ref | 2K 16:9 4s | 12 | 2120481650198892544 | ✔ 试做成功 | 视频生成试做：背影走路绿幕 → 抠像合成回风格 D 背景 | 用户 19:30 要求试做一个片段送审 |
+| 11-11 19:52 | R8_D/EB/E34_h3_full | minimax-h3-metaso image2video_first | 2K 16:9 4s | 12 | (见 /tmp/vidtest) | 试做 | 整张画面视频生成：以合成好的首帧（风格 D 山水 + 背影）为起点 | 用户 19:50 要求对比「整图生成」 |

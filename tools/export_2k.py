@@ -39,9 +39,9 @@ def convert(src, dst, audio=None):
         cmd += ['-an']
     cmd += ['-movflags', '+faststart', dst]
     subprocess.check_call(cmd)
-    print('%s -> %s  (%dx%d @%.2ffps%s -> %dx%d @%dfps%s)' % (
+    print(('%s -> %s  (%dx%d @%.2ffps%s -> %dx%d @%dfps%s)' % (
         os.path.basename(src), os.path.basename(dst), w, h, fps, ' native' if native else '', W, H, FPS,
-        ' native copy' if native else '')).strip()
+        ' native copy' if native else '')).strip())
     return dst
 
 
