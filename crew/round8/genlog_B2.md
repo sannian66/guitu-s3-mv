@@ -1,6 +1,6 @@
 # 第八轮风格 D · B2 主歌二 生图记录（nananobanana RH_image2，提示词 jobs/r8_D_B2.json）
 
-合计 48 张 × 3 = **144 积分**（预算上限 170）。提交失败 0 次；弃用 4 张（见状态列）。候选原图在仓库外 `~/Downloads/gen_cands/R8_D/B2/`。
+RH_image2 48 张 × 3 = **144 积分**；nano-banana-pro 图生图 2 张 × 2 = **4 积分**；合计 **50 张 = 148 积分**（预算上限 170）。提交失败 0 次；弃用 4 张 RH_image2（见状态列）+ 1 张图生图未采用。候选原图在仓库外 `~/Downloads/gen_cands/R8_D/B2/`。
 太上皇按 SPREAD §9 带太上皇定妆照（taishanghuang_sheet，input 见 jobs/r8_D_B2.json）；鬼屠定妆照同 SPREAD_r8 §4。
 
 | 时间 | 组/名 | 模型 | 规格 | 积分 | task_id | 状态 | 文件 | 备注 |
@@ -53,3 +53,5 @@
 | 11-11 15:17 | R8_D/B2/V19_bg | RH_image2 | 2K 16:9 | 3 | 9b70451c-70db-44f4-94d4-2dc823155a97 | ✔ 采用 | assets/gen/R8_D/B2/V19_bg.png | 纯文生图 try1 |
 | 11-11 15:17 | R8_D/B2/V22_bg | RH_image2 | 2K 16:9 | 3 | b1feb158-0db5-47be-a7d3-5519768c0df9 | ✔ 采用 | assets/gen/R8_D/B2/V22_bg.png | 纯文生图 try1 |
 | 11-11 15:19 | R8_D/B2/V15_bg | RH_image2 | 2K 16:9 | 3 | 467cb9cc-1445-47ac-afdf-35d469419ac2 | ✔ 采用 | assets/gen/R8_D/B2/V15_bg.png | 纯文生图 try1 |
+| 11-11 19:48 | R8_D/B2/V03_figs_var | nano-banana-pro | 2K 16:9 | 2 | — | ✘ 未采用 | （候选原图在仓库外） | 图生图（input=V03_figs 原姿势表）：正/侧视六档躬身变体；每个单体只在一个挡位，无法逐级切换，未用上 |
+| 11-11 20:07 | R8_D/B2/V03_figs_back | nano-banana-pro | 2K 16:9 | 2 | — | ✔ 采用 | assets/gen/R8_D/B2/V03_figs_back_cut.png | 图生图（input=V03_figs 原姿势表）：背面版四档躬身姿势表，V03 群臣改用（最左两人与大殿线稿粘连已裁掉） |
