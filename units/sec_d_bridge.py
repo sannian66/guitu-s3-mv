@@ -2651,6 +2651,10 @@ class Bridge:
                 out = ink_press(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             elif name == 'plaque_sweep':
                 out = plaque_sweep(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
+            elif name == 'white_beam':      # [第八轮 STYLE_D] 只在 STYLE_D=1 的 CUTS 里出现：白光竖劈（x0 = S29 刀尖）
+                out = gold_beam(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, x0=_R8.s29_tip()[0], **kw2)
+            elif name == 'tip_iris':        # [第八轮 STYLE_D] 刀尖白光圆（无「答」字）
+                out = _R8.tip_iris(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             elif name == 'gold_tip':
                 out = gold_tip(np.clip(A, 0, 4).astype(np.float32), np.clip(B, 0, 4).astype(np.float32), p, **kw2)
             else:
@@ -2665,6 +2669,28 @@ class Bridge:
 
 
 _B = [None]
+
+# ================================================================ 第八轮 STYLE_D=1：风格 D 全段改版（units/r8d_d.py + r8d_d_shots.py）
+#   切点 / 镜长 / 入出转场种类与上面完全一致（同一张 CUTS 表），只换镜头类；gold_beam / gold_tip 换成白光版（风格 D 不用金）。
+#   2:41–2:58 排比句的字全部画在生图里按演唱时刻揭开；2:58 以后画面不出字。STYLE_D=0 时本段不执行，现版逐像素不变。
+STYLE_D = os.environ.get('STYLE_D', '0') == '1'
+if STYLE_D:
+    import r8d_d_shots as _R8
+    SHOTS = _R8.SHOTS
+    CUTS = dict(CUTS)
+    CUTS['S18_Draw'] = ('slash_wipe', 0.05, 0.2, dict(angle=-12, center=(960, 860), soft_edges=True))   # 两半滑开不露 A 画布边（用户硬规则：任何图层不得露矩形裁切边）
+    CUTS['S25_Leap'] = ('slash_wipe', 0.05, 0.2, dict(angle=-40, soft_edges=True))
+    CUTS['S28_Spin'] = ('hard_cut_on_beat', 0, 0.07, dict(frames=2, flash=0.47))   # 固定（不随 R5D_TEXT_CUT 回到需要旧 S27 文字层的 freeze_glitch_keep）
+    CUTS['S29_Thrust'] = ('white_beam', 0.08, 0.14, {})                # x0 = S29 刀尖（Bridge.raw 里取）
+    CUTS['S30_Da'] = ('tip_iris', 0.1, 0.14, {})
+    GOLDR = (1.0, 1.0, 1.0)                                           # gold_beam 的光改纯白
+    plaque_sweep = _R8.ink_sweep                                      # S20→S21：灰色木牌（CG、直边）→ 干笔浓墨横扫（Bridge.raw 按模块名查找，STYLE_D=0 不受影响）
+
+    def _r8_frame(self, t):
+        fr, pm, ca = self.raw(t)
+        return D.d_finish(fr, t, ca=ca, vig=0.35 - 0.15 * min(1.0, pm), grain=0.05, paper_mode=0.0, bloom_amt=0.25)   # 纸面镜暗角轻一些（白纸占比）
+
+    Bridge.frame = _r8_frame
 
 
 def frame(f, cache):
