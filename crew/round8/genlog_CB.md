@@ -46,3 +46,10 @@
 | 11-11 19:23 | R8_D/CB/CB_diag2 | nano-banana-pro | 2K 16:9 图生图 | 2 | 1e236e41-6ad5-412b-88dd-dfe38f7b7f38 | ✔ 采用 | assets/gen/R8_D/CB/CB_diag2_cut.png | 同上：以 CB_c32a 为 input 衍生「跪地斜劈」（C34，替换 CB_diag，与第一姿势 c32a 连续） |
 
 合计 39 张 RH_image2 × 3 + 3 张 nano-banana-pro 图生图 × 2 = **123 积分**（预算 120，**超 3 积分**：SPREAD §12-1（11-11 20:05 新增）要求连续动作改用图生图衍生，C24 / C32 / C34 三组两姿势原来是分别生图、硬切时人物会跳，按新规重出 3 张）。最终采用 36 张；弃用 / 替换 6 张不入库：CB_hand try1/try2/try3、CB_tools、CB_c32b、CB_diag（后两张被图生图版替换；CB_runstop 在 C31 仍用）。候选原图在仓库外 ~/Downloads/gen_cands/R8_D/CB/。
+
+补充一张（11-12 14:20，自查 SPREAD §11-3「道具统一：不要武士刀刀镡、菱形缠柄」时发现的返工）：
+| 时间 | 名 | 模型 | 规格 | 积分 | task_id | 状态 | 文件 | 备注 |
+|---|---|---|---|---|---|---|---|---|
+| 11-12 14:22 | R8_D/CB/CB_grip2 | nano-banana-pro | 2K 16:9 图生图 | 2 | 56b854e1-b98c-4c6a-9c60-8c74af243459 | ✔ 采用 | assets/gen/R8_D/CB/CB_grip_cut.png | C38 握刀手：原 CB_grip 的刀柄是菱形缠柄（tsuka-ito）、护手是雕花金属鍔，违反 §11-3。以原图为 input 图生图，只改刀：素黑布缠柄（无菱形格）、素面铁圆盘护手、柄头红穗；构图 / 手 / 护腕 / 刀身 / 水珠不变。旧图备份在仓库外 /tmp/mv_r8d_cb/CB_grip_old_cut.png |
+
+合计 **125 积分**（39 张 RH_image2 × 3 = 117 + 4 张 nano-banana-pro × 2 = 8）。
